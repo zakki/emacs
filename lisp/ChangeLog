@@ -2,6 +2,11 @@
 
 	* international/encoded-kb.el: Don't alter minor-mode-alist.
 
+2001-11-20  Kai Grossjohann  <Kai.Grossjohann@CS.Uni-Dortmund.DE>
+
+        * files.el (auto-save-file-name-transforms): Put remote files in
+        temporary-file-directory rather than /tmp.
+
 2001-11-20  Stefan Monnier  <monnier@cs.yale.edu>
 
 	* progmodes/tcl.el (tcl-indent-for-comment): Handle the case where
