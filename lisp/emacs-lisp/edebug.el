@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1995/01/13 02:26:57 $|$Revision: 3.5.1.12 $|~/modes/edebug.el|
+;; |$Date: 1995/01/17 03:34:45 $|$Revision: 3.5.1.13 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.12 $"))
+  (let ((raw-version "$Revision: 3.5.1.13 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -217,11 +217,11 @@ Use this with caution since it is not debugged.")
 
 
 (defvar edebug-print-length 50
-  "*Default value of print-length to use while printing results in edebug.")
+  "*Default value of `print-length' to use while printing results in edebug.")
 (defvar edebug-print-level 50
-  "*Default value of print-level to use while printing results in edebug.")
+  "*Default value of `print-level' to use while printing results in edebug.")
 (defvar edebug-print-circle t
-  "*Default value of print-circle to use while printing results in edebug.")
+  "*Default value of `print-circle' to use while printing results in edebug.")
 
 (defvar edebug-unwrap-results nil
   "*Non-nil if Edebug should unwrap results of expressions.
@@ -319,7 +319,7 @@ A lambda list keyword is a symbol that starts with ""&""."
 
 (defun edebug-last-sexp ()
   ;; Return the last sexp before point in current buffer.
-  ;; Assumes elisp syntax is active.
+  ;; Assumes Emacs Lisp syntax is active.
   (car
    (read-from-string
     (buffer-substring
