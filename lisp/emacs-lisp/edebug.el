@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1994/04/09 22:07:30 $|$Revision: 3.5.1.2 $|~/modes/edebug.el|
+;; |$Date: 1994/04/09 22:11:10 $|$Revision: 3.5.1.3 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -80,8 +80,11 @@
 ;;; liberte@cs.uiuc.edu
 
 ;;; ===============================
-;;; $Header: /home/gd/gnu/emacs/19.0/lisp/RCS/edebug.el,v 3.5.1.2 1994/04/09 22:07:30 liberte Exp liberte $
+;;; $Header: /home/fsf/rms/e19/lisp/RCS/edebug.el,v 3.5.1.3 1994/04/09 22:11:10 liberte Exp rms $
 ;;; $Log: edebug.el,v $
+;;; Revision 3.5.1.3  1994/04/09  22:11:10  liberte
+;;; *** empty log message ***
+;;;
 ;;; Revision 3.5.1.2  1994/04/09  22:07:30  liberte
 ;;; Testing branch.  A change in log comments is not
 ;;; enough to get by ci.
@@ -114,7 +117,7 @@
 ;;; For the rest of the revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.2 $"))
+  (let ((raw-version "$Revision: 3.5.1.3 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -534,7 +537,7 @@ Return the result of the last expression in BODY."
 ;;; eval-defun is redefined to check edebug-all-forms and edebug-all-defs.
 
 ;;; Use the Lisp version of eval-region.
-(require 'elisp-eval-region "eval-region")
+(require 'eval-reg "eval-reg")
 
 ;; Save the original read function
 (or (fboundp 'edebug-original-read)
