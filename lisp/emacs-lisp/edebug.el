@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1994/04/09 21:49:52 $|$Revision: 3.5.1.1 $|~/modes/edebug.el|
+;; |$Date: 1994/04/09 22:07:30 $|$Revision: 3.5.1.2 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -80,8 +80,12 @@
 ;;; liberte@cs.uiuc.edu
 
 ;;; ===============================
-;;; $Header: /home/gd/gnu/emacs/19.0/lisp/RCS/edebug.el,v 3.5.1.1 1994/04/09 21:49:52 liberte Exp liberte $
+;;; $Header: /home/gd/gnu/emacs/19.0/lisp/RCS/edebug.el,v 3.5.1.2 1994/04/09 22:07:30 liberte Exp liberte $
 ;;; $Log: edebug.el,v $
+;;; Revision 3.5.1.2  1994/04/09  22:07:30  liberte
+;;; Testing branch.  A change in log comments is not
+;;; enough to get by ci.
+;;;
 ;;; Revision 3.5.1.1  1994/04/09  21:49:52  liberte
 ;;; Create branch for FSF mods.
 ;;;
@@ -110,7 +114,7 @@
 ;;; For the rest of the revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.1 $"))
+  (let ((raw-version "$Revision: 3.5.1.2 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
