@@ -193,10 +193,10 @@ Several are for Debian GNU/Linux in particular.
    use and improve the Unicode support are currently available under
    <URL:ftp://dlpx1.dl.ac.uk/fx/emacs/Mule>.
 
- * Mailcrypt:
-   <URL:http://www.pobox.com/%7Elbudney/linux/software/mailcrypt.html>
-   PGP and GPG support.  PGP isn't free software, but GPG, the GNU
-   Privacy Guard, is a free replacement <URL:http://www.gnupg.org/>.
+ * Mailcrypt: PGP and GPG support
+   <URL:http://mailcrypt.sourceforge.net/>
+   PGP isn't free software, but GPG, the GNU Privacy Guard, is a free
+   replacement <URL:http://www.gnupg.org/>.
 
  * Pointers to MIME packages:
    <URL:http://bmrc.berkeley.edu/%7Etrey/emacs/mime.html>
