@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1995/08/27 17:52:46 $|$Revision: 3.5.1.22 $|~/modes/edebug.el|
+;; |$Date: 1995/12/21 17:39:58 $|$Revision: 3.5.1.23 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,13 +83,13 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.22 $"))
+  (let ((raw-version "$Revision: 3.5.1.23 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
 (require 'backquote)
 
-;; Emacs 18 doesnt have defalias.
+;; Emacs 18 doesn't have defalias.
 (eval-and-compile
   (or (fboundp 'defalias) (fset 'defalias 'fset)))
 
@@ -325,7 +325,7 @@ A lambda list keyword is a symbol that starts with `&'."
 
 (defun edebug-window-list ()
   "Return a list of windows, in order of `next-window'."
-  ;; This doesnt work for epoch.
+  ;; This doesn't work for epoch.
   (let* ((first-window (selected-window))
 	 (window-list (list first-window))
 	 (next (next-window first-window)))
@@ -421,7 +421,7 @@ Return the result of the last expression in BODY."
 	(split-window))
     ;;      (message "next window: %s" (next-window)) (sit-for 1)
     (if (eq (get-buffer-window edebug-trace-buffer) (next-window))
-	;; Dont select trace window
+	;; Don't select trace window
 	nil
       (select-window (next-window))))
   (set-window-buffer (selected-window) buffer)
@@ -517,7 +517,7 @@ STREAM or the value of `standard-input' may be:
  t (read text line using minibuffer and use it).
 
 This version, from Edebug, maybe instruments the expression. But the
-STREAM must be the current buffer to do so.  Whether it instuments is
+STREAM must be the current buffer to do so.  Whether it instruments is
 also dependent on the values of `edebug-all-defs' and
 `edebug-all-forms'."
   (or stream (setq stream standard-input))
@@ -560,7 +560,7 @@ Print its name in the minibuffer and leave point where it is,
 or if an error occurs, leave point after it with mark at the original point."
   (interactive)
   (eval 
-   ;; Bind edebug-all-forms only while reading, not while evaling
+   ;; Bind edebug-all-forms only while reading, not while evalling
    ;; but this causes problems while edebugging edebug.
    (let ((edebug-all-forms t)
 	 (edebug-all-defs t))
@@ -726,7 +726,7 @@ or if an error occurs, leave point after it with mark at the original point."
     (aset table ?\. 'dot)
     (aset table ?\# 'hash)
     ;; We treat numbers as symbols, because of confusion with -, -1, and 1-.
-    ;; We dont care about any other chars since they wont be seen.
+    ;; We don't care about any other chars since they won't be seen.
     table))
 
 (defun edebug-next-token-class ()
@@ -1120,7 +1120,7 @@ This controls how we read comma constructs.")
   (let (result
 	edebug-top-window-data
 	edebug-def-name;; make sure it is locally nil
-	;; I dont like these here!!
+	;; I don't like these here!!
 	edebug-&optional
 	edebug-&rest
 	edebug-gate
@@ -1144,7 +1144,7 @@ This controls how we read comma constructs.")
 	def-kind
 	defining-form-p
 	def-name
-	;; These offset things dont belong here, but to support recursive
+	;; These offset things don't belong here, but to support recursive
 	;; calls to edebug-read, they need to be here.
 	edebug-offsets
 	edebug-offsets-stack
@@ -1238,7 +1238,7 @@ This controls how we read comma constructs.")
       (quote (, edebug-def-name))
       (, (if edebug-inside-func  
 	     (` (list (,@ 
-		       ;; Doesnt work with more than one def-body!!
+		       ;; Doesn't work with more than one def-body!!
 		       ;; But the list will just be reversed.
 		       (nreverse edebug-def-args))))
 	   'nil))
@@ -1267,7 +1267,7 @@ This controls how we read comma constructs.")
   ;; (edebug-after (edebug-before BEFORE-INDEX) AFTER-INDEX FORM)
   ;; Also increment the offset index for subsequent use.
   ;; if (not edebug-stop-before-symbols) and form is a symbol,
-  ;; then dont call edebug-before.
+  ;; then don't call edebug-before.
   (list 'edebug-after 
 	(list 'edebug-before before-index)
 	after-index form))
@@ -1456,7 +1456,7 @@ expressions; a `progn' form will be returned enclosing these forms."
 
 	 ((symbolp form)
 	  (cond
-	   ;; Check for constant symbols that dont get wrapped.
+	   ;; Check for constant symbols that don't get wrapped.
 	   ((or (memq form '(t nil))
 		(and (fboundp 'edebug-keywordp) (edebug-keywordp form)))
 	    form)
@@ -1644,7 +1644,7 @@ expressions; a `progn' form will be returned enclosing these forms."
 
 
 ;; Define specs for all the symbol specs with functions used to process them.
-;; Perhaps we shouldnt be doing this with edebug-form-specs since the
+;; Perhaps we shouldn't be doing this with edebug-form-specs since the
 ;; user may want to define macros or functions with the same names.
 ;; We could use an internal obarray for these primitive specs.
 
@@ -1762,7 +1762,7 @@ expressions; a `progn' form will be returned enclosing these forms."
 		 (let (edebug-gate ;; only while matching each spec
 		       edebug-best-error
 		       edebug-error-point)
-		   ;; Doesnt support e.g. &or symbolp &rest form
+		   ;; Doesn't support e.g. &or symbolp &rest form
 		   (edebug-match-one-spec cursor (car specs)))))
 	;; Match failed, so reset and try again.
 	(setq specs (cdr specs))
@@ -1791,7 +1791,7 @@ expressions; a `progn' form will be returned enclosing these forms."
 (defun edebug-match-&key (cursor specs)
   ;; Following specs must look like (<name> <spec>) ...
   ;; where <name> is the name of a keyword, and spec is its spec.
-  ;; This really doesnt save much over the expanded form and takes time.
+  ;; This really doesn't save much over the expanded form and takes time.
   (edebug-match-&rest 
    cursor
    (cons '&or 
@@ -1895,7 +1895,7 @@ expressions; a `progn' form will be returned enclosing these forms."
 
 (defun edebug-match-&define (cursor specs)
   ;; Match a defining form.
-  ;; Normally, &define is interpretted specially other places.
+  ;; Normally, &define is interpreted specially other places.
   ;; This should only be called inside of a spec list to match the remainder
   ;; of the current list.  e.g. ("lambda" &define args def-body)
    (edebug-make-form-wrapper
@@ -2034,7 +2034,7 @@ expressions; a `progn' form will be returned enclosing these forms."
 (def-edebug-spec defmacro
   (&define name lambda-list def-body))
 
-(def-edebug-spec arglist lambda-list)  ;; denegrated - use lambda-list.
+(def-edebug-spec arglist lambda-list)  ;; deprecated - use lambda-list.
 
 (def-edebug-spec lambda-list
   (([&rest arg]
@@ -2568,8 +2568,8 @@ MSG is printed after `::::} '."
 	      (setq edebug-buffer-points (edebug-get-displayed-buffer-points)))
 
 	  ;; First move the edebug buffer point to edebug-point
-	  ;; so that window start doesnt get changed when we display it.
-	  ;; I dont know if this is going to help.
+	  ;; so that window start doesn't get changed when we display it.
+	  ;; I don't know if this is going to help.
 	  ;;(set-buffer edebug-buffer)
 	  ;;(goto-char edebug-point)
 
@@ -2664,7 +2664,7 @@ MSG is printed after `::::} '."
 		      (eq edebug-arg-mode 'error)) 
 		  (progn
 		    ;; (setq edebug-execution-mode 'step)
-		    ;; (edebug-overlay-arrow)	; this doesnt always show up.
+		    ;; (edebug-overlay-arrow)	; This doesn't always show up.
 		    (edebug-recursive-edit))) ; <---------- Recursive edit
 
 	    ;; Reset the edebug-window-data to whatever it is now.
@@ -2710,7 +2710,7 @@ MSG is printed after `::::} '."
 					    'no-force)
 			  ;; Unrestore edebug-buffer's window-point.
 			  ;; Needed in addition to setting the buffer point
-			  ;; - otherwise quitting doesnt leave point as is.
+			  ;; - otherwise quitting doesn't leave point as is.
 			  ;; But this causes point to not be restored at times.
 			  ;; Also, it may not be a visible window.
 			  ;; (set-window-point window edebug-point)
@@ -2730,8 +2730,8 @@ MSG is printed after `::::} '."
 	    (set-buffer edebug-outside-buffer)
 	    ;; Restore point, and mark.
 	    ;; Needed even if restoring windows because
-	    ;; that doesnt restore point and mark in the current buffer.
-	    ;; But dont restore point if edebug-buffer is current buffer.
+	    ;; that doesn't restore point and mark in the current buffer.
+	    ;; But don't restore point if edebug-buffer is current buffer.
 	    (if (not (eq edebug-buffer edebug-outside-buffer))
 		(goto-char edebug-outside-point))
 	    (if (marker-buffer (edebug-mark-marker))
@@ -4531,7 +4531,7 @@ Print result in minibuffer."
      popup-menu
      ;; CL
      cl-macroexpand-all
-     ;; And believe it or not, the byte compiler doesnt know about:
+     ;; And believe it or not, the byte compiler doesn't know about:
      byte-compile-resolve-functions
      ))
 
