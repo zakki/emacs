@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1994/07/12 00:35:48 $|$Revision: 3.5.1.9 $|~/modes/edebug.el|
+;; |$Date: 1994/08/23 21:52:41 $|$Revision: 3.5.1.10 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.9 $"))
+  (let ((raw-version "$Revision: 3.5.1.10 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -2263,7 +2263,8 @@ error is signaled again."
 	      ;; Bind signal to edebug-signal only while Edebug is active.
 	      (fset 'signal 'edebug-signal)
 	      (unwind-protect
-		  (edebug-enter edebug-function edebug-args edebug-body)
+		  (save-excursion
+		    (edebug-enter edebug-function edebug-args edebug-body))
 		(fset 'signal (symbol-function 'edebug-original-signal))))
 	  ;; Reset global variables in case outside value was changed.
 	  (setq executing-macro edebug-outside-executing-macro
