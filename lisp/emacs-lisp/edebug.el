@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1994/05/27 00:38:54 $|$Revision: 3.5.1.7 $|~/modes/edebug.el|
+;; |$Date: 1994/06/05 11:59:05 $|$Revision: 3.5.1.8 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.7 $"))
+  (let ((raw-version "$Revision: 3.5.1.8 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -604,7 +604,7 @@ point."
 (defun edebug-install-read-eval-functions ()
   (interactive)
   ;; Don't install if already installed.
-  (if (eq 'read 'edebug-read) nil
+  (if (eq (symbol-function 'read) 'edebug-read) nil
     (elisp-eval-region-install)
     (defalias 'read 'edebug-read)
     (defalias 'eval-defun 'edebug-eval-defun)))
