@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1994/04/08 21:39:52 $|$Revision: 3.5 $|~/modes/edebug.el|
+;; |$Date: 1994/04/09 21:49:52 $|$Revision: 3.5.1.1 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -80,8 +80,11 @@
 ;;; liberte@cs.uiuc.edu
 
 ;;; ===============================
-;;; $Header: /home/gd/gnu/emacs/19.0/lisp/RCS/edebug.el,v 3.5 1994/04/08 21:39:52 liberte Exp liberte $
+;;; $Header: /home/gd/gnu/emacs/19.0/lisp/RCS/edebug.el,v 3.5.1.1 1994/04/09 21:49:52 liberte Exp liberte $
 ;;; $Log: edebug.el,v $
+;;; Revision 3.5.1.1  1994/04/09  21:49:52  liberte
+;;; Create branch for FSF mods.
+;;;
 ;;; Revision 3.5  1994/04/04  21:39:52  liberte
 ;;; * Change "-emacs-" to "-original-" throughout.
 ;;; * (edebug-last-sexp) Fix missing ";;"
@@ -107,7 +110,7 @@
 ;;; For the rest of the revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5 $"))
+  (let ((raw-version "$Revision: 3.5.1.1 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -4540,6 +4543,7 @@ Print result in minibuffer."
   (add-hook 'cl-load-hook
 	    (function (lambda () (require 'cl-specs)))))
 
+;;; edebug-cl-read and cl-read are available from liberte@cs.uiuc.edu 
 (if (featurep 'cl-read)
     (add-hook 'edebug-setup-hook
 	      (function (lambda () (require 'edebug-cl-read))))
