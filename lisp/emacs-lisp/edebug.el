@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1994/04/05 01:21:06 $|$Revision: 3.5 $|~/modes/edebug.el|
+;; |$Date: 1994/04/08 21:39:52 $|$Revision: 3.5 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -80,7 +80,7 @@
 ;;; liberte@cs.uiuc.edu
 
 ;;; ===============================
-;;; $Header: /import/kaplan/kaplan/liberte/Edebug/RCS/edebug.el,v 3.5 1994/04/08 21:39:52 liberte Exp liberte $
+;;; $Header: /home/gd/gnu/emacs/19.0/lisp/RCS/edebug.el,v 3.5 1994/04/08 21:39:52 liberte Exp liberte $
 ;;; $Log: edebug.el,v $
 ;;; Revision 3.5  1994/04/04  21:39:52  liberte
 ;;; * Change "-emacs-" to "-original-" throughout.
