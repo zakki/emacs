@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1996/01/04 23:33:04 $|$Revision: 3.5.1.24 $|~/modes/edebug.el|
+;; |$Date: 1996/01/14 07:34:30 $|$Revision: 3.5.1.25 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -85,7 +85,7 @@
 ;;; Code:
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.24 $"))
+  (let ((raw-version "$Revision: 3.5.1.25 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -3158,7 +3158,8 @@ The default is one second."
 	      (goto-char (+ edebug-def-mark
 			    (aref offset-vector (car breakpoint))))
 	      
-	      (message (concat (if (nth 2 breakpoint)
+	      (message "%s"
+		       (concat (if (nth 2 breakpoint)
 				   "Temporary " "")
 			       (if (car (cdr breakpoint))
 				   (format "Condition: %s"
