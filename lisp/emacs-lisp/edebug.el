@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1995/08/08 22:48:44 $|$Revision: 3.5.1.20 $|~/modes/edebug.el|
+;; |$Date: 1995/08/22 20:49:34 $|$Revision: 3.5.1.21 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.20 $"))
+  (let ((raw-version "$Revision: 3.5.1.21 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -2729,7 +2729,6 @@ MSG is printed after `::::} '."
 
 ;; Emacs 18
 (defvar edebug-outside-unread-command-char)
-(defvar unread-command-char -1)
 
 ;; Lucid Emacs
 (defvar edebug-outside-unread-command-event)  ;; like unread-command-events
@@ -2742,14 +2741,6 @@ MSG is printed after `::::} '."
 (defvar edebug-outside-last-event-frame)
 (defvar edebug-outside-last-nonmenu-event)
 (defvar edebug-outside-track-mouse)
-
-;; For Emacs 18, define vars defined by Emacs 19.
-(defvar last-input-event nil)
-(defvar last-command-event nil)
-(defvar unread-command-events nil)
-(defvar last-event-frame nil)
-(defvar last-nonmenu-event nil)
-(defvar track-mouse nil)
 
 ;; Disable byte compiler warnings about unread-command-char and -event
 ;; (maybe works with byte-compile-version 2.22 at least)
