@@ -9,5 +9,3 @@ config.status
 config.cache
 Makefile
 emacs*.tar.gz
-leim*.tar.gz
-*.xdelta
