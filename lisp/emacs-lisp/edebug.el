@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1996/01/14 07:34:30 $|$Revision: 3.5.1.25 $|~/modes/edebug.el|
+;; |$Date: 1996/01/25 00:53:17 $|$Revision: 3.5.1.26 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -85,7 +85,7 @@
 ;;; Code:
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.25 $"))
+  (let ((raw-version "$Revision: 3.5.1.26 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -530,13 +530,16 @@ non-nil, then the code is instrumented *unless* there is a prefix
 argument.  If instrumenting, it prints: `Edebug: FUNCTIONNAME'.
 Otherwise, it prints in the minibuffer."
   (interactive "P")
-  (let ((edebugging (not (eq (not edebug-it) (not edebug-all-defs))))
-	(edebug-result))
-    (setq edebug-result
-	  (eval
-	   (let ((edebug-all-forms edebugging)
-		 (edebug-all-defs (eq edebug-all-defs (not edebug-it))))
-	     (edebug-read-top-level-form))))
+  (let* ((edebugging (not (eq (not edebug-it) (not edebug-all-defs))))
+	 (edebug-result)
+	 (form
+	  (let ((edebug-all-forms edebugging)
+		(edebug-all-defs (eq edebug-all-defs (not edebug-it))))
+	    (edebug-read-top-level-form))))
+    (if (and (eq (car form) 'defvar)
+	     (cdr-safe (cdr-safe form)))
+	(setq form (cons 'defconst (cdr form))))
+    (setq edebug-result (eval form))
     (if (not edebugging)
 	(princ edebug-result)
       edebug-result)))
