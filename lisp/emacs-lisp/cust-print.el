@@ -332,7 +332,8 @@ This is the custom-print replacement for the standard `princ'."
 (defun custom-prin1-to-string (object &optional noescape)
   "Return a string containing the printed representation of OBJECT,
 any Lisp object.  Quoting characters are used when needed to make output
-that `read' can handle, whenever this is possible.
+that `read' can handle, whenever this is possible, unless the optional
+second argument NOESCAPE is non-nil.
 
 This is the custom-print replacement for the standard `prin1-to-string'."
   (let ((buf (get-buffer-create " *custom-print-temp*")))
