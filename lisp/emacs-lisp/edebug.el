@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1995/05/06 01:24:23 $|$Revision: 3.5.1.18 $|~/modes/edebug.el|
+;; |$Date: 1995/05/06 01:27:21 $|$Revision: 3.5.1.19 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.18 $"))
+  (let ((raw-version "$Revision: 3.5.1.19 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -367,6 +367,7 @@ A lambda list keyword is a symbol that starts with `&'."
   "Returns the function named by OBJECT, or nil if it is not a function."
   (setq object (edebug-lookup-function object))
   (if (or (subrp object)
+	  (byte-code-function-p object)
 	  (and (listp object)
 	       (eq (car object) 'lambda)
 	       (listp (car (cdr object)))))
