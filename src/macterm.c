@@ -1703,7 +1703,8 @@ x_per_char_metric (font, char2b)
  */
 
 static XCharStruct *
-mac_per_char_metric (font, char2b, font_type)
+mac_per_char_metric (f, font, char2b, font_type)
+     FRAME_PTR f;
      XFontStruct *font;
      XChar2b *char2b;
      int font_type;
@@ -6907,7 +6908,7 @@ x_load_font (f, fontname, size)
 	XCharStruct *pcm;
 
 	char2b.byte1 = 0x00, char2b.byte2 = 0x20;
-	pcm = mac_per_char_metric (font, &char2b, 0);
+	pcm = mac_per_char_metric (f, font, &char2b, 0);
 	if (pcm)
 	  fontp->space_width = pcm->width;
 	else
@@ -6917,7 +6918,7 @@ x_load_font (f, fontname, size)
 	  {
 	    int width = pcm->width;
 	    for (char2b.byte2 = 33; char2b.byte2 <= 126; char2b.byte2++)
-	      if ((pcm = mac_per_char_metric (font, &char2b, 0)) != NULL)
+	      if ((pcm = mac_per_char_metric (f, font, &char2b, 0)) != NULL)
 		width += pcm->width;
 	    fontp->average_width = width / 95;
 	  }

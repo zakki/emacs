@@ -28,7 +28,7 @@ Boston, MA 02111-1307, USA.  */
 struct font_info
 {
   /* Pointer to window system dependent font structure.  On X window,
-     this value should be coerced to (XFontStruct *).  */
+     this value should be coerced to (x_font_type *).  */
   void *font;
 
   /* Index number of the font.  */

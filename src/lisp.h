@@ -29,7 +29,7 @@ Boston, MA 02111-1307, USA.  */
 #define P_(proto) ()
 #endif
 
-#if 0
+#if 1
 /* Define this temporarily to hunt a bug.  If defined, the size of
    strings is redundantly recorded in sdata structures so that it can
    be compared to the sizes recorded in Lisp strings.  */

@@ -685,13 +685,16 @@ Boston, MA 02111-1307, USA.  */
 /* Define to 1 if you're using XFree386. */
 #undef HAVE_XFREE386
 
+/* Define to 1 if you have the Xft library. */
+#undef HAVE_XFT
+
 /* Define to 1 if XIM is available */
 #undef HAVE_XIM
 
 /* Define to 1 if you have the XkbGetKeyboard function. */
 #undef HAVE_XKBGETKEYBOARD
 
-/* Define to 1 if you have the Xpm libary (-lXpm). */
+/* Define to 1 if you have the Xpm library (-lXpm). */
 #undef HAVE_XPM
 
 /* Define to 1 if you have the `XrmSetDatabase' function. */
@@ -779,9 +782,9 @@ Boston, MA 02111-1307, USA.  */
 /* If using the C implementation of alloca, define if you know the
    direction of stack growth for your system; otherwise it will be
    automatically deduced at run-time.
-        STACK_DIRECTION > 0 => grows toward higher addresses
-        STACK_DIRECTION < 0 => grows toward lower addresses
-        STACK_DIRECTION = 0 => direction of growth unknown */
+	STACK_DIRECTION > 0 => grows toward higher addresses
+	STACK_DIRECTION < 0 => grows toward lower addresses
+	STACK_DIRECTION = 0 => direction of growth unknown */
 #undef STACK_DIRECTION
 
 /* Define to 1 if you have the ANSI C header files. */
