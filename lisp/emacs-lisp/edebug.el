@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1995/04/19 00:48:35 $|$Revision: 3.5.1.17 $|~/modes/edebug.el|
+;; |$Date: 1995/05/06 01:24:23 $|$Revision: 3.5.1.18 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.17 $"))
+  (let ((raw-version "$Revision: 3.5.1.18 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -2061,8 +2061,8 @@ expressions; a `progn' form will be returned enclosing these forms."
 
 ;; ,@ might have some problems.
 
-(defalias 'edebug-` '`)  ;; same macro as regular backquote.
-(def-edebug-spec edebug-` (def-form))
+(defalias 'edebug-\` '\`)  ;; same macro as regular backquote.
+(def-edebug-spec edebug-\` (def-form))
 
 ;; Assume immediate quote in unquotes mean backquote at next higher level.
 (def-edebug-spec , (&or ("quote" edebug-`) def-form))
