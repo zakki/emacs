@@ -9,7 +9,6 @@
 ;; LCD Archive Entry:
 ;; cust-print|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |Handle print-level, print-circle and more.
-;; |$Date: 1996/01/14 07:34:30 $|$Revision: 2.1.1.4 $|
 
 ;; This file is part of GNU Emacs.
 
@@ -29,8 +28,11 @@
 ;; Boston, MA 02111-1307, USA.
 
 ;; ===============================
-;; $Id: /home/gd/gnu/emacs/19.0/lisp/RCS/cust-print.el,v 2.1.1.4 1996/01/14 07:34:30 erik Exp eggert $
+;; $Id: cust-print.el,v 2.1.1.5 1997/05/05 05:45:46 eggert Exp rms $
 ;; $Log: cust-print.el,v $
+;; Revision 2.1.1.5  1997/05/05 05:45:46  eggert
+;; Change RCS Header to Id.
+;;
 ;; Revision 2.1.1.4  1996/01/14  07:34:30  erik
 ;; Update FSF's address.
 ;;
