@@ -9,7 +9,7 @@
 ;; LCD Archive Entry:
 ;; cust-print|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |Handle print-level, print-circle and more.
-;; |$Date: 1994/04/09 22:24:43 $|$Revision: 2.1.1.1 $|
+;; |$Date: 1995/03/16 04:36:01 $|$Revision: 2.1.1.2 $|
 
 ;; This file is part of GNU Emacs.
 
@@ -28,8 +28,11 @@
 ;; the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
 ;;; ===============================
-;;; $Header: /home/fsf/rms/e19/lisp/RCS/cust-print.el,v 2.1.1.1 1994/04/09 22:24:43 liberte Exp rms $
+;;; $Header: /home/gd/gnu/emacs/19.0/lisp/RCS/cust-print.el,v 2.1.1.2 1995/03/16 04:36:01 rms Exp kwzh $
 ;;; $Log: cust-print.el,v $
+;;; Revision 2.1.1.2  1995/03/16 04:36:01  rms
+;;; Comment change.
+;;;
 ;;; Revision 2.1.1.1  1994/04/09  22:24:43  liberte
 ;;; Branch for FSF mods.
 ;;;
@@ -70,13 +73,13 @@
 ;;; * New macro with-custom-print (added earlier) - executes like
 ;;;     progn but with custom-print activated temporarily.
 ;;;
-;;; * Cleaned up comments for replacements of standardard printers.
+;;; * Cleaned up comments for replacements of standard printers.
 ;;;
 ;;; * Changed custom-prin1-to-string to use a temporary buffer.
 ;;;
 ;;; * Option custom-print-vectors (added earlier) - controls whether
 ;;;     vectors should be printed according to print-length and
-;;;     print-length.  Emacs doesnt do this, but cust-print would
+;;;     print-length.  Emacs doesn't do this, but cust-print would
 ;;;     otherwise do it only if custom printing is required.
 ;;;
 ;;; * Uninterned symbols are treated as non-read-equivalent.
@@ -170,7 +173,7 @@
 
 (require 'backquote)
 
-;; Emacs 18 doesnt have defalias.
+;; Emacs 18 doesn't have defalias.
 ;; Provide def for byte compiler.
 (eval-and-compile
   (or (fboundp 'defalias) (fset 'defalias 'fset)))
@@ -263,7 +266,7 @@ Any pair that has the same PREDICATE is first removed."
 (defun cust-print-update-custom-printers ()
   ;; Modify the definition of cust-print-use-custom-printer
   (defalias 'cust-print-use-custom-printer
-    ;; We dont really want to require the byte-compiler.
+    ;; We don't really want to require the byte-compiler.
     ;; (byte-compile
      (` (lambda (object)
 	  (cond
@@ -382,7 +385,7 @@ that `read' can handle, whenever this is possible.
 This is the custom-print replacement for the standard `prin1-to-string'."
   (let ((buf (get-buffer-create " *custom-print-temp*")))
     ;; We must erase the buffer before printing in case an error 
-    ;; occured during the last prin1-to-string and we are in debugger.
+    ;; occurred during the last prin1-to-string and we are in debugger.
     (save-excursion
       (set-buffer buf)
       (erase-buffer))
