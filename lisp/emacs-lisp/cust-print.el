@@ -9,7 +9,7 @@
 ;; LCD Archive Entry:
 ;; cust-print|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |Handle print-level, print-circle and more.
-;; |$Date: 1994/04/09 22:19:10 $|$Revision: 2.1 $|
+;; |$Date: 1994/04/09 22:24:43 $|$Revision: 2.1.1.1 $|
 
 ;; This file is part of GNU Emacs.
 
@@ -28,8 +28,11 @@
 ;; the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
 
 ;;; ===============================
-;;; $Header: /home/gd/gnu/emacs/19.0/lisp/RCS/cust-print.el,v 2.1 1994/04/09 22:19:10 liberte Exp $
+;;; $Header: /home/fsf/rms/e19/lisp/RCS/cust-print.el,v 2.1.1.1 1994/04/09 22:24:43 liberte Exp rms $
 ;;; $Log: cust-print.el,v $
+;;; Revision 2.1.1.1  1994/04/09  22:24:43  liberte
+;;; Branch for FSF mods.
+;;;
 ;;; Revision 2.1  1994/04/09  22:19:10  liberte
 ;;; Jumping up to new revision.
 ;;; Simplify definition of defalias for Emacs 18.
@@ -235,7 +238,7 @@ Don't modify this variable directly.  Use `add-custom-printer' and
 `delete-custom-printer'")
 ;; Should cust-print-original-princ and cust-print-prin be exported symbols?
 ;; Or should the standard printers functions be replaced by
-;; CP ones in elisp so that CP internal functions need not be called?
+;; CP ones in Emacs Lisp so that CP internal functions need not be called?
 
 (defun add-custom-printer (pred printer)
   "Add a pair of PREDICATE and PRINTER to `custom-printers'.
