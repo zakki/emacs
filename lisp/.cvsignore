@@ -1,4 +1,7 @@
 *.elc
+MANIFEST
 Makefile
 elc.tar.gz
-MANIFEST
+cus-load.el
+finder-inf.el
+subdirs.el
