@@ -1,5 +1,7 @@
 2001-10-04  Gerd Moellmann  <gerd@gnu.org>
 
+	Added to NEWS.
+
 	* startup.el (inhibit-startup-buffer-menu): New user-option.
 	(command-line-1): If inhibit-startup-buffer-menu is set, don't
 	display the buffer menu.  From Simon Josefsson <jas@extundo.com>.
