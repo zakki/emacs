@@ -1,6 +1,6 @@
-;;; edebug.el --- a source-level debugger for Emacs Lispl
+;;; edebug.el --- a source-level debugger for Emacs Lisp
 
-;; Copyright (C) 1988,'89,'90,'91,'92,'93,'94 Free Software Foundation, Inc
+;; Copyright (C) 1988,'89,'90,'91,'92,'93,'94,'95 Free Software Foundation, Inc
 
 ;; Author: Daniel LaLiberte <liberte@cs.uiuc.edu>
 ;; Keywords: lisp, tools, maint
@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1994/08/23 21:52:41 $|$Revision: 3.5.1.10 $|~/modes/edebug.el|
+;; |$Date: 1994/11/30 20:56:46 $|$Revision: 3.5.1.11 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.10 $"))
+  (let ((raw-version "$Revision: 3.5.1.11 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -2263,8 +2263,7 @@ error is signaled again."
 	      ;; Bind signal to edebug-signal only while Edebug is active.
 	      (fset 'signal 'edebug-signal)
 	      (unwind-protect
-		  (save-excursion
-		    (edebug-enter edebug-function edebug-args edebug-body))
+		  (edebug-enter edebug-function edebug-args edebug-body)
 		(fset 'signal (symbol-function 'edebug-original-signal))))
 	  ;; Reset global variables in case outside value was changed.
 	  (setq executing-macro edebug-outside-executing-macro
@@ -4379,7 +4378,7 @@ Print result in minibuffer."
       (setq values (cons (edebug-eval edebug-expr) values))
       (edebug-safe-prin1-to-string (car values)))))
 
-  (easy-menu-define 'edebug edebug-mode-map "Edebug menus" edebug-mode-menus)
+  (easy-menu-define edebug edebug-mode-map "Edebug menus" edebug-mode-menus)
   (if window-system
       (x-popup-menu nil (lookup-key edebug-mode-map [menu-bar Edebug])))
   )
