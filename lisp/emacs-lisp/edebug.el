@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1994/04/11 21:47:38 $|$Revision: 3.5.1.4 $|~/modes/edebug.el|
+;; |$Date: 1994/05/22 21:57:49 $|$Revision: 3.5.1.5 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.4 $"))
+  (let ((raw-version "$Revision: 3.5.1.5 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -142,7 +142,7 @@ This applies to `eval-defun', `eval-region', `eval-buffer', and
 
 You can use the command `edebug-all-defs' to toggle the value of this
 variable.  You may wish to make it local to each buffer with
-(make-local-variable 'edebug-all-defs) in your
+\(make-local-variable 'edebug-all-defs) in your
 `emacs-lisp-mode-hook'.")
 
 (defvar edebug-all-forms nil
@@ -255,7 +255,7 @@ If the result is non-nil, then break.  Errors are ignored.")
 (defmacro def-edebug-spec (symbol spec)
   "Set the edebug-form-spec property of SYMBOL according to SPEC.
 Both SYMBOL and SPEC are unevaluated. The SPEC can be 0, t, a symbol
-(naming a function), or a list."
+\(naming a function), or a list."
   (` (put (quote (, symbol)) 'edebug-form-spec (quote (, spec)))))
 
 (defmacro def-edebug-form-spec (symbol spec-form)
