@@ -12,6 +12,8 @@
 	possible to define arbitrary read-only variables, e.g. with
 	`defconst'.)
 
+	Documentation is in lispref/variables.texi.
+
 	* lisp.h (enum symbol_interned): New enumeration.
 	(struct Lisp_Symbol): Remove member `obarray', add
 	`indirect_variable', `constant', and `interned'.
