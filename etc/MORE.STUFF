@@ -185,7 +185,13 @@ Several are for Debian GNU/Linux in particular.
    <URL:ftp://ftp.m17n.org/pub/mule/Mule-UCS/>
    Extended coding systems for Mule, specifically for reading and
    writing UTF-8 encoded Unicode.  This does more than the built-in
-   utf-8 coding system.
+   utf-8 coding system, specifically covering a lot of Far Eastern
+   characters.  (See the entry in PROBLEMS concerning slow startup of
+   Mule-UCS.)
+
+   Alternatively, various additions and patches for Emacs 21.2 which
+   use and improve the Unicode support are currently available under
+   <URL:ftp://dlpx1.dl.ac.uk/fx/emacs/Mule>.
 
  * Mailcrypt:
    <URL:http://www.pobox.com/%7Elbudney/linux/software/mailcrypt.html>
