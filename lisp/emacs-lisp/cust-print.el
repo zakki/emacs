@@ -329,7 +329,7 @@ This is the custom-print replacement for the standard `princ'."
   (cust-print-top-level object stream 'cust-print-original-princ))
 
 
-(defun custom-prin1-to-string (object)
+(defun custom-prin1-to-string (object &optional noescape)
   "Return a string containing the printed representation of OBJECT,
 any Lisp object.  Quoting characters are used when needed to make output
 that `read' can handle, whenever this is possible.
@@ -342,7 +342,9 @@ This is the custom-print replacement for the standard `prin1-to-string'."
       (set-buffer buf)
       (erase-buffer))
     ;; We must be in the current-buffer when the print occurs.
-    (custom-prin1 object buf)
+    (if noescape
+	(custom-princ object buf)
+      (custom-prin1 object buf))
     (save-excursion
       (set-buffer buf)
       (buffer-string)
