@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1995/04/13 23:38:08 $|$Revision: 3.5.1.15 $|~/modes/edebug.el|
+;; |$Date: 1995/04/14 02:08:53 $|$Revision: 3.5.1.16 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.15 $"))
+  (let ((raw-version "$Revision: 3.5.1.16 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -1609,7 +1609,6 @@ expressions; a `progn' form will be returned enclosing these forms."
    ;; Less frequently used:
    ;; (function . edebug-match-function)
    (lambda-expr . edebug-match-lambda-expr)
-   ;; (keywordp . edebug-match-keywordp)
    (&not . edebug-match-&not)
    (&key . edebug-match-&key)
    (place . edebug-match-place)
@@ -1877,17 +1876,6 @@ expressions; a `progn' form will be returned enclosing these forms."
       )))
 
 
-;; Not needed if the predicate exists.
-'(defun edebug-match-keywordp (cursor)
-  ;; Match a common lisp style keyword symbol.
-  (let ((sexp (edebug-top-element cursor)))
-    (if (edebug-keywordp sexp)
-	(prog1
-	    (list sexp)
-	  (edebug-move-cursor cursor))
-      (edebug-no-match cursor "Keyword expected"))))
-
-		 
 (defun edebug-match-name (cursor)
   ;; Set the edebug-def-name bound in edebug-defining-form.
   (let ((name (edebug-top-element-required cursor "Expected name")))
