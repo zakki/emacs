@@ -1,5 +1,20 @@
 2001-10-04  Gerd Moellmann  <gerd@gnu.org>
 
+	On some systems, XtCloseDisplay seems to cause a SIGSEGV when
+	called for a lost connection.  Prevent dumping core in this case.
+	Instead print the X error, and exit.  On user request.
+	
+	* xterm.c (error_msg): New variable.
+	(x_fatal_error_signal): New function.
+	(x_connection_closed): Set error_msg.  Install
+	x_fatal_error_signal as fatal_error_signal_hook around the call to
+	XtCloseDisplay.
+
+	* emacs.c (fatal_error_signal_hook): New variable.
+	(fatal_error_signal): Call that function.
+
+2001-10-04  Gerd Moellmann  <gerd@gnu.org>
+
 	With this, Emacs prints how much pure storage it will
 	approximately need in case pure storage overflows while dumping.
 
