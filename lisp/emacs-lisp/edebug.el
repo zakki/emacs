@@ -8,7 +8,7 @@
 ;; LCD Archive Entry:
 ;; edebug|Daniel LaLiberte|liberte@cs.uiuc.edu
 ;; |A source level debugger for Emacs Lisp.
-;; |$Date: 1995/08/22 20:49:34 $|$Revision: 3.5.1.21 $|~/modes/edebug.el|
+;; |$Date: 1995/08/27 17:52:46 $|$Revision: 3.5.1.22 $|~/modes/edebug.el|
 
 ;; This file is part of GNU Emacs.
 
@@ -83,7 +83,7 @@
 ;;; For the early revision history, see edebug-history.
 
 (defconst edebug-version
-  (let ((raw-version "$Revision: 3.5.1.21 $"))
+  (let ((raw-version "$Revision: 3.5.1.22 $"))
     (substring raw-version (string-match "[0-9.]*" raw-version)
 	       (match-end 0))))
      
@@ -717,6 +717,8 @@ or if an error occurs, leave point after it with mark at the original point."
     (aset table ?\( 'lparen)
     (aset table ?\) 'rparen)
     (aset table ?\' 'quote)
+    (aset table ?\` 'backquote)
+    (aset table ?\, 'comma)
     (aset table ?\" 'string)
     (aset table ?\? 'char)
     (aset table ?\[ 'lbracket)
@@ -729,7 +731,8 @@ or if an error occurs, leave point after it with mark at the original point."
 
 (defun edebug-next-token-class ()
   ;; Move to the next token and return its class.  We only care about
-  ;; lparen, rparen, dot, quote, string, char, vector, or symbol.
+  ;; lparen, rparen, dot, quote, backquote, comma, string, char, vector,
+  ;; or symbol.
   (edebug-skip-whitespace)
   (aref edebug-read-syntax-table (following-char)))
 
@@ -766,6 +769,10 @@ or if an error occurs, leave point after it with mark at the original point."
 			       (forward-char -1))))
      ((eq class 'quote) (forward-char 1)
       (list 'quote (edebug-read-sexp)))
+     ((eq class 'backquote)
+      (list '\` (edebug-read-sexp)))
+     ((eq class 'comma)
+      (list '\, (edebug-read-sexp)))
      (t ; anything else, just read it.
       (edebug-original-read (current-buffer))))))
 
@@ -855,6 +862,8 @@ or if an error occurs, leave point after it with mark at the original point."
     (lparen . edebug-read-list)
     (string . edebug-read-string)
     (quote . edebug-read-quote)
+    (backquote . edebug-read-backquote)
+    (comma . edebug-read-comma)
     (lbracket . edebug-read-vector)
     (hash . edebug-read-function)
     ))
@@ -891,6 +900,42 @@ or if an error occurs, leave point after it with mark at the original point."
    (edebug-storing-offsets (point)  'quote)
    (edebug-read-storing-offsets stream)))
 
+(defun edebug-read-backquote (stream)
+  ;; Turn `thing into (\` thing)
+  (let ((opoint (point)))
+    (forward-char 1)
+    ;; Generate the same structure of offsets we would have
+    ;; if the resulting list appeared verbatim in the input text.
+    (edebug-storing-offsets opoint
+      (list
+       (edebug-storing-offsets opoint  '\`)
+       (edebug-read-storing-offsets stream)))))
+
+(defvar edebug-read-backquote-new nil
+  "Non-nil if reading the inside of a new-style backquote with no parens around it.
+Value of nil means reading the inside of an old-style backquote construct
+which is surrounded by an extra set of parentheses.
+This controls how we read comma constructs.")
+
+(defun edebug-read-comma (stream)
+  ;; Turn ,thing into (\, thing).  Handle ,@ and ,. also.
+  (let ((opoint (point)))
+    (forward-char 1)
+    (let ((symbol '\,))
+      (cond ((eq (following-char) ?\.)
+	     (setq symbol '\,\.)
+	     (forward-char 1))
+	    ((eq (following-char) ?\@)
+	     (setq symbol '\,@)
+	     (forward-char 1)))
+      ;; Generate the same structure of offsets we would have
+      ;; if the resulting list appeared verbatim in the input text.
+      (if edebug-read-backquote-new
+	  (list
+	   (edebug-storing-offsets opoint symbol)
+	   (edebug-read-storing-offsets stream))
+	(edebug-storing-offsets opoint symbol)))))
+
 (defun edebug-read-function (stream)
   ;; Turn #'thing into (function thing)
   (forward-char 1)
@@ -906,7 +951,18 @@ or if an error occurs, leave point after it with mark at the original point."
   (prog1 
       (let ((elements))
 	(while (not (memq (edebug-next-token-class) '(rparen dot)))
-	  (setq elements (cons (edebug-read-storing-offsets stream) elements)))
+	  (if (eq (edebug-next-token-class) 'backquote)
+	      (let ((edebug-read-backquote-new (not (null elements)))
+		    (opoint (point)))
+		(if edebug-read-backquote-new
+		    (setq elements (cons (edebug-read-backquote stream) elements))
+		  (forward-char 1)	; Skip backquote.
+		  ;; Call edebug-storing-offsets here so that we
+		  ;; produce the same offsets we would have had
+		  ;; if the backquote were an ordinary symbol.
+		  (setq elements (cons (edebug-storing-offsets opoint '\`)
+				       elements))))
+	    (setq elements (cons (edebug-read-storing-offsets stream) elements))))
 	(setq elements (nreverse elements))
 	(if (eq 'dot (edebug-next-token-class))
 	    (let (dotted-form)
