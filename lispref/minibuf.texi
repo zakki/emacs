@@ -1289,6 +1289,18 @@ If the user types @key{RET}, @code{read-file-name} returns the file name
 as the string @code{"/gp/gnu/elisp/manual.texi"}.
 @end defun
 
+@defvar read-file-name-function
+If non-@code{nil}, this should be a function that accepts the same
+arguments as @code{read-file-name}.  When @code{read-file-name} is
+called, it calls this function with the supplied arguments instead of
+doing its usual work.
+@end defvar
+
+@defvar read-file-name-completion-ignore-case
+If this variable is non-@code{nil}, @code{read-file-name} ignores case
+when performing completion.
+@end defvar
+
 @defun read-directory-name prompt &optional directory default existing initial
 This function is like @code{read-file-name} but allows only directory
 names as completion possibilities.
@@ -1297,9 +1309,9 @@ If @var{default} is @code{nil} and @var{initial} is non-@code{nil},
 @code{read-directory-name} constructs a substitute default by
 combining @var{directory} (or the current buffer's default directory
 if @var{directory} is @code{nil}) and @var{initial}.  If both
-@var{default} and @var{initial} are @code{nil}, this function uses the
-current buffer's default directory as substitute default, ignoring
-@var{directory}.
+@var{default} and @var{initial} are @code{nil}, this function uses
+@var{directory} as substitute default, or the current buffer's default
+directory if @var{directory} is @code{nil}.
 @end defun
 
 @defopt insert-default-directory

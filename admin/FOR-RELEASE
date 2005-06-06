@@ -1,8 +1,11 @@
 Tasks needed before the next release.
 
-* NEW FEATURES
+* TO BE DONE SHORTLY BEFORE RELEASE
 
-** Face remapping.
+** `undo-ask-before-discard', currently set to t for debugging purposes
+has to be set to nil: when t, it can leak memory and cause other problems.
+
+* NEW FEATURES
 
 ** Make VC-over-Tramp work where possible, or at least fail
 gracefully if something isn't supported over Tramp.
@@ -15,20 +18,18 @@ See msg from rms to emacs-devel on 21 Dec.
 
 ** Enhance scroll-bar to handle tall line (similar to line-move).
 
+** Adapt mouse-sel-mode to mouse-1-click-follows-link.
+
 
 * FATAL ERRORS
+
+** Make unexec handle memory mapping policy of the latest versions of Linux.
 
 ** Investigate reported crashes in compact_small_strings.
 
 ** Investigate reported crashes related to using an
 invalid pointer from string_free_list.
 
-
-* LOSSAGE
-
-** Clean up flymake.el to follow Emacs Lisp conventions.
-
-** Fix up url-ldap.el.
 
 * BUGS
 
@@ -75,42 +76,6 @@ A fix would be to somehow disable handling of display properties if an error
 is encountered.
 
 
-** custom mode-line face makes Emacs freeze up
-
-From: Stephen Berman <Stephen.Berman@gmx.net>
-Date: Sun, 24 Oct 2004 02:08:56 +0200
-
-1. Start Emacs with -q -no-site-file.
-
-2. Type `M-x customize-face' and at the prompt `mode-line'.
-
-3. In the Custom buffer for mode-line face
-   a. check width and give it the value `narrow';
-   b. check height and give it the value 120 in 1/10 pt;
-   c. check underline and give it the value `on' (or `colored');
-   d. check overline and give it the value `on' (or `colored').
-
-4. Set for current session.
-
-5. Invoke Ediff on any two files.
-
-6. Now Emacs is frozen and consumes 95-99% of CPU.
-
-The customizations in step 3 appear to be the minimum necessary to
-induce this bug.  Leave out any one of them and Ediff runs without a
-problem.  Also if the 1/10 point value of height is 130 or greater
-there's no bug (with the default font family; with e.g. Helvetica the
-bug is induced only by a value of 100 or less).
-
-I've noticed this freeze up only when invoking Ediff.  The only thing
-I've been able to do is kill Emacs externally, via top or with kill
-when run in gdb, after interrupting.  When the freeze up happens
-within a gdb session, there is no automatic debugging feedback.  After
-interrupting I can get a backtrace, here's an example:
-
-Update: Maybe only reveals itself when compiled with GTK+
-
-
 * DOCUMENTATION
 
 ** Document Custom Themes.
@@ -121,9 +86,29 @@ Update: Maybe only reveals itself when compiled with GTK+
 
 *** Update man/info.texi.
 
-*** Update man/ack.texi.
-
 ** Add missing years in copyright notices of all files.
+
+Policy document admin/notes/years must be updated before
+making further progress on this task!!!
+
+Please record your name here and say which part of the distribution
+you're going to handle.
+
+DIRECTORY		STATUS		IN CHARGE
+---------		------		---------
+leim			working		Kenichi Handa
+lisp/calc		working		Thien-Thi Nguyen
+lisp/calendar		working		Glenn Morris
+lisp/emulation		working		Thien-Thi Nguyen
+lisp/eshell		working		Thien-Thi Nguyen
+lisp/international	done		Kenichi Handa
+lisp/languages		done		Kenichi Handa
+lisp/mh-e		working		Thien-Thi Nguyen
+lisp/net		working		Thien-Thi Nguyen
+lisp/play		working		Thien-Thi Nguyen
+lisp/term		working		Thien-Thi Nguyen
+lisp/toolbar		working		Thien-Thi Nguyen
+lisp/url		working		Thien-Thi Nguyen
 
 ** Update AUTHORS.
 
@@ -145,12 +130,12 @@ man/basic.texi      "Luc Teirlinck"  Chong Yidong
 man/buffers.texi    "Luc Teirlinck"  Chong Yidong
 man/building.texi   "Ted Zlatanov" <tzz@lifelogs.com>
 man/calendar.texi   joakim@verona.se  Chong Yidong
-man/cmdargs.texi    Chong Yidong
+man/cmdargs.texi    Chong Yidong     "Luc Teirlinck"
 man/commands.texi   "Luc Teirlinck"  Chong Yidong
 man/custom.texi     Chong Yidong
 man/dired.texi      Chong Yidong     joakim@verona.se
 man/display.texi    "Luc Teirlinck"  Chong Yidong
-man/emacs.texi      "Luc Teirlinck"
+man/emacs.texi      "Luc Teirlinck"  Lute Kamstra
 man/entering.texi   "Luc Teirlinck"  Chong Yidong
 man/files.texi      "Luc Teirlinck"  Chong Yidong
 man/fixit.texi      "Luc Teirlinck"  Chong Yidong
@@ -172,10 +157,10 @@ man/m-x.texi        "Luc Teirlinck"  Chong Yidong
 man/picture.texi    Joakim Verona <joakim@verona.se>   Chong Yidong
 man/programs.texi   "Stephen Eglen"  Chong Yidong
 man/regs.texi       "Luc Teirlinck"   Chong Yidong
-man/rmail.texi      Chong Yidong
+man/rmail.texi      Chong Yidong      "Luc Teirlinck"
 man/screen.texi     "Luc Teirlinck"   Chong Yidong
 man/search.texi     "Luc Teirlinck"   Chong Yidong
-man/sending.texi    Chong Yidong
+man/sending.texi    Chong Yidong      "Luc Teirlinck"
 man/text.texi       "Luc Teirlinck"   Chong Yidong
 man/trouble.texi    Chong Yidong
 man/windows.texi    "Luc Teirlinck"   Chong Yidong
@@ -203,7 +188,7 @@ lispref/customize.texi   Chong Yidong
 lispref/debugging.texi   Joakim Verona <joakim@verona.se>   Lute Kamstra
 lispref/display.texi     Chong Yidong
 lispref/edebug.texi      Chong Yidong
-lispref/elisp.texi       "Luc Teirlinck"
+lispref/elisp.texi       "Luc Teirlinck"   Lute Kamstra
 lispref/errors.texi      "Luc Teirlinck"
 lispref/eval.texi        "Luc Teirlinck"   Chong Yidong
 lispref/files.texi       "Luc Teirlinck"   Chong Yidong
@@ -211,7 +196,7 @@ lispref/frames.texi      "Luc Teirlinck"   Chong Yidong
 lispref/functions.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/hash.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/help.texi	 "Luc Teirlinck"   Chong Yidong
-lispref/hooks.texi
+lispref/hooks.texi	 Lute Kamstra
 lispref/internals.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/intro.texi	 "Luc Teirlinck"
 lispref/keymaps.texi	 "Luc Teirlinck"   Chong Yidong
@@ -228,7 +213,7 @@ lispref/numbers.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/objects.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/os.texi		 "Luc Teirlinck"   Chong Yidong
 lispref/positions.texi	 "Luc Teirlinck"   Chong Yidong
-lispref/processes.texi   Chong Yidong
+lispref/processes.texi   Chong Yidong	   Thien-Thi Nguyen
 lispref/searching.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/sequences.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/streams.texi	 "Luc Teirlinck"   Chong Yidong
@@ -239,6 +224,42 @@ lispref/text.texi        Chong Yidong
 lispref/tips.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/variables.texi	 "Luc Teirlinck"   Chong Yidong
 lispref/windows.texi     "Luc Teirlinck"   Chong Yidong
+
+** Check the Emacs Tutorial.
+
+The first line of every tutorial must begin with text ending in a period
+(".", ASCII 0x2E) saying "Emacs Tutorial" in the respective language.
+This should be followed by "See end for copying conditions", likewise
+in the respective language.
+
+After each file name, on the same line or the following line, come the
+names of the people who have checked it.
+
+
+SECTION                  READERS
+----------------------------------
+etc/TUTORIAL             rms
+etc/TUTORIAL.bg          Ognyan Kulev <ogi@fmi.uni-sofia.bg>
+etc/TUTORIAL.cn
+etc/TUTORIAL.cs          Pavel Janík <Pavel@Janik.cz>
+etc/TUTORIAL.de          Werner LEMBERG <wl@gnu.org>
+etc/TUTORIAL.es          Marcelo Toledo
+etc/TUTORIAL.fr          Thien-Thi Nguyen
+etc/TUTORIAL.it          Thien-Thi Nguyen
+etc/TUTORIAL.ja		 Kenichi Handa <handa@m17n.org>
+etc/TUTORIAL.ko
+etc/TUTORIAL.nl		 Lute Kamstra
+etc/TUTORIAL.pl          Slawomir Nowaczyk <slawek@cs.lth.se>
+etc/TUTORIAL.pt_BR       Marcelo Toledo
+etc/TUTORIAL.ro
+etc/TUTORIAL.ru          Alex Ott <alexott@gmail.com>
+etc/TUTORIAL.sk          Pavel Janík <Pavel@Janik.cz>
+etc/TUTORIAL.sl          Primoz PETERLIN <primoz.peterlin@biofiz.mf.uni-lj.si>
+etc/TUTORIAL.sv          Mats Lidell <matsl@contactor.se>
+etc/TUTORIAL.th          Virach Sornlertlamvanich <virach@tcllab.org>
+etc/TUTORIAL.zh
+
+
 
 
 Local variables:

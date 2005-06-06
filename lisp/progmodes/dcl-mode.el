@@ -78,7 +78,7 @@
 (defvar dcl-font-lock-keywords
   '(("\\<\\(if\\|then\\|else\\|endif\\)\\>"
      1 font-lock-keyword-face)
-    ("\\<f[$][a-z]+\\>"
+    ("\\<f[$][a-z_]+\\>"
      0 font-lock-builtin-face)
     ("[.]\\(eq\\|not\\|or\\|and\\|lt\\|gt\\|le\\|ge\\|eqs\\|nes\\)[.]"
      0 font-lock-builtin-face))
@@ -641,7 +641,7 @@ There is some minimal font-lock support (see vars
   (setq mode-name "DCL")
   (use-local-map dcl-mode-map)
   (tempo-use-tag-list 'dcl-tempo-tags)
-  (run-hooks 'dcl-mode-hook))
+  (run-mode-hooks 'dcl-mode-hook))
 
 
 ;;; *** Movement commands ***************************************************

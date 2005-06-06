@@ -1,6 +1,6 @@
 ;;; autorevert.el --- revert buffers when files on disk change
 
-;; Copyright (C) 1997, 1998, 1999, 2001, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1998, 1999, 2001, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Anders Lindgren <andersl@andersl.com>
 ;; Keywords: convenience
@@ -246,7 +246,7 @@ This currently works by automatically updating the version
 control info every `auto-revert-interval' seconds.  Nevertheless,
 it should not cause excessive CPU usage on a reasonably fast
 machine, if it does not apply to too many version controlled
-buffers.  CPU usage depends on the version control system"
+buffers.  CPU usage depends on the version control system."
   :group 'auto-revert
   :type 'boolean
   :version "22.1")
@@ -290,7 +290,7 @@ This is a minor mode that affects only the current buffer.
 Use `global-auto-revert-mode' to automatically revert all buffers.
 Use `auto-revert-tail-mode' if you know that the file will only grow
 without being changed in the part that is already in the buffer."
-  nil auto-revert-mode-text nil
+  :group 'auto-revert :lighter auto-revert-mode-text
   (if auto-revert-mode
       (if (not (memq (current-buffer) auto-revert-buffer-list))
 	  (push (current-buffer) auto-revert-buffer-list))
@@ -484,46 +484,47 @@ are checked first the next time this function is called.
 This function is also responsible for removing buffers no longer in
 Auto-Revert mode from `auto-revert-buffer-list', and for canceling
 the timer when no buffers need to be checked."
-  (let ((bufs (if global-auto-revert-mode
-		  (buffer-list)
-		auto-revert-buffer-list))
-	(remaining ())
-	(new ()))
-    ;; Partition `bufs' into two halves depending on whether or not
-    ;; the buffers are in `auto-revert-remaining-buffers'.  The two
-    ;; halves are then re-joined with the "remaining" buffers at the
-    ;; head of the list.
-    (dolist (buf auto-revert-remaining-buffers)
-      (if (memq buf bufs)
-	  (push buf remaining)))
-    (dolist (buf bufs)
-      (if (not (memq buf remaining))
-	  (push buf new)))
-    (setq bufs (nreverse (nconc new remaining)))
-    (while (and bufs
-		(not (and auto-revert-stop-on-user-input
-			  (input-pending-p))))
-      (let ((buf (car bufs)))
-	(if (buffer-name buf)		; Buffer still alive?
-	    (with-current-buffer buf
-	      ;; Test if someone has turned off Auto-Revert Mode in a
-	      ;; non-standard way, for example by changing major mode.
-	      (if (and (not auto-revert-mode)
-		       (not auto-revert-tail-mode)
-		       (memq buf auto-revert-buffer-list))
-		  (setq auto-revert-buffer-list
-			(delq buf auto-revert-buffer-list)))
-	      (when (auto-revert-active-p) (auto-revert-handler)))
-	  ;; Remove dead buffer from `auto-revert-buffer-list'.
-	  (setq auto-revert-buffer-list
-		(delq buf auto-revert-buffer-list))))
-      (setq bufs (cdr bufs)))
-    (setq auto-revert-remaining-buffers bufs)
-    ;; Check if we should cancel the timer.
-    (when (and (not global-auto-revert-mode)
-	       (null auto-revert-buffer-list))
-      (cancel-timer auto-revert-timer)
-      (setq auto-revert-timer nil))))
+  (save-match-data
+    (let ((bufs (if global-auto-revert-mode
+		    (buffer-list)
+		  auto-revert-buffer-list))
+	  (remaining ())
+	  (new ()))
+      ;; Partition `bufs' into two halves depending on whether or not
+      ;; the buffers are in `auto-revert-remaining-buffers'.  The two
+      ;; halves are then re-joined with the "remaining" buffers at the
+      ;; head of the list.
+      (dolist (buf auto-revert-remaining-buffers)
+	(if (memq buf bufs)
+	    (push buf remaining)))
+      (dolist (buf bufs)
+	(if (not (memq buf remaining))
+	    (push buf new)))
+      (setq bufs (nreverse (nconc new remaining)))
+      (while (and bufs
+		  (not (and auto-revert-stop-on-user-input
+			    (input-pending-p))))
+	(let ((buf (car bufs)))
+	  (if (buffer-name buf)		; Buffer still alive?
+	      (with-current-buffer buf
+		;; Test if someone has turned off Auto-Revert Mode in a
+		;; non-standard way, for example by changing major mode.
+		(if (and (not auto-revert-mode)
+			 (not auto-revert-tail-mode)
+			 (memq buf auto-revert-buffer-list))
+		    (setq auto-revert-buffer-list
+			  (delq buf auto-revert-buffer-list)))
+		(when (auto-revert-active-p) (auto-revert-handler)))
+	    ;; Remove dead buffer from `auto-revert-buffer-list'.
+	    (setq auto-revert-buffer-list
+		  (delq buf auto-revert-buffer-list))))
+	(setq bufs (cdr bufs)))
+      (setq auto-revert-remaining-buffers bufs)
+      ;; Check if we should cancel the timer.
+      (when (and (not global-auto-revert-mode)
+		 (null auto-revert-buffer-list))
+	(cancel-timer auto-revert-timer)
+	(setq auto-revert-timer nil)))))
 
 
 ;; The end:

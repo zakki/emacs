@@ -1,6 +1,6 @@
 ;;; calc-misc.el --- miscellaenous functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -160,7 +160,7 @@ Calc user interface as before (either M-# C or M-# K; initially M-# C)."
   "Go to a node in the Calculator info documentation."
   (interactive)
   (select-window (get-largest-window))
-  (Info-goto-node (concat "(Calc)" node)))
+  (info (concat "(Calc)" node)))
 
 (defun calc-tutorial ()
   "Run the Emacs Info system on the Calculator Tutorial."

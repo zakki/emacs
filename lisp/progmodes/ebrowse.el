@@ -1,6 +1,6 @@
 ;;; ebrowse.el --- Emacs C++ class browser & tags facility
 
-;; Copyright (C) 1992, 93, 94, 95, 96, 97, 98, 99, 2000, 2001, 2002
+;; Copyright (C) 1992, 93, 94, 95, 96, 97, 98, 99, 2000, 2001, 2002, 2005
 ;;  Free Software Foundation Inc.
 
 ;; Author: Gerd Moellmann <gerd@gnu.org>
@@ -158,13 +158,15 @@ This space is used to display markers."
 
 
 (defface ebrowse-tree-mark-face
-  '((t (:foreground "red")))
+  '((((min-colors 88)) (:foreground "red1"))
+    (t (:foreground "red")))
   "*The face used for the mark character in the tree."
   :group 'ebrowse-faces)
 
 
 (defface ebrowse-root-class-face
-  '((t (:weight bold :foreground "blue")))
+  '((((min-colors 88)) (:weight bold :foreground "blue1"))
+    (t (:weight bold :foreground "blue")))
   "*The face used for root classes in the tree."
   :group 'ebrowse-faces)
 
@@ -182,7 +184,8 @@ This space is used to display markers."
 
 
 (defface ebrowse-member-attribute-face
-  '((t (:foreground "red")))
+  '((((min-colors 88)) (:foreground "red1"))
+    (t (:foreground "red")))
   "*Face used to display member attributes."
   :group 'ebrowse-faces)
 
@@ -194,7 +197,8 @@ This space is used to display markers."
 
 
 (defface ebrowse-progress-face
-  '((t (:background "blue")))
+  '((((min-colors 88)) (:background "blue1"))
+    (t (:background "blue")))
   "*Face for progress indicator."
   :group 'ebrowse-faces)
 
@@ -1158,7 +1162,7 @@ Tree mode key bindings:
     (when tree
       (ebrowse-redraw-tree)
       (set-buffer-modified-p nil))
-    (run-hooks 'ebrowse-tree-mode-hook)))
+    (run-mode-hooks 'ebrowse-tree-mode-hook)))
 
 
 
@@ -1444,10 +1448,10 @@ Pop to member buffer if no prefix ARG, to tree buffer otherwise."
 (defun ebrowse-set-tree-indentation ()
   "Set the indentation width of the tree display."
   (interactive)
-  (let ((width (string-to-int (read-from-minibuffer
-			       (concat "Indentation ("
-				       (int-to-string ebrowse--indentation)
-				       "): ")))))
+  (let ((width (string-to-number (read-from-minibuffer
+                                  (concat "Indentation ("
+                                          (int-to-string ebrowse--indentation)
+                                          "): ")))))
     (when (plusp width)
       (setf ebrowse--indentation width)
       (ebrowse-redraw-tree))))
@@ -2022,7 +2026,7 @@ COLLAPSE non-nil means collapse the branch."
 	truncate-lines t
 	buffer-read-only t
 	major-mode 'ebrowse-electric-list-mode)
-  (run-hooks 'ebrowse-electric-list-mode-hook))
+  (run-mode-hooks 'ebrowse-electric-list-mode-hook))
 
 
 (defun ebrowse-list-tree-buffers ()
@@ -2273,7 +2277,7 @@ See 'Electric-command-loop' for a description of STATE and CONDITION."
 	ebrowse--const-display-flag nil
 	ebrowse--pure-display-flag nil)
   (modify-syntax-entry ?_ (char-to-string (char-syntax ?a)))
-  (run-hooks 'ebrowse-member-mode-hook))
+  (run-mode-hooks 'ebrowse-member-mode-hook))
 
 
 
@@ -2325,7 +2329,7 @@ With prefix ARG, switch to the tree buffer else pop to it."
   "Set the column width of the member display.
 The new width is read from the minibuffer."
   (interactive)
-  (let ((width (string-to-int
+  (let ((width (string-to-number
 		(read-from-minibuffer
 		 (concat "Column width ("
 			 (int-to-string (if ebrowse--long-display-flag
@@ -3933,7 +3937,7 @@ Prefix arg ARG says how much."
 
 
 (defvar ebrowse-electric-position-mode-hook nil
-  "If non-nil, its value is called by ebrowse-electric-position-mode.")
+  "If non-nil, its value is called by `ebrowse-electric-position-mode'.")
 
 
 (unless ebrowse-electric-position-mode-map
@@ -3983,7 +3987,7 @@ Runs the hook `ebrowse-electric-position-mode-hook'."
 	truncate-lines t
 	buffer-read-only t
 	major-mode 'ebrowse-electric-position-mode)
-  (run-hooks 'ebrowse-electric-position-mode-hook))
+  (run-mode-hooks 'ebrowse-electric-position-mode-hook))
 
 
 (defun ebrowse-draw-position-buffer ()
@@ -4181,7 +4185,7 @@ Otherwise, FILE-NAME specifies the file to save the tree in."
 
 (defun ebrowse-print-statistics-line (title value)
   "Print a line in the statistics buffer.
-TITLE is the title of the line, VALUE is number to be printed
+TITLE is the title of the line, VALUE is a number to be printed
 after that."
   (insert title)
   (indent-to 40)
@@ -4309,13 +4313,13 @@ NUMBER-OF-STATIC-VARIABLES:"
   "Select the nth entry in the list by the keys 1..9."
   (interactive)
   (let* ((maxlin (count-lines (point-min) (point-max)))
-	 (n (min maxlin (+ 2 (string-to-int (this-command-keys))))))
+	 (n (min maxlin (+ 2 (string-to-number (this-command-keys))))))
     (goto-line n)
     (throw 'electric-buffer-menu-select (point))))
 
 
 (defun ebrowse-install-1-to-9-keys ()
-  "Define keys 1..9 to select the 1st to 0nth entry in the list."
+  "Define keys 1..9 to select the 1st to 9nth entry in the list."
   (dotimes (i 9)
     (define-key (current-local-map) (char-to-string (+ i ?1))
       'ebrowse-select-1st-to-9nth)))

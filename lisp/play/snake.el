@@ -1,6 +1,6 @@
 ;;; snake.el --- implementation of Snake for Emacs
 
-;; Copyright (C) 1997 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2002 Free Software Foundation, Inc.
 
 ;; Author: Glynn Clements <glynn@sensei.co.uk>
 ;; Created: 1997-09-10
@@ -385,7 +385,7 @@ Snake mode keybindings:
 
   (gamegrid-init (snake-display-options))
 
-  (run-hooks 'snake-mode-hook))
+  (run-mode-hooks 'snake-mode-hook))
 
 ;;;###autoload
 (defun snake ()

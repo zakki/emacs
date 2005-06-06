@@ -1,5 +1,5 @@
 /* Internals of a lightweight menubar widget.
-   Copyright (C) 1999, 2000, 2002, 2004  Free Software Foundation, Inc.
+   Copyright (C) 1999, 2000, 2002, 2004, 2005  Free Software Foundation, Inc.
 
 This file is part of the Lucid Widget Library.
 
@@ -44,11 +44,10 @@ typedef struct _XlwMenu_part
 {
   /* slots set by the resources */
 #ifdef HAVE_X_I18N
-  XFontSet	font;
+  XFontSet	fontSet;
   XFontSetExtents *font_extents;
-#else
-  XFontStruct*	font;
 #endif
+  XFontStruct*	font;
   Pixel		foreground;
   Pixel		disabled_foreground;
   Pixel		button_foreground;

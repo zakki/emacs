@@ -1,6 +1,6 @@
 ;;; whitespace.el --- warn about and clean bogus whitespaces in the file
 
-;; Copyright (C) 1999, 2000 Free Software Foundation, Inc.
+;; Copyright (C) 1999, 2000, 2005 Free Software Foundation, Inc.
 
 ;; Author: Rajesh Vaidheeswarran <rv@gnu.org>
 ;; Keywords: convenience
@@ -86,7 +86,7 @@
 
 ;;; Code:
 
-(defvar whitespace-version "3.4" "Version of the whitespace library.")
+(defvar whitespace-version "3.5" "Version of the whitespace library.")
 
 (defvar whitespace-all-buffer-files nil
   "An associated list of buffers and files checked for whitespace cleanliness.
@@ -319,7 +319,7 @@ To disable timer scans, set this to zero."
   :group 'faces)
 
 (defface whitespace-highlight-face '((((class color) (background light))
-				      (:background "green"))
+				      (:background "green1"))
 				     (((class color) (background dark))
 				      (:background "sea green"))
 				     (((class grayscale mono)
@@ -489,16 +489,14 @@ and:
 				  (if whitespace-spacetab "s")
 				  (if whitespace-trailing "t")))))
 	      (whitespace-update-modeline whitespace-this-modeline)
-	      (save-excursion
-		(get-buffer-create whitespace-errbuf)
-		(kill-buffer whitespace-errbuf)
-		(get-buffer-create whitespace-errbuf)
-		(set-buffer whitespace-errbuf)
+	      (if (get-buffer whitespace-errbuf)
+		  (kill-buffer whitespace-errbuf))
+	      (with-current-buffer (get-buffer-create whitespace-errbuf)
 		(if whitespace-errmsg
 		    (progn
 		      (insert whitespace-errmsg)
 		      (if (not (or quiet whitespace-silent))
-			  (display-buffer whitespace-errbuf t))
+			  (display-buffer (current-buffer) t))
 		      (if (not quiet)
 			  (message "Whitespaces: [%s%s] in %s"
 				   whitespace-this-modeline
@@ -511,9 +509,7 @@ and:
 		  (if (and (not quiet) (not (equal whitespace-clean-msg "")))
 		      (message "%s %s" whitespace-filename
 			       whitespace-clean-msg))))))))
-    (if whitespace-error
-	t
-      nil)))
+    whitespace-error))
 
 ;;;###autoload
 (defun whitespace-region (s e)
@@ -603,7 +599,7 @@ whitespace problems."
       (setq pmax (point))
       (if (equal pmin pmax)
 	  (progn
-	    (whitespace-highlight-the-space pmin pmax)
+	    (whitespace-highlight-the-space pmin (1+ pmax))
 	    t)
 	nil))))
 
@@ -641,7 +637,7 @@ whitespace problems."
 	    (setq pmax (point))
 	    (if (equal pmin pmax)
 		(progn
-		  (whitespace-highlight-the-space pmin pmax)
+		  (whitespace-highlight-the-space (- pmin 1) pmax)
 		  t)
 	      nil))
 	nil))))
@@ -736,23 +732,16 @@ Also with whitespaces whose testing has been turned off."
 (defun whitespace-highlight-the-space (b e)
   "Highlight the current line, unhighlighting a previously jumped to line."
   (if whitespace-display-spaces-in-color
-      (progn
-	(whitespace-unhighlight-the-space)
-	(add-to-list 'whitespace-highlighted-space
-		     (whitespace-make-overlay b e))
-	(whitespace-overlay-put (whitespace-make-overlay b e) 'face
-				'whitespace-highlight-face))))
+      (let ((ol (whitespace-make-overlay b e)))
+	(push ol whitespace-highlighted-space)
+	(whitespace-overlay-put ol 'face 'whitespace-highlight-face))))
 ;;  (add-hook 'pre-command-hook 'whitespace-unhighlight-the-space))
 
-(defun whitespace-unhighlight-the-space ()
+(defun whitespace-unhighlight-the-space()
   "Unhighlight the currently highlight line."
   (if (and whitespace-display-spaces-in-color whitespace-highlighted-space)
-      (let ((whitespace-this-space nil))
-	(while whitespace-highlighted-space
-	  (setq whitespace-this-space (car whitespace-highlighted-space))
-	  (setq whitespace-highlighted-space
-		(cdr whitespace-highlighted-space))
-	  (whitespace-delete-overlay whitespace-this-space))
+      (progn
+	(mapc 'whitespace-delete-overlay whitespace-highlighted-space)
 	(setq whitespace-highlighted-space nil))
     (remove-hook 'pre-command-hook 'whitespace-unhighlight-the-space)))
 
@@ -863,5 +852,5 @@ This is meant to be added buffer-locally to `write-file-functions'."
 
 (provide 'whitespace)
 
-;;; arch-tag: 4ff44e87-b63c-402d-95a6-15e51e58bd0c
+;; arch-tag: 4ff44e87-b63c-402d-95a6-15e51e58bd0c
 ;;; whitespace.el ends here

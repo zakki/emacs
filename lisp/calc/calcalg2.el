@@ -1,6 +1,6 @@
 ;;; calcalg2.el --- more algebraic functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -149,7 +149,7 @@
 					   (and step (list step)))))))
 
 (defun calc-solve-for (var)
-  (interactive "sVariable to solve for: ")
+  (interactive "sVariable(s) to solve for: ")
   (calc-slow-wrapper
    (let ((func (if (calc-is-inverse)
 		   (if (calc-is-hyperbolic) 'calcFunc-ffinv 'calcFunc-finv)
@@ -202,6 +202,8 @@
 (defvar math-deriv-var)
 (defvar math-deriv-total)
 (defvar math-deriv-symb)
+(defvar math-decls-cache)
+(defvar math-decls-all)
 
 (defun math-derivative (expr)
   (cond ((equal expr math-deriv-var)

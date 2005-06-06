@@ -1,6 +1,6 @@
 /* Fundamental definitions for GNU Emacs Lisp interpreter.
-   Copyright (C) 1985,86,87,93,94,95,97,98,1999,2000,01,02,03,2004
-     Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 1998, 1999, 2000,
+   2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -451,7 +451,7 @@ enum pvec_type
 #define make_number(N) \
   (__extension__ ({ Lisp_Object _l; _l.s.val = (N); _l.s.type = Lisp_Int; _l; }))
 #else
-extern Lisp_Object make_number ();
+extern Lisp_Object make_number P_ ((EMACS_INT));
 #endif
 
 #define EQ(x, y) ((x).s.val == (y).s.val && (x).s.type == (y).s.type)
@@ -719,6 +719,14 @@ struct Lisp_Vector
    The first 256 are indexed by the code itself, but the last 128 are
    indexed by (charset-id + 128).  */
 #define CHAR_TABLE_ORDINARY_SLOTS 384
+
+/* These are the slot of the default values for single byte
+   characters.  As 0x9A is never be a charset-id, it is safe to use
+   that slot for ASCII.  0x9E and 0x80 are charset-ids of
+   eight-bit-control and eight-bit-graphic respectively.  */
+#define CHAR_TABLE_DEFAULT_SLOT_ASCII (0x9A + 128)
+#define CHAR_TABLE_DEFAULT_SLOT_8_BIT_CONTROL (0x9E + 128)
+#define CHAR_TABLE_DEFAULT_SLOT_8_BIT_GRAPHIC (0x80 + 128)
 
 /* This is the number of slots that apply to characters of ASCII and
    8-bit Europeans only.  */
@@ -1861,7 +1869,8 @@ extern Lisp_Object case_temp2;
     NATNUMP (case_temp2))					\
    ? XFASTINT (case_temp2) : case_temp1)
 
-extern Lisp_Object Vascii_downcase_table;
+extern Lisp_Object Vascii_downcase_table, Vascii_upcase_table;
+extern Lisp_Object Vascii_canon_table, Vascii_eqv_table;
 
 /* Number of bytes of structure consed since last GC.  */
 
@@ -2343,7 +2352,6 @@ extern Lisp_Object string_to_multibyte P_ ((Lisp_Object));
 extern Lisp_Object string_make_unibyte P_ ((Lisp_Object));
 EXFUN (Fcopy_alist, 1);
 EXFUN (Fplist_get, 2);
-EXFUN (Fsafe_plist_get, 2);
 EXFUN (Fplist_put, 3);
 EXFUN (Fplist_member, 2);
 EXFUN (Fset_char_table_parent, 2);
@@ -3091,7 +3099,7 @@ extern Lisp_Object next_single_char_property_change P_ ((Lisp_Object,
 
 /* defined in xmenu.c */
 EXFUN (Fx_popup_menu, 2);
-EXFUN (Fx_popup_dialog, 2);
+EXFUN (Fx_popup_dialog, 3);
 extern void syms_of_xmenu P_ ((void));
 
 /* defined in sysdep.c */

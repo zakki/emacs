@@ -1,6 +1,7 @@
 ;;; xscheme.el --- run MIT Scheme under Emacs
 
-;; Copyright (C) 1986, 1987, 1989, 1990, 2001, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1986, 1987, 1989, 1990, 2001, 2004, 2005
+;;  Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: languages, lisp
@@ -337,7 +338,7 @@ with no args, if that value is non-nil.
                 (setq xscheme-previous-process-state (cons nil nil)))))))
   (scheme-interaction-mode-initialize)
   (scheme-mode-variables)
-  (run-hooks 'scheme-mode-hook 'scheme-interaction-mode-hook))
+  (run-mode-hooks 'scheme-mode-hook 'scheme-interaction-mode-hook))
 
 (defun exit-scheme-interaction-mode ()
   "Take buffer out of scheme interaction mode"
@@ -408,7 +409,7 @@ characters perform useful functions.
 
 Commands:
 \\{scheme-debugger-mode-map}"
-  (error "Illegal entry to scheme-debugger-mode"))
+  (error "Invalid entry to scheme-debugger-mode"))
 
 (defun scheme-debugger-mode-initialize ()
   (use-local-map scheme-debugger-mode-map)

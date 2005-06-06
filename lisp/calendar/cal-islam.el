@@ -29,8 +29,8 @@
 ;; diary.el that deal with the Islamic calendar.
 
 ;; Technical details of all the calendrical calculations can be found in
-;; ``Calendrical Calculations'' by Nachum Dershowitz and Edward M. Reingold,
-;; Cambridge University Press (1997).
+;; ``Calendrical Calculations: The Millennium Edition'' by Edward M. Reingold
+;; and Nachum Dershowitz, Cambridge University Press (2001).
 
 ;; Comments, corrections, and improvements should be sent to
 ;;  Edward M. Reingold               Department of Computer Science
@@ -337,13 +337,13 @@ provided for use as part of the nongregorian-diary-marking-hook."
                       (buffer-substring
                        (match-beginning m-name-pos)
                        (match-end m-name-pos))))
-                 (mm (string-to-int
+                 (mm (string-to-number
                       (if m-pos
                           (buffer-substring
                            (match-beginning m-pos)
                            (match-end m-pos))
                         "")))
-                 (dd (string-to-int
+                 (dd (string-to-number
                       (if d-pos
                           (buffer-substring
                            (match-beginning d-pos)
@@ -362,14 +362,14 @@ provided for use as part of the nongregorian-diary-marking-hook."
                                     (calendar-islamic-from-absolute
                                      (calendar-absolute-from-gregorian
                                       (calendar-current-date)))))
-                                  (y (+ (string-to-int y-str)
+                                  (y (+ (string-to-number y-str)
                                         (* 100 (/ current-y 100)))))
                              (if (> (- y current-y) 50)
                                  (- y 100)
                                (if (> (- current-y y) 50)
                                    (+ y 100)
                                  y)))
-                         (string-to-int y-str)))))
+                         (string-to-number y-str)))))
             (if dd-name
                 (mark-calendar-days-named
                  (cdr (assoc-string dd-name

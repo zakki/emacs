@@ -1,8 +1,9 @@
 ;;; reftex-vars.el --- configuration variables for RefTeX
-;; Copyright (c) 1997, 1998, 1999, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (c) 1997, 1998, 1999, 2003, 2004, 2005
+;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.26
+;; Version: 4.28
 
 ;; This file is part of GNU Emacs.
 
@@ -154,6 +155,21 @@ distribution.  Mixed-case symbols are convenience aliases.")
       (?f    . "\\fullcite{%l}")
       (?F    . "\\fullocite{%l}")
       (?n    . "\\nocite{%l}")))
+    (jurabib "The Jurabib package"
+     ((?\C-m . "\\cite{%l}")
+      (?c    . "\\cite[][]{%l}")
+      (?t    . "\\citet{%l}")
+      (?p    . "\\citep{%l}")
+      (?e    . "\\citep[e.g.][]{%l}")
+      (?s    . "\\citep[see][]{%l}")
+      (?u    . "\\fullcite{%l}")
+      (?i    . "\\citetitle{%l}")
+      (?a    . "\\citeauthor{%l}")
+      (?e    . "\\citefield{}{%l}")
+      (?y    . "\\citeyear{%l}")
+      (?f    . "\\footcite{%l}")
+      (?F    . "\\footcite[][]{%l}")
+      (?l    . "\\footfullcite{%l}")))
     (bibentry "The Bibentry package"
       "\\bibentry{%l}")
     (harvard "The Harvard package"
@@ -638,7 +654,7 @@ or macro."
   "Non-nil means, trust the label prefix when determining label type.
 It is customary to use special label prefixes to distinguish different label
 types.  The label prefixes have no syntactic meaning in LaTeX (unless
-special packages like fancyref) are being used.  RefTeX can and by
+special packages like fancyref are being used).  RefTeX can and by
 default does parse around each label to detect the correct label type,
 but this process can be slow when a document contains thousands of
 labels.  If you use label prefixes consistently, you may speed up
@@ -747,7 +763,7 @@ And here is the setup for RefTeX:
 
 If DERIVE is t, RefTeX will try to derive a sensible label from context.
 A section label for example will be derived from the section heading.
-The conversion of the context to a legal label is governed by the
+The conversion of the context to a valid label is governed by the
 specifications given in `reftex-derive-label-parameters'.
 If RefTeX fails to derive a label, it will prompt the user.
 If DERIVE is nil, the label generated will consist of the prefix and a
@@ -790,7 +806,7 @@ e (equation), n (footnote), N (endnote), plus any definitions in
                         (string :tag "selected label types" ""))))
 
 (defcustom reftex-string-to-label-function 'reftex-string-to-label
-  "Function to turn an arbitrary string into a legal label.
+  "Function to turn an arbitrary string into a valid label.
 RefTeX's default function uses the variable `reftex-derive-label-parameters'."
   :group 'reftex-making-and-inserting-labels
   :type 'symbol)
@@ -798,7 +814,7 @@ RefTeX's default function uses the variable `reftex-derive-label-parameters'."
 (defcustom reftex-translate-to-ascii-function 'reftex-latin1-to-ascii
   "Filter function which will process a context string before it is used
 to derive a label from it.  The intended application is to convert ISO or
-Mule characters into something legal in labels.  The default function
+Mule characters into something valid in labels.  The default function
 removes the accents from Latin-1 characters.  X-Symbol (>=2.6) sets this
 variable to the much more general `x-symbol-translate-to-ascii'."
   :group 'reftex-making-and-inserting-labels
@@ -811,8 +827,8 @@ This variable is a list of the following items.
 
 NWORDS      Number of words to use.
 MAXCHAR     Maximum number of characters in a label string.
-ILLEGAL     nil: Throw away any words containing characters illegal in labels.
-            t:   Throw away only the illegal characters, not the whole word.
+INVALID     nil: Throw away any words containing characters invalid in labels.
+            t:   Throw away only the invalid characters, not the whole word.
 ABBREV      nil: Never abbreviate words.
             t:   Always abbreviate words (see `reftex-abbrev-parameters').
             not t and not nil: Abbreviate words if necessary to shorten
@@ -823,7 +839,7 @@ DOWNCASE    t:   Downcase words before using them."
   :group 'reftex-making-and-inserting-labels
   :type  '(list (integer :tag "Number of words            "  3)
                 (integer :tag "Maximum label length       " 20)
-                (choice  :tag "Illegal characters in words"
+                (choice  :tag "Invalid characters in words"
                          (const :tag "throw away entire word" nil)
                          (const :tag "throw away single chars" t))
                 (choice  :tag "Abbreviate words           "
@@ -837,7 +853,7 @@ DOWNCASE    t:   Downcase words before using them."
                 (option (boolean :tag "Downcase words          "))))
 
 (defcustom reftex-label-illegal-re "[^-a-zA-Z0-9_+=:;,.]"
-  "Regexp matching characters not legal in labels."
+  "Regexp matching characters not valid in labels."
   :group 'reftex-making-and-inserting-labels
   :type '(regexp :tag "Regular Expression"))
 
@@ -1226,7 +1242,7 @@ phrase buffer.
 
 The final entry may also be a symbol if this entry has a association
 in the variable `reftex-index-macros-builtin' to specify the main
-indexing package you are using.  Legal values are currently
+indexing package you are using.  Valid values are currently
 default         The LaTeX default - unnecessary to specify this one
 multind         The multind.sty package
 index           The index.sty package
@@ -1281,7 +1297,7 @@ DEFAULT-TAG: This is the tag to be used if the macro requires a TAG argument.
 When working with multiple indexes, RefTeX queries for an index tag when
 creating index entries or displaying a specific index.  This variable controls
 the default offered for these queries.  The default can be selected with RET
-during selection or completion.  Legal values of this variable are:
+during selection or completion.  Valid values of this variable are:
 
 nil       Do not provide a default index
 \"tag\"     The default index tag given as a string, e.g. \"idx\".
@@ -1372,7 +1388,9 @@ Inserting indexing commands in a line makes the line longer - often
 so long that it does not fit onto the screen.  When this variable is
 non-nil, newlines will be added as necessary before and/or after the
 indexing command to keep lines short.  However, the matched text
-phrase and its index command will always end up on a single line.")
+phrase and its index command will always end up on a single line."
+  :group 'reftex-index-support
+  :type 'boolean)
 
 (defcustom reftex-index-phrases-sort-prefers-entry nil
   "*Non-nil means when sorting phrase lines, the explicit index entry is used.
@@ -1526,7 +1544,7 @@ This is a list of items, each item is like: (TYPE . (DEF-EXT OTHER-EXT ...))
 
 TYPE:       File type like \"bib\" or \"tex\".
 DEF-EXT:    The default extension for that file type, like \".tex\" or \".bib\".
-OTHER-EXT:  Any number of other legal extensions for this file type.
+OTHER-EXT:  Any number of other valid extensions for this file type.
 
 When a files is searched and it does not have any of the legal extensions,
 we try the default extension first, and then the naked file name.

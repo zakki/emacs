@@ -132,6 +132,7 @@ BODY can start with a bunch of keyword arguments.  The following keyword
   arguments are currently understood:
 :group GROUP
 	Declare the customization group that corresponds to this mode.
+	The command `customize-mode' uses this.
 :syntax-table TABLE
 	Use TABLE instead of the default.
 	A nil value means to simply use the same syntax-table as the parent.
@@ -158,7 +159,9 @@ Note that if the documentation string had been left out, it would have
 been generated automatically, with a reference to the keymap.
 
 The new mode runs the hook constructed by the function
-`derived-mode-hook-name'."
+`derived-mode-hook-name'.
+
+See Info node `(elisp)Derived Modes' for more details."
   (declare (debug (&define name symbolp sexp [&optional stringp]
 			   [&rest keywordp sexp] def-body)))
 

@@ -684,14 +684,13 @@ Buffer local variable.")
 (defvar term-ansi-at-save-user nil)
 (defvar term-ansi-at-save-pwd nil)
 (defvar term-ansi-at-save-anon nil)
-(defvar term-ansi-current-bold 0)
+(defvar term-ansi-current-bold nil)
 (defvar term-ansi-current-color 0)
-(defvar term-ansi-face-already-done 0)
+(defvar term-ansi-face-already-done nil)
 (defvar term-ansi-current-bg-color 0)
-(defvar term-ansi-current-underline 0)
-(defvar term-ansi-current-highlight 0)
-(defvar term-ansi-current-reverse 0)
-(defvar term-ansi-current-invisible 0)
+(defvar term-ansi-current-underline nil)
+(defvar term-ansi-current-reverse nil)
+(defvar term-ansi-current-invisible nil)
 
 ;;; Four should be enough, if you want more, just add. -mm
 (defvar term-terminal-more-parameters 0)
@@ -712,9 +711,10 @@ Buffer local variable.")
   :group 'term
   :type 'string)
 
+;;; Use the same colors that xterm uses, see `xterm-standard-colors'.
 (defvar ansi-term-color-vector
-  [unspecified "black" "red" "green" "yellow" "blue"
-   "magenta" "cyan" "white"])
+  [unspecified "black" "red3" "green3" "yellow3" "blue2"
+   "magenta3" "cyan3" "white"])
 
 ;;; Inspiration came from comint.el -mm
 (defvar term-buffer-maximum-size 2048
@@ -732,8 +732,7 @@ is buffer-local.")
      [ "Enable paging" term-pager-toggle (not term-pager-count)]
      [ "Disable paging" term-pager-toggle term-pager-count])))
 
-(if term-mode-map
-    nil
+(unless term-mode-map
   (setq term-mode-map (make-sparse-keymap))
   (define-key term-mode-map "\ep" 'term-previous-input)
   (define-key term-mode-map "\en" 'term-next-input)
@@ -888,7 +887,9 @@ is buffer-local.")
        (i 0))
   (while (< i 128)
     (define-key map (make-string 1 i) 'term-send-raw)
-    (define-key esc-map (make-string 1 i) 'term-send-raw-meta)
+    ;; Avoid O and [. They are used in escape sequences for various keys.
+    (unless (or (eq i ?O) (eq i 91)) 
+		(define-key esc-map (make-string 1 i) 'term-send-raw-meta))
     (setq i (1+ i)))
   (dolist (elm (generic-character-list))
     (define-key map (vector elm) 'term-send-raw))
@@ -911,6 +912,7 @@ is buffer-local.")
     (define-key term-raw-map [right] 'term-send-right)
     (define-key term-raw-map [left] 'term-send-left)
     (define-key term-raw-map [delete] 'term-send-del)
+    (define-key term-raw-map [deletechar] 'term-send-del)
     (define-key term-raw-map [backspace] 'term-send-backspace)
     (define-key term-raw-map [home] 'term-send-home)
     (define-key term-raw-map [end] 'term-send-end)
@@ -1062,7 +1064,6 @@ Entry to this mode runs the hooks on `term-mode-hook'."
   (make-local-variable 'term-ansi-face-already-done)
   (make-local-variable 'term-ansi-current-bg-color)
   (make-local-variable 'term-ansi-current-underline)
-  (make-local-variable 'term-ansi-current-highlight)
   (make-local-variable 'term-ansi-current-reverse)
   (make-local-variable 'term-ansi-current-invisible)
 
@@ -1101,7 +1102,7 @@ Entry to this mode runs the hooks on `term-mode-hook'."
   (make-local-variable 'term-current-face)
   (make-local-variable 'term-pending-frame)
   (setq term-pending-frame nil)
-  (run-hooks 'term-mode-hook)
+  (run-mode-hooks 'term-mode-hook)
   (term-if-xemacs
    (set-buffer-menubar
     (append current-menubar (list term-terminal-menu))))
@@ -2509,14 +2510,14 @@ See `term-prompt-regexp'."
 (defun term-horizontal-column ()
   (- (term-current-column) (term-start-line-column)))
 
-;; Calls either vertical-motion or buffer-vertical-motion
+;; Calls either vertical-motion or term-buffer-vertical-motion
 (defmacro term-vertical-motion (count)
   (list 'funcall 'term-vertical-motion count))
 
 ;; An emulation of vertical-motion that is independent of having a window.
 ;; Instead, it uses the term-width variable as the logical window width.
 
-(defun buffer-vertical-motion (count)
+(defun term-buffer-vertical-motion (count)
   (cond ((= count 0)
 	 (move-to-column (* term-width (/ (current-column) term-width)))
 	 0)
@@ -2573,7 +2574,16 @@ See `term-prompt-regexp'."
 
 (defun term-move-columns (delta)
   (setq term-current-column (max 0 (+ (term-current-column) delta)))
-  (move-to-column term-current-column t))
+  (let (point-at-eol)
+    (save-excursion
+      (end-of-line)
+      (setq point-at-eol (point)))
+    (move-to-column term-current-column t)
+    ;; If move-to-column extends the current line it will use the face
+    ;; from the last character on the line, set the face for the chars
+    ;; to default.
+    (when (> (point) point-at-eol)
+      (put-text-property point-at-eol (point) 'face 'default))))
 
 ;; Insert COUNT copies of CHAR in the default face.
 (defun term-insert-char (char count)
@@ -2692,7 +2702,7 @@ See `term-prompt-regexp'."
 	      (setq term-vertical-motion (symbol-function 'vertical-motion))
 	      (term-check-size proc))
 	  (setq term-vertical-motion
-		(symbol-function 'buffer-vertical-motion)))
+		(symbol-function 'term-buffer-vertical-motion)))
 
 	(setq save-marker (copy-marker (process-mark proc)))
 
@@ -3028,16 +3038,16 @@ See `term-prompt-regexp'."
 ;;; default one. 
 (defun term-reset-terminal ()
   (erase-buffer)
-  (setq term-current-row 1)
+  (setq term-current-row 0)
   (setq term-current-column 1)
   (setq term-insert-mode nil)
   (setq term-current-face nil)
-  (setq term-ansi-current-underline 0)
-  (setq term-ansi-current-bold 0)
-  (setq term-ansi-current-reverse 0)
+  (setq term-ansi-current-underline nil)
+  (setq term-ansi-current-bold nil)
+  (setq term-ansi-current-reverse nil)
   (setq term-ansi-current-color 0)
-  (setq term-ansi-current-invisible 0)
-  (setq term-ansi-face-already-done 1)
+  (setq term-ansi-current-invisible nil)
+  (setq term-ansi-face-already-done nil)
   (setq term-ansi-current-bg-color 0))
 
 ;;; New function to deal with ansi colorized output, as you can see you can
@@ -3048,32 +3058,32 @@ See `term-prompt-regexp'."
 
 ;;; Bold  (terminfo: bold)
    ((eq parameter 1)
-    (setq term-ansi-current-bold 1))
+    (setq term-ansi-current-bold t))
 
 ;;; Underline
    ((eq parameter 4)
-    (setq term-ansi-current-underline 1))
+    (setq term-ansi-current-underline t))
 
 ;;; Blink (unsupported by Emacs), will be translated to bold.
 ;;; This may change in the future though.
    ((eq parameter 5)
-    (setq term-ansi-current-bold 1))
+    (setq term-ansi-current-bold t))
 
 ;;; Reverse
    ((eq parameter 7)
-    (setq term-ansi-current-reverse 1))
+    (setq term-ansi-current-reverse t))
 
 ;;; Invisible
    ((eq parameter 8)
-    (setq term-ansi-current-invisible 1))
+    (setq term-ansi-current-invisible t))
 
 ;;; Reset underline (i.e. terminfo rmul)
    ((eq parameter 24)
-    (setq term-ansi-current-underline 0))
+    (setq term-ansi-current-underline nil))
 
 ;;; Reset reverse (i.e. terminfo rmso)
    ((eq parameter 27)
-    (setq term-ansi-current-reverse 0))
+    (setq term-ansi-current-reverse nil))
 
 ;;; Foreground
    ((and (>= parameter 30) (<= parameter 37))
@@ -3094,12 +3104,12 @@ See `term-prompt-regexp'."
 ;;; 0 (Reset) or unknown (reset anyway)
    (t
     (setq term-current-face nil)
-    (setq term-ansi-current-underline 0)
-    (setq term-ansi-current-bold 0)
-    (setq term-ansi-current-reverse 0)
+    (setq term-ansi-current-underline nil)
+    (setq term-ansi-current-bold nil)
+    (setq term-ansi-current-reverse nil)
     (setq term-ansi-current-color 0)
-    (setq term-ansi-current-invisible 0)
-    (setq term-ansi-face-already-done 1)
+    (setq term-ansi-current-invisible nil)
+    (setq term-ansi-face-already-done t)
     (setq term-ansi-current-bg-color 0)))
 
 ;	(message "Debug: U-%d R-%d B-%d I-%d D-%d F-%d B-%d"
@@ -3112,9 +3122,9 @@ See `term-prompt-regexp'."
 ;		   term-ansi-current-bg-color)
 
 
-  (if (= term-ansi-face-already-done 0)
-      (if (= term-ansi-current-reverse 1)
-	  (if (= term-ansi-current-invisible 1)
+  (unless term-ansi-face-already-done
+      (if term-ansi-current-reverse
+	  (if term-ansi-current-invisible
 	      (setq term-current-face
 		    (if (= term-ansi-current-color 0)
 			(list :background
@@ -3136,13 +3146,13 @@ See `term-prompt-regexp'."
 			(if (= term-ansi-current-bg-color 0)
 			    (face-background 'default)
 			(elt ansi-term-color-vector term-ansi-current-bg-color))))
-	    (if (= term-ansi-current-bold 1)
+	    (when term-ansi-current-bold
 		(setq term-current-face
 		      (append '(:weight bold) term-current-face)))
-	    (if (= term-ansi-current-underline 1)
+	    (when term-ansi-current-underline
 		(setq term-current-face
 		      (append '(:underline t) term-current-face))))
-	(if (= term-ansi-current-invisible 1)
+	(if term-ansi-current-invisible
 	    (setq term-current-face
 		  (if (= term-ansi-current-bg-color 0)
 		      (list :background
@@ -3160,15 +3170,15 @@ See `term-prompt-regexp'."
 		      (elt ansi-term-color-vector term-ansi-current-color)
 		      :background
 		      (elt ansi-term-color-vector term-ansi-current-bg-color)))
-	  (if (= term-ansi-current-bold 1)
+	  (when term-ansi-current-bold
 	      (setq term-current-face
 		    (append '(:weight bold) term-current-face)))
-	  (if (= term-ansi-current-underline 1)
+	  (when term-ansi-current-underline
 	      (setq term-current-face
 		    (append '(:underline t) term-current-face))))))
 
 ;;;	(message "Debug %S" term-current-face)
-  (setq term-ansi-face-already-done 0))
+  (setq term-ansi-face-already-done nil))
 
 
 ;;; Handle a character assuming (eq terminal-state 2) -
@@ -3224,7 +3234,7 @@ See `term-prompt-regexp'."
    ((eq char ?P)
     (term-delete-chars (max 1 term-terminal-parameter)))
    ;; \E[@ - insert spaces
-   ((eq char ?@)
+   ((eq char ?@) ;; (terminfo: ich)
     (term-insert-spaces (max 1 term-terminal-parameter)))
    ;; \E[?h - DEC Private Mode Set
    ((eq char ?h)
@@ -3329,7 +3339,7 @@ The top-most line is line 0."
 		(second-colon
 		 (string-match ":" string (1+ first-colon)))
 		(filename (substring string 1 first-colon))
-		(fileline (string-to-int
+		(fileline (string-to-number
 			   (substring string (1+ first-colon) second-colon))))
 	   (setq term-pending-frame (cons filename fileline))))
 	((= (aref string 0) ?/)
@@ -3685,12 +3695,20 @@ Should only be called when point is at the start of a screen line."
 ;;; at teh end of this screen line to make room.
 
 (defun term-insert-spaces (count)
-  (let ((save-point (point)) (save-eol))
+  (let ((save-point (point)) (save-eol) (point-at-eol))
     (term-vertical-motion 1)
     (if (bolp)
 	(backward-char))
     (setq save-eol (point))
+    (save-excursion
+      (end-of-line)
+      (setq point-at-eol (point)))
     (move-to-column (+ (term-start-line-column) (- term-width count)) t)
+    ;; If move-to-column extends the current line it will use the face
+    ;; from the last character on the line, set the face for the chars
+    ;; to default.
+    (when (> (point) (point-at-eol))
+      (put-text-property point-at-eol (point) 'face 'default))
     (if (> save-eol (point))
 	(delete-region (point) save-eol))
     (goto-char save-point)
@@ -4161,7 +4179,7 @@ the process.  Any more args are arguments to PROGRAM."
 ;;;   (make-local-variable 'shell-directory-stack)
 ;;;   (setq shell-directory-stack nil)
 ;;;   (add-hook 'term-input-filter-functions 'shell-directory-tracker)
-;;;   (run-hooks 'shell-mode-hook))
+;;;   (run-mode-hooks 'shell-mode-hook))
 ;;;
 ;;;
 ;;; Completion for term-mode users

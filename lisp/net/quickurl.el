@@ -1,6 +1,6 @@
 ;;; quickurl.el --- insert an URL based on text at point in buffer
 
-;; Copyright (C) 1999,2000,2001 Free Software Foundation, Inc.
+;; Copyright (C) 1999,2000,2001,2005 Free Software Foundation, Inc.
 
 ;; Author: Dave Pearson <davep@davep.org>
 ;; Maintainer: Dave Pearson <davep@davep.org>
@@ -458,7 +458,7 @@ The key bindings for `quickurl-list-mode' are:
   (use-local-map quickurl-list-mode-map)
   (setq major-mode 'quickurl-list-mode
         mode-name  "quickurl list")
-  (run-hooks 'quickurl-list-mode-hook)
+  (run-mode-hooks 'quickurl-list-mode-hook)
   (setq buffer-read-only t
         truncate-lines   t))
 

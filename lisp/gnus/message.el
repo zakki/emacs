@@ -842,7 +842,8 @@ the signature is inserted."
     (set-keymap-parent map minibuffer-local-map)
     map)
   "Keymap for `message-read-from-minibuffer'."
-  :version "22.1")
+  :version "22.1"
+  :group 'message-various)
 
 ;;;###autoload
 (defcustom message-citation-line-function 'message-insert-citation-line
@@ -4564,6 +4565,7 @@ Otherwise, generate and save a value for `canlock-password' first."
 	(when (re-search-forward ",+$" nil t)
 	  (replace-match "" t t))))))
 
+(eval-when-compile (require 'parse-time))
 (defun message-make-date (&optional now)
   "Make a valid data header.
 If NOW, use that time instead."
@@ -6364,7 +6366,8 @@ Optional DIGEST will use digest to forward."
 	(replace-match "X-From-Line: "))
       ;; Send it.
       (let ((message-inhibit-body-encoding t)
-	    message-required-mail-headers)
+	    message-required-mail-headers
+	    rfc2047-encode-encoded-words)
 	(message-send-mail))
       (kill-buffer (current-buffer)))
     (message "Resending message to %s...done" address)))

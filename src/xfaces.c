@@ -333,6 +333,8 @@ extern Lisp_Object Qmode_line;
 
 Lisp_Object Qface_alias;
 
+extern Lisp_Object Qcircular_list;
+
 /* Default stipple pattern used on monochrome displays.  This stipple
    pattern is used on monochrome displays instead of shades of gray
    for a face background color.  See `set-face-stipple' for possible
@@ -468,7 +470,7 @@ struct named_merge_point;
 
 static void map_tty_color P_ ((struct frame *, struct face *,
 			       enum lface_attribute_index, int *));
-static Lisp_Object resolve_face_name P_ ((Lisp_Object));
+static Lisp_Object resolve_face_name P_ ((Lisp_Object, int));
 static int may_use_scalable_font_p P_ ((const char *));
 static void set_font_frame_param P_ ((Lisp_Object, Lisp_Object));
 static int better_font_p P_ ((int *, struct font_name *, struct font_name *,
@@ -3203,25 +3205,47 @@ push_named_merge_point (struct named_merge_point *new_named_merge_point,
 
 
 /* Resolve face name FACE_NAME.  If FACE_NAME is a string, intern it
-   to make it a symvol.  If FACE_NAME is an alias for another face,
-   return that face's name.  */
+   to make it a symbol.  If FACE_NAME is an alias for another face,
+   return that face's name.
+
+   Return default face in case of errors.  */
 
 static Lisp_Object
-resolve_face_name (face_name)
+resolve_face_name (face_name, signal_p)
      Lisp_Object face_name;
+     int signal_p;
 {
-  Lisp_Object aliased;
+  Lisp_Object orig_face;
+  Lisp_Object tortoise, hare;
 
   if (STRINGP (face_name))
     face_name = intern (SDATA (face_name));
 
-  while (SYMBOLP (face_name))
+  if (NILP (face_name) || !SYMBOLP (face_name))
+    return face_name;
+
+  orig_face = face_name;
+  tortoise = hare = face_name;
+
+  while (1)
     {
-      aliased = Fget (face_name, Qface_alias);
-      if (NILP (aliased))
+      face_name = hare;
+      hare = Fget (hare, Qface_alias);
+      if (NILP (hare) || !SYMBOLP (hare))
 	break;
-      else
-	face_name = aliased;
+
+      face_name = hare;
+      hare = Fget (hare, Qface_alias);
+      if (NILP (hare) || !SYMBOLP (hare))
+	break;
+
+      tortoise = Fget (tortoise, Qface_alias);
+      if (EQ (hare, tortoise))
+	{
+	  if (signal_p)
+	    Fsignal (Qcircular_list, Fcons (orig_face, Qnil));
+	  return Qdefault;
+	}
     }
 
   return face_name;
@@ -3245,7 +3269,7 @@ lface_from_face_name (f, face_name, signal_p)
 {
   Lisp_Object lface;
 
-  face_name = resolve_face_name (face_name);
+  face_name = resolve_face_name (face_name, signal_p);
 
   if (f)
     lface = assq_no_quit (face_name, f->face_alist);
@@ -3980,7 +4004,7 @@ FRAME 0 means change the face on all frames, and change the default
   CHECK_SYMBOL (face);
   CHECK_SYMBOL (attr);
 
-  face = resolve_face_name (face);
+  face = resolve_face_name (face, 1);
 
   /* If FRAME is 0, change face on all frames, and change the
      default for new frames.  */
@@ -4998,8 +5022,8 @@ lface_equal_p (v1, v2)
 DEFUN ("internal-lisp-face-equal-p", Finternal_lisp_face_equal_p,
        Sinternal_lisp_face_equal_p, 2, 3, 0,
        doc: /* True if FACE1 and FACE2 are equal.
-If the optional argument FRAME is given, report on face FACE in that frame.
-If FRAME is t, report on the defaults for face FACE (for new frames).
+If the optional argument FRAME is given, report on FACE1 and FACE2 in that frame.
+If FRAME is t, report on the defaults for FACE1 and FACE2 (for new frames).
 If FRAME is omitted or nil, use the selected frame.  */)
      (face1, face2, frame)
      Lisp_Object face1, face2, frame;
@@ -5017,8 +5041,8 @@ If FRAME is omitted or nil, use the selected frame.  */)
        Emacs.  That frame is not an X frame.  */
     f = frame_or_selected_frame (frame, 2);
 
-  lface1 = lface_from_face_name (NULL, face1, 1);
-  lface2 = lface_from_face_name (NULL, face2, 1);
+  lface1 = lface_from_face_name (f, face1, 1);
+  lface2 = lface_from_face_name (f, face2, 1);
   equal_p = lface_equal_p (XVECTOR (lface1)->contents,
 			   XVECTOR (lface2)->contents);
   return equal_p ? Qt : Qnil;
@@ -5813,7 +5837,7 @@ face_with_height (f, face_id, height)
    is assumed to be already realized.  */
 
 int
-lookup_derived_face (f, symbol, c, face_id)
+lookup_derived_face (f, symbol, c, face_id, signal_p)
      struct frame *f;
      Lisp_Object symbol;
      int c;
@@ -5826,7 +5850,7 @@ lookup_derived_face (f, symbol, c, face_id)
   if (!default_face)
     abort ();
 
-  get_lface_attributes (f, symbol, symbol_attrs, 1);
+  get_lface_attributes (f, symbol, symbol_attrs, signal_p);
   bcopy (default_face->lface, attrs, sizeof attrs);
   merge_face_vectors (f, symbol_attrs, attrs, 0);
   return lookup_face (f, attrs, c, default_face);
@@ -6449,12 +6473,12 @@ build_scalable_font_name (f, font, specified_pt)
   if (font->numeric[XLFD_RESY] != 0)
     {
       pt = resy / font->numeric[XLFD_RESY] * specified_pt + 0.5;
-      pixel_value = font->numeric[XLFD_RESY] / (PT_PER_INCH * 10.0) * pt;
+      pixel_value = font->numeric[XLFD_RESY] / (PT_PER_INCH * 10.0) * pt + 0.5;
     }
   else
     {
       pt = specified_pt;
-      pixel_value = resy / (PT_PER_INCH * 10.0) * pt;
+      pixel_value = resy / (PT_PER_INCH * 10.0) * pt + 0.5;
     }
   /* We may need a font of the different size.  */
   pixel_value *= font->rescale_ratio;
@@ -6640,8 +6664,8 @@ best_matching_font (f, attrs, fonts, nfonts, width_ratio, needs_overstrike)
 	  }
 
 #ifndef HAVE_XFT
-      /* XXX: overstrike only works with non-aliased fonts.  How to figure
-         out if a font is aliased?  */
+      /* KOKO: overstrike only works with non-aliased fonts.  How to figure
+         out if a font is aliased?  It is in the XFT properties.  */
       if (needs_overstrike)
 	{
 	  enum xlfd_weight want_weight = specified[XLFD_WEIGHT];
@@ -7131,8 +7155,9 @@ realize_x_face (cache, attrs, c, base_face)
      int c;
      struct face *base_face;
 {
+  struct face *face = NULL;
 #ifdef HAVE_WINDOW_SYSTEM
-  struct face *face, *default_face;
+  struct face *default_face;
   struct frame *f;
   Lisp_Object stipple, overline, strike_through, box;
 
@@ -7328,8 +7353,8 @@ realize_x_face (cache, attrs, c, base_face)
     face->stipple = load_pixmap (f, stipple, &face->pixmap_w, &face->pixmap_h);
 
   xassert (FACE_SUITABLE_FOR_CHAR_P (face, c));
-  return face;
 #endif /* HAVE_WINDOW_SYSTEM */
+  return face;
 }
 
 
@@ -7778,7 +7803,7 @@ merge_faces (f, face_name, face_id, base_face_id)
       if (face_id < 0 || face_id >= lface_id_to_name_size)
 	return base_face_id;
       face_name = lface_id_to_name[face_id];
-      face_id = lookup_derived_face (f, face_name, 0, base_face_id);
+      face_id = lookup_derived_face (f, face_name, 0, base_face_id, 1);
       if (face_id >= 0)
 	return face_id;
       return base_face_id;

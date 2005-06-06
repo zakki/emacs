@@ -1,6 +1,6 @@
 ;;; net-utils.el --- network functions
 
-;; Copyright (C) 1998, 1999, 2000, 2001  Free Software Foundation, Inc.
+;; Copyright (C) 1998, 1999, 2000, 2001, 2005  Free Software Foundation, Inc.
 
 ;; Author:  Peter Breton <pbreton@cs.umb.edu>
 ;; Created: Sun Mar 16 1997
@@ -160,7 +160,7 @@ These options can be used to limit how many ICMP packets are emitted."
   "Regexp to match the nslookup prompt.
 
 This variable is only used if the variable
-`comint-use-prompt-regexp-instead-of-fields' is non-nil."
+`comint-use-prompt-regexp' is non-nil."
   :group 'net-utils
   :type  'regexp)
 
@@ -183,7 +183,7 @@ This variable is only used if the variable
   "Regexp which matches the FTP program's prompt.
 
 This variable is only used if the variable
-`comint-use-prompt-regexp-instead-of-fields' is non-nil."
+`comint-use-prompt-regexp' is non-nil."
   :group 'net-utils
   :type  'regexp)
 
@@ -201,7 +201,7 @@ This variable is only used if the variable
   "Regexp which matches the smbclient program's prompt.
 
 This variable is only used if the variable
-`comint-use-prompt-regexp-instead-of-fields' is non-nil."
+`comint-use-prompt-regexp' is non-nil."
   :group 'net-utils
   :type  'regexp)
 
@@ -468,7 +468,8 @@ If your system's ping continues until interrupted, you can try setting
       (require 'ffap)
       (read-from-minibuffer
        "Lookup host: "
-       (or (ffap-string-at-point 'machine) "")))))
+       (with-no-warnings
+	 (or (ffap-string-at-point 'machine) ""))))))
   (net-utils-run-program
    "Dig"
    (concat "** "

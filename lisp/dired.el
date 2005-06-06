@@ -200,6 +200,18 @@ with the buffer narrowed to the listing."
 ;; Note this can't simply be run inside function `dired-ls' as the hook
 ;; functions probably depend on the dired-subdir-alist to be OK.
 
+(defcustom dired-dnd-protocol-alist
+  '(("^file:///" . dired-dnd-handle-local-file)
+    ("^file://"  . dired-dnd-handle-file)
+    ("^file:"    . dired-dnd-handle-local-file))
+  "The functions to call when a drop in `dired-mode' is made.
+See `dnd-protocol-alist' for more information.  When nil, behave
+as in other buffers."
+  :type '(choice (repeat (cons (regexp) (function)))
+		 (const :tag "Behave as in other buffers" nil))
+  :version "22.1"
+  :group 'dired)
+
 ;; Internal variables
 
 (defvar dired-marker-char ?*		; the answer is 42
@@ -406,7 +418,24 @@ Subexpression 2 must end right before the \\n or \\r.")
      ;; It is quicker to first find just an extension, then go back to the
      ;; start of that file name.  So we do this complex MATCH-ANCHORED form.
      (list (concat "\\(" (regexp-opt completion-ignored-extensions) "\\|#\\)$")
-	   '(".+" (dired-move-to-filename) nil (0 dired-ignored-face)))))
+	   '(".+" (dired-move-to-filename) nil (0 dired-ignored-face))))
+   ;;
+   ;; Files suffixed with `completion-ignored-extensions'
+   ;; plus a character put in by -F.
+   '(eval .
+     (list (concat "\\(" (regexp-opt completion-ignored-extensions)
+		   "\\|#\\)[*=|]$")
+	   '(".+" (progn
+		    (end-of-line)
+		    ;; If the last character is not part of the filename,
+		    ;; move back to the start of the filename
+		    ;; so it can be fontified.
+		    ;; Otherwise, leave point at the end of the line;
+		    ;; that way, nothing is fontified.
+		    (unless (get-text-property (1- (point)) 'mouse-face)
+		      (dired-move-to-filename)))
+	     nil (0 dired-ignored-face))))
+)
   "Additional expressions to highlight in Dired mode.")
 
 ;;; Macros must be defined before they are used, for the byte compiler.
@@ -438,7 +467,8 @@ Return value is the number of files marked, or nil if none were marked."
                             "flagged" "marked"))))
     (and (> count 0) count)))
 
-(defmacro dired-map-over-marks (body arg &optional show-progress)
+(defmacro dired-map-over-marks (body arg &optional show-progress
+				     distinguish-one-marked)
   "Eval BODY with point on each marked line.  Return a list of BODY's results.
 If no marked file could be found, execute BODY on the current line.
   If ARG is an integer, use the next ARG (or previous -ARG, if ARG<0)
@@ -453,7 +483,10 @@ No guarantee is made about the position on the marked line.
 Search starts at the beginning of the buffer, thus the car of the list
   corresponds to the line nearest to the buffer's bottom.  This
   is also true for (positive and negative) integer values of ARG.
-BODY should not be too long as it is expanded four times."
+BODY should not be too long as it is expanded four times.
+
+If DISTINGUISH-ONE-MARKED is non-nil, then if we find just one marked file,
+return (t FILENAME) instead of (FILENAME)."
   ;;
   ;;Warning: BODY must not add new lines before point - this may cause an
   ;;endless loop.
@@ -493,13 +526,15 @@ BODY should not be too long as it is expanded four times."
 		 (set-marker next-position nil)
 		 (setq next-position (and (re-search-forward regexp nil t)
 					  (point-marker)))))
+	     (if (and ,distinguish-one-marked (= (length results) 1))
+		 (setq results (cons t results)))
 	     (if found
 		 results
 	       (list ,body)))))
      ;; save-excursion loses, again
      (dired-move-to-filename)))
 
-(defun dired-get-marked-files (&optional localp arg filter)
+(defun dired-get-marked-files (&optional localp arg filter distinguish-one-marked)
   "Return the marked files' names as list of strings.
 The list is in the same order as the buffer, that is, the car is the
   first marked file.
@@ -510,13 +545,21 @@ Optional second argument ARG specifies files near point
   If ARG is otherwise non-nil, use file.  Usually ARG comes from
   the command's prefix arg.
 Optional third argument FILTER, if non-nil, is a function to select
-  some of the files--those for which (funcall FILTER FILENAME) is non-nil."
-  (let ((all-of-them
-	 (save-excursion
-	   (dired-map-over-marks (dired-get-filename localp) arg)))
-	result)
+  some of the files--those for which (funcall FILTER FILENAME) is non-nil.
+
+If DISTINGUISH-ONE-MARKED is non-nil, then if we find just one marked file,
+return (t FILENAME) instead of (FILENAME).
+Don't use that together with FILTER."
+  (let* ((all-of-them
+	  (save-excursion
+	    (dired-map-over-marks
+	     (dired-get-filename localp)
+	     arg nil distinguish-one-marked)))
+	 result)
     (if (not filter)
-	(nreverse all-of-them)
+	(if (and distinguish-one-marked (eq (car all-of-them) t))
+	    all-of-them
+	  (nreverse all-of-them))
       (dolist (file all-of-them)
 	(if (funcall filter file)
 	    (push file result)))
@@ -1251,6 +1294,9 @@ Do so according to the former subdir alist OLD-SUBDIR-ALIST."
     (define-key map [menu-bar immediate dashes]
       '("--"))
 
+    (define-key map [menu-bar immediate compare-directories]
+      '(menu-item "Compare directories..." dired-compare-directories
+		  :help "Mark files with different attributes in two dired buffers"))
     (define-key map [menu-bar immediate backup-diff]
       '(menu-item "Compare with Backup" dired-backup-diff
 		  :help "Diff file at cursor with its latest backup"))
@@ -1519,16 +1565,10 @@ Keybindings:
        'dired-desktop-buffer-misc-data)
   (setq dired-switches-alist nil)
   (dired-sort-other dired-actual-switches t)
-  (run-mode-hooks 'dired-mode-hook)
-  (when (featurep 'x-dnd)
-    (make-variable-buffer-local 'x-dnd-test-function)
-    (make-variable-buffer-local 'x-dnd-protocol-alist)
-    (setq x-dnd-test-function 'dired-dnd-test-function)
-    (setq x-dnd-protocol-alist
-	  (append '(("^file:///" . dired-dnd-handle-local-file)
-		    ("^file://"  . dired-dnd-handle-file)
-		    ("^file:"    . dired-dnd-handle-local-file))
-		  x-dnd-protocol-alist))))
+  (when (featurep 'dnd)
+    (set (make-local-variable 'dnd-protocol-alist)
+	 (append dired-dnd-protocol-alist dnd-protocol-alist)))
+  (run-mode-hooks 'dired-mode-hook))
 
 ;; Idiosyncratic dired commands that don't deal with marks.
 
@@ -1934,10 +1974,11 @@ Return the position of the beginning of the filename, or nil if none found."
   "Copy names of marked (or next ARG) files into the kill ring.
 The names are separated by a space.
 With a zero prefix arg, use the absolute file name of each marked file.
-With \\[universal-argument], use the file name sans directory of each marked file.
+With \\[universal-argument], use the file name relative to the Dired buffer's
+`default-directory'.  (This still may contain slashes if in a subdirectory.)
 
-If on a subdir headerline, use subdirname instead; prefix arg is ignored
-in this case.
+If on a subdir headerline, use absolute subdirname instead;
+prefix arg and marked files are ignored in this case.
 
 You can then feed the file name(s) to other commands with \\[yank]."
   (interactive "P")
@@ -1947,10 +1988,11 @@ You can then feed the file name(s) to other commands with \\[yank]."
                         (if arg
                             (cond ((zerop (prefix-numeric-value arg))
                                    (dired-get-marked-files))
-                                  ((integerp arg)
-                                   (dired-get-marked-files 'no-dir arg))
-                                  (t    ; else a raw arg
-                                   (dired-get-marked-files t)))
+                                  ((consp arg)
+                                   (dired-get-marked-files t))
+                                  (t
+                                   (dired-get-marked-files
+				    'no-dir (prefix-numeric-value arg))))
                           (dired-get-marked-files 'no-dir))
                         " "))))
     (if (eq last-command 'kill-region)
@@ -2525,15 +2567,21 @@ FUNCTION should not manipulate files, just read input
  (an argument or confirmation).
 The window is not shown if there is just one file or
  OP-SYMBOL is a member of the list in `dired-no-confirm'.
-FILES is the list of marked files."
+FILES is the list of marked files.  It can also be (t FILENAME)
+in the case of one marked file, to distinguish that from using
+just the current file."
   (or bufname (setq bufname  " *Marked Files*"))
   (if (or (eq dired-no-confirm t)
 	  (memq op-symbol dired-no-confirm)
+	  ;; If FILES defaulted to the current line's file.
 	  (= (length files) 1))
       (apply function args)
     (with-current-buffer (get-buffer-create bufname)
       (erase-buffer)
-      (dired-format-columns-of-files files)
+      ;; Handle (t FILE) just like (FILE), here.
+      ;; That value is used (only in some cases), to mean
+      ;; just one file that was marked, rather than the current line file.
+      (dired-format-columns-of-files (if (eq (car files) t) (cdr files) files))
       (remove-text-properties (point-min) (point-max)
 			      '(mouse-face nil help-echo nil)))
     (save-window-excursion
@@ -3131,23 +3179,9 @@ Anything else means ask for each directory."
 		 (const :tag "Copy directories without asking" always))
   :group 'dired)
 
-(defun dired-dnd-test-function (window action types)
-  "The test function for drag and drop into dired buffers.
-WINDOW is where the mouse is when this function is called.  It may be a frame
-if the mouse is over the menu bar, scroll bar or tool bar.
-ACTION is the suggested action from the source, and TYPES are the
-types the drop data can have.  This function only accepts drops with
-types in `x-dnd-known-types'.  It returns the action suggested by the source."
-  (let ((type (x-dnd-choose-type types)))
-    (if type
-	(cons action type)
-      nil)))
-
 (defun dired-dnd-popup-notice ()
-  (x-popup-dialog
-   t
-   '("Recursive copies not enabled.\nSee variable dired-recursive-copies."
-     ("Ok" . nil))))
+  (message-box
+   "Recursive copies not enabled.\nSee variable dired-recursive-copies."))
 
 
 (defun dired-dnd-do-ask-action (uri)
@@ -3171,7 +3205,7 @@ types in `x-dnd-known-types'.  It returns the action suggested by the source."
 URI is the file to handle, ACTION is one of copy, move, link or ask.
 Ask means pop up a menu for the user to select one of copy, move or link."
   (require 'dired-aux)
-  (let* ((from (x-dnd-get-local-file-name uri t))
+  (let* ((from (dnd-get-local-file-name uri t))
 	 (to (if from (concat (dired-current-directory)
 			   (file-name-nondirectory from))
 	       nil)))
@@ -3209,7 +3243,7 @@ Ask means pop up a menu for the user to select one of copy, move or link."
 URI is the file to handle.  If the hostname in the URI isn't local, do nothing.
 ACTION is one of copy, move, link or ask.
 Ask means pop up a menu for the user to select one of copy, move or link."
-  (let ((local-file (x-dnd-get-local-file-uri uri)))
+  (let ((local-file (dnd-get-local-file-uri uri)))
     (if local-file (dired-dnd-handle-local-file local-file action)
       nil)))
 

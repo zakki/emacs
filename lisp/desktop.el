@@ -1,6 +1,6 @@
 ;;; desktop.el --- save partial status of Emacs when killed
 
-;; Copyright (C) 1993, 1994, 1995, 1997, 2000, 2001
+;; Copyright (C) 1993, 1994, 1995, 1997, 2000, 2001, 2005
 ;;   Free Software Foundation, Inc.
 
 ;; Author: Morten Welinder <terra@diku.dk>
@@ -158,14 +158,14 @@ If nil, just print error messages in the message buffer."
 
 (defcustom desktop-no-desktop-file-hook nil
   "Normal hook run when `desktop-read' can't find a desktop file.
-May e.g. be used to show a dired buffer."
+May be used to show a dired buffer."
   :type 'hook
   :group 'desktop
   :version "22.1")
 
 (defcustom desktop-after-read-hook nil
   "Normal hook run after a successful `desktop-read'.
-May e.g. be used to show a buffer list."
+May be used to show a buffer list."
   :type 'hook
   :group 'desktop
   :version "22.1")
@@ -1030,9 +1030,10 @@ If there are no buffers left to create, kill the timer."
   'after-init-hook
   '(lambda ()
     (let ((key "--no-desktop"))
-      (if (member key command-line-args)
-        (delete key command-line-args)
-        (when desktop-save-mode (desktop-read))))))
+      (when (member key command-line-args)
+        (setq command-line-args (delete key command-line-args))
+        (setq desktop-save-mode nil)))
+    (when desktop-save-mode (desktop-read))))
 
 (provide 'desktop)
 

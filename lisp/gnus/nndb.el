@@ -1,6 +1,7 @@
 ;;; nndb.el --- nndb access for Gnus
 
-;; Copyright (C) 1997, 1998, 2000, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1998, 2000, 2003, 2004, 2005
+;;        Free Software Foundation, Inc.
 
 ;; Author: Masanobu UMEDA <umerin@flab.flab.fujitsu.junet>
 ;;         Kai Grossjohann <grossjohann@ls6.informatik.uni-dortmund.de>
@@ -50,7 +51,9 @@
 ;;-
 ;; Register nndb with known select methods.
 
-(gnus-declare-backend "nndb" 'mail 'respool 'address 'prompt-address)
+(require 'gnus-start)
+(unless (assoc "nndb" gnus-valid-select-methods)
+  (gnus-declare-backend "nndb" 'mail 'respool 'address 'prompt-address))
 
 ;;; Code:
 
@@ -58,14 +61,6 @@
 (require 'nnheader)
 (require 'nntp)
 (eval-when-compile (require 'cl))
-
-(eval-and-compile
-  (autoload 'news-setup "rnewspost")
-  (autoload 'news-reply-mode "rnewspost")
-  (autoload 'cancel-timer "timer")
-  (autoload 'telnet "telnet" nil t)
-  (autoload 'telnet-send-input "telnet" nil t)
-  (autoload 'gnus-declare-backend "gnus-start"))
 
 ;; Declare nndb as derived from nntp
 
@@ -201,7 +196,7 @@ article was posted to nndb")
       ;; otherwise, pull all of the following numbers into the list
       (re-search-forward "follows\r?\n?" nil t)
       (while (re-search-forward "^[0-9]+$" nil t)
-      (push (string-to-int (match-string 0)) list)))
+      (push (string-to-number (match-string 0)) list)))
     list))
 
 (defun nndb-request-expire-articles-remote

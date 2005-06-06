@@ -1,8 +1,10 @@
 ;;; mule-cmds.el --- commands for mulitilingual environment -*-coding: iso-2022-7bit -*-
 
-;; Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
-;; Copyright (C) 1995, 2003 Electrotechnical Laboratory, JAPAN.
-;; Licensed to the Free Software Foundation.
+;; Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;;   Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;;   National Institute of Advanced Industrial Science and Technology (AIST)
+;;   Registration Number H14PRO021
 
 ;; Keywords: mule, multilingual
 
@@ -27,7 +29,9 @@
 
 ;;; Code:
 
-(eval-when-compile (defvar dos-codepage))
+(eval-when-compile
+  (defvar dos-codepage)
+  (autoload 'widget-value "wid-edit"))
 
 ;;; MULE related key bindings and menus.
 
@@ -349,9 +353,6 @@ This also sets the following values:
     (setq default-process-coding-system
 	  (cons output-coding input-coding))))
 
-(defalias 'update-iso-coding-systems 'update-coding-systems-internal)
-(make-obsolete 'update-iso-coding-systems 'update-coding-systems-internal "20.3")
-
 (defun prefer-coding-system (coding-system)
   "Add CODING-SYSTEM at the front of the priority list for automatic detection.
 This also sets the following coding systems:
@@ -384,6 +385,7 @@ See also `coding-category-list' and `coding-system-category'."
 	;; CODING-SYSTEM is no-conversion or undecided.
 	(error "Can't prefer the coding system `%s'" coding-system))
     (set coding-category (or base coding-system))
+    ;; Changing the binding of a coding category requires this call.
     (update-coding-systems-internal)
     (or (eq coding-category (car coding-category-list))
 	;; We must change the order.
@@ -924,7 +926,10 @@ and TO is ignored."
     ;; give when file is re-read.
     ;; But don't do this if we explicitly ignored the cookie
     ;; by using `find-file-literally'.
-    (unless (or (stringp from) find-file-literally)
+    (unless (or (stringp from)
+		find-file-literally
+		(and coding-system
+		     (memq (coding-system-type coding-system) '(0 5))))
       (let ((auto-cs (save-excursion
 		       (save-restriction
 			 (widen)
@@ -1691,6 +1696,7 @@ The default status is as follows:
      coding-category-ccl
      coding-category-binary))
 
+  ;; Changing the binding of a coding category requires this call.
   (update-coding-systems-internal)
 
   (set-default-coding-systems nil)
@@ -1734,7 +1740,7 @@ The default status is as follows:
 
 (reset-language-environment)
 
-(defun set-display-table-and-terminal-coding-system (language-name)
+(defun set-display-table-and-terminal-coding-system (language-name &optional coding-system)
   "Set up the display table and terminal coding system for LANGUAGE-NAME."
   (let ((coding (get-language-info language-name 'unibyte-display)))
     (if coding
@@ -1748,7 +1754,7 @@ The default status is as follows:
 	(dotimes (i 128)
 	  (aset standard-display-table (+ i 128) nil))))
     (or (eq window-system 'pc)
-	(set-terminal-coding-system coding))))
+	(set-terminal-coding-system (or coding-system coding)))))
 
 (defun set-language-environment (language-name)
   "Set up multi-lingual environment for using LANGUAGE-NAME.
@@ -1904,6 +1910,7 @@ of `buffer-file-coding-system' set by this function."
 	  (while priority
 	    (set (car categories) (car priority))
 	    (setq priority (cdr priority) categories (cdr categories)))
+	  ;; Changing the binding of a coding category requires this call.
 	  (update-coding-systems-internal)))))
 
 (defsubst princ-list (&rest args)
@@ -2392,6 +2399,15 @@ See also `locale-charset-language-names', `locale-language-names',
 		    (= 0 (length locale))) ; nil or empty string
 	  (setq locale (getenv (pop vars))))))
 
+    (unless (or locale (not (fboundp 'mac-get-preference)))
+      (setq locale (mac-get-preference "AppleLocale"))
+      (unless locale
+	(let ((languages (mac-get-preference "AppleLanguages")))
+	  (unless (= (length languages) 0) ; nil or empty vector
+	    (setq locale (aref languages 0))))))
+    (unless (or locale (not (boundp 'mac-system-locale)))
+      (setq locale mac-system-locale))
+
     (when locale
 
       ;; Translate "swedish" into "sv_SE.ISO8859-1", and so on,
@@ -2422,7 +2438,8 @@ See also `locale-charset-language-names', `locale-language-names',
 		 (when locale
 		   (if (string-match "\\.\\([^@]+\\)" locale)
 		       (locale-charset-to-coding-system
-			(match-string 1 locale)))))))
+			(match-string 1 locale))))
+		 (and (eq system-type 'macos) mac-system-coding-system))))
 
 	(if (consp language-name)
 	    ;; locale-language-names specify both lang-env and coding.
@@ -2446,7 +2463,8 @@ See also `locale-charset-language-names', `locale-language-names',
 	  ;; we are using single-byte characters,
 	  ;; so the display table and terminal coding system are irrelevant.
 	  (when default-enable-multibyte-characters
-	    (set-display-table-and-terminal-coding-system language-name))
+	    (set-display-table-and-terminal-coding-system
+	     language-name coding-system))
 
 	  ;; Set the `keyboard-coding-system' if appropriate (tty
 	  ;; only).  At least X and MS Windows can generate
@@ -2476,9 +2494,16 @@ See also `locale-charset-language-names', `locale-language-names',
 	  (set-keyboard-coding-system code-page-coding)
 	  (set-terminal-coding-system code-page-coding))))
 
-    ;; On Darwin, file names are always encoded in utf-8, no matter the locale.
     (when (eq system-type 'darwin)
-      (setq default-file-name-coding-system 'utf-8))
+      ;; On Darwin, file names are always encoded in utf-8, no matter
+      ;; the locale.
+      (setq default-file-name-coding-system 'utf-8)
+      ;; Mac OS X's Terminal.app by default uses utf-8 regardless of
+      ;; the locale.
+      (when (and (null window-system)
+		 (equal (getenv "TERM_PROGRAM") "Apple_Terminal"))
+	(set-terminal-coding-system 'utf-8)
+	(set-keyboard-coding-system 'utf-8)))
 
     ;; Default to A4 paper if we're not in a C, POSIX or US locale.
     ;; (See comments in Flocale_info.)

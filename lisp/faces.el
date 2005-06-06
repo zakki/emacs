@@ -183,10 +183,7 @@ Return nil if there is no such face.
 If the optional argument FRAME is given, this gets the face NAME for
 that frame; otherwise, it uses the selected frame.
 If FRAME is the symbol t, then the global, non-frame face is returned.
-If NAME is already a face, it is simply returned.
-
-This function is defined for compatibility with Emacs 20.2.  It
-should not be used anymore."
+If NAME is already a face, it is simply returned."
   (facep name))
 (make-obsolete 'internal-find-face 'facep "21.1")
 
@@ -234,8 +231,8 @@ of a face name is the same for all frames."
 (defun face-equal (face1 face2 &optional frame)
   "Non-nil if faces FACE1 and FACE2 are equal.
 Faces are considered equal if all their attributes are equal.
-If the optional argument FRAME is given, report on face FACE in that frame.
-If FRAME is t, report on the defaults for face FACE (for new frames).
+If the optional argument FRAME is given, report on FACE1 and FACE2 in that frame.
+If FRAME is t, report on the defaults for FACE1 and FACE2 (for new frames).
 If FRAME is omitted or nil, use the selected frame."
   (internal-lisp-face-equal-p face1 face2 frame))
 
@@ -1014,7 +1011,7 @@ name of the attribute for prompting.  Value is the new attribute value."
 	  ((member new-value '("unspecified-fg" "unspecified-bg"))
 	   new-value)
 	  (t
-	   (string-to-int new-value)))))
+	   (string-to-number new-value)))))
 
 
 (defun read-face-attribute (face attribute &optional frame)
@@ -1154,16 +1151,24 @@ this regular expression.  When called interactively with a prefix
 arg, prompt for a regular expression."
   (interactive (list (and current-prefix-arg
                           (read-string "List faces matching regexp: "))))
-  (let ((faces (sort (face-list) #'string-lessp))
+  (let ((all-faces (zerop (length regexp)))
 	(frame (selected-frame))
+	(max-length 0)
+	faces line-format
 	disp-frame window face-name)
-    (when (> (length regexp) 0)
-      (setq faces
-            (delq nil
-                  (mapcar (lambda (f)
-                            (when (string-match regexp (symbol-name f))
-                              f))
-                          faces))))
+    ;; We filter and take the max length in one pass
+    (setq faces
+	  (delq nil
+		(mapcar (lambda (f)
+			  (let ((s (symbol-name f)))
+			    (when (or all-faces (string-match regexp s))
+			      (setq max-length (max (length s) max-length))
+			      f)))
+			(sort (face-list) #'string-lessp))))
+    (unless faces
+      (error "No faces matching \"%s\"" regexp))
+    (setq max-length (1+ max-length)
+	  line-format (format "%%-%ds" max-length))
     (with-output-to-temp-buffer "*Faces*"
       (save-excursion
 	(set-buffer standard-output)
@@ -1178,12 +1183,13 @@ arg, prompt for a regular expression."
 	(setq help-xref-stack nil)
 	(dolist (face faces)
 	  (setq face-name (symbol-name face))
-	  (insert (format "%25s " face-name))
+	  (insert (format line-format face-name))
 	  ;; Hyperlink to a customization buffer for the face.  Using
 	  ;; the help xref mechanism may not be the best way.
 	  (save-excursion
 	    (save-match-data
 	      (search-backward face-name)
+	      (setq help-xref-stack-item `(list-faces-display ,regexp))
 	      (help-xref-button 0 'help-customize-face face)))
 	  (let ((beg (point))
 		(line-beg (line-beginning-position)))
@@ -1202,7 +1208,7 @@ arg, prompt for a regular expression."
 	    (goto-char beg)
 	    (forward-line 1)
 	    (while (not (eobp))
-	      (insert "                          ")
+	      (insert-char ?\s max-length)
 	      (forward-line 1))))
 	(goto-char (point-min)))
       (print-help-return-message))
@@ -1257,17 +1263,32 @@ If FRAME is omitted or nil, use the selected frame."
 	  (insert "Face: " (symbol-name f))
 	  (if (not (facep f))
 	      (insert "   undefined face.\n")
-	    (let ((customize-label "customize this face"))
+	    (let ((customize-label "customize this face")
+		  file-name)
 	      (princ (concat " (" customize-label ")\n"))
 	      (insert "Documentation: "
 		      (or (face-documentation f)
 			  "Not documented as a face.")
-		      "\n\n")
+		      "\n")
 	      (with-current-buffer standard-output
 		(save-excursion
 		  (re-search-backward
 		   (concat "\\(" customize-label "\\)") nil t)
 		  (help-xref-button 1 'help-customize-face f)))
+	      ;; The next 4 sexps are copied from describe-function-1
+	      ;; and simplified.
+	      (setq file-name (symbol-file f 'defface))
+	      (when file-name
+		(princ "Defined in `")
+		(princ file-name)
+		(princ "'")
+		;; Make a hyperlink to the library.
+		(save-excursion
+		  (re-search-backward "`\\([^`']+\\)'" nil t)
+		  (help-xref-button 1 'help-face-def f file-name))
+		(princ ".")
+		(terpri)
+		(terpri))
 	      (dolist (a attrs)
 		(let ((attr (face-attribute f (car a) frame)))
 		  (insert (make-string (- max-width (length (cdr a))) ?\ )
@@ -1827,9 +1848,22 @@ created."
   :group 'modeline
   :group 'basic-faces)
 
+(defface mode-line-highlight
+  '((((class color) (min-colors 88) (background light))
+      :background "RoyalBlue4" :foreground "white")
+     (((class color) (min-colors 88) (background dark))
+      :background "light sky blue" :foreground "black")
+     (t
+     :inverse-video t))
+  "Basic mode line face for highlighting."
+  :version "22.1"
+  :group 'modeline
+  :group 'basic-faces)
+
 ;; Make `modeline' an alias for `mode-line', for compatibility.
 (put 'modeline 'face-alias 'mode-line)
 (put 'modeline-inactive 'face-alias 'mode-line-inactive)
+(put 'modeline-higilight 'face-alias 'mode-line-highlight)
 
 (defface header-line
   '((default
@@ -2015,7 +2049,7 @@ Note: Other faces cannot inherit from the cursor face."
 
 (defface secondary-selection
   '((((class color) (min-colors 88) (background light))
-     :background "yellow")
+     :background "yellow1")
     (((class color) (min-colors 88) (background dark))
      :background "SkyBlue4")
     (((class color) (min-colors 16) (background light))
@@ -2041,13 +2075,13 @@ Note: Other faces cannot inherit from the cursor face."
 
 (defface trailing-whitespace
   '((((class color) (background light))
-     :background "red")
+     :background "red1")
     (((class color) (background dark))
-     :background "red")
+     :background "red1")
     (t :inverse-video t))
   "Basic face for highlighting trailing whitespace."
   :version "21.1"
-  :group 'font-lock			; like `show-trailing-whitespace'
+  :group 'whitespace		; like `show-trailing-whitespace'
   :group 'basic-faces)
 
 (defface escape-glyph '((((background dark)) :foreground "cyan")

@@ -1,6 +1,6 @@
 ;;; calc-prog.el --- user programmability functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -637,7 +637,7 @@
 	     (setq part (nconc part (list (if (= (match-beginning 1)
 						 (match-end 1))
 					      0
-					    (string-to-int
+					    (string-to-number
 					     (buffer-substring
 					      (1+ (match-beginning 1))
 					      (match-end 1)))))))
@@ -702,7 +702,7 @@
 			       (get func 'calc-user-defn)))
                     (kys (concat "z" (char-to-string (car def))))
                     (intcmd (symbol-name (cdr def)))
-                    (algcmd (substring (symbol-name func) 9)))
+                    (algcmd (if func (substring (symbol-name func) 9) "")))
 	       (if (and defn (calc-valid-formula-func func))
 		   (let ((niceexpr (math-format-nice-expr defn (frame-width))))
 		     (calc-wrapper
@@ -727,7 +727,7 @@
   (goto-char calc-edit-top)
   (while
       (re-search-forward "^\\([0-9]+\\)\\*" nil t)
-    (let ((num (string-to-int (match-string 1)))
+    (let ((num (string-to-number (match-string 1)))
           (line (buffer-substring (point) (line-end-position))))
       (goto-char (line-beginning-position))
       (kill-line 1)
@@ -902,6 +902,7 @@
         (calc-edit-macro-combine-var-name))
        ((or
          (string-equal type "calc-copy-variable")
+         (string-equal type "calc-copy-special-constant")
          (string-equal type "calc-declare-variable"))
         (forward-line 1)
         (calc-edit-macro-combine-var-name)
@@ -1445,15 +1446,22 @@ Redefine the corresponding command."
     (error "Unbalanced Z' in keyboard macro")))
 
 
-(defun calc-kbd-report (msg)
-  (interactive "sMessage: ")
-  (calc-wrapper
-   (math-working msg (calc-top-n 1))))
+;; (defun calc-kbd-report (msg)
+;;   (interactive "sMessage: ")
+;;   (calc-wrapper
+;;    (math-working msg (calc-top-n 1))))
 
-(defun calc-kbd-query (msg)
-  (interactive "sPrompt: ")
-  (calc-wrapper
-   (calc-alg-entry nil (and (not (equal msg "")) msg))))
+(defun calc-kbd-query ()
+  (interactive)
+  (let ((defining-kbd-macro nil)
+        (executing-kbd-macro nil)
+        (msg (calc-top 1)))
+    (if (not (eq (car-safe msg) 'vec))
+        (error "No prompt string provided")
+      (setq msg (math-vector-to-string msg))
+      (calc-wrapper
+       (calc-pop-stack 1)
+       (calc-alg-entry nil (and (not (equal msg "")) msg))))))
 
 ;;;; Logical operations.
 

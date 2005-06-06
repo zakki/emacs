@@ -33,8 +33,10 @@ Boston, MA 02111-1307, USA.  */
 
 #include <config.h>
 
+#if 0  /* Why was this included?  And without syssignal.h?  */
 /* On 4.3 this loses if it comes after xterm.h.  */
 #include <signal.h>
+#endif
 
 #include <stdio.h>
 
@@ -114,7 +116,8 @@ extern Lisp_Object Qmenu_bar_update_hook;
 extern void set_frame_menubar P_ ((FRAME_PTR, int, int));
 extern XtAppContext Xt_app_con;
 
-static Lisp_Object xdialog_show P_ ((FRAME_PTR, int, Lisp_Object, char **));
+static Lisp_Object xdialog_show P_ ((FRAME_PTR, int, Lisp_Object, Lisp_Object,
+				     char **));
 static void popup_get_selection P_ ((XEvent *, struct x_display_info *,
                                      LWLIB_ID, int));
 
@@ -127,7 +130,8 @@ static void popup_get_selection P_ ((XEvent *, struct x_display_info *,
 #include "gtkutil.h"
 #define HAVE_BOXES 1
 extern void set_frame_menubar P_ ((FRAME_PTR, int, int));
-static Lisp_Object xdialog_show P_ ((FRAME_PTR, int, Lisp_Object, char **));
+static Lisp_Object xdialog_show P_ ((FRAME_PTR, int, Lisp_Object, Lisp_Object,
+				     char **));
 #endif
 
 /* This is how to deal with multibyte text if HAVE_MULTILINGUAL_MENU
@@ -737,7 +741,7 @@ DEFUN ("x-popup-menu", Fx_popup_menu, Sx_popup_menu, 2, 2, 0,
 POSITION is a position specification.  This is either a mouse button event
 or a list ((XOFFSET YOFFSET) WINDOW)
 where XOFFSET and YOFFSET are positions in pixels from the top left
-corner of WINDOW's frame.  (WINDOW may be a frame object instead of a window.)
+corner of WINDOW.  (WINDOW may be a window or a frame object.)
 This controls the position of the top left of the menu as a whole.
 If POSITION is t, it means to use the current mouse position.
 
@@ -752,8 +756,11 @@ Otherwise, REAL-DEFINITION should be a valid key binding definition.
 
 You can also use a list of keymaps as MENU.
   Then each keymap makes a separate pane.
-When MENU is a keymap or a list of keymaps, the return value
-is a list of events.
+
+When MENU is a keymap or a list of keymaps, the return value is the
+list of events corresponding to the user's choice. Note that
+`x-popup-menu' does not actually execute the command bound to that
+sequence of events.
 
 Alternatively, you can specify a menu of multiple panes
   with a list of the form (TITLE PANE1 PANE2...),
@@ -764,14 +771,21 @@ in the menu.
 With this form of menu, the return value is VALUE from the chosen item.
 
 If POSITION is nil, don't display the menu at all, just precalculate the
-cached information about equivalent key sequences.  */)
+cached information about equivalent key sequences.
+
+If the user gets rid of the menu without making a valid choice, for
+instance by clicking the mouse away from a valid choice or by typing
+keyboard input, then this normally results in a quit and
+`x-popup-menu' does not return.  But if POSITION is a mouse button
+event (indicating that the user invoked the menu with the mouse) then
+no quit occurs and `x-popup-menu' returns nil.  */)
      (position, menu)
      Lisp_Object position, menu;
 {
   Lisp_Object keymap, tem;
   int xpos = 0, ypos = 0;
   Lisp_Object title;
-  char *error_name;
+  char *error_name = NULL;
   Lisp_Object selection;
   FRAME_PTR f = NULL;
   Lisp_Object x, y, window;
@@ -987,7 +1001,7 @@ cached information about equivalent key sequences.  */)
 
 #ifdef HAVE_MENUS
 
-DEFUN ("x-popup-dialog", Fx_popup_dialog, Sx_popup_dialog, 2, 2, 0,
+DEFUN ("x-popup-dialog", Fx_popup_dialog, Sx_popup_dialog, 2, 3, 0,
        doc: /* Pop up a dialog box and return user's selection.
 POSITION specifies which frame to use.
 This is normally a mouse button event or a window or frame.
@@ -995,16 +1009,23 @@ If POSITION is t, it means to use the frame the mouse is on.
 The dialog box appears in the middle of the specified frame.
 
 CONTENTS specifies the alternatives to display in the dialog box.
-It is a list of the form (TITLE ITEM1 ITEM2...).
+It is a list of the form (DIALOG ITEM1 ITEM2...).
 Each ITEM is a cons cell (STRING . VALUE).
 The return value is VALUE from the chosen item.
 
 An ITEM may also be just a string--that makes a nonselectable item.
 An ITEM may also be nil--that means to put all preceding items
 on the left of the dialog box and all following items on the right.
-\(By default, approximately half appear on each side.)  */)
-     (position, contents)
-     Lisp_Object position, contents;
+\(By default, approximately half appear on each side.)
+
+If HEADER is non-nil, the frame title for the box is "Information",
+otherwise it is "Question".
+
+If the user gets rid of the dialog box without making a valid choice,
+for instance using the window manager, then this produces a quit and
+`x-popup-dialog' does not return.  */)
+     (position, contents, header)
+     Lisp_Object position, contents, header;
 {
   FRAME_PTR f = NULL;
   Lisp_Object window;
@@ -1099,7 +1120,7 @@ on the left of the dialog box and all following items on the right.
 
     /* Display them in a dialog box.  */
     BLOCK_INPUT;
-    selection = xdialog_show (f, 0, title, &error_name);
+    selection = xdialog_show (f, 0, title, header, &error_name);
     UNBLOCK_INPUT;
 
     unbind_to (specpdl_count, Qnil);
@@ -1214,6 +1235,10 @@ popup_get_selection (initial_event, dpyinfo, id, do_timers)
       if (event.type == ButtonRelease
           && dpyinfo->display == event.xbutton.display)
         {
+	  /* If the click is not on the menu, deactivate the menu.  */
+	  if (x_any_window_to_frame (dpyinfo, event.xexpose.window))
+	    popup_activated_flag = 0;
+	    
           dpyinfo->grabbed &= ~(1 << event.xbutton.button);
 #ifdef USE_MOTIF /* Pretending that the event came from a
                     Btn1Down seems the only way to convince Motif to
@@ -2483,18 +2508,21 @@ create_and_show_popup_menu (f, first_wv, x, y, for_click)
         if (FRAME_X_DISPLAY_INFO (f)->grabbed & (1 << i))
           break;
     }
-  
+
   /* Display the menu.  */
   gtk_widget_show_all (menu);
   gtk_menu_popup (GTK_MENU (menu), 0, 0, pos_func, &popup_x_y, i, 0);
 
   record_unwind_protect (pop_down_menu, make_save_value (menu, 0));
 
-  /* Set this to one.  popup_widget_loop increases it by one, so it becomes
-     two.  show_help_echo uses this to detect popup menus.  */
-  popup_activated_flag = 1;
-  /* Process events that apply to the menu.  */
-  popup_widget_loop (1, menu);
+  if (GTK_WIDGET_MAPPED (menu))
+    {
+      /* Set this to one.  popup_widget_loop increases it by one, so it becomes
+         two.  show_help_echo uses this to detect popup menus.  */
+      popup_activated_flag = 1;
+      /* Process events that apply to the menu.  */
+      popup_widget_loop (1, menu);
+    }
 
   unbind_to (specpdl_count, Qnil);
 
@@ -2598,7 +2626,7 @@ create_and_show_popup_menu (f, first_wv, x, y, for_click)
   /* Display the menu.  */
   lw_popup_menu (menu, (XEvent *) &dummy);
   popup_activated_flag = 1;
-  
+
   {
     int fact = 4 * sizeof (LWLIB_ID);
     int specpdl_count = SPECPDL_INDEX ();
@@ -2886,6 +2914,9 @@ xmenu_show (f, x, y, for_click, keymaps, title, error)
 	    }
 	}
     }
+  else if (!for_click)
+    /* Make "Cancel" equivalent to C-g.  */
+    Fsignal (Qquit, Qnil);
 
   return Qnil;
 }
@@ -2998,11 +3029,11 @@ static char * button_names [] = {
   "button6", "button7", "button8", "button9", "button10" };
 
 static Lisp_Object
-xdialog_show (f, keymaps, title, error)
+xdialog_show (f, keymaps, title, header, error_name)
      FRAME_PTR f;
      int keymaps;
-     Lisp_Object title;
-     char **error;
+     Lisp_Object title, header;
+     char **error_name;
 {
   int i, nb_buttons=0;
   char dialog_name[6];
@@ -3014,11 +3045,11 @@ xdialog_show (f, keymaps, title, error)
   /* 1 means we've seen the boundary between left-hand elts and right-hand.  */
   int boundary_seen = 0;
 
-  *error = NULL;
+  *error_name = NULL;
 
   if (menu_items_n_panes > 1)
     {
-      *error = "Multiple panes in dialog box";
+      *error_name = "Multiple panes in dialog box";
       return Qnil;
     }
 
@@ -3055,7 +3086,7 @@ xdialog_show (f, keymaps, title, error)
 	if (NILP (item_name))
 	  {
 	    free_menubar_widget_value_tree (first_wv);
-	    *error = "Submenu in dialog items";
+	    *error_name = "Submenu in dialog items";
 	    return Qnil;
 	  }
 	if (EQ (item_name, Qquote))
@@ -3069,7 +3100,7 @@ xdialog_show (f, keymaps, title, error)
 	if (nb_buttons >= 9)
 	  {
 	    free_menubar_widget_value_tree (first_wv);
-	    *error = "Too many dialog items";
+	    *error_name = "Too many dialog items";
 	    return Qnil;
 	  }
 
@@ -3099,11 +3130,18 @@ xdialog_show (f, keymaps, title, error)
     wv = xmalloc_widget_value ();
     wv->name = dialog_name;
     wv->help = Qnil;
+
+    /*  Frame title: 'Q' = Question, 'I' = Information.
+        Can also have 'E' = Error if, one day, we want
+        a popup for errors. */
+    if (NILP(header))
+      dialog_name[0] = 'Q';
+    else
+      dialog_name[0] = 'I';
+
     /* Dialog boxes use a really stupid name encoding
        which specifies how many buttons to use
-       and how many buttons are on the right.
-       The Q means something also.  */
-    dialog_name[0] = 'Q';
+       and how many buttons are on the right. */
     dialog_name[1] = '0' + nb_buttons;
     dialog_name[2] = 'B';
     dialog_name[3] = 'R';
@@ -3222,7 +3260,7 @@ pop_down_menu (arg)
 {
   struct Lisp_Save_Value *p1 = XSAVE_VALUE (Fcar (arg));
   struct Lisp_Save_Value *p2 = XSAVE_VALUE (Fcdr (arg));
-  
+
   FRAME_PTR f = p1->pointer;
   XMenu *menu = p2->pointer;
 
@@ -3456,7 +3494,7 @@ xmenu_show (f, x, y, for_click, keymaps, title, error)
 #ifndef MSDOS
   XMenuActivateSetWaitFunction (x_menu_wait_for_event, FRAME_X_DISPLAY (f));
 #endif
-  
+
   record_unwind_protect (pop_down_menu,
                          Fcons (make_save_value (f, 0),
                                 make_save_value (menu, 0)));
@@ -3516,8 +3554,8 @@ xmenu_show (f, x, y, for_click, keymaps, title, error)
       entry = Qnil;
       break;
     case XM_NO_SELECT:
-      /* Make "Cancel" equivalent to C-g unless this menu was popped up by
-         a mouse press.  */
+      /* Make "Cancel" equivalent to C-g unless FOR_CLICK (which means
+	 the menu was invoked with a mouse event as POSITION).  */
       if (! for_click)
         Fsignal (Qquit, Qnil);
       entry = Qnil;

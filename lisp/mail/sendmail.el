@@ -366,7 +366,9 @@ actually occur.")
       (list '("^\\(To\\|Newsgroups\\):" . font-lock-function-name-face)
 	    '("^\\(B?CC\\|Reply-to\\|Mail-\\(reply\\|followup\\)-to\\):" . font-lock-keyword-face)
 	    '("^\\(Subject:\\)[ \t]*\\(.+\\)?"
-	      (1 font-lock-comment-face) (2 font-lock-type-face nil t))
+	      (1 font-lock-comment-face)
+;;	      (2 font-lock-type-face nil t)
+	      )
 	    ;; Use EVAL to delay in case `mail-header-separator' gets changed.
 	    '(eval .
 	      (let ((separator (if (zerop (length mail-header-separator))
@@ -376,12 +378,12 @@ actually occur.")
 	    ;; Use MATCH-ANCHORED to effectively anchor the regexp left side.
 	    `(,cite-chars
 	      (,(concat "\\=[ \t]*"
-			"\\(\\([" cite-prefix "]+[" cite-suffix "]*\\)?"
-			"\\(" cite-chars "[ \t]*\\)\\)+"
+			"\\(\\(\\([" cite-prefix "]+[" cite-suffix "]*\\)?"
+			"\\(" cite-chars "[ \t]*\\)\\)+\\)"
 			"\\(.*\\)")
 	       (beginning-of-line) (end-of-line)
-	       (2 font-lock-constant-face nil t)
-	       (4 font-lock-comment-face nil t)))
+	       (1 font-lock-comment-delimiter-face nil t)
+	       (5 font-lock-comment-face nil t)))
 	    '("^\\(X-[A-Za-z0-9-]+\\|In-reply-to\\):.*\\(\n[ \t]+.*\\)*$"
 	      . font-lock-string-face))))
   "Additional expressions to highlight in Mail mode.")
@@ -808,7 +810,8 @@ the user from the mailer."
 			     '(lambda (e)
 				(unless (member e l)
 				  (push e l)))
-			     (split-string new-header-values ", +" t))
+			     (split-string new-header-values
+					   ",[[:space:]]+" t))
 			    (mapconcat 'identity l ", "))
 			  "\n"))
 		;; Add Mail-Reply-To if none yet

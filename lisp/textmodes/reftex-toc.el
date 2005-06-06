@@ -1,8 +1,9 @@
 ;;; reftex-toc.el --- RefTeX's table of contents mode
-;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004, 2005
+;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.26
+;; Version: 4.28
 
 ;; This file is part of GNU Emacs.
 
@@ -72,7 +73,7 @@ Here are all local bindings.
   (add-hook 'post-command-hook 'reftex-toc-post-command-hook nil t)
   (add-hook 'pre-command-hook  'reftex-toc-pre-command-hook nil t)
   (easy-menu-add reftex-toc-menu reftex-toc-map)
-  (run-hooks 'reftex-toc-mode-hook))
+  (run-mode-hooks 'reftex-toc-mode-hook))
 
 (defvar reftex-last-toc-file nil
   "Stores the file name from which `reftex-toc' was called.  For redo command.")

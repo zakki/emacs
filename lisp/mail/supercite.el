@@ -1,9 +1,9 @@
 ;;; supercite.el --- minor mode for citing mail and news replies
 
-;; Copyright (C) 1993, 1997, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1997, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: 1993 Barry A. Warsaw <bwarsaw@python.org>
-;; Maintainer:    FSF
+;; Maintainer:    Glenn Morris <gmorris@ast.cam.ac.uk>
 ;; Created:       February 1993
 ;; Last Modified: 1993/09/22 18:58:46
 ;; Keywords: mail, news
@@ -153,6 +153,7 @@ a variable whose value is a citation frame."
 					    (choice (repeat (repeat sexp))
 						    symbol)))))
   :group 'supercite-frames)
+(put 'sc-cite-frame-alist 'risky-local-variable t)
 
 (defcustom sc-uncite-frame-alist '()
   "*Alist for frame selection during unciting.
@@ -161,6 +162,7 @@ See the variable `sc-cite-frame-alist' for details."
 					    (choice (repeat (repeat sexp))
 						    symbol)))))
   :group 'supercite-frames)
+(put 'sc-uncite-frame-alist 'risky-local-variable t)
 
 (defcustom sc-recite-frame-alist '()
   "*Alist for frame selection during reciting.
@@ -169,6 +171,7 @@ See the variable `sc-cite-frame-alist' for details."
 					    (choice (repeat (repeat sexp))
 						    symbol)))))
   :group 'supercite-frames)
+(put 'sc-recite-frame-alist 'risky-local-variable t)
 
 (defcustom sc-default-cite-frame
   '(;; initialize fill state and temporary variables when entering
@@ -214,6 +217,7 @@ See the variable `sc-cite-frame-alist' for details."
   "*Default REGI frame for citing a region."
   :type '(repeat (repeat sexp))
   :group 'supercite-frames)
+(put 'sc-default-cite-frame 'risky-local-variable t)
 
 (defcustom sc-default-uncite-frame
   '(;; do nothing on a blank line
@@ -224,6 +228,7 @@ See the variable `sc-cite-frame-alist' for details."
   "*Default REGI frame for unciting a region."
   :type '(repeat (repeat sexp))
   :group 'supercite-frames)
+(put 'sc-default-uncite-frame 'risky-local-variable t)
 
 (defcustom sc-default-recite-frame
   '(;; initialize fill state when entering frame
@@ -240,10 +245,11 @@ See the variable `sc-cite-frame-alist' for details."
   "*Default REGI frame for reciting a region."
   :type '(repeat (repeat sexp))
   :group 'supercite-frames)
+(put 'sc-default-recite-frame 'risky-local-variable t)
 
 (defcustom sc-cite-region-limit t
   "*This variable controls automatic citation of yanked text.
-Legal values are:
+Valid values are:
 
 non-nil   -- cite the entire region, regardless of its size
 nil       -- do not cite the region at all
@@ -347,7 +353,7 @@ Non-nil uses nested citations, nil uses non-nested citations."
 
 (defcustom sc-nuke-mail-headers 'all
   "*Controls mail header nuking.
-Used in conjunction with `sc-nuke-mail-header-list'.  Legal values are:
+Used in conjunction with `sc-nuke-mail-header-list'.  Valid values are:
 
 `all'       -- nuke all mail headers
 `none'      -- don't nuke any mail headers
@@ -427,6 +433,7 @@ to be consulted during attribution selection."
 				     (choice (sexp :tag "List to eval")
 					     string)))))
   :group 'supercite-attr)
+(put 'sc-attrib-selection-list 'risky-local-variable t)
 
 (defcustom sc-attribs-preselect-hook nil
   "*Hook to run before selecting an attribution."
@@ -482,6 +489,7 @@ this list is chosen for automatic reference header insertions.
 Electric reference mode will cycle through this list of functions."
   :type '(repeat sexp)
   :group 'supercite)
+(put 'sc-rewrite-header-list 'risky-local-variable t)
 
 (defcustom sc-titlecue-regexp "\\s +-+\\s +"
   "*Regular expression describing the separator between names and titles.
@@ -796,7 +804,7 @@ The number of lines left is specified by `sc-blank-lines-after-headers'."
 	    nonentry-func '(sc-mail-nuke-header-line)))
      ;; we never get far enough to interpret a frame if s-n-m-h == 'none
      ((eq sc-nuke-mail-headers 'none))
-     (t (error "Illegal value for sc-nuke-mail-headers: %s"
+     (t (error "Invalid value for sc-nuke-mail-headers: %s"
 	       sc-nuke-mail-headers))
      )					; end-cond
     (append
@@ -838,7 +846,7 @@ error occurs."
   "Return the mail header field value associated with FIELD.
 If there was no mail header with FIELD as its key, return the value of
 `sc-mumble'.  FIELD is case insensitive."
-  (or (cdr (assoc (downcase field) sc-mail-info)) sc-mumble))
+  (or (cdr (assoc-string field sc-mail-info 'case-fold)) sc-mumble))
 
 (defun sc-mail-field-query (arg)
   "View the value of a mail field.
@@ -916,8 +924,8 @@ Match addresses of the style ``<name[stuff]>.''"
   "Get the full email address path from FROM.
 AUTHOR is the author's name (which is removed from the address)."
   (let ((eos (length from)))
-    (if (string-match (concat "\\(^\\|^\"\\)" author
-			      "\\(\\s +\\|\"\\s +\\)") from 0)
+    (if (string-match (concat "\\`\"?" (regexp-quote author)
+			      "\"?\\s +") from 0)
 	(let ((address (substring from (match-end 0) eos)))
 	  (if (and (= (aref address 0) ?<)
 		   (= (aref address (1- (length address))) ?>))
@@ -1174,8 +1182,11 @@ to the auto-selected attribution string."
 	      (setq attribution attrib
 		    attriblist nil))
 	     ((listp attrib)
-	      (setq attribution (eval attrib)
-		    attriblist nil))
+	      (setq attribution (eval attrib))
+              (if (stringp attribution)
+                  (setq attriblist nil)
+                (setq attribution nil
+                      attriblist (cdr attriblist))))
 	     (t (error "%s did not evaluate to a string or list!"
 		       "sc-attrib-selection-list"))
 	     )))
@@ -1659,7 +1670,7 @@ header style to use, unless not supplied or invalid, in which case
 	      (major-mode 'sc-electric-mode))
 	  (use-local-map sc-electric-mode-map)
 	  (sc-eref-show sc-eref-style)
-	  (run-hooks 'sc-electric-mode-hook)
+	  (run-mode-hooks 'sc-electric-mode-hook)
 	  (recursive-edit)
 	  )))
 
@@ -1866,10 +1877,11 @@ Note on function names in this list: all functions of the form
 
 (define-minor-mode sc-minor-mode
   "Supercite minor mode."
-  nil (" SC" (sc-auto-fill-region-p
-	      (":f" (sc-fixup-whitespace-p "w"))
-	      (sc-fixup-whitespace-p ":w")))
-  `((,sc-mode-map-prefix . ,sc-mode-map)))
+  :group 'supercite
+  :lighter (" SC" (sc-auto-fill-region-p
+		   (":f" (sc-fixup-whitespace-p "w"))
+		   (sc-fixup-whitespace-p ":w")))
+  :keymap `((,sc-mode-map-prefix . ,sc-mode-map)))
 
 ;;;###autoload
 (defun sc-cite-original ()
@@ -2054,5 +2066,5 @@ more information.  Info node `(SC)Top'."
 (provide 'supercite)
 (run-hooks 'sc-load-hook)
 
-;;; arch-tag: a5d5bfa6-3bd5-4414-8c65-0afc83e45cd3
+;; arch-tag: a5d5bfa6-3bd5-4414-8c65-0afc83e45cd3
 ;;; supercite.el ends here

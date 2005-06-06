@@ -1,6 +1,6 @@
 ;;; vip.el --- a VI Package for GNU Emacs
 
-;; Copyright (C) 1986, 1987, 1988, 1992, 1993, 1998
+;; Copyright (C) 1986, 1987, 1988, 1992, 1993, 1998, 2005
 ;;        Free Software Foundation, Inc.
 
 ;; Author: Masahiko Sato <ms@sail.stanford.edu>
@@ -2177,7 +2177,7 @@ a token has type \(command, address, end-mark\) and value."
 		 (cond ((string= ex-token-type "plus") "add-number")
 		       ((string= ex-token-type "minus") "sub-number")
 		       (t "abs-number")))
-	   (setq ex-token (string-to-int (buffer-substring (point) (mark)))))
+	   (setq ex-token (string-to-number (buffer-substring (point) (mark)))))
 	  ((looking-at "\\$")
 	   (forward-char 1)
 	   (setq ex-token-type "end"))
@@ -2253,7 +2253,7 @@ a token has type \(command, address, end-mark\) and value."
 	   (setq ex-token-type "end-mark")
 	   (setq ex-token "goto"))
 	  (t
-	   (error "illegal token")))))
+	   (error "invalid token")))))
 
 (defun vip-ex (&optional string)
   "ex commands within VIP."
@@ -2471,14 +2471,14 @@ a token has type \(command, address, end-mark\) and value."
 	(progn
 	  (set-mark (point))
 	  (re-search-forward "[0-9][0-9]*")
-	  (setq ex-count (string-to-int (buffer-substring (point) (mark))))
+	  (setq ex-count (string-to-number (buffer-substring (point) (mark))))
 	  (skip-chars-forward " \t")))
     (if (looking-at "[pl#]")
 	(progn
 	  (setq ex-flag t)
 	  (forward-char 1)))
     (if (not (looking-at "[\n|]"))
-	(error "Illegal extra characters"))))
+	(error "Invalid extra characters"))))
 
 (defun vip-get-ex-count ()
   (setq ex-variant nil
@@ -2496,14 +2496,14 @@ a token has type \(command, address, end-mark\) and value."
 	(progn
 	  (set-mark (point))
 	  (re-search-forward "[0-9][0-9]*")
-	  (setq ex-count (string-to-int (buffer-substring (point) (mark))))
+	  (setq ex-count (string-to-number (buffer-substring (point) (mark))))
 	  (skip-chars-forward " \t")))
     (if (looking-at "[pl#]")
 	(progn
 	  (setq ex-flag t)
 	  (forward-char 1)))
     (if (not (looking-at "[\n|]"))
-	(error "Illegal extra characters"))))
+	(error "Invalid extra characters"))))
 
 (defun vip-get-ex-file ()
   "get a file name and set ex-variant, ex-append and ex-offset if found"

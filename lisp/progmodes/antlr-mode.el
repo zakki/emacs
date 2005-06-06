@@ -785,6 +785,7 @@ bound to `antlr-language'.  For example, with value
   \((java-mode \. 2) (c++-mode \. 0))
 Java actions are fontified with level 2 and C++ actions are not
 fontified at all."
+  :group 'antlr
   :type '(choice (const :tag "None" none)
 		 (const :tag "Inherit" inherit)
 		 (const :tag "Default" nil)
@@ -2623,7 +2624,7 @@ the default language."
        (imenu-add-to-menubar
 	(if (stringp antlr-imenu-name) antlr-imenu-name "Index")))
   (antlr-set-tabs)
-  (run-hooks 'antlr-mode-hook))
+  (run-mode-hooks 'antlr-mode-hook))
 
 ;; A smarter version of `group-buffers-menu-by-mode-then-alphabetically' (in
 ;; XEmacs) could use the following property.  The header of the submenu would

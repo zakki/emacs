@@ -1,6 +1,6 @@
 /* Asynchronous subprocess control for GNU Emacs.
-   Copyright (C) 1985, 86, 87, 88, 93, 94, 95, 96, 98, 1999,
-      2001, 2002, 2003, 2004 Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995, 1996, 1998, 1999,
+      2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -375,8 +375,6 @@ extern int timers_run;
 
 /* Maximum number of bytes to send to a pty without an eof.  */
 static int pty_max_bytes;
-
-extern Lisp_Object Vfile_name_coding_system, Vdefault_file_name_coding_system;
 
 #ifdef HAVE_PTYS
 #ifdef HAVE_PTY_H
@@ -5110,6 +5108,7 @@ send_process_trap ()
   sigrelse (SIGPIPE);
   sigrelse (SIGALRM);
 #endif /* BSD4_1 */
+  sigunblock (sigmask (SIGPIPE));
   longjmp (send_process_frame, 1);
 }
 
@@ -5135,6 +5134,7 @@ send_process (proc, buf, len, object)
   int rv;
   struct coding_system *coding;
   struct gcpro gcpro1;
+  SIGTYPE (*volatile old_sigpipe) ();
 
   GCPRO1 (object);
 
@@ -5259,7 +5259,6 @@ send_process (proc, buf, len, object)
       while (len > 0)
 	{
 	  int this = len;
-	  SIGTYPE (*old_sigpipe)();
 
 	  /* Decide how much data we can send in one batch.
 	     Long lines need to be split into multiple batches.  */
@@ -5301,7 +5300,11 @@ send_process (proc, buf, len, object)
 			       0, datagram_address[outfd].sa,
 			       datagram_address[outfd].len);
 		  if (rv < 0 && errno == EMSGSIZE)
-		    report_file_error ("sending datagram", Fcons (proc, Qnil));
+		    {
+		      signal (SIGPIPE, old_sigpipe);
+		      report_file_error ("sending datagram",
+					 Fcons (proc, Qnil));
+		    }
 		}
 	      else
 #endif
@@ -5398,6 +5401,7 @@ send_process (proc, buf, len, object)
 #endif /* not VMS */
   else
     {
+      signal (SIGPIPE, old_sigpipe);
 #ifndef VMS
       proc = process_sent_to;
       p = XPROCESS (proc);

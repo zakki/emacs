@@ -1,6 +1,6 @@
 ;;; decipher.el --- cryptanalyze monoalphabetic substitution ciphers
 ;;
-;; Copyright (C) 1995, 1996, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1996, 2003, 2005 Free Software Foundation, Inc.
 ;;
 ;; Author: Christopher J. Madsen <chris_madsen@geocities.com>
 ;; Keywords: games
@@ -314,7 +314,7 @@ The most useful commands are:
             (lambda () (setq buffer-read-only nil
                              buffer-undo-list nil))
             nil t)
-  (run-hooks 'decipher-mode-hook)
+  (run-mode-hooks 'decipher-mode-hook)
   (setq buffer-read-only t))
 (put 'decipher-mode 'mode-class 'special)
 
@@ -998,7 +998,7 @@ Creates the statistics buffer if it doesn't exist."
         major-mode       'decipher-stats-mode
         mode-name        "Decipher-Stats")
   (use-local-map decipher-stats-mode-map)
-  (run-hooks 'decipher-stats-mode-hook))
+  (run-mode-hooks 'decipher-stats-mode-hook))
 (put 'decipher-stats-mode 'mode-class 'special)
 
 ;;--------------------------------------------------------------------

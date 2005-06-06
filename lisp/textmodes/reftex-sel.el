@@ -1,8 +1,9 @@
 ;;; reftex-sel.el --- the selection modes for RefTeX
-;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004, 2005
+;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.26
+;; Version: 4.28
 
 ;; This file is part of GNU Emacs.
 
@@ -59,7 +60,7 @@ During a selection process, these are the local bindings.
   (when (syntax-table-p reftex-latex-syntax-table)
     (set-syntax-table reftex-latex-syntax-table))
   ;; We do not set a local map - reftex-select-item does this.
-  (run-hooks 'reftex-select-label-mode-hook))
+  (run-mode-hooks 'reftex-select-label-mode-hook))
 
 (defvar reftex-select-bib-map nil
   "Keymap used for *RefTeX Select* buffer, when selecting a BibTeX entry.
@@ -87,7 +88,7 @@ During a selection process, these are the local bindings.
         mode-name "BSelect")
   (set (make-local-variable 'reftex-select-marked) nil)
   ;; We do not set a local map - reftex-select-item does this.
-  (run-hooks 'reftex-select-bib-mode-hook))
+  (run-mode-hooks 'reftex-select-bib-mode-hook))
 
 ;;; (defun reftex-get-offset (buf here-am-I &optional typekey toc index file)
 ;;;   ;; Find the correct offset data, like insert-docstruct would, but faster.
@@ -418,7 +419,7 @@ During a selection process, these are the local bindings.
           (remove-hook 'post-command-hook 
                        'reftex-select-post-command-hook t))
         ;; Kill the mark overlays
-        (mapcar (lambda (c) (delete-overlay (nth 1 c)))
+        (mapcar (lambda (c) (reftex-delete-overlay (nth 1 c)))
                 reftex-select-marked)))))
 
     (set (make-local-variable 'reftex-last-line)
@@ -604,14 +605,14 @@ Useful for large TOC's."
     (setq boe (or (previous-single-property-change (1+ (point)) :data)
                   (point-min))
           eoe (or (next-single-property-change (point) :data) (point-max)))
-    (setq ovl (make-overlay boe eoe))
+    (setq ovl (reftex-make-overlay boe eoe))
     (push (list data ovl separator) reftex-select-marked)
-    (overlay-put ovl 'face reftex-select-mark-face)
-    (overlay-put ovl 'before-string
-                 (if separator
-                     (format "*%c%d* " separator
-                             (length reftex-select-marked))
-                   (format "*%d*  " (length reftex-select-marked))))
+    (reftex-overlay-put ovl 'face reftex-select-mark-face)
+    (reftex-overlay-put ovl 'before-string
+                        (if separator
+                            (format "*%c%d* " separator
+                                    (length reftex-select-marked))
+                          (format "*%d*  " (length reftex-select-marked))))
     (message "Entry has mark no. %d" (length reftex-select-marked))))
 
 (defun reftex-select-mark-comma ()
@@ -637,19 +638,16 @@ Useful for large TOC's."
          sep)
     (unless cell
       (error "No marked entry at point"))
-    (and ovl (delete-overlay ovl))
+    (and ovl (reftex-delete-overlay ovl))
     (setq reftex-select-marked (delq cell reftex-select-marked))
-    (if (featurep 'xemacs)
-        ;; before-string property is broken in Emacs
-        (progn
-          (setq cnt (1+ (length reftex-select-marked)))
-          (mapcar (lambda (c)
-                    (setq sep (nth 2 c))
-                    (overlay-put (nth 1 c) 'before-string
-                                 (if sep
-                                     (format "*%c%d* " sep (decf cnt))
-                                   (format "*%d*  " (decf cnt)))))
-                  reftex-select-marked)))
+    (setq cnt (1+ (length reftex-select-marked)))
+    (mapcar (lambda (c)
+              (setq sep (nth 2 c))
+              (reftex-overlay-put (nth 1 c) 'before-string
+                                  (if sep
+                                      (format "*%c%d* " sep (decf cnt))
+                                    (format "*%d*  " (decf cnt)))))
+            reftex-select-marked)
     (message "Entry no longer marked")))
 
 (defun reftex-select-help ()

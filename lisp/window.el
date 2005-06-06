@@ -29,6 +29,15 @@
 
 ;;; Code:
 
+(defvar window-size-fixed nil
+ "*Non-nil in a buffer means windows displaying the buffer are fixed-size.
+If the value is`height', then only the window's height is fixed.
+If the value is `width', then only the window's width is fixed.
+Any other non-nil value fixes both the width and the height.
+Emacs won't change the size of any window displaying that buffer,
+unless you explicitly change the size, or Emacs has no other choice.")
+(make-variable-buffer-local 'window-size-fixed)
+
 (defmacro save-selected-window (&rest body)
   "Execute BODY, then select the window that was selected before BODY.
 Also restore the selected window of each frame as it was at the start
@@ -397,20 +406,13 @@ lines than are actually needed in the case where some error may be present."
 
 (defun window-buffer-height (window)
   "Return the height (in screen lines) of the buffer that WINDOW is displaying."
-  (save-excursion
-    (set-buffer (window-buffer window))
-    (goto-char (point-min))
-    (let ((ignore-final-newline
-           ;; If buffer ends with a newline, ignore it when counting height
-           ;; unless point is after it.
-           (and (not (eobp)) (eq ?\n (char-after (1- (point-max)))))))
-      (+ 1 (nth 2 (compute-motion (point-min)
-                                  '(0 . 0)
-                                  (- (point-max) (if ignore-final-newline 1 0))
-                                  (cons 0 100000000)
-                                  nil
-                                  nil
-                                  window))))))
+  (with-current-buffer (window-buffer window)
+    (max 1
+	 (count-screen-lines (point-min) (point-max)
+			     ;; If buffer ends with a newline, ignore it when
+			     ;; counting height unless point is after it.
+			     (eobp)
+			     window))))
 
 (defun count-screen-lines (&optional beg end count-final-newline window)
   "Return the number of screen lines in the region.
@@ -541,8 +543,7 @@ Do not shrink to less than `window-min-height' lines.
 Do nothing if the buffer contains more lines than the present window height,
 or if some of the window's contents are scrolled out of view,
 or if shrinking this window would also shrink another window.
-or if the window is the only window of its frame.
-Return non-nil if the window was shrunk."
+or if the window is the only window of its frame."
   (interactive)
   (when (null window)
     (setq window (selected-window)))
@@ -581,7 +582,7 @@ Return non-nil if the window was shrunk."
 
 (defun quit-window (&optional kill window)
   "Quit the current buffer.  Bury it, and maybe delete the selected frame.
-\(The frame is deleted if it is contains a dedicated window for the buffer.)
+\(The frame is deleted if it contains a dedicated window for the buffer.)
 With a prefix argument, kill the buffer instead.
 
 Noninteractively, if KILL is non-nil, then kill the current buffer,

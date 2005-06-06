@@ -1,3 +1,749 @@
+2005-06-05  Chong Yidong  <cyd@stupidchicken.com>
+
+	* emacs.texi: Rename Hardcopy to Printing.
+	Make PostScript and PostScript Variables subnodes of it.
+
+	* misc.texi (Printing): Rename node from Hardcopy.
+	Mention menu bar options.
+	Move PostScript and PostScript Variables to submenu.
+	(Printing package): New node.
+
+	* mark.texi (Using Region): Change Hardcopy xref to Printing.
+
+	* dired.texi (Operating on Files): Likewise.
+
+	* calendar.texi (Displaying the Diary): Likewise.
+
+	* msdog.texi (MS-DOS Printing, MS-DOS Processes): Likewise.
+
+	* glossary.texi (Glossary): Likewise.
+
+	* frames.texi (Mode Line Mouse): Mention mode-line-highlight
+	effect.
+
+2005-06-04  Richard M. Stallman  <rms@gnu.org>
+
+	* trouble.texi (After a Crash): Polish previous change.
+
+2005-05-31  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Notations Used in This Manual): Use @kbd for key
+	sequence.
+	(Demonstration of Calc): Mention another way of starting Calc.
+	(Starting Calc): Mention long name of M-#.
+	(Embedded Mode Overview): Remove unnecessary instruction.
+	(Other M-# commands): Rephrase `M-# 0' explanation.
+	(Basic Embedded Mode): Rewrite discussion of prefix arguments to
+	reflect current behavior.
+
+2005-05-30  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Hooks): Change description of calc-window-hook and
+	calc-trail-window-hook to match usage.
+	(Computational Functions): Add more constant-generating functions.
+	(Customizable Variables): Use defvar.
+
+2005-05-30  Noah Friedman  <friedman@splode.com>
+
+	* trouble.texi (After a Crash): Mention emacs-buffer.gdb as a
+	recovery mechanism.
+
+2005-05-28  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Assignments in Embedded Mode): Fix variable name.
+	(Basic Embedded Mode): Explain behavior of arguments to
+	calc-embedded-mode.
+
+2005-05-28  Nick Roberts  <nickrob@snap.net.nz>
+
+	* building.texi (Other Buffers): SPC toggles display of
+	floating point registers.
+
+2005-05-27  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Queries in Keyboard Macros): Rewrite to reflect
+	current behavior.
+
+2005-05-27  Nick Roberts  <nickrob@snap.net.nz>
+
+	* files.texi (Log Buffer): Merge in description of Log Edit
+	mode from pcl-cvs.texi.
+
+2005-05-26  Richard M. Stallman  <rms@gnu.org>
+
+	* building.texi (Lisp Eval): C-M-x with arg runs Edebug.
+
+2005-05-25  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi: Change Calc version number throughout.
+	(Keypad Mode): Change location in info output.
+	(Keypad mode overview): Move picture of keypad.
+
+2005-05-24  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* fixit.texi (Spelling): Delete confusing sentence; flyspell is
+	not enabled by default.
+	When not on a word, `ispell-word' by default checks the word
+	before point.
+
+2005-05-24  Nick Roberts  <nickrob@snap.net.nz>
+
+	* building.texi (Debugger Operation): Simplify last sentence.
+
+2005-05-23  Lute Kamstra  <lute@gnu.org>
+
+	* emacs.texi: Update FSF's address throughout.
+	(Preface): Use @cite.
+	(Distrib): Add cross reference to the node "Copying".  Mention the
+	FDL.  Don't refer to etc/{FTP,ORDERS}.  Mention the sale of
+	printed manuals.
+	(Intro): Use @xref for the Emacs Lisp Intro.
+
+2005-05-21  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Storing variables): Mention that only most variables
+	are void to begin with.
+
+2005-05-21  Kevin Ryde  <user42@zip.com.au>
+
+	* widget.texi (Basic Types): Update cross ref from "Enabling
+	Mouse-1 to Follow Links" to "Links and Mouse-1" per recent
+	lispref/text.texi change.
+
+2005-05-20  Carsten Dominik  <dominik@science.uva.nl>
+
+	* org.texi: Version 3.09
+
+2005-05-18  Carsten Dominik  <dominik@science.uva.nl>
+
+	* reftex.texi: Version 4.28
+
+2005-05-18  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* buffers.texi (Select Buffer): Document `C-u M-g M-g'.
+
+	* basic.texi (Moving Point): Mention default for `goto-line'.
+
+	* programs.texi (Lisp Doc): Eldoc mode shows only the first line
+	of a variable's docstring.
+
+2005-05-18  Lute Kamstra  <lute@gnu.org>
+
+	* maintaining.texi (Overview of Emerge): Add cross reference.
+	Remove duplication.
+
+	* emacs.texi (Top): Update to the current structure of the manual.
+	* misc.texi (Emacs Server): Add menu description.
+	* files.texi (Saving): Fix menu.
+	* custom.texi (Customization): Fix menu.
+	* mule.texi (International): Fix menu.
+	* kmacro.texi (Keyboard Macros): Fix menu.
+
+2005-05-16  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* display.texi:  Various minor changes.
+	(Faces): Delete text that is repeated in the next section.
+
+2005-05-16  Nick Roberts  <nickrob@snap.net.nz>
+
+	* building.texi (Debugger Operation): Mention GUD tooltips are
+	disabled with GDB in text command mode.
+
+2005-05-16  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Storing Variables): Mention `calc-copy-special-constant'.
+
+2005-05-16  Nick Roberts  <nickrob@snap.net.nz>
+
+	* building.texi: Replace toolbar with "tool bar" for consistency.
+	(Compilation Mode): Describe compilation-context-lines
+	and use of arrow in compilation buffer.
+	(Debugger Operation): Replace help text with variable's value.
+
+	* frames.texi (Tooltips): Replace toolbar with "tool bar" for
+	consistency.
+
+2005-05-15  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* major.texi (Choosing Modes): normal-mode processes the -*- line.
+	Add xref.
+
+2005-05-14  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Default Simplifications): Insert missing ! (logical
+	not operator).
+
+2005-05-14  Michael Albinus  <michael.albinus@gmx.de>
+
+	Sync with Tramp 2.0.49.
+
+2005-05-14  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* basic.texi (Moving Point): Mention `M-g g' binding for `goto-line'.
+	(Position Info): Delete discussion of `goto-line'.  It is already
+	described in `Moving point'.
+
+	* mini.texi (Completion Commands): Correct reference.
+	(Completion Options): Fix typo.
+
+	* killing.texi (Deletion): Complete description of `C-x C-o'.
+
+2005-05-10  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Default Simplifications): Mention that 0^0 simplifies
+	to 1.
+
+2005-05-10  Richard M. Stallman  <rms@gnu.org>
+
+	* building.texi (Compilation): Clarify recompile's directory choice.
+
+	* frames.texi (Tooltips): Cleanups.
+
+	* basic.texi (Arguments): Fix punctuation.
+
+2005-05-09  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* screen.texi (Menu Bar): The up and down (not left and right)
+	arrow keys move through a keyboard menu.
+
+2005-05-08  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* basic.texi: Various typo and grammar fixes.
+	(Moving Point): C-a now runs move-beginning-of-line.
+
+2005-05-08  Nick Roberts  <nickrob@snap.net.nz>
+
+	* building.texi (Debugger Operation): Describe gud-tooltip-echo-area.
+
+	* frames.texi (Tooltips): Describe help tooltips and GUD tooltips
+	as different animals.
+
+2005-05-07  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* frames.texi (Mouse References): Clarify `mouse-1-click-follows-link'.
+	Correct index entry.
+
+2005-05-07  Nick Roberts  <nickrob@snap.net.nz>
+
+	* building.texi (Debugger Operation): Update to reflect changes
+	in GUD tooltips.
+
+2005-04-30  Richard M. Stallman  <rms@gnu.org>
+
+	* files.texi (Compressed Files): Auto Compression normally enabled.
+
+	* building.texi (Debugger Operation): Clarify previous change.
+
+2005-04-29  Carsten Dominik  <dominik@science.uva.nl>
+
+	* org.texi: Version 3.08, structure reorganized.
+
+2005-04-28  Nick Roberts  <nickrob@snap.net.nz>
+
+	* building.texi (Debugger Operation): Add description for
+	GUD tooltips when program is not running.
+
+2005-04-26  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* misc.texi (Shell): Add `Shell Prompts' to menu.
+	(Shell Mode): Add xref to `Shell Prompts'.  Clarify `C-c C-u'
+	description.  Delete remarks moved to new node.
+	(Shell Prompts): New node.
+	(History References): Replace remarks moved to `Shell Prompts'
+	with xref to that node.
+	(Remote Host): Clarify how to specify the terminal type when
+	logging in to a different machine.
+
+2005-04-26  Richard M. Stallman  <rms@gnu.org>
+
+	* emacs.texi (Top): Update submenus from files.texi.
+
+	* files.texi (Filesets): Clarify previous change.
+
+	* dired.texi (Misc Dired Features): Clarify previous change.
+
+2005-04-25  Chong Yidong  <cyd@stupidchicken.com>
+
+	* ack.texi (Acknowledgments): Delete info about iso-acc.el
+
+	* dired.texi (Misc Dired Features): Document
+	dired-compare-directories.
+
+	* files.texi (Filesets): New node.
+	(File Conveniences): Document Image mode.
+
+	* text.texi (TeX Print): Document tex-compile.
+
+2005-04-25  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* frames.texi (Tooltips): Tooltip mode is enabled by default.
+	Delete redundant reference to tooltip Custom group.   It is
+	referred too again in the next paragraph.
+
+2005-04-24  Richard M. Stallman  <rms@gnu.org>
+
+	* ack.texi: Delete info about lazy-lock.el and fast-lock.el.
+
+	* faq.texi: Delete info about lazy-lock.el and fast-lock.el.
+
+2005-04-19  Kim F. Storm  <storm@cua.dk>
+
+	* building.texi (Compilation Mode): Add M-g M-n and M-g M-p bindings.
+
+2005-04-18  Lars Hansen  <larsh@math.ku.dk>
+
+	* misc.texi (Saving Emacs Sessions): Add that "--no-desktop" now
+	turns off desktop-save-mode.
+
+2005-04-17  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* frames.texi (XTerm Mouse): Xterm Mouse mode is no longer enabled
+	by default in terminals compatible with xterm.  Mention that
+	xterm-mouse-mode is a minor mode and put in pxref to Minor Modes
+	node.
+
+2005-04-15  Carsten Dominik  <dominik@science.uva.nl>
+
+	* org.texi: Update to version 3.06.
+
+2005-04-13  Lute Kamstra  <lute@gnu.org>
+
+	* cc-mode.texi: Prevent creating an unnecessary empty cc-mode.ss file.
+
+2005-04-12  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* frames.texi (XTerm Mouse): Xterm Mouse mode is now enabled by
+	default.
+
+2005-04-12  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* xresources.texi (Table of Resources): Add cursorBlink.
+
+2005-04-11  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* rmail.texi (Rmail Summary Edit): Explain numeric arguments to
+	`d', `C-d' and `u'.
+
+2005-04-11  Richard M. Stallman  <rms@gnu.org>
+
+	* cmdargs.texi (Initial Options): -Q is now --quick, and does less.
+	(Misc X): Add -D, --basic-display.
+
+	* maintaining.texi (Change Log): Correct the description of
+	the example.
+
+	* major.texi (Choosing Modes): Document magic-mode-alist.
+
+2005-04-10  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	* cl.texi (Porting Common Lisp): Fix typo.
+
+2005-04-10  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* rmail.texi (Rmail Basics): Clarify description of `q' and `b'.
+	(Rmail Deletion): `C-d' in RMAIL buffer does not accept a numeric
+	argument.
+	(Rmail Inbox): Give full name of `rmail-primary-inbox-list'.
+	(Rmail Output): Clarify which statements apply to `o', `C-o' and
+	`w', respectively.
+	(Rmail Labels): Mention `l'.
+	(Rmail Attributes): Correct pxref.  Mention `stored' attribute.
+	(Rmail Summary Edit): Describe `j' and RET.
+
+2005-04-10  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* xresources.texi (Lucid Resources): Added fonSet resource.
+
+2005-04-06  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus.texi (RSS): Addition.
+
+2005-04-09  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* display.texi (Useless Whitespace): `indicate-unused-lines' is
+	now called `indicate-empty-lines'.
+
+2005-04-06  Kim F. Storm  <storm@cua.dk>
+
+	* cmdargs.texi (Initial Options): Add --bare-bones alias for -Q.
+
+2005-04-04  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* dired.texi (Dired Visiting): `dired-view-command-alist' has been
+	deleted.
+	(Marks vs Flags): Add some convenient key bindings.
+	(Hiding Subdirectories): Delete redundant and inaccurate sentence.
+	(Misc Dired Features): Correct and expand description of `w' command.
+
+	* frames.texi (XTerm Mouse): Delete apparently false info.
+	The GNU/Linux console currently does not appear to support
+	`xterm-mouse-mode'.
+
+2005-04-04  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi: Change Calc version number.
+	(Customizable variables): Fix description of calc-language-alist.
+	(Copying): Put in version 2 of GPL.
+
+2005-04-03  Glenn Morris  <gmorris@ast.cam.ac.uk>
+
+	* calendar.texi (Diary): Mention shell utility `calendar'.
+
+2005-04-01  Richard M. Stallman  <rms@gnu.org>
+
+	* cmdargs.texi (Misc X): Explain horizontal scroll bars don't exist.
+
+2005-04-01  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Troubleshooting Commands): Remove comment about
+	installation.
+	(Installation): Remove section.
+	(Customizable Variables): New section.
+	(Basic Embedded Mode, Customizing Embedded Mode, Graphics)
+	(Graphical Devices): Add references to Customizable Variables.
+
+2005-04-01  Lute Kamstra  <lute@gnu.org>
+
+	* maintaining.texi (Change Log): add-change-log-entry uses
+	add-log-mailing-address.
+
+2005-03-31  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* files.texi (Reverting): Move `auto-revert-check-vc-info' to
+	`VC Mode Line' and put in an xref to that node.
+	(VC Mode Line): Move `auto-revert-check-vc-info' here and clarify
+	its description.
+
+2005-03-31  Paul Eggert  <eggert@cs.ucla.edu>
+
+	* calendar.texi (Calendar Systems): Say that the Persian calendar
+	implemented here is the arithmetical one championed by Birashk.
+
+2005-03-30  Glenn Morris  <gmorris@ast.cam.ac.uk>
+
+	* programs.texi (Fortran Motion): Fix previous change.
+
+2005-03-25  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* emacs-mime.texi (Display Customization): Markup fixes.
+	(rfc2047): Update.
+
+2005-03-23  Reiner Steib  <Reiner.Steib@gmx.de>
+
+	* gnus-faq.texi: Replaced with auto-generated version.
+
+2005-03-29  Richard M. Stallman  <rms@gnu.org>
+
+	* mule.texi (Single-Byte Character Support): Reinstall the C-x 8 info.
+
+2005-03-29  Chong Yidong  <cyd@stupidchicken.com>
+
+	* text.texi (Refill): Refer to Long Lines Mode.
+	(Longlines): New node.
+	(Auto Fill): Don't index "word wrap" here.
+	(Filling): Add Longlines to menu.
+
+2005-03-29  Richard M. Stallman  <rms@gnu.org>
+
+	* xresources.texi: Minor fixes.
+
+	* misc.texi (Emacs Server): Fix Texinfo usage.
+
+	* emacs.texi (Top): Don't use a real section heading for
+	"Detailed Node Listing".  Fake it instead.
+
+	* basic.texi (Position Info): Minor cleanup.
+
+	* mule.texi (Input Methods): Minor cleanup.
+
+2005-03-29  Glenn Morris  <gmorris@ast.cam.ac.uk>
+
+	* programs.texi (ForIndent Vars): `fortran-if-indent' does other
+	constructs as well.
+	(Fortran Motion): Add fortran-end-of-block,
+	fortran-beginning-of-block.
+
+2005-03-29  Kenichi Handa  <handa@m17n.org>
+
+	* mule.texi (Input Methods): Refer to the command C-u C-x =.
+
+	* basic.texi (Position Info): Update the description about the
+	command C-u C-x =.
+
+2005-03-28  Richard M. Stallman  <rms@gnu.org>
+
+	* emacs.texi (Top): Use @section for the detailed node listing.
+
+	* calendar.texi: Minor fixes to previous change.
+
+	* programs.texi (Fortran): Small fixes to previous changes.
+
+	* emacs.texi (Top): Update list of subnodes of Dired.
+	Likewise for building.texi.
+
+	* files.texi (File Conveniences): Delete Auto Image File mode.
+
+2005-03-28  Chong Yidong  <cyd@stupidchicken.com>
+
+	* building.texi (Flymake): New node.
+
+	* custom.texi (Function Keys): Document kp- event types and
+	keypad-setup package.
+
+	* dired.texi (Wdired): New node.
+
+	* files.texi (File Conveniences): Reorder entries.
+	Explain how to turn on Auto-image-file mode.
+	Document Thumbs mode.
+
+	* mule.texi (Specify Coding): Document recode-region and
+	recode-file-name.
+
+	* programs.texi (Program Modes): Add Conf mode and DNS mode.
+
+2005-03-27  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* commands.texi (Keys): M-o is now a prefix key.
+
+2005-03-27  Glenn Morris  <gmorris@ast.cam.ac.uk>
+
+	* programs.texi: Reformat and update copyright years.
+	(Fortran): Update section.
+
+2005-03-26  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* files.texi: Several small changes in addition to:
+	(Visiting): Change xref for Dialog Boxes to ref.
+	(Version Headers): Replace references to obsolete var
+	`vc-header-alist' with `vc-BACKEND-header'.
+	(Customizing VC): Update value of `vc-handled-backends'.
+
+2005-03-26  Glenn Morris  <gmorris@ast.cam.ac.uk>
+
+	* emacs-xtra.texi (Advanced Calendar/Diary Usage): New section;
+	move here from Emacs Lisp Reference Manual.
+	* calendar.texi (Calendar/Diary, Diary Commands)
+	(Special Diary Entries, Importing Diary): Change some xrefs to
+	point to emacs-xtra rather than elisp.
+
+	* emacs-xtra.texi (Calendar Customizing): Move
+	view-diary-entries-initially, view-calendar-holidays-initially,
+	mark-diary-entries-in-calendar, mark-holidays-in-calendar to main
+	Emacs Manual.
+	(Appt Customizing): Merge entire section into main Emacs Manual.
+	* calendar.texi (Holidays): Move view-calendar-holidays-initially,
+	mark-holidays-in-calendar here from emacs-xtra.
+	(Displaying the Diary): Move view-diary-entries-initially,
+	mark-diary-entries-in-calendar here from emacs-xtra.
+	(Appointments): Move appt-display-mode-line,
+	appt-display-duration, appt-disp-window-function,
+	appt-delete-window-function here from emacs-xtra.
+
+	* calendar.texi: Update and reformat copyright.
+	Change all @xrefs to the non-printing emacs-xtra to @inforefs.
+	(Calendar/Diary): Menu now only on Mouse-3, not C-Mouse-3.
+	(Diary): Refer to `diary-file' rather than ~/diary.
+	(Diary Commands): Rename node to "Displaying the Diary".
+	* emacs.texi (Top): Rename "Diary Commands" section.
+	* misc.texi (Hardcopy): Rename "Diary Commands" xref.
+
+2005-03-26  Eli Zaretskii  <eliz@gnu.org>
+
+	* misc.texi (Emacs Server): Fix the command for setting
+	server-name.  Add an xref to Invoking emacsclient.
+
+	* help.texi (Help Summary): Clarify when "C-h ." will do something
+	nontrivial.
+	(Apropos): Add cindex entry for apropos-sort-by-scores.
+
+	* display.texi (Text Display): Add index entries for how no-break
+	characters are displayed.
+
+2005-03-26  Stephan Stahl  <stahl@eos.franken.de>  (tiny change)
+
+	* dired-x.texi (Multiple Dired Directories): default-directory was
+	renamed to dired-default-directory.
+
+2005-03-26  Eli Zaretskii  <eliz@gnu.org>
+
+	* files.texi (Visiting): Fix cross-references introduced with the
+	last change.
+
+	* xresources.texi (GTK resources): Fix last change.
+
+2005-03-26  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Simplifying Formulas, Rewrite Rules): Change
+	description of top and bottom of fraction.
+	(Modulo Forms): Move description of how to create modulo forms to
+	earlier in the section.
+	(Fraction Mode): Suggest using : to get a fraction by dividing.
+	(Basic Arithmetic): Adjust placement of command name.
+	(Truncating the Stack): Emphasize that "hidden" entries are still
+	visible.
+	(Installation): Move discussion of printing manual to "About This
+	Manual".
+	(About This Manual): Mention how to print the manual.
+	(Reporting Bugs): Remove first person.
+	(Building Vectors): Add algebraic version of append.
+	(Manipulating Vectors): Fix algebraic version of calc-reverse-vector.
+	(Grouping Digits): Fix typo.
+
+2005-03-25  Chong Yidong  <cyd@stupidchicken.com>
+
+	* xresources.texi (X Resources): GTK options documented too.
+	(Resources): Clarify meaning of program name.
+	(Table of Resources): Add visualClass.
+	(GTK resources): Rewrite.
+	(GTK widget names, GTK Names in Emacs, GTK styles): Cleanups.
+
+	* display.texi (Text Display): Mention non-breaking spaces.
+
+	* files.texi (Reverting): Document auto-revert-check-vc-info.
+
+	* frames.texi (Mouse Commands): Document
+	x-mouse-click-focus-ignore-position and mouse-drag-copy-region.
+
+	* help.texi (Help Summary): Add `C-h .'.
+	(Apropos): Apropos accepts a list of search terms.
+	Document apropos-sort-by-scores.
+	(Help Echo): Document display-local-help.
+
+	* misc.texi (Emacs Server): Document server-name.
+	(Invoking emacsclient): Document -s option for server names.
+
+	* text.texi (Outline Visibility): Introduce "current heading
+	line" (commands can be called with point on a body line).
+	Re-order table to follow the sequence of discussion.
+	hide-body won't hide lines before first header line.
+	(TeX Mode): Add DocTeX mode.
+
+2005-03-25  Werner Lemberg  <wl@gnu.org>
+
+	* calc.texi, cl.texi, gnus.texi, idlwave.texi, reftex.texi: Replace
+	`legal' with `valid'.
+
+2005-03-25  Werner Lemberg  <wl@gnu.org>
+
+	* calc.texi, reftex.texi: Replace `illegal' with `invalid'.
+
+2005-03-24  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (General Mode Commands)
+	(Mode Settings in Embedded Mode): Added some explanation of
+	recording mode settings.
+
+2005-03-24  Richard M. Stallman  <rms@gnu.org>
+
+	* mule.texi (Single-Byte Character Support): Delete mention
+	of iso-acc.el and iso-transl.el.
+
+	* calc.texi: Remove praise of non-free software.
+
+	* idlwave.texi: Don't say where to get IDL or its non-free manual.
+	(Installation): Node deleted.
+
+2005-03-23  Lute Kamstra  <lute@gnu.org>
+
+	* search.texi (Non-ASCII Isearch): Rename from Non-Ascii Isearch.
+
+2005-03-23  Richard M. Stallman  <rms@gnu.org>
+
+	* url.texi (HTTP language/coding): Improve last change.
+
+	* search.texi: Delete explicit node pointers.
+	(Incremental Search): New menu.
+	(Basic Isearch, Repeat Isearch, Error in Isearch)
+	(Non-Ascii Isearch, Isearch Yank, Highlight Isearch, Isearch Scroll)
+	(Slow Isearch): New subnodes.
+	(Configuring Scrolling): Node deleted.
+	(Search Case): Doc default-case-fold-search.
+	(Regexp Replace): Move replace-regexp doc here.
+
+	* rmail.texi (Movemail): Put commas inside closequotes.
+
+	* picture.texi (Insert in Picture): Document C-c arrow combos.
+	(Basic Picture): Clarify erasure.
+
+	* display.texi (Font Lock): Put commas inside closequotes.
+
+	* cmdargs.texi (General Variables): Put commas inside closequotes.
+
+2005-03-23  Nick Roberts  <nickrob@snap.net.nz>
+
+	* building.texi (Stack Buffer): Mention reverse contrast for
+	*selected* frame (might not be current frame).
+
+2005-03-22  Jay Belanger  <belanger@truman.edu>
+
+	* calc.texi (Embedded Mode): Add new information on changing
+	modes.
+
+2005-03-21  Richard M. Stallman  <rms@gnu.org>
+
+	* building.texi (Starting GUD): Add bashdb.
+
+2005-03-20  Chong Yidong  <cyd@stupidchicken.com>
+
+	* basic.texi (Moving Point): Add M-g M-g binding.
+	(Undo): Document undo-only.
+	(Position Info): Document M-g M-g and C-u M-g M-g.
+
+	* building.texi (Building): Put Grep Searching after Compilation
+	Shell.
+	(Compilation Mode): Document M-n, M-p, M-}, M-{, and C-c C-f bindings.
+	Document next-error-highlight.
+	(Grep Searching): Document grep-highlight-matches.
+	(Lisp Eval): Typing C-x C-e twice prints integers specially.
+
+	* calendar.texi (Importing Diary): Rename node from iCalendar.
+	Document diary-from-outlook.
+
+	* dired.texi (Misc Dired Features): Rename node from Misc Dired
+	Commands.
+	Mention effect of X drag and drop on Dired buffers.
+
+	* files.texi (Visiting): Document large-file-warning-threshold.
+	Move paragraph on file-selection dialog.
+	Mention visiting files using X drag and drop.
+	(Reverting): Mention using Auto-Revert mode to tail files.
+	Document auto-revert-tail-mode.
+	(Version Systems): Minor correction.
+	(Comparing Files): Diff-mode is no longer based on Compilation
+	mode.
+	Document compare-ignore-whitespace.
+	(Misc File Ops): Explain passing a directory to rename-file.
+	Likewise for copy-file and make-symbolic-link.
+
+	* frames.texi (Wheeled Mice): Mouse wheel support on by default.
+	Document mouse-wheel-progressive speed.
+
+	* help.texi (Misc Help): Document numeric argument for C-h i.
+	Correctly explain the effect of just C-u as argument.
+
+	* killing.texi (Deletion): Document numeric argument for
+	just-one-space.
+
+	* mini.texi (Completion): Completion acts on text before point.
+
+	* misc.texi (Saving Emacs Sessions): Document desktop-restore-eager.
+	(Emulation): CUA mode replaces pc-bindings-mode,
+	pc-selection-mode, and s-region.
+
+	* mule.texi (Input Methods): Leim is now built-in.
+	(Select Input Method): Document quail-show-key.
+	(Specify Coding): Document revert-buffer-with-coding-system.
+
+	* programs.texi (Fortran Motion): Document f90-next-statement,
+	f90-previous-statement, f90-next-block, f90-previous-block,
+	f90-end-of-block, and f90-beginning-of-block.
+
+	* text.texi (Format Faces): Replace old M-g key prefix with M-o.
+
+	* emacs.texi (Acknowledgments): Updated.
+
+	* anti.texi: Total rewrite.
+
 2005-03-20  Michael Albinus  <michael.albinus@gmx.de>
 
 	Sync with Tramp 2.0.48.
@@ -472,7 +1218,7 @@
 
 2005-01-15  Sergey Poznyakoff  <gray@Mirddin.farlep.net>
 
- 	* man/rmail.texi (Movemail): Explain differences
+	* rmail.texi (Movemail): Explain differences
 	between standard and mailutils versions of movemail.
 	Describe command line and configuration options introduced
 	with the latter.
@@ -1140,8 +1886,8 @@
 	(Indentation Commands): Correct description of `indent-relative'.
 	(Tab Stops): <TAB> is no longer bound to `tab-to-tab-stop' in Text
 	mode.  The *Tab Stops* buffer uses Overwrite Mode.
-	(Just Spaces): `untabify' converts sequences of at least two
-	spaces to tabs.
+	(Just Spaces): `tabify' converts sequences of at least two spaces
+	to tabs.
 
 2004-08-28  Eli Zaretskii  <eliz@gnu.org>
 

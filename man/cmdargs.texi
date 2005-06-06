@@ -268,10 +268,10 @@ option and @samp{-Q} are the only options that block it.
 
 @item -Q
 @opindex -Q
-Start emacs with minimum customizations and window decorations.
-This is like using @samp{-q} and @samp{--no-site-file}, but in
-addition it also disables the menu-bar, the tool-bar, the scroll-bars,
-tool tips, the blinking cursor, and the fancy startup screen.
+@itemx --quick
+@opindex --quick
+Start emacs with minimum customizations.  This is like using @samp{-q}
+and @samp{--no-site-file}, but also disables the startup screen.
 
 @item --no-splash
 @opindex --no-splash
@@ -457,7 +457,7 @@ Directory for the documentation string file,
 variable @code{doc-directory}.
 @item EMACSLOADPATH
 A colon-separated list of directories@footnote{
-Here and below, whenever we say ``colon-separated list of directories'',
+Here and below, whenever we say ``colon-separated list of directories,''
 it pertains to Unix and GNU/Linux systems.  On MS-DOS and MS-Windows,
 the directories are separated by semi-colons instead, since DOS/Windows
 file names might include a colon after a drive letter.}
@@ -1196,8 +1196,9 @@ appear until you deiconify it.
 @opindex -hb
 @itemx --horizontal-scroll-bars
 @opindex --horizontal-scroll-bars
-@cindex horizontal scroll bars, command-line argument
-Enable horizontal scroll bars.
+@c @cindex horizontal scroll bars, command-line argument
+Enable horizontal scroll bars.  Since horizontal scroll bars
+are not yet implemented, this actually does nothing.
 
 @item -vb
 @opindex -vb
@@ -1219,6 +1220,14 @@ Specify @var{pixels} as additional space to put between lines, in pixels.
 @opindex --no-blinking-cursor
 @cindex blinking cursor disable, command-line argument
 Disable the blinking cursor on graphical terminals.
+
+@item -D
+@opindex -D
+@itemx --basic-display
+@opindex --basic-display
+Disable the menu-bar, the tool-bar, the scroll-bars, and tool tips,
+and turn off the blinking cursor.  This can be useful for making a
+test case that simplifies debugging of display problems.
 @end table
 
   The @samp{--xrm} option (@pxref{Resources}) specifies additional

@@ -1,5 +1,5 @@
 ;;; gnus-agent.el --- unplugged support for Gnus
-;; Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004
+;; Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
 ;;        Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
@@ -561,7 +561,8 @@ manipulated as follows:
   (if (and (fboundp 'propertize)
 	   (fboundp 'make-mode-line-mouse-map))
       (propertize string 'local-map
-		  (make-mode-line-mouse-map mouse-button mouse-func))
+		  (make-mode-line-mouse-map mouse-button mouse-func)
+		  'mouse-face 'mode-line-highlight)
     string))
 
 (defun gnus-agent-toggle-plugged (set-to)
@@ -1371,7 +1372,7 @@ downloaded into the agent."
         (nnheader-translate-file-chars
          (nnheader-replace-duplicate-chars-in-string
           (nnheader-replace-chars-in-string
-           (gnus-group-real-name group)
+           (gnus-group-real-name (gnus-group-decoded-name group))
            ?/ ?_)
           ?. ?_)))
   (if (or nnmail-use-long-file-names
@@ -1387,8 +1388,10 @@ downloaded into the agent."
   ;; unplugged.  The agent must, therefore, use the same directory
   ;; while plugged.
   (let ((gnus-command-method (or gnus-command-method
-                                 (gnus-find-method-for-group group))))
-    (nnmail-group-pathname (gnus-group-real-name group) (gnus-agent-directory))))
+				 (gnus-find-method-for-group group))))
+    (nnmail-group-pathname (gnus-group-real-name
+			    (gnus-group-decoded-name group))
+			   (gnus-agent-directory))))
 
 (defun gnus-agent-get-function (method)
   (if (gnus-online method)
@@ -1537,7 +1540,7 @@ downloaded into the agent."
                           (while (looking-at "\\([^: \n]+\\):\\([0-9]+\\) *")
                             (push (cons (buffer-substring (match-beginning 1)
                                                           (match-end 1))
-                                        (string-to-int
+                                        (string-to-number
 					 (buffer-substring (match-beginning 2)
 							   (match-end 2))))
                                   crosses)
@@ -2549,7 +2552,7 @@ The following commands are available:
   (buffer-disable-undo)
   (setq truncate-lines t)
   (setq buffer-read-only t)
-  (gnus-run-hooks 'gnus-category-mode-hook))
+  (gnus-run-mode-hooks 'gnus-category-mode-hook))
 
 (defalias 'gnus-category-position-point 'gnus-goto-colon)
 
@@ -3700,7 +3703,7 @@ If REREAD is not nil, downloaded articles are marked as unread."
              (dir (file-name-directory file))
              point
              (downloaded (if (file-exists-p dir)
-                             (sort (mapcar (lambda (name) (string-to-int name))
+                             (sort (mapcar (lambda (name) (string-to-number name))
                                            (directory-files dir nil "^[0-9]+$" t))
                                    '>)
                            (progn (gnus-make-directory dir) nil)))

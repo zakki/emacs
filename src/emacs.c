@@ -44,6 +44,7 @@ Boston, MA 02111-1307, USA.  */
 #include <fcntl.h>
 #include <windows.h> /* just for w32.h */
 #include "w32.h"
+#include "w32heap.h" /* for prototype of sbrk */
 #endif
 
 #include "lisp.h"
@@ -264,7 +265,8 @@ Initialization options:\n\
 --no-shared-memory, -nl     do not use shared memory\n\
 --no-site-file              do not load site-start.el\n\
 --no-splash                 do not display a splash screen on startup\n\
---no-window-system, -nw     don't communicate with X, ignoring $DISPLAY\n\
+--no-window-system, -nw     do not communicate with X, ignoring $DISPLAY\n\
+--quick, -Q                 equivalent to -q --no-site-file\n\
 --script FILE               run FILE as an Emacs Lisp script\n\
 --terminal, -t DEVICE       use DEVICE for terminal I/O\n\
 --unibyte, --no-multibyte   run Emacs in unibyte mode\n\
@@ -294,6 +296,8 @@ FILE                    visit FILE using find-file\n\
 Display options:\n\
 \n\
 --background-color, -bg COLOR   window background color\n\
+--basic-display, -D             disable many display features;\n\
+                                  used for debugging Emacs\n\
 --border-color, -bd COLOR       main border color\n\
 --border-width, -bw WIDTH       width of main border\n\
 --color, --color=MODE           color mode for character terminals;\n\
@@ -320,16 +324,16 @@ Display options:\n\
 --xrm XRESOURCES                set additional X resources\n\
 --help                          display this help and exit\n\
 --version                       output version information and exit\n\
-\n\
+\n"
+
+#define USAGE4 "\
 You can generally also specify long option names with a single -; for\n\
 example, -batch as well as --batch.  You can use any unambiguous\n\
 abbreviation for a --option.\n\
 \n\
 Various environment variables and window system resources also affect\n\
 Emacs' operation.  See the main documentation.\n\
-\n"
-
-#define USAGE4 "\
+\n\
 Report bugs to %s.  First, please see the Bugs\n\
 section of the Emacs manual or the file BUGS.\n"
 
@@ -1317,10 +1321,12 @@ main (argc, argv
       syms_of_fontset ();
       syms_of_macterm ();
       syms_of_macmenu ();
+      syms_of_macselect ();
       syms_of_data ();
       syms_of_search ();
       syms_of_frame ();
 
+      init_atimer ();
       mac_term_init (build_string ("Mac"), NULL, NULL);
       init_keyboard ();
 #endif
@@ -1346,7 +1352,9 @@ main (argc, argv
 #ifdef CLASH_DETECTION
   init_filelock ();
 #endif
+#ifndef MAC_OS8
   init_atimer ();
+#endif
   running_asynch_code = 0;
 
   /* Handle --unibyte and the EMACS_UNIBYTE envvar,
@@ -1631,6 +1639,7 @@ main (argc, argv
       syms_of_macterm ();
       syms_of_macfns ();
       syms_of_macmenu ();
+      syms_of_macselect ();
       syms_of_fontset ();
 #endif /* MAC_OSX && HAVE_CARBON */
 
@@ -1806,6 +1815,8 @@ struct standard_args standard_args[] =
   { "-d", "--display", 60, 1 },
   { "-display", 0, 60, 1 },
   /* Now for the options handled in startup.el.  */
+  { "-Q", "--quick", 55, 0 },
+  { "-quick", 0, 55, 0 },
   { "-q", "--no-init-file", 50, 0 },
   { "-no-init-file", 0, 50, 0 },
   { "-no-site-file", "--no-site-file", 40, 0 },
@@ -1816,6 +1827,8 @@ struct standard_args standard_args[] =
   { "-i", "--icon-type", 15, 0 },
   { "-itype", 0, 15, 0 },
   { "-iconic", "--iconic", 15, 0 },
+  { "-D", "--basic-display", 12, 0},
+  { "--basic-display", 0, 12, 0},
   { "-bg", "--background-color", 10, 1 },
   { "-background", 0, 10, 1 },
   { "-fg", "--foreground-color", 10, 1 },
@@ -2430,16 +2443,16 @@ syms_of_emacs ()
 Many arguments are deleted from the list as they are processed.  */);
 
   DEFVAR_LISP ("system-type", &Vsystem_type,
-+	       doc: /* Value is symbol indicating type of operating system you are using.
-+Special values:
-+  `gnu/linux'   compiled for a GNU/Linux system.
-+  `darwin'      compiled for Darwin (GNU-Darwin, Mac OS X, ...).
-+  `macos'       compiled for Mac OS 9.
-+  `ms-dos'      compiled as an MS-DOS application.
-+  `windows-nt'  compiled as a native W32 application.
-+  `cygwin'      compiled using the Cygwin library.
-+  `vax-vms' or `axp-vms': compiled for a (Open)VMS system.
-+Anything else indicates some sort of Unix system.  */);
+	       doc: /* Value is symbol indicating type of operating system you are using.
+Special values:
+  `gnu/linux'   compiled for a GNU/Linux system.
+  `darwin'      compiled for Darwin (GNU-Darwin, Mac OS X, ...).
+  `macos'       compiled for Mac OS 9.
+  `ms-dos'      compiled as an MS-DOS application.
+  `windows-nt'  compiled as a native W32 application.
+  `cygwin'      compiled using the Cygwin library.
+  `vax-vms' or `axp-vms': compiled for a (Open)VMS system.
+Anything else indicates some sort of Unix system.  */);
   Vsystem_type = intern (SYSTEM_TYPE);
 
   DEFVAR_LISP ("system-configuration", &Vsystem_configuration,

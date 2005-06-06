@@ -130,9 +130,7 @@ extern void _XEditResCheckMessages ();
 #ifdef HAVE_XAW3D
 #include <X11/Xaw3d/Simple.h>
 #include <X11/Xaw3d/Scrollbar.h>
-#define ARROW_SCROLLBAR
-#define XAW_ARROW_SCROLLBARS
-#include <X11/Xaw3d/ScrollbarP.h>
+#include <X11/Xaw3d/ThreeD.h>
 #else /* !HAVE_XAW3D */
 #include <X11/Xaw/Simple.h>
 #include <X11/Xaw/Scrollbar.h>
@@ -925,6 +923,7 @@ x_encode_char (c, char2b, font_info, two_byte_p)
       /* It's a program.  */
       struct ccl_program *ccl = font_info->font_encoder;
 
+      check_ccl_update (ccl);
       if (CHARSET_DIMENSION (charset) == 1)
 	{
 	  ccl->reg[0] = charset;
@@ -1218,8 +1217,7 @@ x_compute_glyph_string_overhangs (s)
 #ifdef HAVE_XFT
       XGlyphInfo xgl;
       XftChar16 ch = s->char2b->byte2 | (s->char2b->byte1 << 8);
-      /* XXXXX:  Display? */
-      Display *dpy = x_display_list->display;
+      Display *dpy = s->display;
       BLOCK_INPUT;
       XftTextExtents16 (dpy, s->font, &ch, 1, &xgl);
       UNBLOCK_INPUT;
@@ -1344,8 +1342,10 @@ x_draw_glyph_string_foreground (s)
 	 use XDrawImageString when drawing the cursor so that there is
 	 no chance that characters under a box cursor are invisible.  */
 #ifdef HAVE_XFT
-      if (! (s->for_overlaps_p
-             || (s->background_filled_p && s->hl != DRAW_CURSOR)))
+      /* KOKO: Always clear background for now, there are some redraw problems
+         otherwise.  */
+      if (1 || ! (s->for_overlaps_p
+                  || (s->background_filled_p && s->hl != DRAW_CURSOR)))
         XftDrawRect (s->face->xft_draw,
                      s->hl == DRAW_CURSOR ? &s->face->xft_fg : &s->face->xft_bg,
                      s->x,
@@ -4648,6 +4648,7 @@ x_create_toolkit_scroll_bar (f, bar)
       f->output_data.x->scroll_bar_bottom_shadow_pixel = pixel;
     }
 
+#ifdef XtNbeNiceToColormap
   /* Tell the toolkit about them.  */
   if (f->output_data.x->scroll_bar_top_shadow_pixel == -1
       || f->output_data.x->scroll_bar_bottom_shadow_pixel == -1)
@@ -4671,16 +4672,17 @@ x_create_toolkit_scroll_bar (f, bar)
       pixel = f->output_data.x->scroll_bar_top_shadow_pixel;
       if (pixel != -1)
 	{
-	  XtSetArg (av[ac], "topShadowPixel", pixel);
+	  XtSetArg (av[ac], XtNtopShadowPixel, pixel);
 	  ++ac;
 	}
       pixel = f->output_data.x->scroll_bar_bottom_shadow_pixel;
       if (pixel != -1)
 	{
-	  XtSetArg (av[ac], "bottomShadowPixel", pixel);
+	  XtSetArg (av[ac], XtNbottomShadowPixel, pixel);
 	  ++ac;
 	}
     }
+#endif
 
   widget = XtCreateWidget (scroll_bar_name, scrollbarWidgetClass,
 			   f->output_data.x->edit_widget, av, ac);
@@ -4826,30 +4828,11 @@ x_set_toolkit_scroll_bar_thumb (bar, portion, position, whole)
 	  XawScrollbarSetThumb (widget, top, shown);
 	else
 	  {
-#ifdef HAVE_XAW3D
-	    ScrollbarWidget sb = (ScrollbarWidget) widget;
-	    int scroll_mode = 0;
-
-	    /* `scroll_mode' only exists with Xaw3d + ARROW_SCROLLBAR.  */
-	    if (xaw3d_arrow_scroll)
-	      {
-		/* Xaw3d stupidly ignores resize requests while dragging
-		   so we have to make it believe it's not in dragging mode.  */
-		scroll_mode = sb->scrollbar.scroll_mode;
-		if (scroll_mode == 2)
-		  sb->scrollbar.scroll_mode = 0;
-	      }
-#endif
 	    /* Try to make the scrolling a tad smoother.  */
 	    if (!xaw3d_pick_top)
 	      shown = min (shown, old_shown);
 
 	    XawScrollbarSetThumb (widget, top, shown);
-
-#ifdef HAVE_XAW3D
-	    if (xaw3d_arrow_scroll && scroll_mode == 2)
-	      sb->scrollbar.scroll_mode = scroll_mode;
-#endif
 	  }
       }
   }
@@ -6895,18 +6878,18 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
           {
             dpyinfo->grabbed |= (1 << event.xbutton.button);
             last_mouse_frame = f;
-            /* Ignore any mouse motion that happened
-               before this event; any subsequent mouse-movement
-               Emacs events should reflect only motion after
-               the ButtonPress.  */
-            if (f != 0)
-              f->mouse_moved = 0;
 
             if (!tool_bar_p)
               last_tool_bar_item = -1;
           }
         else
           dpyinfo->grabbed &= ~(1 << event.xbutton.button);
+
+	/* Ignore any mouse motion that happened before this event;
+	   any subsequent mouse-movement Emacs events should reflect
+	   only motion after the ButtonPress/Release.  */
+	if (f != 0)
+	  f->mouse_moved = 0;
 
 #if defined (USE_X_TOOLKIT) || defined (USE_GTK)
         f = x_menubar_window_to_frame (dpyinfo, event.xbutton.window);
@@ -7880,6 +7863,12 @@ x_error_handler (display, error)
 #define NO_INLINE __attribute__((noinline))
 #else
 #define NO_INLINE
+#endif
+
+/* Some versions of GNU/Linux define noinline in their headers.  */
+
+#ifdef noinline
+#undef noinline
 #endif
 
 /* On older GCC versions, just putting x_error_quitter

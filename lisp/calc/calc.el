@@ -1,6 +1,7 @@
 ;;; calc.el --- the GNU Emacs calculator
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 
+;;           Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -205,12 +206,126 @@
 
 (require 'calc-macs)
 
+(defgroup calc nil
+  "GNU Calc"
+  :prefix "calc-"
+  :tag    "Calc"
+  :group  'applications)
+
 ;;;###autoload
-(defvar calc-settings-file (convert-standard-filename "~/.calc.el")
-  "*File in which to record permanent settings.")
+(defcustom calc-settings-file 
+  (convert-standard-filename "~/.calc.el")
+  "*File in which to record permanent settings."
+  :group 'calc
+  :type '(file))
+
+(defcustom calc-language-alist
+  '((latex-mode . latex)
+    (tex-mode   . tex)
+    (plain-tex-mode . tex)
+    (context-mode . tex)
+    (nroff-mode . eqn)
+    (pascal-mode . pascal)
+    (c-mode . c)
+    (c++-mode . c)
+    (fortran-mode . fortran)
+    (f90-mode . fortran))
+  "*Alist of major modes with appropriate Calc languages."
+  :group 'calc
+  :type '(alist :key-type (symbol :tag "Major mode") 
+                :value-type (symbol :tag "Calc language")))
+
+(defcustom calc-embedded-announce-formula 
+  "%Embed\n\\(% .*\n\\)*"
+  "*A regular expression which is sure to be followed by a calc-embedded formula."
+  :group 'calc
+  :type '(regexp))
+
+(defcustom calc-embedded-open-formula 
+  "\\`\\|^\n\\|\\$\\$?\\|\\\\\\[\\|^\\\\begin[^{].*\n\\|^\\\\begin{.*[^x]}.*\n\\|^@.*\n\\|^\\.EQ.*\n\\|\\\\(\\|^%\n\\|^\\.\\\\\"\n"
+  "*A regular expression for the opening delimiter of a formula used by calc-embedded."
+  :group 'calc
+  :type '(regexp))
+
+(defcustom calc-embedded-close-formula 
+  "\\'\\|\n$\\|\\$\\$?\\|\\\\]\\|^\\\\end[^{].*\n\\|^\\\\end{.*[^x]}.*\n\\|^@.*\n\\|^\\.EN.*\n\\|\\\\)\\|\n%\n\\|^\\.\\\\\"\n"
+  "*A regular expression for the closing delimiter of a formula used by calc-embedded."
+  :group 'calc
+  :type '(regexp))
+
+(defcustom calc-embedded-open-word 
+  "^\\|[^-+0-9.eE]"
+  "*A regular expression for the opening delimiter of a formula used by calc-embedded-word."
+  :group 'calc
+  :type '(regexp))
+
+(defcustom calc-embedded-close-word 
+  "$\\|[^-+0-9.eE]"
+  "*A regular expression for the closing delimiter of a formula used by calc-embedded-word."
+  :group 'calc
+  :type '(regexp))
+
+(defcustom calc-embedded-open-plain 
+  "%%% "
+  "*A string which is the opening delimiter for a \"plain\" formula.
+If calc-show-plain mode is enabled, this is inserted at the front of
+each formula."
+  :group 'calc
+  :type '(string))
+
+(defcustom calc-embedded-close-plain 
+  " %%%\n"
+  "*A string which is the closing delimiter for a \"plain\" formula.
+See calc-embedded-open-plain."
+  :group 'calc
+  :type '(string))
+
+(defcustom calc-embedded-open-new-formula 
+  "\n\n"
+  "*A string which is inserted at front of formula by calc-embedded-new-formula."
+  :group 'calc
+  :type '(string))
+
+(defcustom calc-embedded-close-new-formula 
+  "\n\n"
+  "*A string which is inserted at end of formula by calc-embedded-new-formula."
+  :group 'calc
+  :type '(string))
+
+(defcustom calc-embedded-open-mode 
+  "% "
+  "*A string which should precede calc-embedded mode annotations.
+This is not required to be present for user-written mode annotations."
+  :group 'calc
+  :type '(string))
+
+(defcustom calc-embedded-close-mode 
+  "\n"
+  "*A string which should follow calc-embedded mode annotations.
+This is not required to be present for user-written mode annotations."
+  :group 'calc
+  :type '(string))
+
+(defcustom calc-gnuplot-name 
+  "gnuplot"
+  "*Name of GNUPLOT program, for calc-graph features."
+  :group 'calc
+  :type '(string))
+
+(defcustom calc-gnuplot-plot-command 
+  nil
+  "*Name of command for displaying GNUPLOT output; %s = file name to print."
+  :group 'calc
+  :type '(choice (string) (sexp)))
+
+(defcustom calc-gnuplot-print-command 
+  "lp %s"
+  "*Name of command for printing GNUPLOT output; %s = file name to print."
+  :group 'calc
+  :type '(choice (string) (sexp)))
 
 (defvar calc-bug-address "belanger@truman.edu"
-  "Address of the author of Calc, for use by `report-calc-bug'.")
+  "Address of the maintainer of Calc, for use by `report-calc-bug'.")
 
 (defvar calc-scan-for-dels t
   "If t, scan keymaps to find all DEL-like keys.
@@ -605,6 +720,12 @@ If nil, selections displayed but ignored.")
 (defvar calc-load-hook nil
   "Hook run when calc.el is loaded.")
 
+(defvar calc-window-hook nil
+  "Hook called to create the Calc window.")
+
+(defvar calc-trail-window-hook nil
+  "Hook called to create the Calc trail window.")
+
 ;; Verify that Calc is running on the right kind of system.
 (defvar calc-emacs-type-lucid (not (not (string-match "Lucid" emacs-version))))
 
@@ -656,8 +777,7 @@ If nil, selections displayed but ignored.")
 (put 'math-underflow 'error-conditions '(error math-underflow calc-error))
 (put 'math-underflow 'error-message "Floating-point underflow occurred")
 
-(defconst calc-version "2.02g")
-(defconst calc-version-date "Mon Nov 19 2001")
+(defconst calc-version "2.1")
 (defvar calc-trail-pointer nil)		; "Current" entry in trail buffer.
 (defvar calc-trail-overlay nil)		; Value of overlay-arrow-string.
 (defvar calc-undo-list nil)		; List of previous operations for undo.
@@ -716,20 +836,6 @@ If nil, selections displayed but ignored.")
 (defvar var-phi '(special-const (math-phi)))
 (defvar var-gamma '(special-const (math-gamma-const)))
 (defvar var-Modes '(special-const (math-get-modes-vec)))
-
-(defvar calc-language-alist
-  '((latex-mode . latex)
-    (tex-mode   . tex)
-    (plain-tex-mode . tex)
-    (context-mode . tex)
-    (nroff-mode . eqn)
-    (pascal-mode . pascal)
-    (c-mode . c)
-    (c++-mode . c)
-    (fortran-mode . fortran)
-    (f90-mode . fortran))
-  "Alist of major modes with appropriate Calc languages.")
-
 
 (mapcar (lambda (v) (or (boundp v) (set v nil)))
 	  calc-local-var-list)
@@ -953,7 +1059,7 @@ If nil, selections displayed but ignored.")
 	(use-global-map glob)
 	(use-local-map loc)))))
 
-
+(defvar calc-alg-map) ; Defined in calc-ext.el
 
 (defun calc-mode ()
   "Calculator major mode.
@@ -1018,7 +1124,7 @@ Notations:  3.14e6     3.14 * 10^6
 	   (string-match "full" (nth 1 p))
 	   (setq calc-standalone-flag t))
       (setq p (cdr p))))
-  (run-hooks 'calc-mode-hook)
+  (run-mode-hooks 'calc-mode-hook)
   (calc-refresh t)
   (calc-set-mode-line)
   (calc-check-defines))
@@ -1061,8 +1167,6 @@ commands given here will actually operate on the *Calculator* stack."
   (setq buffer-read-only t)
   (make-local-variable 'overlay-arrow-position)
   (make-local-variable 'overlay-arrow-string)
-  (set (make-local-variable 'font-lock-defaults)
-       '(nil t nil nil nil (font-lock-core-only . t)))
   (when buf
     (set (make-local-variable 'calc-main-buffer) buf))
   (when (= (buffer-size) 0)
@@ -1070,7 +1174,7 @@ commands given here will actually operate on the *Calculator* stack."
       (insert (propertize (concat "Emacs Calculator v" calc-version
 				  " by Dave Gillespie\n")
 			  'font-lock-face 'italic))))
-  (run-hooks 'calc-trail-mode-hook))
+  (run-mode-hooks 'calc-trail-mode-hook))
 
 (defun calc-create-buffer ()
   (set-buffer (get-buffer-create "*Calculator*"))
@@ -1107,18 +1211,20 @@ commands given here will actually operate on the *Calculator* stack."
 	    (switch-to-buffer (current-buffer) t)
 	  (if (get-buffer-window (current-buffer))
 	      (select-window (get-buffer-window (current-buffer)))
-            (let ((w (get-largest-window)))
-              (if (and pop-up-windows
-                       (> (window-height w)
-                          (+ window-min-height calc-window-height 2)))
-                  (progn
-                    (setq w (split-window w
-                                          (- (window-height w)
-                                             calc-window-height 2)
-                                          nil))
-                    (set-window-buffer w (current-buffer))
-                    (select-window w))
-                (pop-to-buffer (current-buffer))))))
+            (if calc-window-hook
+                (run-hooks 'calc-window-hook)
+              (let ((w (get-largest-window)))
+                (if (and pop-up-windows
+                         (> (window-height w)
+                            (+ window-min-height calc-window-height 2)))
+                    (progn
+                      (setq w (split-window w
+                                            (- (window-height w)
+                                               calc-window-height 2)
+                                            nil))
+                      (set-window-buffer w (current-buffer))
+                      (select-window w))
+                  (pop-to-buffer (current-buffer)))))))
 	(save-excursion
 	  (set-buffer (calc-trail-buffer))
 	  (and calc-display-trail
@@ -1725,15 +1831,17 @@ See calc-keypad for details."
 	      (not (if flag (memq flag '(nil 0)) win)))
 	(if (null win)
 	    (progn
-              (let ((w (split-window nil (/ (* (window-width) 2) 3) t)))
-                (set-window-buffer w calc-trail-buffer))
-	      (calc-wrapper
-	       (setq overlay-arrow-string calc-trail-overlay
-		     overlay-arrow-position calc-trail-pointer)
-	       (or no-refresh
-		   (if interactive
-		       (calc-do-refresh)
-		     (calc-refresh))))))
+              (if calc-trail-window-hook
+                  (run-hooks 'calc-trail-window-hook)
+                (let ((w (split-window nil (/ (* (window-width) 2) 3) t)))
+                  (set-window-buffer w calc-trail-buffer)))
+              (calc-wrapper
+               (setq overlay-arrow-string calc-trail-overlay
+                     overlay-arrow-position calc-trail-pointer)
+               (or no-refresh
+                   (if interactive
+                       (calc-do-refresh)
+                     (calc-refresh))))))
       (if win
 	  (progn
 	    (delete-window win)
@@ -2025,7 +2133,7 @@ See calc-keypad for details."
      (t
       (insert (char-to-string last-command-char))
       (if (or (and (calc-minibuffer-contains "[-+]?\\(.*\\+/- *\\|.*mod *\\)?\\([0-9][0-9]?\\)#[0-9a-zA-Z]*\\(:[0-9a-zA-Z]*\\(:[0-9a-zA-Z]*\\)?\\|.[0-9a-zA-Z]*\\(e[-+]?[0-9]*\\)?\\)?\\'")
-		   (let ((radix (string-to-int
+		   (let ((radix (string-to-number
 				 (buffer-substring
 				  (match-beginning 2) (match-end 2)))))
 		     (and (>= radix 2)
@@ -3167,7 +3275,7 @@ See calc-keypad for details."
 		(eq (aref digs 0) ?0))
 	   (math-read-number (concat "8#" digs))
 	 (if (<= (length digs) 6)
-	     (string-to-int digs)
+	     (string-to-number digs)
 	   (cons 'bigpos (math-read-bignum digs))))))
 
     ;; Clean up the string if necessary
@@ -3204,7 +3312,7 @@ See calc-keypad for details."
 	   (exp (math-match-substring s 2)))
        (let ((mant (if (> (length mant) 0) (math-read-number mant) 1))
 	     (exp (if (<= (length exp) (if (memq (aref exp 0) '(?+ ?-)) 8 7))
-		      (string-to-int exp))))
+		      (string-to-number exp))))
 	 (and mant exp (Math-realp mant) (> exp -4000000) (< exp 4000000)
 	      (let ((mant (math-float mant)))
 		(list 'float (nth 1 mant) (+ (nth 2 mant) exp)))))))
@@ -3219,9 +3327,9 @@ See calc-keypad for details."
 
 (defun math-read-bignum (s)   ; [l X]
   (if (> (length s) 3)
-      (cons (string-to-int (substring s -3))
+      (cons (string-to-number (substring s -3))
 	    (math-read-bignum (substring s 0 -3)))
-    (list (string-to-int s))))
+    (list (string-to-number s))))
 
 
 (defconst math-tex-ignore-words
@@ -3333,7 +3441,7 @@ Also looks for the equivalent TeX words, \\gets and \\evalto."
 
 (defun calc-user-invocation ()
   (interactive)
-  (unless (stringp calc-invocation-macro)
+  (unless calc-invocation-macro
     (error "Use `Z I' inside Calc to define a `M-# Z' keyboard macro"))
   (execute-kbd-macro calc-invocation-macro nil))
 

@@ -1,6 +1,7 @@
 ;;; mh-mime.el --- MH-E support for composing MIME messages
 
-;; Copyright (C) 1993, 1995, 2001, 02, 03, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1995,
+;; 2001, 2002, 2003, 2004 Free Software Foundation, Inc.
 
 ;; Author: Bill Wohler <wohler@newt.com>
 ;; Maintainer: Bill Wohler <wohler@newt.com>
@@ -197,7 +198,7 @@ Returns nil if file command not on system."
     ("text/richtext") ("text/x-vcard") ("text/xml")
 
     ("video/mpeg") ("video/quicktime"))
-  "Legal MIME content types.
+  "Valid MIME content types.
 See documentation for \\[mh-edit-mhn].")
 
 ;; RFC 2045 - Multipurpose Internet Mail Extensions (MIME) Part One:
@@ -224,7 +225,7 @@ See documentation for \\[mh-edit-mhn].")
     ("tftp")            ; RFC2046 Trivial File Transfer Protocol
     ("url")             ; RFC2017 URL scheme MIME access-type Protocol
     ("wais"))           ; RFC1738 Wide Area Information Servers
-  "Legal MIME access-type values.")
+  "Valid MIME access-type values.")
 
 ;;;###mh-autoload
 (defun mh-mhn-compose-insertion (filename type description attributes)
@@ -1325,6 +1326,18 @@ Parameter EL is unused."
              (point-max)))
         (forward-line -1)))))
 
+(defun mh-mime-security-button-face (info)
+  "Return the button face to use for encrypted/signed mail based on INFO."
+  (cond ((string-match "OK" info)       ;Decrypted mail
+         mh-show-pgg-good-face)
+        ((string-match "Failed" info)   ;Decryption failed or signature invalid
+         mh-show-pgg-bad-face)
+        ((string-match "Undecided" info);Unprocessed mail
+         mh-show-pgg-unknown-face)
+        ((string-match "Untrusted" info);Key not trusted
+         mh-show-pgg-unknown-face)
+        (t mh-show-pgg-good-face)))
+
 (defun mh-mime-security-press-button (handle)
   "Callback from security button for part HANDLE."
   (if (mm-handle-multipart-ctl-parameter handle 'gnus-info)
@@ -1364,9 +1377,10 @@ Parameter EL is unused."
          (info (or (mm-handle-multipart-ctl-parameter handle 'gnus-info)
                    "Undecided"))
          (details (mm-handle-multipart-ctl-parameter handle 'gnus-details))
-         pressed-details begin end)
+         pressed-details begin end face)
     (setq details (if details (concat "\n" details) ""))
     (setq pressed-details (if mh-mime-security-button-pressed details ""))
+    (setq face (mh-mime-security-button-face info))
     (unless (bolp) (insert "\n"))
     (setq begin (point))
     (gnus-eval-format
@@ -1382,6 +1396,7 @@ Parameter EL is unused."
                            :mime-handle handle
                            :action 'mh-widget-press-button
                            :button-keymap mh-mime-security-button-map
+                           :button-face face
                            :help-echo "Mouse-2 click or press RET (in show buffer) to see security details.")
     (dolist (ov (mh-funcall-if-exists overlays-in begin end))
       (mh-funcall-if-exists overlay-put ov 'evaporate t))

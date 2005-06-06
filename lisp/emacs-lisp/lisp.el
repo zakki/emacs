@@ -1,6 +1,7 @@
 ;;; lisp.el --- Lisp editing commands for Emacs
 
-;; Copyright (C) 1985, 86, 1994, 2000, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1994, 2000, 2004, 2005
+;;   Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: lisp, languages
@@ -31,18 +32,16 @@
 
 ;; Note that this variable is used by non-lisp modes too.
 (defcustom defun-prompt-regexp nil
-  "*If non-nil, a regexp to ignore before the character that starts a defun.
+  "*If non-nil, a regexp to ignore before a defun.
 This is only necessary if the opening paren or brace is not in column 0.
-See function `beginning-of-defun'.
-
-Setting this variable automatically makes it local to the current buffer."
+See function `beginning-of-defun'."
   :type '(choice (const nil)
 		 regexp)
   :group 'lisp)
 (make-variable-buffer-local 'defun-prompt-regexp)
 
 (defcustom parens-require-spaces t
-  "Non-nil means `insert-parentheses' should insert whitespace as needed."
+  "If non-nil, `insert-parentheses' inserts whitespace as needed."
   :type 'boolean
   :group 'lisp)
 
@@ -74,7 +73,7 @@ move forward across N balanced expressions."
 The place mark goes is the same place \\[forward-sexp] would
 move to with the same argument.
 Interactively, if this command is repeated
-or (in Transient Mark mode) if the mark is active, 
+or (in Transient Mark mode) if the mark is active,
 it marks the next ARG sexps after the ones already marked."
   (interactive "P\np")
   (cond ((and allow-extend
@@ -233,13 +232,14 @@ recipe (see `end-of-defun').  Major modes can define this if the
 normal method is not appropriate.")
 
 (defun buffer-end (arg)
-  "Return the \"far end\" position of the buffer, moving in direction ARG.
+  "Return the \"far end\" position of the buffer, in direction ARG.
 If ARG is positive, that's the end of the buffer.
 Otherwise, that's the beginning of the buffer."
   (if (> arg 0) (point-max) (point-min)))
 
 (defun end-of-defun (&optional arg)
-  "Move forward to next end of defun.  With argument, do it that many times.
+  "Move forward to next end of defun.
+With argument, do it that many times.
 Negative argument -N means move back to Nth preceding end of defun.
 
 An end of a defun occurs right after the close-parenthesis that
@@ -299,7 +299,7 @@ is called as a function to find the defun's end."
 The defun marked is the one that contains point or follows point.
 
 Interactively, if this command is repeated
-or (in Transient Mark mode) if the mark is active, 
+or (in Transient Mark mode) if the mark is active,
 it marks the next defun after the ones already marked."
   (interactive "p")
   (cond ((and allow-extend
@@ -424,7 +424,8 @@ character is inserted ARG times."
                  (prefix-numeric-value arg))))
 
 (defun insert-parentheses (&optional arg)
-  "Enclose following ARG sexps in parentheses.  Leave point after open-paren.
+  "Enclose following ARG sexps in parentheses.
+Leave point after open-paren.
 A negative ARG encloses the preceding ARG sexps instead.
 No argument is equivalent to zero: just insert `()' and leave point between.
 If `parens-require-spaces' is non-nil, this command also inserts a space
@@ -487,9 +488,9 @@ If region is active, insert enclosing characters at region boundaries."
 More accurately, check the narrowed part of the buffer for unbalanced
 expressions (\"sexps\") in general.  This is done according to the
 current syntax table and will find unbalanced brackets or quotes as
-appropriate.  (See Info node `(emacs)Lists and Sexps'.)  If imbalance
-is found, an error is signalled and point is left at the first
-unbalanced character."
+appropriate.  (See Info node `(emacs)Parentheses'.)  If imbalance is
+found, an error is signalled and point is left at the first unbalanced
+character."
   (interactive)
   (condition-case data
       ;; Buffer can't have more than (point-max) sexps.

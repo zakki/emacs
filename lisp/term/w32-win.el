@@ -1,6 +1,6 @@
 ;;; w32-win.el --- parse switches controlling interface with W32 window system
 
-;; Copyright (C) 1993, 1994, 2003, 2004, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 2003, 2005  Free Software Foundation, Inc.
 
 ;; Author: Kevin Gallo
 ;; Keywords: terminals
@@ -76,7 +76,7 @@
 (require 'faces)
 (require 'select)
 (require 'menu-bar)
-(require 'x-dnd)
+(require 'dnd)
 (require 'code-pages)
 
 ;; Conditional on new-fontset so bootstrapping works on non-GUI compiles
@@ -109,8 +109,8 @@ Switch to a buffer editing the last file dropped."
       (if (and (> x 0) (> y 0))
 	  (set-frame-selected-window nil window))
       (mapcar (lambda (file-name) 
-		(x-dnd-handle-one-url window 'private 
-				      (concat "file:" file-name)))
+		(dnd-handle-one-url window 'private 
+				    (concat "file:" file-name)))
 		(car (cdr (cdr event)))))
   (raise-frame)))
 
@@ -146,7 +146,7 @@ the last file dropped is selected."
   "Handle SWITCH of the form \"-switch n\"."
   (let ((aelt (assoc switch command-line-x-option-alist)))
     (if aelt
-	(push (cons (nth 3 aelt) (string-to-int (pop x-invocation-args)))
+	(push (cons (nth 3 aelt) (string-to-number (pop x-invocation-args)))
 	      default-frame-alist))))
 
 ;; Handle options that apply to initial frame only
@@ -1223,7 +1223,7 @@ font dialog to get the matching FONTS. Otherwise use a pop-up menu
 
 ;;; Set default known names for image libraries
 (setq image-library-alist
-      '((xpm "libXpm-nox4.dll" "libxpm.dll")
+      '((xpm "xpm4.dll" "libXpm-nox4.dll" "libxpm.dll")
         (png "libpng13d.dll" "libpng13.dll" "libpng12d.dll" "libpng12.dll" "libpng.dll")
         (jpeg "jpeg62.dll" "libjpeg.dll" "jpeg-62.dll" "jpeg.dll")
         (tiff "libtiff3.dll" "libtiff.dll")

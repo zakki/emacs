@@ -21,7 +21,6 @@ Boston, MA 02111-1307, USA.  */
 /* Contributed by Andrew Choi (akochoi@mac.com).  */
 
 #include <config.h>
-#include <signal.h>
 
 #include <stdio.h>
 #include "lisp.h"
@@ -603,6 +602,13 @@ list_of_items (pane)
     }
 }
 
+static Lisp_Object
+cleanup_popup_menu (arg)
+     Lisp_Object arg;
+{
+  discard_menu_items ();
+}
+
 DEFUN ("x-popup-menu", Fx_popup_menu, Sx_popup_menu, 2, 2, 0,
        doc: /* Pop up a deck-of-cards menu and return user's selection.
 POSITION is a position specification.  This is either a mouse button
@@ -648,6 +654,8 @@ cached information about equivalent key sequences.  */)
   int keymaps = 0;
   int for_click = 0;
   struct gcpro gcpro1;
+  int specpdl_count = SPECPDL_INDEX ();
+
 
 #ifdef HAVE_MENUS
   if (! NILP (position))
@@ -807,13 +815,13 @@ cached information about equivalent key sequences.  */)
 
 #ifdef HAVE_MENUS
   /* Display them in a menu.  */
+  record_unwind_protect (cleanup_popup_menu, Qnil);
   BLOCK_INPUT;
 
   selection = mac_menu_show (f, xpos, ypos, for_click,
 			     keymaps, title, &error_name);
   UNBLOCK_INPUT;
-
-  discard_menu_items ();
+  unbind_to (specpdl_count, Qnil);
 
   UNGCPRO;
 #endif /* HAVE_MENUS */
@@ -824,7 +832,7 @@ cached information about equivalent key sequences.  */)
 
 #ifdef HAVE_MENUS
 
-DEFUN ("x-popup-dialog", Fx_popup_dialog, Sx_popup_dialog, 2, 2, 0,
+DEFUN ("x-popup-dialog", Fx_popup_dialog, Sx_popup_dialog, 2, 3, 0,
        doc: /* Pop up a dialog box and return user's selection.
 POSITION specifies which frame to use.
 This is normally a mouse button event or a window or frame.
@@ -839,9 +847,12 @@ The return value is VALUE from the chosen item.
 An ITEM may also be just a string--that makes a nonselectable item.
 An ITEM may also be nil--that means to put all preceding items
 on the left of the dialog box and all following items on the right.
-\(By default, approximately half appear on each side.)  */)
-  (position, contents)
-     Lisp_Object position, contents;
+\(By default, approximately half appear on each side.)
+
+If HEADER is non-nil, the frame title for the box is "Information",
+otherwise it is "Question". */)
+  (position, contents, header)
+     Lisp_Object position, contents, header;
 {
   FRAME_PTR f = NULL;
   Lisp_Object window;
@@ -928,7 +939,7 @@ on the left of the dialog box and all following items on the right.
 
     /* Display them in a dialog box.  */
     BLOCK_INPUT;
-    selection = mac_dialog_show (f, 0, title, &error_name);
+    selection = mac_dialog_show (f, 0, title, header, &error_name);
     UNBLOCK_INPUT;
 
     discard_menu_items ();
@@ -1929,6 +1940,9 @@ mac_menu_show (f, x, y, for_click, keymaps, title, error)
 	    }
 	}
     }
+  else if (!for_click)
+    /* Make "Cancel" equivalent to C-g.  */
+    Fsignal (Qquit, Qnil);
 
   return Qnil;
 }
@@ -2047,10 +2061,10 @@ static char * button_names [] = {
   "button6", "button7", "button8", "button9", "button10" };
 
 static Lisp_Object
-mac_dialog_show (f, keymaps, title, error)
+mac_dialog_show (f, keymaps, title, header, error)
      FRAME_PTR f;
      int keymaps;
-     Lisp_Object title;
+     Lisp_Object title, header;
      char **error;
 {
   int i, nb_buttons=0;
@@ -2153,11 +2167,17 @@ mac_dialog_show (f, keymaps, title, error)
     wv->name = dialog_name;
     wv->help = Qnil;
 
+    /*  Frame title: 'Q' = Question, 'I' = Information.
+        Can also have 'E' = Error if, one day, we want
+        a popup for errors. */
+    if (NILP(header))
+      dialog_name[0] = 'Q';
+    else
+      dialog_name[0] = 'I';
+
     /* Dialog boxes use a really stupid name encoding
        which specifies how many buttons to use
-       and how many buttons are on the right.
-       The Q means something also.  */
-    dialog_name[0] = 'Q';
+       and how many buttons are on the right. */
     dialog_name[1] = '0' + nb_buttons;
     dialog_name[2] = 'B';
     dialog_name[3] = 'R';

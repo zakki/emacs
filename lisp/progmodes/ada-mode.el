@@ -1364,7 +1364,12 @@ If you use ada-xref.el:
         (add-hook 'local-write-file-hooks
                   (lambda () (untabify (point-min) (point-max))))))
 
-  (run-hooks 'ada-mode-hook)
+  (set (make-local-variable 'skeleton-further-elements)
+       '((< '(backward-delete-char-untabify
+	      (min ada-indent (current-column))))))
+  (add-hook 'skeleton-end-hook  'ada-adjust-case-skeleton nil t)
+
+  (run-mode-hooks 'ada-mode-hook)
 
   ;;  To be run after the hook, in case the user modified
   ;;  ada-fill-comment-prefix
@@ -1393,6 +1398,13 @@ If you use ada-xref.el:
   (if ada-auto-case
       (ada-activate-keys-for-case)))
 
+(defun ada-adjust-case-skeleton ()
+  "Adjust the case of the text inserted by a skeleton."
+  (save-excursion
+    (let ((aa-end (point)))
+      (ada-adjust-case-region
+       (progn (goto-char (symbol-value 'beg)) (forward-word -1) (point))
+       (goto-char aa-end)))))
 
 ;;  transient-mark-mode and mark-active are not defined in XEmacs
 (defun ada-region-selected ()

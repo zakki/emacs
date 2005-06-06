@@ -1,6 +1,9 @@
 ;;; code-pages.el --- coding systems for assorted codepages  -*-coding: utf-8;-*-
 
 ;; Copyright (C) 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 2004, 2005
+;;   National Institute of Advanced Industrial Science and Technology (AIST)
+;;   Registration Number H14PRO021
 
 ;; Author: Dave Love <fx@gnu.org>
 ;; Keywords: i18n
@@ -189,16 +192,19 @@ Return an updated `non-iso-charset-alist'."
 	      ;; For Quail translation.  Fixme: this should really be
 	      ;; a separate table that only translates the coding
 	      ;; system's safe-chars.
-	      (cons 'translation-table-for-input ,ucs-mule-to-mule-unicode)))
-       (push (list ',name
-		   nil			; charset list
-		   ',decoder
-		   (let (l)		; code range
-		     (dolist (elt (reverse codes))
-		       (push (cdr elt) l)
-		       (push (car elt) l))
-		     (list l)))
-	     non-iso-charset-alist))))
+	      (cons 'translation-table-for-input 'ucs-mule-to-mule-unicode)))
+       (let ((slot (assq ',name non-iso-charset-alist))
+	     (elt (list nil			; charset list
+			',decoder
+			(let (l)		; code range
+			  (dolist (elt (reverse codes))
+			    (push (cdr elt) l)
+			    (push (car elt) l))
+			  (list l)))))
+	 (if (not slot)
+	     (push (cons ',name elt) non-iso-charset-alist)
+	   (setcdr slot elt)
+	   non-iso-charset-alist)))))
 
 (eval-when-compile (defvar non-iso-charset-alist))
 
@@ -3944,21 +3950,21 @@ Return an updated `non-iso-charset-alist'."
  [nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil
   nil nil nil nil nil nil nil nil nil nil nil nil nil nil nil
   ?\ 
-  ?\¡
+  ?\”
   ?\¢
   ?\£
   ?\¤
   ?\„
   ?\¦
   ?\§
-  ?\¨
+  ?\Ø
   ?\©
-  ?\ª
+  ?\Ŗ
   ?\«
   ?\¬
   ?\­
   ?\®
-  ?\¯
+  ?\Æ
   ?\°
   ?\±
   ?\²
@@ -3967,14 +3973,14 @@ Return an updated `non-iso-charset-alist'."
   ?\µ
   ?\¶
   ?\·
-  ?\¸
+  ?\ø
   ?\¹
-  ?\º
+  ?\ŗ
   ?\»
   ?\¼
   ?\½
   ?\¾
-  ?\¿
+  ?\æ
   ?\Ą
   ?\Į
   ?\Ā
@@ -4475,7 +4481,7 @@ Return an updated `non-iso-charset-alist'."
  pt154
  [?Җ ?Ғ ?Ӯ ?ғ ?„ ?… ?Ҷ ?Ү ?Ҳ ?ү ?Ҡ ?Ӣ ?Ң ?Қ ?Һ ?Ҹ ?җ ?‘ ?’ ?“ ?” ?• ?–
   ?— ?ҳ ?ҷ ?ҡ ?ӣ ?ң ?қ ?һ ?ҹ ?  ?Ў ?ў ?Ј ?Ө ?Ҙ ?Ұ ?§ ?Ё ?© ?Ә ?\« ?¬ ?ӯ
-  ?® ?Ҝ ?° ?ұ ?І ?і ?ҙ ?ө ?¶ ?· ?ё ?№ ?ә ?» ?ј ?Ҫ ?ҫ ?ҝ ?А ?Б ?В ?Г ?Д
+  ?® ?Ҝ ?° ?ұ ?І ?і ?ҙ ?ө ?¶ ?· ?ё ?№ ?ә ?\» ?ј ?Ҫ ?ҫ ?ҝ ?А ?Б ?В ?Г ?Д
   ?Е ?Ж ?З ?И ?Й ?К ?Л ?М ?Н ?О ?П ?Р ?С ?Т ?У ?Ф ?Х ?Ц ?Ч ?Ш ?Щ ?Ъ ?Ы
   ?Ь ?Э ?Ю ?Я ?а ?б ?в ?г ?д ?е ?ж ?з ?и ?й ?к ?л ?м ?н ?о ?п ?р ?с ?т
   ?у ?ф ?х ?ц ?ч ?ш ?щ ?ъ ?ы ?ь ?э ?ю ?я])
@@ -4499,11 +4505,14 @@ Return an updated `non-iso-charset-alist'."
     ;; Define cp125* as aliases for all windows-125*, so on Windows
     ;; we can just concat "cp" to the ANSI codepage we get from the system
     ;; and not have to worry about whether it should be "cp" or "windows-".
-    (if (coding-system-p w)
-	(define-coding-system-alias c w))
-    ;; Compatibility with codepage.el, though cp... are not the
-    ;; canonical names.
-    (push (assoc w non-iso-charset-alist) non-iso-charset-alist)))
+    (when (coding-system-p w)
+      (define-coding-system-alias c w)
+      ;; Compatibility with codepage.el, though cp... are not the
+      ;; canonical names.
+      (if (not (assq c non-iso-charset-alist))
+	  (let ((slot (assq w non-iso-charset-alist)))
+	    (if slot
+		(push (cons c (cdr slot)) non-iso-charset-alist)))))))
 
 (provide 'code-pages)
 

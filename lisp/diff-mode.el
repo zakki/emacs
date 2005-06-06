@@ -1,7 +1,7 @@
 ;;; diff-mode.el --- a mode for viewing/editing context diffs
 
-;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;;   Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@cs.yale.edu>
 ;; Keywords: convenience patch diff
@@ -70,7 +70,8 @@
 (defcustom diff-jump-to-old-file nil
   "*Non-nil means `diff-goto-source' jumps to the old file.
 Else, it jumps to the new file."
-  :type '(boolean))
+  :type 'boolean
+  :group 'diff-mode)
 
 (defcustom diff-update-on-the-fly t
   "*Non-nil means hunk headers are kept up-to-date on-the-fly.
@@ -79,17 +80,20 @@ need to be kept consistent with the actual diff.  This can
 either be done on the fly (but this sometimes interacts poorly with the
 undo mechanism) or whenever the file is written (can be slow
 when editing big diffs)."
-  :type '(boolean))
+  :type 'boolean
+  :group 'diff-mode)
 
 (defcustom diff-advance-after-apply-hunk t
   "*Non-nil means `diff-apply-hunk' will move to the next hunk after applying."
-  :type 'boolean)
+  :type 'boolean
+  :group 'diff-mode)
 
 
 (defcustom diff-mode-hook nil
   "Run after setting up the `diff-mode' major mode."
   :type 'hook
-  :options '(diff-delete-empty-files diff-make-unified))
+  :options '(diff-delete-empty-files diff-make-unified)
+  :group 'diff-mode)
 
 (defvar diff-outline-regexp
   "\\([*+][*+][*+] [^0-9]\\|@@ ...\\|\\*\\*\\* [0-9].\\|--- [0-9]..\\)")
@@ -159,7 +163,8 @@ when editing big diffs)."
 
 (defcustom diff-minor-mode-prefix "\C-c="
   "Prefix key for `diff-minor-mode' commands."
-  :type '(choice (string "\e") (string "C-c=") string))
+  :type '(choice (string "\e") (string "C-c=") string)
+  :group 'diff-mode)
 
 (easy-mmode-defmap diff-minor-mode-map
   `((,diff-minor-mode-prefix . ,diff-mode-shared-map))
@@ -180,7 +185,8 @@ when editing big diffs)."
     (((class color) (background dark))
      :foreground "green" :weight bold)
     (t :weight bold))
-  "`diff-mode' face inherited by hunk and index header faces.")
+  "`diff-mode' face inherited by hunk and index header faces."
+  :group 'diff-mode)
 (defvar diff-header-face 'diff-header-face)
 
 (defface diff-file-header-face
@@ -193,27 +199,32 @@ when editing big diffs)."
     (((class color) (background dark))
      :foreground "cyan" :weight bold)
     (t :weight bold))			; :height 1.3
-  "`diff-mode' face used to highlight file header lines.")
+  "`diff-mode' face used to highlight file header lines."
+  :group 'diff-mode)
 (defvar diff-file-header-face 'diff-file-header-face)
 
 (defface diff-index-face
   '((t :inherit diff-file-header-face))
-  "`diff-mode' face used to highlight index header lines.")
+  "`diff-mode' face used to highlight index header lines."
+  :group 'diff-mode)
 (defvar diff-index-face 'diff-index-face)
 
 (defface diff-hunk-header-face
   '((t :inherit diff-header-face))
-  "`diff-mode' face used to highlight hunk header lines.")
+  "`diff-mode' face used to highlight hunk header lines."
+  :group 'diff-mode)
 (defvar diff-hunk-header-face 'diff-hunk-header-face)
 
 (defface diff-removed-face
   '((t :inherit diff-changed-face))
-  "`diff-mode' face used to highlight removed lines.")
+  "`diff-mode' face used to highlight removed lines."
+  :group 'diff-mode)
 (defvar diff-removed-face 'diff-removed-face)
 
 (defface diff-added-face
   '((t :inherit diff-changed-face))
-  "`diff-mode' face used to highlight added lines.")
+  "`diff-mode' face used to highlight added lines."
+  :group 'diff-mode)
 (defvar diff-added-face 'diff-added-face)
 
 (defface diff-changed-face
@@ -221,12 +232,14 @@ when editing big diffs)."
      :foreground "magenta" :weight bold :slant italic)
     (((type tty pc) (class color) (background dark))
      :foreground "yellow" :weight bold :slant italic))
-  "`diff-mode' face used to highlight changed lines.")
+  "`diff-mode' face used to highlight changed lines."
+  :group 'diff-mode)
 (defvar diff-changed-face 'diff-changed-face)
 
 (defface diff-function-face
   '((t :inherit diff-context-face))
-  "`diff-mode' face used to highlight function names produced by \"diff -p\".")
+  "`diff-mode' face used to highlight function names produced by \"diff -p\"."
+  :group 'diff-mode)
 (defvar diff-function-face 'diff-function-face)
 
 (defface diff-context-face
@@ -234,12 +247,14 @@ when editing big diffs)."
      :foreground "grey50")
     (((class color) (background dark))
      :foreground "grey70"))
-  "`diff-mode' face used to highlight context and other side-information.")
+  "`diff-mode' face used to highlight context and other side-information."
+  :group 'diff-mode)
 (defvar diff-context-face 'diff-context-face)
 
 (defface diff-nonexistent-face
   '((t :inherit diff-file-header-face))
-  "`diff-mode' face used to highlight nonexistent files in recursive diffs.")
+  "`diff-mode' face used to highlight nonexistent files in recursive diffs."
+  :group 'diff-mode)
 (defvar diff-nonexistent-face 'diff-nonexistent-face)
 
 (defconst diff-yank-handler '(diff-yank-function))
@@ -263,7 +278,7 @@ when editing big diffs)."
 	(save-excursion
 	  (while (re-search-backward re start t)
 	    (replace-match "" t t)))))))
-	
+
 
 (defvar diff-font-lock-keywords
   `(("^\\(@@ -[0-9,]+ \\+[0-9,]+ @@\\)\\(.*\\)$" ;unified
@@ -484,7 +499,7 @@ If the OLD prefix arg is passed, tell the file NAME of the old file."
   (let ((fs (diff-hunk-file-names old)))
     (unless fs (error "No file name to look for"))
     (push (cons fs name) diff-remembered-files-alist)))
-  
+
 (defun diff-hunk-file-names (&optional old)
   "Give the list of file names textually mentioned for the current hunk."
   (save-excursion
@@ -952,7 +967,7 @@ a diff with \\[diff-reverse-direction]."
 (define-minor-mode diff-minor-mode
   "Minor mode for viewing/editing context diffs.
 \\{diff-minor-mode-map}"
-  nil " Diff" nil
+  :group 'diff-mode :lighter " Diff"
   ;; FIXME: setup font-lock
   ;; setup change hooks
   (if (not diff-update-on-the-fly)

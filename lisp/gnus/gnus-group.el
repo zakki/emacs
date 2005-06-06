@@ -1,5 +1,5 @@
 ;;; gnus-group.el --- group mode commands for Gnus
-;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
 ;;        Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
@@ -41,7 +41,11 @@
 (require 'time-date)
 (require 'gnus-ems)
 
-(eval-when-compile (require 'mm-url))
+(eval-when-compile
+  (require 'mm-url)
+  (let ((features (cons 'gnus-group features)))
+    (require 'gnus-sum))
+  (defvar gnus-cache-active-hashtb))
 
 (defcustom gnus-group-archive-directory
   "/ftp@ftp.hpc.uh.edu:/pub/emacs/ding-list/"
@@ -482,9 +486,15 @@ simple manner.")
     (?T (gnus-range-length (cdr (assq 'tick gnus-tmp-marked))) ?d)
     (?i (+ (gnus-range-length (cdr (assq 'dormant gnus-tmp-marked)))
 	   (gnus-range-length (cdr (assq 'tick gnus-tmp-marked)))) ?d)
-    (?g gnus-tmp-group ?s)
+    (?g (if (boundp 'gnus-tmp-decoded-group)
+	    gnus-tmp-decoded-group
+	  gnus-tmp-group)
+	?s)
     (?G gnus-tmp-qualified-group ?s)
-    (?c (gnus-short-group-name gnus-tmp-group) ?s)
+    (?c (gnus-short-group-name (if (boundp 'gnus-tmp-decoded-group)
+				   gnus-tmp-decoded-group
+				 gnus-tmp-group))
+	?s)
     (?C gnus-tmp-comment ?s)
     (?D gnus-tmp-newsgroup-description ?s)
     (?o gnus-tmp-moderated ?c)
@@ -1036,7 +1046,7 @@ The following commands are available:
     (gnus-undo-mode 1))
   (when gnus-slave
     (gnus-slave-mode))
-  (gnus-run-hooks 'gnus-group-mode-hook))
+  (gnus-run-mode-hooks 'gnus-group-mode-hook))
 
 (defun gnus-update-group-mark-positions ()
   (save-excursion
@@ -1441,12 +1451,12 @@ if it is a string, only list groups matching REGEXP."
      (point)
      (prog1 (1+ (point))
        ;; Insert the text.
-       (let ((gnus-tmp-group (gnus-group-name-decode
-			      gnus-tmp-group group-name-charset)))
+       (let ((gnus-tmp-decoded-group (gnus-group-name-decode
+				      gnus-tmp-group group-name-charset)))
 	 (eval gnus-group-line-format-spec)))
      `(gnus-group ,(gnus-intern-safe gnus-tmp-group gnus-active-hashtb)
 		  gnus-unread ,(if (numberp number)
-				   (string-to-int gnus-tmp-number-of-unread)
+				   (string-to-number gnus-tmp-number-of-unread)
 				 t)
 		  gnus-marked ,gnus-tmp-marked-mark
 		  gnus-indentation ,gnus-group-indentation
@@ -1984,7 +1994,8 @@ confirmation is required."
 (defun gnus-group-read-ephemeral-group (group method &optional activate
 					      quit-config request-only
 					      select-articles
-					      parameters)
+					      parameters
+					      number)
   "Read GROUP from METHOD as an ephemeral group.
 If ACTIVATE, request the group first.
 If QUIT-CONFIG, use that window configuration when exiting from the
@@ -1992,6 +2003,7 @@ ephemeral group.
 If REQUEST-ONLY, don't actually read the group; just request it.
 If SELECT-ARTICLES, only select those articles.
 If PARAMETERS, use those as the group parameters.
+If NUMBER, fetch this number of articles.
 
 Return the name of the group if selection was successful."
   (interactive
@@ -2039,7 +2051,7 @@ Return the name of the group if selection was successful."
 	  (when (let ((gnus-large-newsgroup gnus-large-ephemeral-newsgroup)
 		      (gnus-fetch-old-headers
 		       gnus-fetch-old-ephemeral-headers))
-		  (gnus-group-read-group t t group select-articles))
+		  (gnus-group-read-group (or number t) t group select-articles))
 	    group)
 	;;(error nil)
 	(quit
@@ -2242,7 +2254,7 @@ ADDRESS."
 	 (nname (if method (gnus-group-prefixed-name name meth) name))
 	 backend info)
     (when (gnus-gethash nname gnus-newsrc-hashtb)
-      (error "Group %s already exists" nname))
+      (error "Group %s already exists" (gnus-group-decoded-name nname)))
     ;; Subscribe to the new group.
     (gnus-group-change-level
      (setq info (list t nname gnus-level-default-subscribed nil nil meth))
@@ -2303,20 +2315,21 @@ be removed from the server, even when it's empty."
   (unless (gnus-check-backend-function 'request-delete-group group)
     (error "This back end does not support group deletion"))
   (prog1
-      (if (and (not no-prompt)
-	       (not (gnus-yes-or-no-p
-		     (format
-		      "Do you really want to delete %s%s? "
-		      group (if force " and all its contents" "")))))
-	  ()				; Whew!
-	(gnus-message 6 "Deleting group %s..." group)
-	(if (not (gnus-request-delete-group group force))
-	    (gnus-error 3 "Couldn't delete group %s" group)
-	  (gnus-message 6 "Deleting group %s...done" group)
-	  (gnus-group-goto-group group)
-	  (gnus-group-kill-group 1 t)
-	  (gnus-sethash group nil gnus-active-hashtb)
-	  t))
+      (let ((group-decoded (gnus-group-decoded-name group)))
+	(if (and (not no-prompt)
+		 (not (gnus-yes-or-no-p
+		       (format
+			"Do you really want to delete %s%s? "
+			group-decoded (if force " and all its contents" "")))))
+	    ()				; Whew!
+	  (gnus-message 6 "Deleting group %s..." group-decoded)
+	  (if (not (gnus-request-delete-group group force))
+	      (gnus-error 3 "Couldn't delete group %s" group-decoded)
+	    (gnus-message 6 "Deleting group %s...done" group-decoded)
+	    (gnus-group-goto-group group)
+	    (gnus-group-kill-group 1 t)
+	    (gnus-sethash group nil gnus-active-hashtb)
+	    t)))
     (gnus-group-position-point)))
 
 (defun gnus-group-rename-group (group new-name)
@@ -2586,16 +2599,26 @@ If there is, use Gnus to create an nnrss group"
       (setq url (read-from-minibuffer "URL to Search for RSS: ")))
   (let ((feedinfo (nnrss-discover-feed url)))
     (if feedinfo
-	(let ((title (read-from-minibuffer "Title: "
-					   (cdr (assoc 'title
-						       feedinfo))))
+	(let ((title (gnus-newsgroup-savable-name
+		      (read-from-minibuffer "Title: "
+					    (gnus-newsgroup-savable-name
+					     (or (cdr (assoc 'title
+							     feedinfo))
+						 "")))))
 	      (desc  (read-from-minibuffer "Description: "
 					   (cdr (assoc 'description
 						       feedinfo))))
-	      (href (cdr (assoc 'href feedinfo))))
-	  (push (list title href desc)
-		nnrss-group-alist)
-	  (gnus-group-make-group title '(nnrss ""))
+	      (href (cdr (assoc 'href feedinfo)))
+	      (encodable (mm-coding-system-p 'utf-8)))
+	  (when encodable
+	    ;; Unify non-ASCII text.
+	    (setq title (mm-decode-coding-string
+			 (mm-encode-coding-string title 'utf-8) 'utf-8)))
+	  (gnus-group-make-group (if encodable
+				     (mm-encode-coding-string title 'utf-8)
+				   title)
+				 '(nnrss ""))
+	  (push (list title href desc) nnrss-group-alist)
 	  (nnrss-save-server-data nil))
       (error "No feeds found for %s" url))))
 
@@ -3099,7 +3122,7 @@ up is returned."
 		   "Do you really want to mark all articles in %s as read? "
 		 "Mark all unread articles in %s as read? ")
 	       (if (= (length groups) 1)
-		   (car groups)
+		   (gnus-group-decoded-name (car groups))
 		 (format "these %d groups" (length groups)))))))
 	n
       (while (setq group (pop groups))
@@ -3177,7 +3200,8 @@ Uses the process/prefix convention."
 
 (defun gnus-group-expire-articles-1 (group)
   (when (gnus-check-backend-function 'request-expire-articles group)
-    (gnus-message 6 "Expiring articles in %s..." group)
+    (gnus-message 6 "Expiring articles in %s..."
+		  (gnus-group-decoded-name group))
     (let* ((info (gnus-get-info group))
 	   (expirable (if (gnus-group-total-expirable-p group)
 			  (cons nil (gnus-list-of-read-articles group))
@@ -3202,7 +3226,8 @@ Uses the process/prefix convention."
 	    (gnus-request-expire-articles
 	     (gnus-uncompress-sequence (cdr expirable)) group))))
 	(gnus-close-group group))
-      (gnus-message 6 "Expiring articles in %s...done" group)
+      (gnus-message 6 "Expiring articles in %s...done"
+		    (gnus-group-decoded-name group))
       ;; Return the list of un-expired articles.
       (cdr expirable))))
 
@@ -3225,7 +3250,7 @@ Uses the process/prefix convention."
     (progn
       (unless (gnus-group-process-prefix current-prefix-arg)
 	(error "No group on the current line"))
-      (string-to-int
+      (string-to-number
        (let ((s (read-string
 		 (format "Level (default %s): "
 			 (or (gnus-group-group-level)
@@ -3241,7 +3266,8 @@ Uses the process/prefix convention."
     (while (setq group (pop groups))
       (gnus-group-remove-mark group)
       (gnus-message 6 "Changed level of %s from %d to %d"
-		    group (or (gnus-group-group-level) gnus-level-killed)
+		    (gnus-group-decoded-name group)
+		    (or (gnus-group-group-level) gnus-level-killed)
 		    level)
       (gnus-group-change-level
        group level (or (gnus-group-group-level) gnus-level-killed))
@@ -3390,7 +3416,7 @@ of groups killed."
 		  gnus-list-of-killed-groups))
 	  (gnus-group-change-level
 	   (if entry entry group) gnus-level-killed (if entry nil level))
-	  (message "Killed group %s" group))
+	  (message "Killed group %s" (gnus-group-decoded-name group)))
       ;; If there are lots and lots of groups to be killed, we use
       ;; this thing instead.
       (dolist (group (nreverse groups))

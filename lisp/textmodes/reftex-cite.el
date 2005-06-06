@@ -1,8 +1,9 @@
 ;;; reftex-cite.el --- creating citations with RefTeX
-;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004, 2005
+;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.26
+;; Version: 4.28
 
 ;; This file is part of GNU Emacs.
 
@@ -311,12 +312,12 @@
       (not (stringp (car al1))))))
 
 (defun reftex-bib-sort-year (e1 e2)
-  (< (string-to-int (or (cdr (assoc "year" e1)) "0"))
-     (string-to-int (or (cdr (assoc "year" e2)) "0"))))
+  (< (string-to-number (or (cdr (assoc "year" e1)) "0"))
+     (string-to-number (or (cdr (assoc "year" e2)) "0"))))
 
 (defun reftex-bib-sort-year-reverse (e1 e2)
-  (> (string-to-int (or (cdr (assoc "year" e1)) "0"))
-     (string-to-int (or (cdr (assoc "year" e2)) "0"))))
+  (> (string-to-number (or (cdr (assoc "year" e1)) "0"))
+     (string-to-number (or (cdr (assoc "year" e2)) "0"))))
 
 (defun reftex-get-crossref-alist (entry)
   ;; return the alist from a crossref entry
@@ -680,7 +681,7 @@ While entering the regexp, completion on knows citation keys is possible.
         ;; Should we cleanup empty optional arguments?
         ;; if the first is empty, it can be removed.  If the second is empty,
         ;; it has to go.  If there is only a single arg and empty, it can go
-	;; as well.
+        ;; as well.
         (when reftex-cite-cleanup-optional-args
           (cond 
            ((string-match "\\([a-zA-Z0-9]\\)\\[\\]{" string)
@@ -982,12 +983,12 @@ While entering the regexp, completion on knows citation keys is possible.
 
   (if (and reftex-comment-citations
            (string-match "%l" reftex-cite-comment-format))
-      (error "reftex-cite-comment-format contains illegal %%l"))
+      (error "reftex-cite-comment-format contains invalid %%l"))
 
   (while (string-match
           "\\(\\`\\|[^%]\\)\\(\\(%\\([0-9]*\\)\\([a-zA-Z]\\)\\)[.,;: ]*\\)"
           format)
-    (let ((n (string-to-int (match-string 4 format)))
+    (let ((n (string-to-number (match-string 4 format)))
           (l (string-to-char (match-string 5 format)))
           rpl b e)
       (save-match-data

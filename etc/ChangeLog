@@ -1,3 +1,165 @@
+2005-05-30  Miles Bader  <miles@gnu.org>
+
+	* emacs-buffer.gdb: Remove RCS keywords.
+
+2005-05-30  Noah Friedman  <friedman@splode.com>
+
+	* emacs-buffer.gdb: New file.
+	* NEWS: Mention it.
+
+2005-05-28  Richard M. Stallman  <rms@gnu.org>
+
+	* TUTORIAL.fr: Change NBSP to space.
+
+2005-05-28  Bill Wohler  <wohler@newt.com>
+
+	* NEWS, MH-E-NEWS: Upgraded to MH-E version 7.84.
+
+2005-05-19  Nick Roberts  <nickrob@snap.net.nz>
+
+	* TODO: post-command-idle-hook has gone.
+
+2005-05-16  Juanma Barranquero  <lekktu@gmail.com>
+
+	* NEWS: Remove references to open-network-stream-nowait and
+	open-network-stream-server.
+
+2005-05-15  Richard M. Stallman  <rms@gnu.org>
+
+	* GNU: Correct/improve previous change.
+
+2005-05-14  Richard M. Stallman  <rms@gnu.org>
+
+	* GNU: Update footnotes.
+
+	* NEWS: Lots of clarifications and cleanups.
+
+2005-05-05  Slawomir Nowaczyk  <slawek@cs.lth.se>  (tiny change)
+
+        * TUTORIAL.pl: Updated header.
+
+2005-05-02  Richard M. Stallman  <rms@gnu.org>
+
+	* NEWS: More rearrangements.
+
+2005-05-02  Chong Yidong  <cyd@stupidchicken.com>
+
+	* NEWS: Items rearranged in logical order.
+
+2005-05-01  Lars Hansen  <larsh@math.ku.dk>
+
+	* NEWS: Correct key binding for dired-mark-omitted.
+
+2005-04-25  Dan Nicolaescu  <dann@ics.uci.edu>
+
+	* NEWS: Mention xterm key bindings.
+
+	* e/eterm.ti: Add a comment.
+	* e/eterm: Regenerate.
+
+2005-04-25  Alex Ott  <ott@jet.msk.su>
+
+	* TUTORIAL.ru: Update.
+
+2005-04-13  Pavel Jan,Am(Bk  <Pavel@Janik.cz>
+
+	* TUTORIAL.sk: Updated header.
+
+2005-04-12  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* NEWS: Mention cursorBlink resource.
+
+2005-04-12  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
+
+	* NEWS: Mention dynamic change of keyboard-coding-system on Mac.
+
+2005-04-10  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* NEWS: Mention fontSet for Lucid menus.
+
+2005-04-10  Masatake YAMATO  <jet@gyve.org>
+
+	* compilation.txt (symbol): Added gcov-file
+	gcov-bb-file gcov-never-called-line gcov-called-line .
+
+2005-04-08  Kenichi Handa  <handa@m17n.org>
+
+	* TUTORIAL.ja: Updated header, contents synchronized with
+	TUTORIAL (CVS-1.61).
+
+2005-04-06  Pavel Jan,Am(Bk  <Pavel@Janik.cz>
+
+	* TUTORIAL.cs: Updated header.
+
+2005-04-05  Werner Lemberg  <wl@gnu.org>
+
+	* TUTORIAL.de: Updated header.
+
+2005-04-05  Marcelo Toledo  <marcelo@gnu.org>
+
+        * TUTORIAL.translators: Added the field Maintainer.
+
+2005-04-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	* TUTORIAL.it: Move "copying conditions at end" sentence after title.
+
+2005-04-04  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	* TUTORIAL.ja: Update text before first period.
+	Reported by Kenichi Handa.
+
+2005-04-02  Richard M. Stallman  <rms@gnu.org>
+
+	* TUTORIAL.ja, TUTORIAL.cn, TUTORIAL.ru, TUTORIAL.zh: Remove the
+	old intro line that apparently was a longer version of "Emacs
+	tutorial".
+
+	* TUTORIAL.es: Clean up line breaks.
+
+2005-04-01  Marcelo Toledo  <marcelo@gnu.org>
+
+        * TUTORIAL.pt_BR, TUTORIAL.cn, TUTORIAL.cs, TUTORIAL.de,
+        * TUTORIAL.es, TUTORIAL.fr, TUTORIAL.it, TUTORIAL.ja, TUTORIAL.ko,
+        * TUTORIAL.pl, TUTORIAL.pt_BR, TUTORIAL.ro, TUTORIAL.ru,
+        * TUTORIAL.sk, TUTORIAL.sl, TUTORIAL.th, TUTORIAL.zh: Fix title
+        line.
+
+2005-04-01  Ognyan Kulev  <ogi@fmi.uni-sofia.bg>
+
+        * TUTORIAL.bg: Fix title line; Applied TUTORIAL changes in
+        revision 1.59, "Emacs" is not transliterated to cyrillic anymore;
+        Minor fixes.
+
+2005-04-01  Mats Lidell  <matsl@contactor.se>
+
+        * TUTORIAL.sv: Sync some other changes with the TUTORIAL version
+        1.61 in CVS.
+
+2005-04-01  Lute Kamstra  <lute@gnu.org>
+
+	* TUTORIAL.nl: Fix title line.
+
+2005-03-30  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	* TUTORIAL: Add title line.
+	* TUTORIAL.bg, TUTORIAL.cn, TUTORIAL.cs, TUTORIAL.de,
+	* TUTORIAL.es, TUTORIAL.fr, TUTORIAL.it, TUTORIAL.ja,
+	* TUTORIAL.ko, TUTORIAL.nl, TUTORIAL.pl, TUTORIAL.pt_BR,
+	* TUTORIAL.ro, TUTORIAL.ru, TUTORIAL.sk, TUTORIAL.sl
+	* TUTORIAL.sv, TUTORIAL.th, TUTORIAL.zh: Likewise.
+
+2005-03-29  Reiner Steib  <Reiner.Steib@gmx.de>
+
+	* gnus-refcard.tex, gnus-logo.eps: New files.
+
+2005-03-23  David Ponce  <david@dponce.com>
+
+	* NEWS: Mention recentf-keep.
+
+2005-03-17  Lute Kamstra  <lute@gnu.org>
+
+	* TODO: Remove define-generic-mode entry (DONE).
+
 2005-03-10  Michael Albinus  <michael.albinus@gmx.de>
 
 	* NEWS: Explain how to default Tramp to FTP.
@@ -236,7 +398,7 @@
 	* tree-widget: New directory containing tree-widget themes and
 	images.
 
-2004-04-13  Marcelo Toledo  <marcelo@marcelotoledo.org>
+2004-04-13  Marcelo Toledo  <marcelo@gnu.org>
 
 	* TUTORIAL.pt_BR: initial check-in.
 
@@ -255,9 +417,9 @@
 
 	* TUTORIAL.it, TUTORIAL.nl, TUTORIAL.sv: Add coding: latin-1.
 
-2004-04-16  David Kastrup  <dak@gnu.org>
+2004-04-16  Alex Ott  <ottalex@narod.ru>
 
-	* TUTORIAL.ru: Changes by Alex Ott checked in.
+	* TUTORIAL.ru: Various corrections.
 
 2004-04-14  Jan Nieuwenhuizen  <janneke@gnu.org>
 
@@ -452,10 +614,9 @@
 
 	* MH-E-NEWS: Upgraded to MH-E version 7.0.
 
-2002-11-22  Juanma Barranquero  <lektu@terra.es>
+2002-11-22  Rafael Sep,Az(Blveda  <drs@gnulinux.org.mx>
 
-	* TUTORIAL.es: Extensively changed and updated by Rafael Sep,Az(Blveda
-	<drs@gnulinux.org.mx>.
+	* TUTORIAL.es: Extensively changed and updated.
 
 2002-10-01  Bill Wohler  <wohler@newt.com>
 
@@ -1712,9 +1873,11 @@
 
 	* emacsstool.1: update to document environment variables.
 
-1989-02-21  Richard Stallman  (rms@sugar-bombs.ai.mit.edu)
+1989-02-21  Mosur Mohan (email@notavailable)
 
-	* etags.c (PAS_funcs): New function by Mosur Mohan.
+	* etags.c (PAS_funcs): New function.
+
+1989-02-21  Richard Stallman  (rms@sugar-bombs.ai.mit.edu)
 
 	* movemail.c: On sysv, include unistd.h.
 
@@ -1734,10 +1897,10 @@
 
 	* fakemail.c (put_line): Break header lines at 79 cols.
 
-1989-01-19  Richard Stallman  (rms@sugar-bombs.ai.mit.edu)
+1989-01-19  Sam Kendall  (email@notavailable)
 
-	* etags.c: Greatly rewritten by Sam Kendall for C++ support and for
-	multiple tags per line.
+	* etags.c: Greatly rewritten for C++ support and for multiple tags
+        per line.
 
 1989-01-03  Richard Stallman  (rms@sugar-bombs.ai.mit.edu)
 

@@ -213,14 +213,16 @@
 ;; indentation on inserts gets underlined (which can look pretty ugly!).
 
 (defface highlight-changes-face
-  '((((class color)) (:foreground "red" ))
+  '((((min-colors 88) (class color)) (:foreground "red1" ))
+    (((class color)) (:foreground "red" ))
     (t (:inverse-video t)))
   "Face used for highlighting changes."
   :group 'highlight-changes)
 
 ;; This looks pretty ugly, actually.  Maybe the underline should be removed.
 (defface highlight-changes-delete-face
-  '((((class color)) (:foreground "red" :underline t))
+  '((((min-colors 88) (class color)) (:foreground "red1" :underline t))
+    (((class color)) (:foreground "red" :underline t))
     (t (:inverse-video t)))
   "Face used for highlighting deletions."
   :group 'highlight-changes)
@@ -993,12 +995,12 @@ changes are made, so \\[highlight-changes-next-change] and
 
 ;; Global Highlight Changes mode is modeled after Global Font-lock mode.
 ;; Three hooks are used to gain control.  When Global Changes Mode is
-;; enabled, `find-file-hooks' and `change-major-mode-hook' are set.
-;; `find-file-hooks' is called when visiting a file, the new mode is
+;; enabled, `find-file-hook' and `change-major-mode-hook' are set.
+;; `find-file-hook' is called when visiting a file, the new mode is
 ;; known at this time.
 ;; `change-major-mode-hook' is called when a buffer is changing mode.
 ;; This could be because of finding a file in which case
-;; `find-file-hooks' has already been called and has done its work.
+;; `find-file-hook' has already been called and has done its work.
 ;; However, it also catches the case where a new mode is being set by
 ;; the user.  However, it is called from `kill-all-variables' and at
 ;; this time the mode is the old mode, which is not what we want.
@@ -1080,18 +1082,18 @@ variable `highlight-changes-global-changes-existing-buffers' is non-nil).
 	(setq global-highlight-changes t)
 	(message "Turning ON Global Highlight Changes mode in %s state"
 		 highlight-changes-global-initial-state)
-	(add-hook 'hilit-chg-major-mode-hook 'hilit-chg-major-mode-hook)
-	(add-hook 'find-file-hooks 'hilit-chg-check-global)
+	;; FIXME: Not sure what this was intended to do.  --Stef
+	;; (add-hook 'hilit-chg-major-mode-hook 'hilit-chg-major-mode-hook)
+	(add-hook 'find-file-hook 'hilit-chg-check-global)
 	(if highlight-changes-global-changes-existing-buffers
 	    (hilit-chg-update-all-buffers
 	     highlight-changes-global-initial-state)))
 
     (message "Turning OFF global Highlight Changes mode")
-    (remove-hook 'hilit-chg-major-mode-hook 'hilit-chg-major-mode-hook)
-    (remove-hook 'find-file-hooks 'hilit-chg-check-global)
-    (remove-hook 'post-command-hook
-		 'hilit-chg-post-command-hook)
-    (remove-hook 'find-file-hooks 'hilit-chg-check-global)
+    ;; FIXME: Not sure what this was intended to do.  --Stef
+    ;; (remove-hook 'hilit-chg-major-mode-hook 'hilit-chg-major-mode-hook)
+    (remove-hook 'post-command-hook 'hilit-chg-post-command-hook)
+    (remove-hook 'find-file-hook 'hilit-chg-check-global)
     (if highlight-changes-global-changes-existing-buffers
 	(hilit-chg-update-all-buffers nil))))
 

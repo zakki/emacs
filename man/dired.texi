@@ -39,7 +39,8 @@ files.
 * Hiding Subdirectories::     Making subdirectories visible or invisible.
 * Updating: Dired Updating.   Discarding lines for files of no interest.
 * Find: Dired and Find.	      Using `find' to choose the files for Dired.
-* Misc: Misc Dired Commands.  Various other features.
+* Wdired::                    Operating on files by editing the Dired buffer.
+* Misc: Misc Dired Features.  Various other features.
 @end menu
 
 @node Dired Enter
@@ -288,15 +289,11 @@ to display the file, like the @kbd{o} command.
 @item v
 @kindex v @r{(Dired)}
 @findex dired-view-file
-View the file described on the current line, using either an external
-viewing program or @kbd{M-x view-file} (@code{dired-view-file}).
-
-@vindex dired-view-command-alist
-External viewers are used for certain file types under the control of
-@code{dired-view-command-alist}.  Viewing a file with @code{view-file}
-is like visiting it, but is slanted toward moving around in the file
+View the file described on the current line, using @kbd{M-x view-file}
+(@code{dired-view-file}).  Viewing a file with @code{view-file} is
+like visiting it, but is slanted toward moving around in the file
 conveniently and does not allow changing the file.  @xref{Misc File
-Ops,View File, Miscellaneous File Operations}.
+Ops, View File, Miscellaneous File Operations}.
 
 @item ^
 @kindex ^ @r{(Dired)}
@@ -375,13 +372,17 @@ Move point to previous line and remove any mark on that line
 (@code{dired-unmark-backward}).
 
 @item * !
+@itemx U
 @kindex * ! @r{(Dired)}
+@kindex U @r{(Dired)}
 @findex dired-unmark-all-marks
 Remove all marks from all the files in this Dired buffer
 (@code{dired-unmark-all-marks}).
 
 @item * ? @var{markchar}
+@itemx M-@key{DEL}
 @kindex * ? @r{(Dired)}
+@kindex M-DEL @r{(Dired)}
 @findex dired-unmark-all-files
 Remove all marks that use the character @var{markchar}
 (@code{dired-unmark-all-files}).  The argument is a single
@@ -395,17 +396,23 @@ asking whether to remove its mark.  You can answer @kbd{y} meaning yes,
 files without asking about them.
 
 @item * C-n
+@itemx M-@}
 @findex dired-next-marked-file
 @kindex * C-n @r{(Dired)}
+@kindex M-@} @r{(Dired)}
 Move down to the next marked file (@code{dired-next-marked-file})
 A file is ``marked'' if it has any kind of mark.
 
 @item * C-p
+@itemx M-@{
 @findex dired-prev-marked-file
 @kindex * C-p @r{(Dired)}
+@kindex M-@{ @r{(Dired)}
 Move up to the previous marked file (@code{dired-prev-marked-file})
 
-@item * t
+@item t
+@itemx * t
+@kindex t @r{(Dired)}
 @kindex * t @r{(Dired)}
 @findex dired-toggle-marks
 @cindex toggling marks (in Dired)
@@ -609,7 +616,7 @@ Print the specified files (@code{dired-do-print}).  You must specify the
 command to print them with, but the minibuffer starts out with a
 suitable guess made using the variables @code{lpr-command} and
 @code{lpr-switches} (the same variables that @code{lpr-buffer} uses;
-@pxref{Hardcopy}).
+@pxref{Printing}).
 
 @findex dired-do-compress
 @kindex Z @r{(Dired)}
@@ -967,9 +974,6 @@ ignore files in hidden directories even if they are marked.  Thus you
 can use hiding to temporarily exclude subdirectories from operations
 without having to remove the markers.
 
-  The subdirectory hiding commands toggle; that is, they hide what was
-visible, and show what was hidden.
-
 @node Dired Updating
 @section Updating the Dired Buffer
 @cindex updating Dired buffer
@@ -1098,33 +1102,97 @@ may need to change the value of this variable.
 program.  @kbd{M-x locate-with-filter} is similar, but keeps only lines
 matching a given regular expression.
 
-These buffers don't work entirely like ordinary Dired buffers.  File
+  These buffers don't work entirely like ordinary Dired buffers.  File
 operations work, but do not always automatically update the buffer.
 Reverting the buffer with @kbd{g} deletes all inserted subdirectories,
 and erases all flags and marks.
 
-@node Misc Dired Commands
-@section Other Dired Commands
+@node Wdired
+@section Editing the Dired Buffer
 
-@table @kbd
-@item w
+@cindex wdired mode
+@findex wdired-change-to-wdired-mode
+  Wdired is a special mode that allows you to perform file operations
+by editing the Dired buffer directly (the ``W'' in ``Wdired'' stands
+for ``writable''.)  To enter Wdired mode, type @kbd{M-x
+wdired-change-to-wdired-mode} while in a Dired buffer.  Alternatively,
+use @samp{Edit File Names} in the @samp{Immediate} menu bar menu.
+
+@findex wdired-finish-edit
+  While in Wdired mode, you can rename files by editing the file names
+displayed in the Dired buffer.  All the ordinary Emacs editing
+commands, including rectangle operations and @code{query-replace}, are
+available for this.  Once you are done editing, type @kbd{C-c C-c}
+(@code{wdired-finish-edit}).  This applies your changes and switches
+back to ordinary Dired mode.
+
+  Apart from simply renaming files, you can move a file to another
+directory by typing in the new file name (either absolute or
+relative).  To mark a file for deletion, delete the entire filename.
+To change the target of a symbolic link, just edit the target name
+displayed next to the link name.
+
+  The rest of the text in the buffer, such as the file sizes and
+modification dates, is marked read-only, so you can't edit it.
+However, if you set @code{wdired-allow-to-change-permissions} to
+@code{t}, the file permission bits can also be edited.  For example,
+you can change @samp{-rw-r--r--} to @samp{-rw-rw-rw-} to make a file
+world-writable.  These changes also take effect when you type @kbd{C-c
+C-c}.
+
+@node Misc Dired Features
+@section Other Dired Features
+
 @cindex Adding to the kill ring in Dired.
 @kindex w @r{(Dired)}
 @findex dired-copy-filename-as-kill
-The @kbd{w} command (@code{dired-copy-filename-as-kill}) puts the
+  The @kbd{w} command (@code{dired-copy-filename-as-kill}) puts the
 names of the marked (or next @var{n}) files into the kill ring, as if
-you had killed them with @kbd{C-w}.  With a zero prefix argument
-@var{n}=0, use the absolute file name of each marked file.  With just
-@kbd{C-u} as the prefix argument, use the relative file name of each
-marked file.  As a special case, if no prefix argument is given and
-point is on a directory headerline, @kbd{w} gives you the name of that
-directory without looking for marked files.
+you had killed them with @kbd{C-w}.  The names are separated by a space.
 
-The main purpose of the @kbd{w} command is so that you can yank the
-file names into arguments for other Emacs commands.  It also displays
-what was pushed onto the kill ring, so you can use it to display the
-list of currently marked files in the echo area.
-@end table
+  The main purpose of this command is so that you can yank the file
+names into arguments for other Emacs commands.  It also displays what
+was pushed onto the kill ring, so you can use it to display the list
+of currently marked files in the echo area.  With a zero prefix
+argument, this uses the absolute file name of each marked file.  With
+just @kbd{C-u} as the prefix argument, it uses file names relative to
+the Dired buffer's default directory.  (This can still contain slashes
+if in a subdirectory.)  As a special case, if point is on a directory
+headerline, @kbd{w} gives you the absolute name of that directory.
+Any prefix argument or marked files are ignored in this case.
+
+@findex dired-compare-directories
+  The command @kbd{M-x dired-compare-directories} is used to compare
+the current Dired buffer with another directory.  It marks all the files
+that are ``different'' between the two directories.  It puts these marks
+in all Dired buffers where these files are listed, which of course includes
+the current buffer.
+
+  The default comparison method (used if you type @key{RET} at the
+prompt) is to compare just the file names---each file name that does
+not appear in the other directory is ``different''.  You can specify
+more stringent comparisons by entering a Lisp expression, which can
+refer to the variables @code{size1} and @code{size2}, the respective
+file sizes; @code{mtime1} and @code{mtime2}, the last modification
+times in seconds, as floating point numers; and @code{fa1} and
+@code{fa2}, the respective file attribute lists (as returned by the
+function @code{file-attributes}).  This expression is evaluated for
+each pair of like-named files, and if the expression's value is
+non-@code{nil}, those files are considered ``different''.
+
+  For instance, @code{M-x dired-compare-directories @key{RET} (>
+mtime1 mtime2) @key{RET}} marks files newer in this directory than in
+the other, and marks files older in the other directory than in this
+one.  It also marks files with no counterpart, in both directories, as
+always.
+
+@cindex drag and drop, Dired
+  On the X window system, Emacs supports the ``drag and drop''
+protocol.  You can drag a file object from another program, and drop
+it onto a Dired buffer; this either moves, copies, or creates a link
+to the file in that directory.  Precisely which action is taken is
+determined by the originating program.  Dragging files out of a Dired
+buffer is currently not supported.
 
 @ignore
    arch-tag: d105f9b9-fc1b-4c5f-a949-9b2cf3ca2fc1

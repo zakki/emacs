@@ -284,14 +284,14 @@ You can use \\[hexl-find-file] to visit a file in Hexl mode.
     (add-hook 'change-major-mode-hook 'hexl-maybe-dehexlify-buffer nil t)
 
     ;; Set a callback function for eldoc.
-    (set (make-local-variable 'eldoc-print-current-symbol-info-function)
+    (set (make-local-variable 'eldoc-documentation-function)
 	 'hexl-print-current-point-info)
     (eldoc-add-command-completions "hexl-")
     (eldoc-remove-command "hexl-save-buffer" 
 			  "hexl-current-address")
 
     (if hexl-follow-ascii (hexl-follow-ascii 1)))
-  (run-hooks 'hexl-mode-hook))
+  (run-mode-hooks 'hexl-mode-hook))
 
 
 (defun hexl-isearch-search-function ()
@@ -874,7 +874,7 @@ Embedded whitespace, dashes, and periods in the string are ignored."
 (defun hexl-insert-decimal-char (arg)
   "Insert a character given by its decimal code ARG times at point."
   (interactive "p")
-  (let ((num (string-to-int (read-string "Decimal Number: "))))
+  (let ((num (string-to-number (read-string "Decimal Number: "))))
     (if (< num 0)
 	(error "Decimal number out of range")
       (hexl-insert-multibyte-char num arg))))
@@ -926,10 +926,11 @@ Customize the variable `hexl-follow-ascii' to disable this feature."
   "Activate `hl-line-mode'"
   (require 'frame)
   (require 'hl-line)
-  (set (make-local-variable 'hl-line-range-function)
-       'hexl-highlight-line-range)
-  (set (make-local-variable 'hl-line-face) 
-       'highlight)
+  (with-no-warnings
+    (set (make-local-variable 'hl-line-range-function)
+	 'hexl-highlight-line-range)
+    (set (make-local-variable 'hl-line-face) 
+	 'highlight))
   (hl-line-mode 1))
 
 (defun hexl-highlight-line-range ()

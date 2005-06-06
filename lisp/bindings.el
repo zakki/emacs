@@ -165,7 +165,8 @@ corresponding to the mode line clicked."
 	     (eval-when-compile
 	       (let ((map (make-sparse-keymap)))
 		 (define-key map [mode-line mouse-3] 'mode-line-change-eol)
-		 map))))
+		 map))
+	     'mouse-face 'mode-line-highlight))
       (push (cons eol (cons mnemonic desc)) mode-line-eol-desc-cache)
       desc)))
 
@@ -177,7 +178,8 @@ corresponding to the mode line clicked."
 			     "Input method: "
 			     current-input-method
 			     ".  mouse-2: disable, mouse-3: describe")
-		  local-map ,mode-line-input-method-map))
+		  local-map ,mode-line-input-method-map
+		  mouse-face mode-line-highlight))
     ,(propertize
       "%z"
       'help-echo
@@ -191,6 +193,7 @@ corresponding to the mode line clicked."
 			  " buffer; mouse-3: describe coding system")
 		(concat "Unibyte " (symbol-name buffer-file-coding-system)
 			" buffer")))))
+      'mouse-face 'mode-line-highlight
       'local-map mode-line-coding-system-map)
     (:eval (mode-line-eol-desc)))
   "Mode-line control for displaying information of multilingual environment.
@@ -235,7 +238,8 @@ Normally nil in most modes, since there is no process to display.")
 					    "Not r")))))
 	 'local-map (purecopy (make-mode-line-mouse-map
 			       'mouse-3
-			       #'mode-line-toggle-read-only)))
+			       #'mode-line-toggle-read-only))
+	 'mouse-face 'mode-line-highlight)
 	(propertize
 	 "%1+"
 	 'help-echo  (purecopy (lambda (window object point)
@@ -246,7 +250,8 @@ Normally nil in most modes, since there is no process to display.")
 					     "M"
 					   "Not m")))))
 	 'local-map (purecopy (make-mode-line-mouse-map
-			       'mouse-3 #'mode-line-toggle-modified))))
+			       'mouse-3 #'mode-line-toggle-modified))
+	 'mouse-face 'mode-line-highlight))
   "Mode-line control for displaying whether current buffer is modified.")
 
 (make-variable-buffer-local 'mode-line-modified)
@@ -262,6 +267,7 @@ buffer size, the line number and the column number.")
 
 (defvar mode-line-major-mode-keymap
   (let ((map (make-sparse-keymap)))
+    (define-key map [mode-line down-mouse-1] 'mouse-major-mode-menu)
     (define-key map [mode-line mouse-2] 'describe-mode)
     (define-key map [mode-line down-mouse-3] 'mode-line-mode-menu-1)
     map) "\
@@ -303,13 +309,16 @@ Keymap to display on minor modes.")
     (list
      (propertize "%[(" 'help-echo help-echo)
      `(:propertize ("" mode-name)
-		   help-echo "mouse-2: help for current major mode"
+		   help-echo "mouse-1: major-mode-menu mouse-2: help for current major mode"
+		   mouse-face mode-line-highlight
 		   local-map ,mode-line-major-mode-keymap)
      '("" mode-line-process)
      `(:propertize ("" minor-mode-alist)
+		   mouse-face mode-line-highlight
 		   help-echo "mouse-2: help for minor modes, mouse-3: minor mode menu"
 		   local-map ,mode-line-minor-mode-keymap)
      (propertize "%n" 'help-echo "mouse-2: widen"
+		 'mouse-face 'mode-line-highlight
 		 'local-map (make-mode-line-mouse-map
 			     'mouse-2 #'mode-line-widen))
      (propertize ")%]--" 'help-echo help-echo)))
@@ -392,9 +401,6 @@ Menu of mode operations in the mode line.")
   "Return the value of symbol VAR if it is bound, else nil."
   `(and (boundp (quote ,var)) ,var))
 
-(define-key mode-line-mode-menu [tooltip-mode]
-  `(menu-item ,(purecopy "Tooltip") tooltip-mode
-	      :button (:toggle . tooltip-mode)))
 (define-key mode-line-mode-menu [overwrite-mode]
   `(menu-item ,(purecopy "Overwrite (Ovwrt)") overwrite-mode
 	      :button (:toggle . overwrite-mode)))
@@ -468,6 +474,7 @@ text properties for face, help-echo, and local-map to it."
 		    'face 'Buffer-menu-buffer-face
 		    'help-echo
 		    (purecopy "mouse-1: previous buffer, mouse-3: next buffer")
+		    'mouse-face 'mode-line-highlight
 		    'local-map mode-line-buffer-identification-keymap)))
 
 (setq-default mode-line-buffer-identification
@@ -503,7 +510,7 @@ is okay.  See `mode-line-format'.")
 		".a" ".ln" ".blg" ".bbl" ".dll" ".drv" ".vxd" ".386"))
 	     ((eq system-type 'vax-vms)
 	      '(".obj" ".exe" ".bin" ".lbin" ".sbin"
-		".brn" ".rnt" ".lni" ".lis"
+		".brn" ".rnt" ".lni"
 		".olb" ".tlb" ".mlb" ".hlb"))
 	     (t
 	      '(".o" "~" ".bin" ".lbin" ".so"
@@ -628,6 +635,10 @@ language you are using."
 ;; (define-key ctl-x-map "n" 'narrow-to-region)
 ;; (define-key ctl-x-map "w" 'widen)
 
+;; Quitting
+(define-key global-map "\e\e\e" 'keyboard-escape-quit)
+(define-key global-map "\C-g" 'keyboard-quit)
+
 (define-key global-map "\C-j" 'newline-and-indent)
 (define-key global-map "\C-m" 'newline)
 (define-key global-map "\C-o" 'open-line)
@@ -652,8 +663,17 @@ language you are using."
 ;; Many people are used to typing C-/ on X terminals and getting C-_.
 (define-key global-map [?\C-/] 'undo)
 (define-key global-map "\C-_" 'undo)
+;; Richard said that we should not use C-x <uppercase letter> and I have
+;; no idea whereas to bind it.  Any suggestion welcome.  -stef
+;; (define-key ctl-x-map "U" 'undo-only)
+
 (define-key esc-map "!" 'shell-command)
 (define-key esc-map "|" 'shell-command-on-region)
+
+(define-key global-map [?\C-x right] 'next-buffer)
+(define-key global-map [?\C-x C-right] 'next-buffer)
+(define-key global-map [?\C-x left] 'prev-buffer)
+(define-key global-map [?\C-x C-left] 'prev-buffer)
 
 (let ((map minibuffer-local-map))
   (define-key map "\en"   'next-history-element)
@@ -709,6 +729,13 @@ language you are using."
 (define-key esc-map "g\M-g" 'goto-line)
 (define-key esc-map "gg" 'goto-line)
 
+(define-key esc-map "gn" 'next-error)
+(define-key esc-map "g\M-n" 'next-error)
+(define-key ctl-x-map "`" 'next-error)
+
+(define-key esc-map "gp" 'previous-error)
+(define-key esc-map "g\M-p" 'previous-error)
+
 ;;(defun function-key-error ()
 ;;  (interactive)
 ;;  (error "That function key is not bound to anything"))
@@ -737,6 +764,7 @@ language you are using."
 (define-key global-map [C-next]		'scroll-left)
 (define-key global-map [M-next]		'scroll-other-window)
 (define-key global-map [M-prior]	'scroll-other-window-down)
+(define-key esc-map [?\C-\S-v]		'scroll-other-window-down)
 (define-key global-map [end]		'end-of-line)
 (define-key global-map [C-end]		'end-of-buffer)
 (define-key global-map [M-end]		'end-of-buffer-other-window)
@@ -1019,6 +1047,8 @@ language you are using."
 (define-key ctl-x-map "'" 'expand-abbrev)
 
 (define-key ctl-x-map "z" 'repeat)
+
+(define-key ctl-x-4-map "c" 'clone-indirect-buffer-other-window)
 
 ;; Don't look for autoload cookies in this file.
 ;; Local Variables:

@@ -735,16 +735,18 @@ for its usual definition is in @file{userlock.el}.
 @section Information about Files
 
   The functions described in this section all operate on strings that
-designate file names.  All the functions have names that begin with the
-word @samp{file}.  These functions all return information about actual
-files or directories, so their arguments must all exist as actual files
-or directories unless otherwise noted.
+designate file names.  With a few exceptions, all the functions have
+names that begin with the word @samp{file}.  These functions all
+return information about actual files or directories, so their
+arguments must all exist as actual files or directories unless
+otherwise noted.
 
 @menu
 * Testing Accessibility::   Is a given file readable?  Writable?
 * Kinds of Files::          Is it a directory?  A symbolic link?
 * Truenames::		    Eliminating symbolic links from a file name.
 * File Attributes::         How large is it?  Any other names?  Etc.
+* Locating Files::          How to find a file in standard places.
 @end menu
 
 @node Testing Accessibility
@@ -1254,6 +1256,66 @@ is on file system number -32252.
 @end table
 @end defun
 
+@node Locating Files
+@subsection How to Locate Files in Standard Places
+@cindex locate files
+@cindex find files
+
+  This section explains how to search for a file in a list of
+directories.  One example is when you need to look for a program's
+executable file, e.g., to find out whether a given program is
+installed on the user's system.  Another example is the search for
+Lisp libraries (@pxref{Library Search}).  Such searches generally need
+to try various possible file name extensions, in addition to various
+possible directories.  Emacs provides a function for such a
+generalized search for a file.
+
+@defun locate-file filename path &optional suffixes predicate
+This function searches for a file whose name is @var{filename} in a
+list of directories given by @var{path}, trying the suffixes in
+@var{suffixes}.  If it finds such a file, it returns the full
+@dfn{absolute file name} of the file (@pxref{Relative File Names});
+otherwise it returns @code{nil}.
+
+The optional argument @var{suffixes} gives the list of file-name
+suffixes to append to @var{filename} when searching.
+@code{locate-file} tries each possible directory with each of these
+suffixes.  If @var{suffixes} is @code{nil}, or @code{("")}, then there
+are no suffixes, and @var{filename} is used only as-is.  Typical
+values of @var{suffixes} are @code{exec-suffixes} (@pxref{Subprocess
+Creation, exec-suffixes}) and @code{load-suffixes} (@pxref{Library
+Search, load-suffixes}).
+
+Typical values for @var{path} are @code{exec-path} (@pxref{Subprocess
+Creation, exec-path}) when looking for executable programs or
+@code{load-path} (@pxref{Library Search, load-path}) when looking for
+Lisp files.  If @var{filename} is absolute, @var{path} has no effect,
+but the suffixes in @var{suffixes} are still tried.
+
+The optional argument @var{predicate}, if non-@code{nil}, specifies
+the predicate function to use for testing whether a candidate file is
+suitable.  The predicate function is passed the candidate file name as
+its single argument.  If @var{predicate} is @code{nil} or unspecified,
+@code{locate-file} uses @code{file-readable-p} as the default
+predicate.  Useful non-default predicates include
+@code{file-executable-p}, @code{file-directory-p}, and other
+predicates described in @ref{Kinds of Files}.
+
+For compatibility, @var{predicate} can also be one of the symbols
+@code{executable}, @code{readable}, @code{writable}, @code{exists}, or
+a list of one or more of these symbols.
+@end defun
+
+@cindex find executable program
+@defun executable-find program
+This function searches for the executable file of the named
+@var{program} and returns the full absolute name of the executable,
+including its file-name extensions, if any.  It returns @code{nil} if
+the file is not found.  The functions searches in all the directories
+in @code{exec-path} and tries all the file-name extensions in
+@code{exec-suffixes}.
+@end defun
+
 @node Changing Files
 @section Changing File Names and Attributes
 @cindex renaming files
@@ -1364,7 +1426,7 @@ with @code{add-name-to-file} and then deleting @var{filename} has the
 same effect as renaming, aside from momentary intermediate states.
 @end deffn
 
-@deffn Command copy-file oldname newname &optional ok-if-exists time
+@deffn Command copy-file oldname newname &optional ok-if-exists time mustbenew
 This command copies the file @var{oldname} to @var{newname}.  An
 error is signaled if @var{oldname} does not exist.  If @var{newname}
 names a directory, it copies @var{oldname} into that directory,
@@ -1379,6 +1441,10 @@ This function copies the file modes, too.
 
 In an interactive call, a prefix argument specifies a non-@code{nil}
 value for @var{time}.
+
+The argument @var{mustbenew} controls whether an existing file can be
+overwritten.  It works like the similarly-named argument of
+@code{write-region} (@pxref{Writing to Files, mustbenew}).
 @end deffn
 
 @deffn Command make-symbolic-link filename newname  &optional ok-if-exists
@@ -2024,10 +2090,13 @@ two different jobs from trying to use the exact same file name.
 
 @defun make-temp-file prefix &optional dir-flag suffix
 @tindex make-temp-file
-This function creates a temporary file and returns its name.
-The name starts with @var{prefix}; it also contains a number that is
-different in each Emacs job.  If @var{prefix} is a relative file name,
-it is expanded against @code{temporary-file-directory}.
+This function creates a temporary file and returns its name.  Emacs
+creates the temporary file's name by adding to @var{prefix} some
+random characters that are different in each Emacs job.  The result is
+guaranteed to be a newly created empty file.  On MS-DOS, this function
+can truncate the @var{string} prefix to fit into the 8+3 file-name
+limits.  If @var{prefix} is a relative file name, it is expanded
+against @code{temporary-file-directory}.
 
 @example
 @group
@@ -2072,13 +2141,13 @@ you should use @code{make-temp-name} instead:
 @end example
 
 @defun make-temp-name string
-This function generates a string that can be used as a unique file name.
-The name starts with @var{string}, and contains a number that is
-different in each Emacs job.  It is like @code{make-temp-file} except
-that it just constructs a name, and does not create a file.  Another
-difference is that @var{string} should be an absolute file name.  On
-MS-DOS, this function can truncate the @var{string} prefix to fit into
-the 8+3 file-name limits.
+This function generates a string that can be used as a unique file
+name.  The name starts with @var{string}, and has several random
+characters appended to it, which are different in each Emacs job.  It
+is like @code{make-temp-file} except that it just constructs a name,
+and does not create a file.  Another difference is that @var{string}
+should be an absolute file name.  On MS-DOS, this function can
+truncate the @var{string} prefix to fit into the 8+3 file-name limits.
 @end defun
 
 @defvar temporary-file-directory
@@ -2434,7 +2503,7 @@ check the given file name against @code{file-name-handler-alist}.  If
 the file name matches @var{regexp}, the primitives handle that file by
 calling @var{handler}.
 
-The first argument given to @var{handler} is the name of the
+  The first argument given to @var{handler} is the name of the
 primitive, as a symbol; the remaining arguments are the arguments that
 were passed to that primitive.  (The first of these arguments is most
 often the file name itself.)  For example, if you do this:
@@ -2451,7 +2520,7 @@ called like this:
 (funcall @var{handler} 'file-exists-p @var{filename})
 @end example
 
-When a function takes two or more arguments that must be file names,
+  When a function takes two or more arguments that must be file names,
 it checks each of those names for a handler.  For example, if you do
 this:
 
@@ -2472,7 +2541,7 @@ this:
 The @var{handler} then needs to figure out whether to handle
 @var{filename} or @var{dirname}.
 
-If the specified file name matches more than one handler, the one
+  If the specified file name matches more than one handler, the one
 whose match starts last in the file name gets precedence.  This rule
 is chosen so that handlers for jobs such as uncompression are handled
 first, before handlers for jobs such as remote file access.
@@ -2568,12 +2637,12 @@ Here are the operations that a magic file name handler gets to handle:
 @end flushleft
 @end iftex
 
-Handlers for @code{insert-file-contents} typically need to clear the
+  Handlers for @code{insert-file-contents} typically need to clear the
 buffer's modified flag, with @code{(set-buffer-modified-p nil)}, if the
 @var{visit} argument is non-@code{nil}.  This also has the effect of
 unlocking the buffer if it is locked.
 
-The handler function must handle all of the above operations, and
+  The handler function must handle all of the above operations, and
 possibly others to be added in the future.  It need not implement all
 these operations itself---when it has nothing special to do for a
 certain operation, it can reinvoke the primitive, to handle the
@@ -2596,7 +2665,7 @@ for an operation it does not recognize.  Here's one way to do this:
              (apply operation args)))))
 @end smallexample
 
-When a handler function decides to call the ordinary Emacs primitive for
+  When a handler function decides to call the ordinary Emacs primitive for
 the operation at hand, it needs to prevent the primitive from calling
 the same handler once again, thus leading to an infinite recursion.  The
 example above shows how to do this, with the variables
@@ -2607,7 +2676,7 @@ multiple handlers, and for operations that have two file names that may
 each have handlers.
 
 @kindex safe-magic (@r{property})
-Handlers that don't really do anything special for actual access to the
+  Handlers that don't really do anything special for actual access to the
 file---such as the ones that implement completion of host names for
 remote file names---should have a non-@code{nil} @code{safe-magic}
 property.  For instance, Emacs normally ``protects'' directory names
@@ -2615,6 +2684,15 @@ it finds in @code{PATH} from becoming magic, if they look like magic
 file names, by prefixing them with @samp{/:}.  But if the handler that
 would be used for them has a non-@code{nil} @code{safe-magic}
 property, the @samp{/:} is not added.
+
+@kindex operations (@r{property})
+  A file name handler can have an @code{operations} property to
+declare which operations it handles in a nontrivial way.  If this
+property has a non-@code{nil} value, it should be a list of
+operations; then only those operations will call the handler.  This
+avoids inefficiency, but its main purpose is for autoloaded handler
+functions, so that they won't be loaded except when they have real
+work to do.
 
 @defvar inhibit-file-name-handlers
 This variable holds a list of handlers whose use is presently inhibited

@@ -1,6 +1,6 @@
 ;;; esh-io.el --- I/O management
 
-;; Copyright (C) 1999, 2000 Free Software Foundation
+;; Copyright (C) 1999, 2000, 2005 Free Software Foundation
 
 ;; Author: John Wiegley <johnw@gnu.org>
 
@@ -192,7 +192,7 @@ not be added to this variable."
 	  (eshell-finish-arg
 	   (prog1
 	       (list 'eshell-set-output-handle
-		     (or (and sh (string-to-int sh)) 1)
+		     (or (and sh (string-to-number sh)) 1)
 		     (list 'quote
 			   (aref [overwrite append insert]
 				 (1- (length oper)))))
@@ -353,7 +353,8 @@ it defaults to `insert'."
    ((or (bufferp target)
 	(and (boundp 'eshell-buffer-shorthand)
 	     (symbol-value 'eshell-buffer-shorthand)
-	     (symbolp target)))
+	     (symbolp target)
+	     (not (memq target '(t nil)))))
     (let ((buf (if (bufferp target)
 		   target
 		 (get-buffer-create
@@ -377,7 +378,7 @@ it defaults to `insert'."
     target)
 
    (t
-    (error "Illegal redirection target: %s"
+    (error "Invalid redirection target: %s"
 	   (eshell-stringify target)))))
 
 (eval-when-compile

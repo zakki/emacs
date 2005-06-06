@@ -1,8 +1,9 @@
 ;;; cyrillic.el --- support for Cyrillic -*- coding: iso-2022-7bit; -*-
 
-;; Copyright (C) 1995 Electrotechnical Laboratory, JAPAN.
-;; Licensed to the Free Software Foundation.
-;; Copyright (C) 2001, 2002, 2003  Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1998, 2001, 2002, 2003  Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1997, 1998, 1999, 2000, 2002, 2003, 2004
+;;   National Institute of Advanced Industrial Science and Technology (AIST)
+;;   Registration Number H14PRO021
 
 ;; Author: Kenichi Handa <handa@etl.go.jp>
 ;; Keywords: multilingual, Cyrillic, i18n
@@ -473,6 +474,23 @@ Support for Russian using koi8-r and the russian-computer input method.")
 	 ?\$,1(E(B ?\$,1(F(B ?\$,1(G(B ?\$,1(H(B ?\$,1(I(B ?\$,1(J(B ?\$,1(K(B ?\$,1(L(B ?\$,1(M(B ?\$,1(N(B ?\$,1(O(B ?\$,1(P(B ?\$,1(Q(B ?\$,1(R(B ?\$,1(S(B ?\$,1(T(B ?\$,1(U(B
 	 ?\$,1(V(B ?\$,1(W(B ?\$,1(X(B ?\$,1(Y(B ?\$,1(Z(B ?\$,1([(B ?\$,1(\(B ?\$,1(](B ?\$,1(^(B ?\$,1(_(B ?\$,1(`(B ?\$,1(a(B ?\$,1(b(B ?\$,1(c(B ?\$,1(d(B ?\$,1(e(B ?\$,1(f(B
 	 ?\$,1(g(B ?\$,1(h(B ?\$,1(i(B ?\$,1(j(B ?\$,1(k(B ?\$,1(l(B ?\$,1(m(B ?\$,1(n(B ?\$,1(o(B] nil ?b)))
+
+;; Register cyrillic-iso8859-5 characters in the encode table of
+;; windows-1251.
+(let ((table (get 'encode-windows-1251 'translation-table))
+      ;; Nth element is a cyrillic-iso8859-5 character encoded to a
+      ;; code (128 + N), or nil.
+      (vec [?\,L"(B ?\,L#(B nil ?\,Ls(B nil nil nil nil nil nil ?\,L)(B nil ?\,L*(B ?\,L,(B ?\,L+(B ?\,L/(B
+	    ?\,Lr(B nil nil nil nil nil nil nil nil nil ?\,Ly(B nil ?\,Lz(B ?\,L|(B ?\,L{(B ?\,L(B
+	    nil ?\,L.(B ?\,L~(B ?\,L((B nil nil nil nil ?\,L!(B nil ?\,L$(B nil nil nil nil ?\,L'(B
+	    nil nil ?\,L&(B ?\,Lv(B nil nil nil nil ?\,Lq(B ?\,Lp(B ?\,Lt(B nil ?\,Lx(B ?\,L%(B ?\,Lu(B ?\,Lw(B
+	    ?\,L0(B ?\,L1(B ?\,L2(B ?\,L3(B ?\,L4(B ?\,L5(B ?\,L6(B ?\,L7(B ?\,L8(B ?\,L9(B ?\,L:(B ?\,L;(B ?\,L<(B ?\,L=(B ?\,L>(B ?\,L?(B
+	    ?\,L@(B ?\,LA(B ?\,LB(B ?\,LC(B ?\,LD(B ?\,LE(B ?\,LF(B ?\,LG(B ?\,LH(B ?\,LI(B ?\,LJ(B ?\,LK(B ?\,LL(B ?\,LM(B ?\,LN(B ?\,LO(B
+	    ?\,LP(B ?\,LQ(B ?\,LR(B ?\,LS(B ?\,LT(B ?\,LU(B ?\,LV(B ?\,LW(B ?\,LX(B ?\,LY(B ?\,LZ(B ?\,L[(B ?\,L\(B ?\,L](B ?\,L^(B ?\,L_(B
+	    ?\,L`(B ?\,La(B ?\,Lb(B ?\,Lc(B ?\,Ld(B ?\,Le(B ?\,Lf(B ?\,Lg(B ?\,Lh(B ?\,Li(B ?\,Lj(B ?\,Lk(B ?\,Ll(B ?\,Lm(B ?\,Ln(B ?\,Lo(B]))
+  (dotimes (i (length vec))
+    (if (aref vec i)
+	(aset table (aref vec i) (+ 128 i)))))
 
 (define-coding-system-alias 'cp1251 'windows-1251)
 

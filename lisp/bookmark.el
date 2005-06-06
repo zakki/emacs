@@ -866,7 +866,7 @@ the annotation.
   (use-local-map bookmark-read-annotation-mode-map)
   (setq major-mode 'bookmark-read-annotation-mode)
   (insert (funcall bookmark-read-annotation-text-func bookmark))
-  (run-hooks 'text-mode-hook))
+  (run-mode-hooks 'text-mode-hook))
 
 
 (defun bookmark-read-annotation (parg bookmark)
@@ -903,7 +903,7 @@ When you have finished composing, type \\[bookmark-send-annotation].
   (let ((annotation (bookmark-get-annotation bookmark)))
     (if (and annotation (not (string-equal annotation "")))
 	(insert annotation)))
-  (run-hooks 'text-mode-hook))
+  (run-mode-hooks 'text-mode-hook))
 
 
 (defun bookmark-send-edited-annotation ()
@@ -1355,7 +1355,9 @@ for a file, defaulting to the file defined by variable
 		((eq 'nospecial bookmark-version-control) version-control)
 		(t
 		 t))))
-	  (write-file file)
+          (condition-case nil
+              (write-file file)
+            (file-error (message "Can't write %s" file)))
 	  (kill-buffer (current-buffer))
 	  (if (>= baud-rate 9600)
 	      (message "Saving bookmarks to file %s...done" file)))))))
@@ -1616,7 +1618,7 @@ Bookmark names preceded by a \"*\" have annotations.
   (setq buffer-read-only t)
   (setq major-mode 'bookmark-bmenu-mode)
   (setq mode-name "Bookmark Menu")
-  (run-hooks 'bookmark-bmenu-mode-hook))
+  (run-mode-hooks 'bookmark-bmenu-mode-hook))
 
 
 (defun bookmark-bmenu-toggle-filenames (&optional show)
@@ -2111,12 +2113,12 @@ strings returned are not."
     (define-key map [write]	'("Save Bookmarks As..." . bookmark-write))
     (define-key map [save]	'("Save Bookmarks" . bookmark-save))
     (define-key map [edit]	'("Edit Bookmark List" . bookmark-bmenu-list))
-    (define-key map [delete]	'("Delete Bookmark" . bookmark-delete))
-    (define-key map [rename]	'("Rename Bookmark" . bookmark-rename))
-    (define-key map [locate]	'("Insert Location" . bookmark-locate))
-    (define-key map [insert]	'("Insert Contents" . bookmark-insert))
-    (define-key map [set]	'("Set Bookmark" . bookmark-set))
-    (define-key map [jump]	'("Jump to Bookmark" . bookmark-jump))
+    (define-key map [delete]	'("Delete Bookmark..." . bookmark-delete))
+    (define-key map [rename]	'("Rename Bookmark..." . bookmark-rename))
+    (define-key map [locate]	'("Insert Location..." . bookmark-locate))
+    (define-key map [insert]	'("Insert Contents..." . bookmark-insert))
+    (define-key map [set]	'("Set Bookmark..." . bookmark-set))
+    (define-key map [jump]	'("Jump to Bookmark..." . bookmark-jump))
     map))
 
 ;;;###autoload

@@ -1,3 +1,23 @@
+2005-06-05  Eli Zaretskii  <eliz@gnu.org>
+
+	* inc/sys/socket.h: Change arg 4 of sys_setsockopt to
+	`const void *', for consistency with Posix.
+
+2005-06-04  Eli Zaretskii  <eliz@gnu.org>
+
+	* inc/pwd.h (getpwnam, getpwuid): Add prototypes.
+
+2005-05-24  Juanma Barranquero  <lekktu@gmail.com>
+
+	* INSTALL: Add more pointers to ports of Unix tools to Windows,
+	and to the Emacs Wiki (which contains building instructions for
+	Windows).  Reword image library instructions and remove obsolete
+	incompatibility information.
+
+2005-04-23  David Hunter  <hunterd42@comcast.net>  (tiny change)
+
+	* config.nt (HAVE_PWD_H): Undef.
+
 2004-06-07  Juanma Barranquero  <lektu@terra.es>
 
 	* INSTALL: Clarify paragraph about compatibility between image

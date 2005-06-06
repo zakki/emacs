@@ -1,6 +1,6 @@
 /* Buffer manipulation primitives for GNU Emacs.
-   Copyright (C) 1985, 86, 87, 88, 89, 93, 94, 95, 97, 98, 99, 
-     2000, 01, 02, 03, 04, 2005 Free Software Foundation, Inc. 
+   Copyright (C) 1985, 86, 87, 88, 89, 93, 94, 95, 97, 98, 99,
+     2000, 01, 02, 03, 04, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -630,7 +630,21 @@ CLONE nil means the indirect buffer's state is reset to default values.  */)
       XMARKER (b->zv_marker)->insertion_type = 1;
     }
   else
-    clone_per_buffer_values (b->base_buffer, b);
+    {
+      struct buffer *old_b = current_buffer;
+
+      clone_per_buffer_values (b->base_buffer, b);
+      b->filename = Qnil;
+      b->file_truename = Qnil;
+      b->display_count = make_number (0);
+      b->backed_up = Qnil;
+      b->auto_save_file_name = Qnil;
+      set_buffer_internal_1 (b);
+      Fset (intern ("buffer-save-without-query"), Qnil);
+      Fset (intern ("buffer-file-number"), Qnil);
+      Fset (intern ("buffer-stale-function"), Qnil);
+      set_buffer_internal_1 (old_b);
+    }
 
   return buf;
 }
@@ -863,20 +877,23 @@ DEFUN ("buffer-local-value", Fbuffer_local_value,
        Sbuffer_local_value, 2, 2, 0,
        doc: /* Return the value of VARIABLE in BUFFER.
 If VARIABLE does not have a buffer-local binding in BUFFER, the value
-is the default binding of variable. */)
-     (symbol, buffer)
-     register Lisp_Object symbol;
+is the default binding of the variable. */)
+     (variable, buffer)
+     register Lisp_Object variable;
      register Lisp_Object buffer;
 {
   register struct buffer *buf;
   register Lisp_Object result;
 
-  CHECK_SYMBOL (symbol);
+  CHECK_SYMBOL (variable);
   CHECK_BUFFER (buffer);
   buf = XBUFFER (buffer);
 
+  if (SYMBOLP (variable))
+    variable = indirect_variable (variable);
+
   /* Look in local_var_list */
-  result = Fassoc (symbol, buf->local_var_alist);
+  result = Fassoc (variable, buf->local_var_alist);
   if (NILP (result))
     {
       int offset, idx;
@@ -891,7 +908,7 @@ is the default binding of variable. */)
 	  idx = PER_BUFFER_IDX (offset);
 	  if ((idx == -1 || PER_BUFFER_VALUE_P (buf, idx))
 	      && SYMBOLP (PER_BUFFER_SYMBOL (offset))
-	      && EQ (PER_BUFFER_SYMBOL (offset), symbol))
+	      && EQ (PER_BUFFER_SYMBOL (offset), variable))
 	    {
 	      result = PER_BUFFER_VALUE (buf, offset);
 	      found = 1;
@@ -900,7 +917,7 @@ is the default binding of variable. */)
 	}
 
       if (!found)
-	result = Fdefault_value (symbol);
+	result = Fdefault_value (variable);
     }
   else
     {
@@ -908,7 +925,7 @@ is the default binding of variable. */)
       Lisp_Object current_alist_element;
 
       /* What binding is loaded right now?  */
-      valcontents = SYMBOL_VALUE (symbol);
+      valcontents = SYMBOL_VALUE (variable);
       current_alist_element
 	= XCAR (XBUFFER_LOCAL_VALUE (valcontents)->cdr);
 
@@ -925,13 +942,13 @@ is the default binding of variable. */)
     }
 
   if (EQ (result, Qunbound))
-    return Fsignal (Qvoid_variable, Fcons (symbol, Qnil));
+    return Fsignal (Qvoid_variable, Fcons (variable, Qnil));
 
   return result;
 }
 
 /* Return an alist of the Lisp-level buffer-local bindings of
-   buffer BUF.  That is, do't include  the variables maintained
+   buffer BUF.  That is, don't include the variables maintained
    in special slots in the buffer object.  */
 
 static Lisp_Object
@@ -4958,6 +4975,7 @@ init_buffer_once ()
   buffer_defaults.direction_reversed = Qnil;
   buffer_defaults.cursor_type = Qt;
   buffer_defaults.extra_line_spacing = Qnil;
+  buffer_defaults.cursor_in_non_selected_windows = Qt;
 
 #ifdef DOS_NT
   buffer_defaults.buffer_file_type = Qnil; /* TEXT */
@@ -5054,6 +5072,7 @@ init_buffer_once ()
   XSETFASTINT (buffer_local_flags.header_line_format, idx); ++idx;
   XSETFASTINT (buffer_local_flags.cursor_type, idx); ++idx;
   XSETFASTINT (buffer_local_flags.extra_line_spacing, idx); ++idx;
+  XSETFASTINT (buffer_local_flags.cursor_in_non_selected_windows, idx); ++idx;
 
   /* Need more room? */
   if (idx >= MAX_PER_BUFFER_VARS)
@@ -5245,6 +5264,11 @@ This is the same as (default-value 'cursor-type).  */);
 		     doc: /* Default value of `line-spacing' for buffers that don't override it.
 This is the same as (default-value 'line-spacing).  */);
 
+  DEFVAR_LISP_NOPRO ("default-cursor-in-non-selected-windows",
+		     &buffer_defaults.cursor_in_non_selected_windows,
+		     doc: /* Default value of `cursor-in-non-selected-windows'.
+This is the same as (default-value 'cursor-in-non-selected-windows).  */);
+
   DEFVAR_LISP_NOPRO ("default-abbrev-mode",
 		     &buffer_defaults.abbrev_mode,
 		     doc: /* Default value of `abbrev-mode' for buffers that do not override it.
@@ -5255,19 +5279,19 @@ This is the same as (default-value 'abbrev-mode).  */);
 		     doc: /* Default value of `ctl-arrow' for buffers that do not override it.
 This is the same as (default-value 'ctl-arrow).  */);
 
-   DEFVAR_LISP_NOPRO ("default-direction-reversed",
-		      &buffer_defaults.direction_reversed,
-		      doc: /* Default value of `direction-reversed' for buffers that do not override it.
+  DEFVAR_LISP_NOPRO ("default-direction-reversed",
+                     &buffer_defaults.direction_reversed,
+                     doc: /* Default value of `direction-reversed' for buffers that do not override it.
 This is the same as (default-value 'direction-reversed).  */);
 
-   DEFVAR_LISP_NOPRO ("default-enable-multibyte-characters",
-		      &buffer_defaults.enable_multibyte_characters,
-		      doc: /* *Default value of `enable-multibyte-characters' for buffers not overriding it.
+  DEFVAR_LISP_NOPRO ("default-enable-multibyte-characters",
+                     &buffer_defaults.enable_multibyte_characters,
+                     doc: /* *Default value of `enable-multibyte-characters' for buffers not overriding it.
 This is the same as (default-value 'enable-multibyte-characters).  */);
 
-   DEFVAR_LISP_NOPRO ("default-buffer-file-coding-system",
-		      &buffer_defaults.buffer_file_coding_system,
-		      doc: /* Default value of `buffer-file-coding-system' for buffers not overriding it.
+  DEFVAR_LISP_NOPRO ("default-buffer-file-coding-system",
+                     &buffer_defaults.buffer_file_coding_system,
+                     doc: /* Default value of `buffer-file-coding-system' for buffers not overriding it.
 This is the same as (default-value 'buffer-file-coding-system).  */);
 
   DEFVAR_LISP_NOPRO ("default-truncate-lines",
@@ -5923,6 +5947,11 @@ this variable has no effect; the cursor appears as a hollow box.  */);
 The space is measured in pixels, and put below lines on window systems.
 If value is a floating point number, it specifies the spacing relative
 to the default frame line height.  */);
+
+  DEFVAR_PER_BUFFER ("cursor-in-non-selected-windows",
+		     &current_buffer->cursor_in_non_selected_windows, Qnil,
+    doc: /* *Cursor type to display in non-selected windows.
+t means to use hollow box cursor.  See `cursor-type' for other values.  */);
 
   DEFVAR_LISP ("kill-buffer-query-functions", &Vkill_buffer_query_functions,
 	       doc: /* List of functions called with no args to query before killing a buffer.  */);

@@ -1,7 +1,7 @@
 ;;; info.el --- info package for Emacs
 
-;; Copyright (C) 1985,86,92,93,94,95,96,97,98,99,2000,01,02,03,2004
-;;  Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
+;;   2000, 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: help
@@ -83,7 +83,11 @@ The Lisp code is executed when the node is selected.")
   :group 'info)
 
 (defface info-xref
-  '((((class color) (background light)) :foreground "blue" :underline t)
+  '((((min-colors 88) 
+      (class color) (background light)) :foreground "blue1" :underline t)
+    (((class color) (background light)) :foreground "blue" :underline t)
+    (((min-colors 88) 
+      (class color) (background dark)) :foreground "cyan1" :underline t)
     (((class color) (background dark)) :foreground "cyan" :underline t)
     (t :underline t))
   "Face for Info cross-references."
@@ -511,9 +515,10 @@ in all the directories in that path."
       ;; since the argument will then be parsed improperly.  This also
       ;; has the added benefit of allowing node names to be included
       ;; following the parenthesized filename.
-      (if (and (stringp file) (string-match "(.*)" file))
-	  (Info-goto-node file)
-	(Info-goto-node (concat "(" file ")")))
+      (Info-goto-node
+       (if (and (stringp file) (string-match "(.*)" file))
+           file
+         (concat "(" file ")")))
     (if (zerop (buffer-size))
         (Info-directory))))
 
@@ -1340,7 +1345,9 @@ any double quotes or backslashes must be escaped (\\\",\\\\)."
 ;; Go to an info node specified with a filename-and-nodename string
 ;; of the sort that is found in pointers in nodes.
 
-;;;###autoload
+;; Don't autoload this function: the correct entry point for other packages
+;; to use is `info'.  --Stef
+;; ;;;###autoload
 (defun Info-goto-node (nodename &optional fork)
   "Go to info node named NODENAME.  Give just NODENAME or (FILENAME)NODENAME.
 If NODENAME is of the form (FILENAME)NODENAME, the node is in the Info file
@@ -3026,12 +3033,12 @@ if point is in a menu item description, follow that menu item."
     :help "Go to menu of visited nodes"]
    ["Table of Contents" Info-toc
     :help "Go to table of contents"]
-   ("Index..."
-    ["Lookup a String" Info-index
+   ("Index"
+    ["Lookup a String..." Info-index
      :help "Look for a string in the index items"]
-    ["Next Matching Item" Info-index-next
+    ["Next Matching Item" Info-index-next :active Info-index-alternatives
      :help "Look for another occurrence of previous item"]
-    ["Lookup a string in all indices" info-apropos
+    ["Lookup a string in all indices..." info-apropos
      :help "Look for a string in the indices of all manuals"])
    ["Edit" Info-edit :help "Edit contents of this node"
     :active Info-enable-edit]
@@ -3239,7 +3246,10 @@ Advanced commands:
   (make-local-variable 'line-move-ignore-invisible)
   (setq line-move-ignore-invisible t)
   (make-local-variable 'desktop-save-buffer)
+  (make-local-variable 'widen-automatically)
+  (setq widen-automatically nil)
   (setq desktop-save-buffer 'Info-desktop-buffer-misc-data)
+  (add-hook 'kill-buffer-hook 'Info-kill-buffer nil t)
   (add-hook 'clone-buffer-hook 'Info-clone-buffer-hook nil t)
   (add-hook 'change-major-mode-hook 'font-lock-defontify nil t)
   (add-hook 'isearch-mode-hook 'Info-isearch-start nil t)
@@ -3252,7 +3262,14 @@ Advanced commands:
   (set (make-local-variable 'search-whitespace-regexp)
        Info-search-whitespace-regexp)
   (Info-set-mode-line)
-  (run-hooks 'Info-mode-hook))
+  (run-mode-hooks 'Info-mode-hook))
+
+;; When an Info buffer is killed, make sure the associated tags buffer
+;; is killed too.
+(defun Info-kill-buffer ()
+  (and (eq major-mode 'Info-mode)
+       Info-tag-table-buffer
+       (kill-buffer Info-tag-table-buffer)))
 
 (defun Info-clone-buffer-hook ()
   (when (bufferp Info-tag-table-buffer)
@@ -3287,7 +3304,7 @@ which returns to Info mode for browsing.
   (setq buffer-read-only nil)
   (force-mode-line-update)
   (buffer-enable-undo (current-buffer))
-  (run-hooks 'Info-edit-mode-hook))
+  (run-mode-hooks 'Info-edit-mode-hook))
 
 (defun Info-edit ()
   "Edit the contents of this Info node.
@@ -3787,77 +3804,78 @@ Preserve text properties."
         (let ((n 0)
               cont)
           (while (re-search-forward
-                  (concat "^\\* +\\(" Info-menu-entry-name-re "\\)\\(:"
-                          Info-node-spec-re "\\([ \t]*\\)\\)")
+                  (concat "^\\* Menu:\\|\\(?:^\\* +\\(" Info-menu-entry-name-re "\\)\\(:"
+                          Info-node-spec-re "\\([ \t]*\\)\\)\\)")
                   nil t)
-            (when not-fontified-p
-              (setq n (1+ n))
-              (if (and (<= n 9) (zerop (% n 3))) ; visual aids to help with 1-9 keys
-                  (put-text-property (match-beginning 0)
-                                     (1+ (match-beginning 0))
-                                     'font-lock-face 'info-menu-5)))
-            (when not-fontified-p
-              (add-text-properties
-               (match-beginning 1) (match-end 1)
-               (list
-                'help-echo (if (and (match-end 3)
-                                    (not (equal (match-string 3) "")))
-                               (concat "mouse-2: go to " (match-string 3))
-                             "mouse-2: go to this node")
-                'mouse-face 'highlight)))
-            (when (or not-fontified-p fontify-visited-p)
-              (add-text-properties
-               (match-beginning 1) (match-end 1)
-               (list
-                'font-lock-face
-                ;; Display visited menu items in a different face
-                (if (and Info-fontify-visited-nodes
-                         (save-match-data
-                           (let ((node (if (equal (match-string 3) "")
-                                           (match-string 1)
-                                         (match-string 3)))
-                                 (file (file-name-nondirectory Info-current-file))
-                                 (hl Info-history-list)
-                                 res)
-                             (if (string-match "(\\([^)]+\\))\\([^)]*\\)" node)
-                                 (setq file (file-name-nondirectory
-                                             (match-string 1 node))
-                                       node (if (equal (match-string 2 node) "")
-                                                "Top"
-                                              (match-string 2 node))))
-                             (while hl
-                               (if (and (string-equal node (nth 1 (car hl)))
-                                        (string-equal file
-                                                      (file-name-nondirectory
-                                                       (nth 0 (car hl)))))
-                                   (setq res (car hl) hl nil)
-                                 (setq hl (cdr hl))))
-                             res))) 'info-xref-visited 'info-xref))))
-            (when (and not-fontified-p (memq Info-hide-note-references '(t hide)))
-              (put-text-property (match-beginning 2) (1- (match-end 6))
-                                 'invisible t)
-              ;; Unhide the file name in parens
-              (if (and (match-end 4) (not (eq (char-after (match-end 4)) ?.)))
-                  (remove-text-properties (match-beginning 4) (match-end 4)
-                                          '(invisible t)))
-              ;; We need a stretchable space like :align-to but with
-              ;; a minimum value.
-              (put-text-property (1- (match-end 6)) (match-end 6) 'display
-                                 (if (>= 22 (- (match-end 1)
-                                               (match-beginning 0)))
-                                     '(space :align-to 24)
-                                   '(space :width 2)))
-              (setq cont (looking-at "."))
-              (while (and (= (forward-line 1) 0)
-                          (looking-at "\\([ \t]+\\)[^*\n]"))
-                (put-text-property (match-beginning 1) (1- (match-end 1))
-                                   'invisible t)
-                (put-text-property (1- (match-end 1)) (match-end 1)
-                                   'display
-                                   (if cont
-                                       '(space :align-to 26)
-                                     '(space :align-to 24)))
-                (setq cont t))))))
+	    (when (match-beginning 1)
+	      (when not-fontified-p
+		(setq n (1+ n))
+		(if (and (<= n 9) (zerop (% n 3))) ; visual aids to help with 1-9 keys
+		    (put-text-property (match-beginning 0)
+				       (1+ (match-beginning 0))
+				       'font-lock-face 'info-menu-5)))
+	      (when not-fontified-p
+		(add-text-properties
+		 (match-beginning 1) (match-end 1)
+		 (list
+		  'help-echo (if (and (match-end 3)
+				      (not (equal (match-string 3) "")))
+				 (concat "mouse-2: go to " (match-string 3))
+			       "mouse-2: go to this node")
+		  'mouse-face 'highlight)))
+	      (when (or not-fontified-p fontify-visited-p)
+		(add-text-properties
+		 (match-beginning 1) (match-end 1)
+		 (list
+		  'font-lock-face
+		  ;; Display visited menu items in a different face
+		  (if (and Info-fontify-visited-nodes
+			   (save-match-data
+			     (let ((node (if (equal (match-string 3) "")
+					     (match-string 1)
+					   (match-string 3)))
+				   (file (file-name-nondirectory Info-current-file))
+				   (hl Info-history-list)
+				   res)
+			       (if (string-match "(\\([^)]+\\))\\([^)]*\\)" node)
+				   (setq file (file-name-nondirectory
+					       (match-string 1 node))
+					 node (if (equal (match-string 2 node) "")
+						  "Top"
+						(match-string 2 node))))
+			       (while hl
+				 (if (and (string-equal node (nth 1 (car hl)))
+					  (string-equal file
+							(file-name-nondirectory
+							 (nth 0 (car hl)))))
+				     (setq res (car hl) hl nil)
+				   (setq hl (cdr hl))))
+			       res))) 'info-xref-visited 'info-xref))))
+	      (when (and not-fontified-p (memq Info-hide-note-references '(t hide)))
+		(put-text-property (match-beginning 2) (1- (match-end 6))
+				   'invisible t)
+		;; Unhide the file name in parens
+		(if (and (match-end 4) (not (eq (char-after (match-end 4)) ?.)))
+		    (remove-text-properties (match-beginning 4) (match-end 4)
+					    '(invisible t)))
+		;; We need a stretchable space like :align-to but with
+		;; a minimum value.
+		(put-text-property (1- (match-end 6)) (match-end 6) 'display
+				   (if (>= 22 (- (match-end 1)
+						 (match-beginning 0)))
+				       '(space :align-to 24)
+				     '(space :width 2)))
+		(setq cont (looking-at "."))
+		(while (and (= (forward-line 1) 0)
+			    (looking-at "\\([ \t]+\\)[^*\n]"))
+		  (put-text-property (match-beginning 1) (1- (match-end 1))
+				     'invisible t)
+		  (put-text-property (1- (match-end 1)) (match-end 1)
+				     'display
+				     (if cont
+					 '(space :align-to 26)
+				       '(space :align-to 24)))
+		  (setq cont t)))))))
 
       ;; Fontify menu headers
       ;; Add the face `info-menu-header' to any header before a menu entry
@@ -3887,16 +3905,6 @@ Preserve text properties."
 
       (set-buffer-modified-p nil))))
 
-
-;; When an Info buffer is killed, make sure the associated tags buffer
-;; is killed too.
-(defun Info-kill-buffer ()
-  (and (eq major-mode 'Info-mode)
-       Info-tag-table-buffer
-       (kill-buffer Info-tag-table-buffer)))
-
-(add-hook 'kill-buffer-hook 'Info-kill-buffer)
-
 ;;; Speedbar support:
 ;; These functions permit speedbar to display the "tags" in the
 ;; current info node.
@@ -4122,5 +4130,5 @@ BUFFER is the buffer speedbar is requesting buttons for."
 
 (provide 'info)
 
-;;; arch-tag: f2480fe2-2139-40c1-a49b-6314991164ac
+;; arch-tag: f2480fe2-2139-40c1-a49b-6314991164ac
 ;;; info.el ends here

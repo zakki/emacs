@@ -1,6 +1,6 @@
 ;;; tetris.el --- implementation of Tetris for Emacs
 
-;; Copyright (C) 1997 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2002 Free Software Foundation, Inc.
 
 ;; Author: Glynn Clements <glynn@sensei.co.uk>
 ;; Version: 2.01
@@ -616,7 +616,7 @@ tetris-mode keybindings:
 
   (gamegrid-init (tetris-display-options))
 
-  (run-hooks 'tetris-mode-hook))
+  (run-mode-hooks 'tetris-mode-hook))
 
 ;;;###autoload
 (defun tetris ()

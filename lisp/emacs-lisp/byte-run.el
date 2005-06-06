@@ -114,6 +114,22 @@ was first made obsolete, for example a date or a release number."
     (put function 'byte-obsolete-info (list new handler when)))
   function)
 
+(defmacro define-obsolete-function-alias (function new
+						   &optional when docstring)
+  "Set FUNCTION's function definition to NEW and mark it obsolete.
+
+\(define-obsolete-function-alias 'old-fun 'new-fun \"22.1\" \"old-fun's doc.\")
+
+is equivalent to the following two lines of code:
+
+\(defalias 'old-fun 'new-fun \"old-fun's doc.\")
+\(make-obsolete 'old-fun 'new-fun \"22.1\")
+
+See the docstrings of `defalias' and `make-obsolete' for more details."
+  `(progn
+     (defalias ,function ,new ,docstring)
+     (make-obsolete ,function ,new ,when)))
+
 (defun make-obsolete-variable (variable new &optional when)
   "Make the byte-compiler warn that VARIABLE is obsolete.
 The warning will say that NEW should be used instead.
@@ -129,6 +145,23 @@ was first made obsolete, for example a date or a release number."
   (put variable 'byte-obsolete-variable (cons new when))
   variable)
 
+(defmacro define-obsolete-variable-alias (variable new
+						 &optional when docstring)
+  "Make VARIABLE a variable alias for NEW and mark it obsolete.
+
+\(define-obsolete-variable-alias 'old-var 'new-var \"22.1\" \"old-var's doc.\")
+
+is equivalent to the following two lines of code:
+
+\(defvaralias 'old-var 'new-var \"old-var's doc.\")
+\(make-obsolete-variable 'old-var 'new-var \"22.1\")
+
+See the docstrings of `defvaralias' and `make-obsolete-variable' or
+Info node `(elisp)Variable Aliases' for more details."
+  `(progn
+     (defvaralias ,variable ,new ,docstring)
+      (make-obsolete-variable ,variable ,new ,when)))
+
 (defmacro dont-compile (&rest body)
   "Like `progn', but the body always runs interpreted (not compiled).
 If you think you need this, you're probably making a mistake somewhere."
@@ -142,8 +175,9 @@ If you think you need this, you're probably making a mistake somewhere."
 ;;; byte-compile-macro-environment.
 
 (defmacro eval-when-compile (&rest body)
-  "Like `progn', but evaluates the body at compile time.
-The result of the body appears to the compiler as a quoted constant."
+  "Like `progn', but evaluates the body at compile time if you're compiling.
+Thus, the result of the body appears to the compiler as a quoted constant.
+In interpreted code, this is entirely equivalent to `progn'."
   (declare (debug t) (indent 0))
   ;; Not necessary because we have it in b-c-initial-macro-environment
   ;; (list 'quote (eval (cons 'progn body)))

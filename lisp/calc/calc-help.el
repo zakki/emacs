@@ -1,6 +1,6 @@
 ;;; calc-help.el --- help display functions for Calc,
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2004
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005
 ;;           Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
@@ -393,12 +393,14 @@ C-w  Describe how there is no warranty for Calc."
 	(error "Can't locate Calc sources"))
     (calc-quit)
     (switch-to-buffer "*Help*")
-    (erase-buffer)
-    (insert-file-contents (expand-file-name "README" (car path)))
-    (search-forward "Summary of changes")
-    (forward-line -1)
-    (delete-region (point-min) (point))
-    (goto-char (point-min))))
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (insert-file-contents (expand-file-name "README" (car path)))
+      (search-forward "Summary of changes")
+      (forward-line -1)
+      (delete-region (point-min) (point))
+      (goto-char (point-min)))
+    (help-mode)))
 
 (defvar calc-help-long-names '((?b . "binary/business")
 			       (?g . "graphics")
@@ -409,10 +411,10 @@ C-w  Describe how there is no warranty for Calc."
 (defun calc-full-help ()
   (interactive)
   (with-output-to-temp-buffer "*Help*"
-    (princ (format "GNU Emacs Calculator version %s of %s.\n"
-		   calc-version calc-version-date))
-    (princ "  By Dave Gillespie, daveg@synaptics.com.\n")
-    (princ "  Copyright (C) 1990, 1993 Free Software Foundation, Inc.\n\n")
+    (princ (format "GNU Emacs Calculator version %s.\n"
+		   calc-version))
+    (princ "  By Dave Gillespie.\n")
+    (princ "  Copyright (C) 2005 Free Software Foundation, Inc.\n\n")
     (princ "Type `h s' for a more detailed summary.\n")
     (princ "Or type `h i' to read the full Calc manual on-line.\n\n")
     (princ "Basic keys:\n")
@@ -524,7 +526,7 @@ C-w  Describe how there is no warranty for Calc."
   (interactive)
   (calc-do-prefix-help
    '("Store, inTo, Xchg, Unstore; Recall, 0-9; : (:=); = (=>)"
-     "Let; Copy; Declare; Insert, Perm; Edit"
+     "Let; Copy, K=copy constant; Declare; Insert, Perm; Edit"
      "Negate, +, -, *, /, ^, &, |, [, ]; Map"
      "SHIFT + Decls, GenCount, TimeZone, Holidays; IntegLimit"
      "SHIFT + LineStyles, PointStyles, plotRejects; Units"
@@ -628,7 +630,7 @@ C-w  Describe how there is no warranty for Calc."
   (interactive)
   (calc-do-prefix-help
    '("Deg, Rad, HMS; Frac; Polar; Inf; Alg, Total; Symb; Vec/mat"
-     "Working; Xtensions; Mode-save"
+     "Working; Xtensions; Mode-save; preserve Embedded modes"
      "SHIFT + Shifted-prefixes, mode-Filename; Record; reCompute"
      "SHIFT + simplify: Off, Num, Default, Bin, Alg, Ext, Units")
    "mode" ?m))

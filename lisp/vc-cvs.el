@@ -1,6 +1,7 @@
 ;;; vc-cvs.el --- non-resident support for CVS version-control
 
-;; Copyright (C) 1995,98,99,2000,2001,02,2003  Free Software Foundation, Inc.
+;; Copyright (C) 1995,98,99,2000,2001,02,2003, 2005
+;;  Free Software Foundation, Inc.
 
 ;; Author:      FSF (see vc.el for full credits)
 ;; Maintainer:  Andre Spiegel <spiegel@gnu.org>
@@ -235,16 +236,19 @@ See also variable `vc-cvs-sticky-date-format-string'."
 
 (defun vc-cvs-checkout-model (file)
   "CVS-specific version of `vc-checkout-model'."
-  (if (or (getenv "CVSREAD")
-          ;; If the file is not writable (despite CVSREAD being
-          ;; undefined), this is probably because the file is being
-          ;; "watched" by other developers.
-          ;; (If vc-mistrust-permissions was t, we actually shouldn't
-          ;; trust this, but there is no other way to learn this from CVS
-          ;; at the moment (version 1.9).)
-          (string-match "r-..-..-." (nth 8 (file-attributes file))))
+  (if (getenv "CVSREAD")
       'announce
-    'implicit))
+    (let ((attrib (file-attributes file)))
+      (if (and attrib ;; don't check further if FILE doesn't exist
+               ;; If the file is not writable (despite CVSREAD being
+               ;; undefined), this is probably because the file is being
+               ;; "watched" by other developers.
+               ;; (If vc-mistrust-permissions was t, we actually shouldn't
+               ;; trust this, but there is no other way to learn this from CVS
+               ;; at the moment (version 1.9).)
+               (string-match "r-..-..-." (nth 8 attrib)))
+          'announce
+        'implicit))))
 
 (defun vc-cvs-mode-line-string (file)
   "Return string for placement into the modeline for FILE.
@@ -745,7 +749,7 @@ is `local'.
 The default METHOD for a CVS root of the form
   [USER@]HOSTNAME:/path/to/repository
 is `ext'.
-For an empty string, nil is returned (illegal CVS root)."
+For an empty string, nil is returned (invalid CVS root)."
   ;; Split CVS root into colon separated fields (0-4).
   ;; The `x:' makes sure, that leading colons are not lost;
   ;; `HOST:/PATH' is then different from `:METHOD:/PATH'.

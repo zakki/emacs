@@ -573,7 +573,7 @@ An alternative value is \" . \", if you use a font with a narrow period."
 	      2 '(tex-font-lock-append-prop 'italic) 'append)
 	;; This is separate from the previous one because of cases like
 	;; {\em foo {\bf bar} bla} where both match.
-	(list (concat "\\\\\\(bf\\)\\>" args)
+	(list (concat "\\\\\\(bf\\(series\\)?\\)\\>" args)
 	      2 '(tex-font-lock-append-prop 'bold) 'append)))))
    "Gaudy expressions to highlight in TeX modes.")
 
@@ -643,19 +643,23 @@ An alternative value is \" . \", if you use a font with a narrow period."
 
 (defface superscript
   '((t :height 0.8)) ;; :raise 0.3
-  "Face used for superscripts.")
+  "Face used for superscripts."
+  :group 'tex)
 (defface subscript
   '((t :height 0.8)) ;; :raise -0.3
-  "Face used for subscripts.")
+  "Face used for subscripts."
+  :group 'tex)
 
 (defface tex-math-face
   '((t :inherit font-lock-string-face))
-  "Face used to highlight TeX math expressions.")
+  "Face used to highlight TeX math expressions."
+  :group 'tex)
 (defvar tex-math-face 'tex-math-face)
 (defface tex-verbatim-face
   ;; '((t :inherit font-lock-string-face))
   '((t :family "courier"))
-  "Face used to highlight TeX verbatim environments.")
+  "Face used to highlight TeX verbatim environments."
+  :group 'tex)
 (defvar tex-verbatim-face 'tex-verbatim-face)
 
 ;; Use string syntax but math face for $...$.
@@ -827,6 +831,14 @@ says which mode to use."
       ;; We're called from one of the children already.
       (tex-mode-internal)
     (tex-guess-mode)))
+
+;; The following three autoloaded aliases appear to conflict with
+;; AUCTeX.  However, even though AUCTeX uses the mixed case variants
+;; for all mode relevant variables and hooks, the invocation function
+;; and setting of `major-mode' themselves need to be lowercase for
+;; AUCTeX to provide a fully functional user-level replacement.  So
+;; these aliases should remain as they are, in particular since AUCTeX
+;; users are likely to use them.
 
 ;;;###autoload
 (defalias 'TeX-mode 'tex-mode)
@@ -1562,8 +1574,9 @@ Return the process in which TeX is running."
 	    (concat
 	     (if file
 		 (if star (concat (substring cmd 0 star)
-				  file (substring cmd (1+ star)))
-		   (concat cmd " " file))
+				  (shell-quote-argument file)
+				  (substring cmd (1+ star)))
+		   (concat cmd " " (shell-quote-argument file)))
 	       cmd)
 	     (if background "&" ""))))
       ;; Switch to buffer before checking for subproc output in it.
@@ -1614,7 +1627,8 @@ If NOT-ALL is non-nil, save the `.dvi' file."
 
 (defcustom tex-use-reftex t
   "If non-nil, use RefTeX's list of files to determine what command to use."
-  :type 'boolean)
+  :type 'boolean
+  :group 'tex)
 
 (defvar tex-compile-commands
   '(((concat "pdf" tex-command
@@ -1886,8 +1900,8 @@ FILE is typically the output DVI or PDF file."
 	    (prog1 (file-name-directory (expand-file-name file))
 	      (setq file (file-name-nondirectory file))))
 	  (root (file-name-sans-extension file))
-	  (fspec (list (cons ?r (comint-quote-filename root))
-		       (cons ?f (comint-quote-filename file))))
+	  (fspec (list (cons ?r (shell-quote-argument root))
+		       (cons ?f (shell-quote-argument file))))
 	  (default (tex-compile-default fspec)))
      (list default-directory
 	   (completing-read
@@ -1908,14 +1922,14 @@ FILE is typically the output DVI or PDF file."
          (compile-command
           (if star
 	      (concat (substring command 0 star)
-		      (comint-quote-filename file)
+		      (shell-quote-argument file)
 		      (substring command (1+ star)))
             (concat command " "
 		    tex-start-options
 		    (if (< 0 (length tex-start-commands))
 			(concat
 			 (shell-quote-argument tex-start-commands) " "))
-		    (comint-quote-filename file)))))
+		    (shell-quote-argument file)))))
     (tex-send-tex-command compile-command dir)))
 
 (defun tex-send-tex-command (cmd &optional dir)
@@ -2218,8 +2232,7 @@ is provided, use the alternative command, `tex-alt-dvi-print-command'."
         (tex-start-shell))
       (tex-send-command
        (if alt tex-alt-dvi-print-command tex-dvi-print-command)
-       (shell-quote-argument
-	print-file-name-dvi)
+       print-file-name-dvi
        t))))
 
 (defun tex-alt-print ()

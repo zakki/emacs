@@ -304,8 +304,8 @@ special-display-frame-alist}.
 If you use options that specify window appearance when you invoke Emacs,
 they take effect by adding elements to @code{default-frame-alist}.  One
 exception is @samp{-geometry}, which adds the specified position to
-@code{initial-frame-alist} instead.  @xref{Command Arguments,,, emacs,
-The GNU Emacs Manual}.
+@code{initial-frame-alist} instead.  @xref{Emacs Invocation,, Command
+Line Arguments for Emacs Invocation, emacs, The GNU Emacs Manual}.
 
 @node Window Frame Parameters
 @subsection Window Frame Parameters
@@ -362,20 +362,8 @@ non-@code{nil} value for the @code{user-position} parameter as well.
 
 @item top
 The screen position of the top edge, in pixels, with respect to the
-top edge of the screen.  The value may be a positive number @var{pos},
-or a list of the form @code{(+ @var{pos})} which permits specifying a
-negative @var{pos} value.
-
-A negative number @minus{}@var{pos}, or a list of the form @code{(-
-@var{pos})}, actually specifies the position of the bottom edge of the
-window with respect to the bottom edge of the screen.  A positive value
-of @var{pos} counts toward the top.  @strong{Reminder:} if the
-parameter is a negative integer @minus{}@var{pos}, then @var{pos} is
-positive.
-
-Some window managers ignore program-specified positions.  If you want to
-be sure the position you specify is not ignored, specify a
-non-@code{nil} value for the @code{user-position} parameter as well.
+top edge of the screen.  It works just like @code{left}, except vertically
+instead of horizontally.
 
 @item icon-left
 The screen position of the left edge @emph{of the frame's icon}, in
@@ -417,6 +405,11 @@ pixels, call @code{frame-pixel-height}; see @ref{Size and Position}.)
 @item width
 The width of the frame contents, in characters.  (To get the height in
 pixels, call @code{frame-pixel-width}; see @ref{Size and Position}.)
+
+@item user-size
+This does for the size parameters @code{height} and @code{width} what
+the @code{user-position} parameter (see above) does for the position
+parameters @code{top} and @code{left}.
 
 @item fullscreen
 Specify that width, height or both shall be set to the size of the screen.
@@ -1360,8 +1353,9 @@ This function displays a pop-up menu and returns an indication of
 what selection the user makes.
 
 The argument @var{position} specifies where on the screen to put the
-menu.  It can be either a mouse button event (which says to put the menu
-where the user actuated the button) or a list of this form:
+top left corner of the menu.  It can be either a mouse button event
+(which says to put the menu where the user actuated the button) or a
+list of this form:
 
 @example
 ((@var{xoffset} @var{yoffset}) @var{window})
@@ -1369,7 +1363,8 @@ where the user actuated the button) or a list of this form:
 
 @noindent
 where @var{xoffset} and @var{yoffset} are coordinates, measured in
-pixels, counting from the top left corner of @var{window}'s frame.
+pixels, counting from the top left corner of @var{window}.  @var{window}
+may be a window or a frame.
 
 If @var{position} is @code{t}, it means to use the current mouse
 position.  If @var{position} is @code{nil}, it means to precompute the
@@ -1377,8 +1372,13 @@ key binding equivalents for the keymaps specified in @var{menu},
 without actually displaying or popping up the menu.
 
 The argument @var{menu} says what to display in the menu.  It can be a
-keymap or a list of keymaps (@pxref{Menu Keymaps}).  Alternatively, it
-can have the following form:
+keymap or a list of keymaps (@pxref{Menu Keymaps}).  In this case, the
+return value is the list of events corresponding to the user's choice.
+(This list has more than one element if the choice occurred in a
+submenu.)  Note that @code{x-popup-menu} does not actually execute the
+command bound to that sequence of events.
+
+Alternatively, @var{menu} can have the following form:
 
 @example
 (@var{title} @var{pane1} @var{pane2}...)
@@ -1388,11 +1388,20 @@ can have the following form:
 where each pane is a list of form
 
 @example
-(@var{title} (@var{line} . @var{item})...)
+(@var{title} @var{item1} @var{item2}...)
 @end example
 
-Each @var{line} should be a string, and each @var{item} should be the
-value to return if that @var{line} is chosen.
+Each item should normally be a cons cell @code{(@var{line} . @var{value})},
+where @var{line} is a string, and @var{value} is the value to return if
+that @var{line} is chosen.  An item can also be a string; this makes a
+non-selectable line in the menu.
+
+If the user gets rid of the menu without making a valid choice, for
+instance by clicking the mouse away from a valid choice or by typing
+keyboard input, then this normally results in a quit and
+@code{x-popup-menu} does not return.  But if @var{position} is a mouse
+button event (indicating that the user invoked the menu with the
+mouse) then no quit occurs and @code{x-popup-menu} returns @code{nil}.
 @end defun
 
   @strong{Usage note:} Don't use @code{x-popup-menu} to display a menu
@@ -1422,13 +1431,14 @@ the menu keymap as necessary.
 
   A dialog box is a variant of a pop-up menu---it looks a little
 different, it always appears in the center of a frame, and it has just
-one level and one pane.  The main use of dialog boxes is for asking
-questions that the user can answer with ``yes'', ``no'', and a few other
-alternatives.  The functions @code{y-or-n-p} and @code{yes-or-no-p} use
-dialog boxes instead of the keyboard, when called from commands invoked
-by mouse clicks.
+one level and one or more buttons.  The main use of dialog boxes is
+for asking questions that the user can answer with ``yes'', ``no'',
+and a few other alternatives.  With a single button, they can also
+force the user to acknowledge important information.  The functions
+@code{y-or-n-p} and @code{yes-or-no-p} use dialog boxes instead of the
+keyboard, when called from commands invoked by mouse clicks.
 
-@defun x-popup-dialog position contents
+@defun x-popup-dialog position contents &optional header
 This function displays a pop-up dialog box and returns an indication of
 what selection the user makes.  The argument @var{contents} specifies
 the alternatives to offer; it has this format:
@@ -1443,9 +1453,9 @@ which looks like the list that specifies a single pane for
 
 The return value is @var{value} from the chosen alternative.
 
-An element of the list may be just a string instead of a cons cell
-@code{(@var{string} . @var{value})}.  That makes a box that cannot
-be selected.
+As for @code{x-popup-menu}, an element of the list may be just a
+string instead of a cons cell @code{(@var{string} . @var{value})}.
+That makes a box that cannot be selected.
 
 If @code{nil} appears in the list, it separates the left-hand items from
 the right-hand items; items that precede the @code{nil} appear on the
@@ -1455,12 +1465,20 @@ items appear on each side.
 
 Dialog boxes always appear in the center of a frame; the argument
 @var{position} specifies which frame.  The possible values are as in
-@code{x-popup-menu}, but the precise coordinates don't matter; only the
-frame matters.
+@code{x-popup-menu}, but the precise coordinates or the individual
+window don't matter; only the frame matters.
+
+If @var{header} is non-@code{nil}, the frame title for the box is
+@samp{Information}, otherwise it is @samp{Question}.  The former is used
+for @code{message-box} (@pxref{The Echo Area}).
 
 In some configurations, Emacs cannot display a real dialog box; so
 instead it displays the same items in a pop-up menu in the center of the
 frame.
+
+If the user gets rid of the dialog box without making a valid choice,
+for instance using the window manager, then this produces a quit and
+@code{x-popup-dialog} does not return.
 @end defun
 
 @node Pointer Shapes

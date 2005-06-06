@@ -91,13 +91,14 @@ With prefix arg, prompt for argument SWITCHES which is options for `diff'."
       nil))
   (diff-backup (dired-get-filename) switches))
 
+;;;###autoload
 (defun dired-compare-directories (dir2 predicate)
   "Mark files with different file attributes in two dired buffers.
 Compare file attributes of files in the current directory
 with file attributes in directory DIR2 using PREDICATE on pairs of files
 with the same name.  Mark files for which PREDICATE returns non-nil.
 Mark files with different names if PREDICATE is nil (or interactively
-when the user enters empty input at the predicate prompt).
+with empty input at the predicate prompt).
 
 PREDICATE is a Lisp expression that can refer to the following variables:
 
@@ -117,9 +118,10 @@ Examples of PREDICATE:
     (not (and (= (nth 2 fa1) (nth 2 fa2))   - mark files with different UID
               (= (nth 3 fa1) (nth 3 fa2))))   and GID."
   (interactive
-   (list (read-file-name (format "Compare %s with: "
-				 (dired-current-directory))
-			 (dired-dwim-target-directory))
+   (list (read-directory-name (format "Compare %s with: "
+				      (dired-current-directory))
+			      (dired-dwim-target-directory)
+			      (dired-dwim-target-directory))
          (read-from-minibuffer "Mark if (lisp expr or RET): " nil nil t nil "nil")))
   (let* ((dir1 (dired-current-directory))
          (file-alist1 (dired-files-attributes dir1))
@@ -426,7 +428,7 @@ with a prefix argument."
 	 (setq base-version-list	; there was a base version to which
 	       (assoc (substring fn 0 start-vn)	; this looks like a
 		      dired-file-version-alist))	; subversion
-	 (not (memq (string-to-int (substring fn (+ 2 start-vn)))
+	 (not (memq (string-to-number (substring fn (+ 2 start-vn)))
 		    base-version-list))	; this one doesn't make the cut
 	 (progn (beginning-of-line)
 		(delete-char 1)
@@ -758,7 +760,10 @@ Otherwise, the rule is a compression rule, and compression is done with gzip.")
   ;; The files used are determined by ARG (as in dired-get-marked-files).
   (or (eq dired-no-confirm t)
       (memq op-symbol dired-no-confirm)
-      (let ((files (dired-get-marked-files t arg))
+      ;; Pass t for DISTINGUISH-ONE-MARKED so that a single file which
+      ;; is marked pops up a window.  That will help the user see
+      ;; it isn't the current line file.
+      (let ((files (dired-get-marked-files t arg nil t))
 	    (string (if (eq op-symbol 'compress) "Compress or uncompress"
 		      (capitalize (symbol-name op-symbol)))))
 	(dired-mark-pop-up nil op-symbol files (function y-or-n-p)
@@ -1130,23 +1135,29 @@ Special value `always' suppresses confirmation."
 
 (defun dired-copy-file-recursive (from to ok-flag &optional
 				       preserve-time top recursive)
-  (if (and recursive
-	   (eq t (car (file-attributes from))) ; A directory, no symbolic link.
-	   (or (eq recursive 'always)
-	       (yes-or-no-p (format "Recursive copies of %s " from))))
-      (let ((files (directory-files from nil dired-re-no-dot)))
-	(if (eq recursive 'top) (setq recursive 'always)) ; Don't ask any more.
-	(if (file-exists-p to)
-	    (or top (dired-handle-overwrite to))
-	  (make-directory to))
-	(while files
-	  (dired-copy-file-recursive
-	   (expand-file-name (car files) from)
-	   (expand-file-name (car files) to)
-	   ok-flag preserve-time nil recursive)
-	  (setq files (cdr files))))
-    (or top (dired-handle-overwrite to)) ; Just a file.
-    (copy-file from to ok-flag dired-copy-preserve-time)))
+  (let ((attrs (file-attributes from)))
+    (if (and recursive
+	     (eq t (car attrs))
+	     (or (eq recursive 'always)
+		 (yes-or-no-p (format "Recursive copies of %s " from))))
+	;; This is a directory.
+	(let ((files (directory-files from nil dired-re-no-dot)))
+	  (if (eq recursive 'top) (setq recursive 'always)) ; Don't ask any more.
+	  (if (file-exists-p to)
+	      (or top (dired-handle-overwrite to))
+	    (make-directory to))
+	  (while files
+	    (dired-copy-file-recursive
+	     (expand-file-name (car files) from)
+	     (expand-file-name (car files) to)
+	     ok-flag preserve-time nil recursive)
+	    (setq files (cdr files))))
+      ;; Not a directory.
+      (or top (dired-handle-overwrite to))
+      (if (stringp (car attrs))
+	  ;; It is a symlink
+	  (make-symbolic-link (car attrs) to ok-flag)
+	(copy-file from to ok-flag dired-copy-preserve-time)))))
 
 ;;;###autoload
 (defun dired-rename-file (file newname ok-if-already-exists)

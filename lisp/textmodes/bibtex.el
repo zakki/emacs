@@ -1,6 +1,6 @@
 ;;; bibtex.el --- BibTeX mode for GNU Emacs
 
-;; Copyright (C) 1992, 1994, 1995, 1996, 1997, 1998, 1999, 2003, 2004
+;; Copyright (C) 1992, 1994, 1995, 1996, 1997, 1998, 1999, 2003, 2004, 2005
 ;;           Free Software Foundation, Inc.
 
 ;; Author: Stefan Schoef <schoef@offis.uni-oldenburg.de>
@@ -652,7 +652,7 @@ See `bibtex-generate-autokey' for details."
 
 (defcustom bibtex-autokey-titleword-ignore
   '("A" "An" "On" "The" "Eine?" "Der" "Die" "Das"
-    "[^A-Z].*" ".*[^A-Z0-9].*")
+    "[^[:upper:]].*" ".*[^[:upper:]0-9].*")
   "Determines words from the title that are not to be used in the key.
 Each item of the list is a regexp.  If a word of the title matches a
 regexp from that list, it is not included in the title part of the key.
@@ -776,49 +776,64 @@ If non-nil, the column for the equal sign is the value of
   :type '(repeat string))
 
 (defcustom bibtex-summary-function 'bibtex-summary
-  "Function to call for generating a one-line summary of a BibTeX entry.
-It takes one argument, the key of the entry.
+  "Function to call for generating a summary of current BibTeX entry.
+It takes no arguments.  Point must be at beginning of entry.
 Used by `bibtex-complete-crossref-cleanup' and `bibtex-copy-summary-as-kill'."
   :group 'bibtex
   :type '(choice (const :tag "Default" bibtex-summary)
                  (function :tag "Personalized function")))
 
 (defcustom bibtex-generate-url-list
-  '((("url" . ".*:.*"))
-    ;; Example of a complex setup.
-    (("journal" . "\\<\\(PR[ABCDEL]?\\|RMP\\)\\>")
-     "http://link.aps.org/abstract/"
-     ("journal" ".*" downcase)
-     "/v"
-     ("volume" ".*" 0)
-     "/p"
-     ("pages" "\\`\\([0-9]+\\)" 1)))
+  '((("url" . ".*:.*")))
   "List of schemes for generating the URL of a BibTeX entry.
 These schemes are used by `bibtex-url'.
 
-Each scheme is of the form ((FIELD . REGEXP) STEP...).
+Each scheme should have one of these forms:
+
+  ((FIELD . REGEXP))
+  ((FIELD . REGEXP) STEP...)
+  ((FIELD . REGEXP) STRING STEP...)
 
 FIELD is a field name as returned by `bibtex-parse-entry'.
-REGEXP is matched against the text of FIELD.  If the match succeeds, then
-this scheme is used.  If no STEPs are specified the matched text is used
-as the URL, otherwise the URL is built by concatenating the STEPs.
+REGEXP is matched against the text of FIELD.  If the match succeeds,
+then this scheme is used.  If no STRING and STEPs are specified
+the matched text is used as the URL, otherwise the URL is built
+by evaluating STEPs.  If no STRING is specified the STEPs must result
+in strings which are concatenated.  Otherwise the resulting objects
+are passed through `format' using STRING as format control string.
 
-A STEP can be a string or a list (FIELD REGEXP REPLACE) in which case
-the text of FIELD is matched against REGEXP, and is replaced with REPLACE.
-REPLACE can be a string, or a number (which selects the corresponding submatch)
-or a function called with the field's text as argument and with the
-`match-data' properly set.
+A STEP is a list (FIELD REGEXP REPLACE).  The text of FIELD
+is matched against REGEXP, and is replaced with REPLACE.
+REPLACE can be a string, or a number (which selects the corresponding
+submatch), or a function called with the field's text as argument
+and with the `match-data' properly set.
 
-Case is always ignored.  Always remove the field delimiters."
+Case is always ignored.  Always remove the field delimiters.
+
+The following is a complex example, see http://link.aps.org/linkfaq.html.
+
+   (((\"journal\" . \"\\\\=<\\(PR[ABCDEL]?\\|RMP\\)\\\\=>\")
+     \"http://link.aps.org/abstract/%s/v%s/p%s\"
+     (\"journal\" \".*\" downcase)
+     (\"volume\" \".*\" 0)
+     (\"pages\" \"\\`[A-Z]?[0-9]+\" 0)))"
   :group 'bibtex
   :type '(repeat
-          (list :tag "Scheme"
+          (cons :tag "Scheme"
                 (cons :tag "Matcher" :extra-offset 4
                       (string :tag "BibTeX field")
 		      (regexp :tag "Regexp"))
-                (repeat :tag "Steps to generate URL" :inline t
-                        (choice
-                         (string :tag "Literal text")
+                (choice
+                 (const :tag "Take match as is" nil)
+                 (cons :tag "Formatted"
+                  (string :tag "Format control string")
+                  (repeat :tag "Steps to generate URL"
+                          (list (string :tag "BibTeX field")
+                                (regexp :tag "Regexp")
+                                (choice (string :tag "Replacement")
+                                        (integer :tag "Sub-match")
+                                        (function :tag "Filter")))))
+                 (repeat :tag "Concatenated"
                          (list (string :tag "BibTeX field")
 			       (regexp :tag "Regexp")
                                (choice (string :tag "Replacement")
@@ -1063,10 +1078,10 @@ The CDRs of the elements are t for header keys and nil for crossref keys.")
 (defconst bibtex-entry-type (concat "@" bibtex-field-name)
   "Regexp matching the type part of a BibTeX entry.")
 
-(defconst bibtex-reference-key "[][a-zA-Z0-9.:;?!`'/*@+|()<>&_^$-]+"
+(defconst bibtex-reference-key "[][[:alnum:].:;?!`'/*@+|()<>&_^$-]+"
   "Regexp matching the reference key part of a BibTeX entry.")
 
-(defconst bibtex-field-const "[][a-zA-Z0-9.:;?!`'/*@+=|<>&_^$-]+"
+(defconst bibtex-field-const "[][[:alnum:].:;?!`'/*@+=|<>&_^$-]+"
   "Regexp matching a BibTeX field constant.")
 
 (defconst bibtex-entry-head
@@ -2088,7 +2103,7 @@ and `bibtex-autokey-names-stretch'."
 (defun bibtex-autokey-demangle-name (fullname)
   "Get the last part from a well-formed FULLNAME and perform abbreviations."
   (let* (case-fold-search
-         (name (cond ((string-match "\\([A-Z][^, ]*\\)[^,]*," fullname)
+         (name (cond ((string-match "\\([[:upper:]][^, ]*\\)[^,]*," fullname)
                       ;; Name is of the form "von Last, First" or
                       ;; "von Last, Jr, First"
                       ;; --> Take the first capital part before the comma
@@ -2097,7 +2112,7 @@ and `bibtex-autokey-names-stretch'."
                       ;; Strange name: we have a comma, but nothing capital
                       ;; So we accept even lowercase names
                       (match-string 1 fullname))
-                     ((string-match "\\(\\<[a-z][^ ]* +\\)+\\([A-Z][^ ]*\\)"
+                     ((string-match "\\(\\<[[:lower:]][^ ]* +\\)+\\([[:upper:]][^ ]*\\)"
                                     fullname)
                       ;; name is of the form "First von Last", "von Last",
                       ;; "First von von Last", or "d'Last"
@@ -2535,25 +2550,24 @@ Use `bibtex-summary-function' to generate summary."
   (save-excursion
     (if (and (stringp key)
              (bibtex-find-entry key t))
-        (message "Ref: %s" (funcall bibtex-summary-function key)))))
+        (message "Ref: %s" (funcall bibtex-summary-function)))))
 
 (defun bibtex-copy-summary-as-kill ()
   "Push summery of current BibTeX entry to kill ring.
 Use `bibtex-summary-function' to generate summary."
   (interactive)
-  (let ((key (save-excursion
-               (bibtex-beginning-of-entry)
-               (if (looking-at bibtex-entry-maybe-empty-head)
-                   (bibtex-key-in-head)
-                 (error "No key found")))))
-    (kill-new (message "%s" (funcall bibtex-summary-function key)))))
+  (save-excursion
+    (bibtex-beginning-of-entry)
+    (if (looking-at bibtex-entry-maybe-empty-head)
+        (kill-new (message "%s" (funcall bibtex-summary-function)))
+      (error "No entry found"))))
 
-(defun bibtex-summary (key)
-  "Return summary of BibTeX entry KEY.
+(defun bibtex-summary ()
+  "Return summary of current BibTeX entry.
 Used as default value of `bibtex-summary-function'."
   ;; It would be neat to customize this function.  How?
   (save-excursion
-    (if (bibtex-find-entry key t)
+    (if (looking-at bibtex-entry-maybe-empty-head)
         (let* ((bibtex-autokey-name-case-convert 'identity)
                (bibtex-autokey-name-length 'infty)
                (bibtex-autokey-names 1)
@@ -2579,7 +2593,7 @@ Used as default value of `bibtex-summary-function'."
                      `((" " . ,names) (" " . ,year) (": " . ,title)
                        (", " . ,journal) (" " . ,volume) (":" . ,pages))
                      ""))
-      (error "Key `%s' not found" key))))
+      (error "Entry not found"))))
 
 (defun bibtex-pop (arg direction)
   "Fill current field from the ARGth same field's text in DIRECTION.
@@ -2662,11 +2676,10 @@ begins at the beginning of a line.  We use this function for font-locking."
       (let ((lst bibtex-generate-url-list) url)
         (goto-char start)
 	(while (and (not found)
-		    (setq url (caar lst)))
+		    (setq url (car (pop lst))))
 	  (setq found (and (bibtex-string= field (car url))
                            (re-search-forward (cdr url) end t)
-                           (>= (match-beginning 0) pnt))
-                lst (cdr lst))))
+                           (>= (match-beginning 0) pnt)))))
       (goto-char end))
     (if found (bibtex-button (match-beginning 0) (match-end 0)
                              'bibtex-url (match-beginning 0)))
@@ -2729,7 +2742,7 @@ works only with buffers containing valid (syntactical correct) and sorted
 entries.  This is usually the case, if you have created a buffer completely
 with BibTeX mode and finished every new entry with \\[bibtex-clean-entry].
 
-For third party BibTeX files, call the function `bibtex-convert-alien'
+For third party BibTeX files, call the command \\[bibtex-convert-alien]
 to fully take advantage of all features of BibTeX mode.
 
 
@@ -2782,7 +2795,7 @@ if that value is non-nil.
   (set (make-local-variable 'comment-start-skip)
        (concat (regexp-quote bibtex-comment-start) "\\>[ \t]*"))
   (set (make-local-variable 'comment-column) 0)
-  (set (make-local-variable 'defun-prompt-regexp) "^[ \t]*@[a-zA-Z0-9]+[ \t]*")
+  (set (make-local-variable 'defun-prompt-regexp) "^[ \t]*@[[:alnum:]]+[ \t]*")
   (set (make-local-variable 'outline-regexp) "[ \t]*@")
   (set (make-local-variable 'fill-paragraph-function) 'bibtex-fill-field)
   (set (make-local-variable 'fill-prefix) (make-string (+ bibtex-entry-offset
@@ -2811,7 +2824,7 @@ if that value is non-nil.
   ;; XEmacs needs easy-menu-add, Emacs does not care
   (easy-menu-add bibtex-edit-menu)
   (easy-menu-add bibtex-entry-menu)
-  (run-hooks 'bibtex-mode-hook))
+  (run-mode-hooks 'bibtex-mode-hook))
 
 (defun bibtex-field-list (entry-type)
   "Return list of allowed fields for entry ENTRY-TYPE.
@@ -3332,7 +3345,7 @@ INDEX is a list (KEY CROSSREF-KEY ENTRY-NAME).
 Move point where the entry KEY should be placed.
 If `bibtex-maintain-sorted-entries' is non-nil, perform a binary
 search to look for place for KEY.  This requires that buffer is sorted,
-see \\[bibtex-validate].)
+see `bibtex-validate'.
 Return t if preparation was successful or nil if entry KEY already exists."
   (let ((key (nth 0 index))
         key-exist)
@@ -3756,7 +3769,7 @@ but do not actually kill it."
   "Reinsert the last BibTeX item.
 More precisely, reinsert the field or entry killed or yanked most recently.
 With argument N, reinsert the Nth most recently killed BibTeX item.
-See also the command \\[bibtex-yank-pop]]."
+See also the command \\[bibtex-yank-pop]."
   (interactive "*p")
   (bibtex-insert-kill (1- n))
   (setq this-command 'bibtex-yank))
@@ -4283,39 +4296,36 @@ The URL is generated using the schemes defined in `bibtex-generate-url-list'
           ;; Always ignore case,
           (case-fold-search t)
           (lst bibtex-generate-url-list)
-          field url scheme)
+          field url scheme obj fmt)
       (while (setq scheme (pop lst))
         (when (and (setq field (cdr (assoc-string (caar scheme)
 						  fields-alist t)))
                    ;; Always remove field delimiters
                    (progn (setq field (bibtex-remove-delimiters-string field))
                           (string-match (cdar scheme) field)))
-          (setq lst nil)
-	  (if (null (cdr scheme))
-	      (setq url (match-string 0 field)))
-          (dolist (step (cdr scheme))
-            (cond ((stringp step)
-                   (setq url (concat url step)))
-                  ((setq field (cdr (assoc-string (car step) fields-alist t)))
-                   ;; Always remove field delimiters
-                   (setq field (bibtex-remove-delimiters-string field))
-                   (if (string-match (nth 1 step) field)
-                       (setq field (cond
-                                    ((functionp (nth 2 step))
-                                     (funcall (nth 2 step) field))
-                                    ((numberp (nth 2 step))
-                                     (match-string (nth 2 step) field))
-                                    (t
-                                     (replace-match (nth 2 step) t nil field))))
-                     ;; If the scheme is set up correctly,
-                     ;; we should never reach this point
-                     (error "Match failed: %s" field))
-                   (setq url (concat url field)))
-                  ;; If the scheme is set up correctly,
-                  ;; we should never reach this point
-                  (t (error "Step failed: %s" step))))
-          (message "%s" url)
-          (browse-url url)))
+          (setq lst nil
+                scheme (cdr scheme)
+                url (if (null scheme) (match-string 0 field)
+                      (if (stringp (car scheme))
+                          (setq fmt (pop scheme)))
+                      (dolist (step scheme)
+                        ;; Always remove field delimiters
+                        (setq field (bibtex-remove-delimiters-string
+                                     (cdr (assoc-string (car step) fields-alist t))))
+                        (if (string-match (nth 1 step) field)
+                            (setq field (cond ((functionp (nth 2 step))
+                                               (funcall (nth 2 step) field))
+                                              ((numberp (nth 2 step))
+                                               (match-string (nth 2 step) field))
+                                              (t
+                                               (replace-match (nth 2 step) t nil field))))
+                          ;; If the scheme is set up correctly,
+                          ;; we should never reach this point
+                          (error "Match failed: %s" field))
+                        (push field obj))
+                      (if fmt (apply 'format fmt (nreverse obj))
+                        (apply 'concat (nreverse obj)))))
+          (browse-url (message "%s" url))))
       (unless url (message "No URL known.")))))
 
 

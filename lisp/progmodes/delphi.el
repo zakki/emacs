@@ -1530,7 +1530,7 @@ before the indent, the point is moved to the indent."
     (save-selected-window
       (switch-to-buffer-other-window to-buffer)
       (goto-char (point-max))
-      (set-window-dot (get-buffer-window to-buffer) (point))
+      (set-window-point (get-buffer-window to-buffer) (point))
       (insert the-msg))))
 
 ;; Debugging helpers:
@@ -2002,7 +2002,7 @@ no args, if that value is non-nil."
        (delphi-parse-region (point-min) (point-max))
        (delphi-progress-done))))
 
-  (run-hooks 'delphi-mode-hook))
+  (run-mode-hooks 'delphi-mode-hook))
 
 ;;; arch-tag: 410e192d-e9b5-4397-ad62-12340fc3fa41
 ;;; delphi.el ends here

@@ -301,7 +301,9 @@ Must be greater than 1."
   :type 'integer
   :group 'ispell)
 
-(defcustom ispell-program-name "ispell"
+(defcustom ispell-program-name
+  (or (locate-file "aspell" exec-path exec-suffixes 'file-executable-p)
+      "ispell")
   "Program invoked by \\[ispell-word] and \\[ispell-region] commands."
   :type 'string
   :group 'ispell)
@@ -645,6 +647,10 @@ re-start emacs."
     "[A-Za-z\301\304\311\315\323\332\324\300\305\245\335\256\251\310\317\253\322\341\344\351\355\363\372\364\340\345\265\375\276\271\350\357\273\362]"
     "[^A-Za-z\301\304\311\315\323\332\324\300\305\245\335\256\251\310\317\253\322\341\344\351\355\363\372\364\340\345\265\375\276\271\350\357\273\362]"
     "" nil ("-B") nil iso-8859-2)
+   ("slovenian"				; Slovenian
+    "[A-Za-z\301\304\311\315\323\332\324\300\305\245\335\256\251\310\317\253\322\341\344\351\355\363\372\364\340\345\265\375\276\271\350\357\273\362]"
+    "[^A-Za-z\301\304\311\315\323\332\324\300\305\245\335\256\251\310\317\253\322\341\344\351\355\363\372\364\340\345\265\375\276\271\350\357\273\362]"
+    "" nil ("-B" "-d" "slovenian") nil iso-8859-2)
    ("svenska"				; Swedish mode
     "[A-Za-z\345\344\366\351\340\374\350\346\370\347\305\304\326\311\300\334\310\306\330\307]"
     "[^A-Za-z\345\344\366\351\340\374\350\346\370\347\305\304\326\311\300\334\310\306\330\307]"
@@ -2290,9 +2296,9 @@ Optional third arg SHIFT is an offset to apply based on previous corrections."
       (setq output (substring output (match-end 0))) ; skip over misspelling
       (if (eq type ?#)
 	  (setq count 0)		; no misses for type #
-	(setq count (string-to-int output) ; get number of misses.
+	(setq count (string-to-number output) ; get number of misses.
 	      output (substring output (1+ (string-match " " output 1)))))
-      (setq offset (string-to-int output))
+      (setq offset (string-to-number output))
       (if (eq type ?#)			; No miss or guess list.
 	  (setq output nil)
 	(setq output (substring output (1+ (string-match " " output 1)))))

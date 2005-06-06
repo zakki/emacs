@@ -1,7 +1,9 @@
 ;;; viet-util.el --- utilities for Vietnamese  -*- coding: iso-2022-7bit; -*-
 
-;; Copyright (C) 1995 Electrotechnical Laboratory, JAPAN.
-;; Licensed to the Free Software Foundation.
+;; Copyright (C) 1998  Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1997
+;;   National Institute of Advanced Industrial Science and Technology (AIST)
+;;   Registration Number H14PRO021
 
 ;; Keywords: mule, multilingual, Vietnamese
 
@@ -35,6 +37,8 @@
 ;; ASCII characters.
 
 ;;; Code:
+
+(defvar viet-viscii-nonascii-translation-table)
 
 ;;;###autoload
 (defun viet-encode-viscii-char (char)

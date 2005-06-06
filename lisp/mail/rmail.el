@@ -246,7 +246,7 @@ It is useful to set this variable in the site customization file.")
 
 ;;;###autoload
 (defcustom rmail-ignored-headers
-  (concat "^via:\\|^mail-from:\\|^origin:\\|^references:"
+  (concat "^via:\\|^mail-from:\\|^origin:\\|^references:\\|^sender:"
 	  "\\|^status:\\|^received:\\|^x400-originator:\\|^x400-recipients:"
 	  "\\|^x400-received:\\|^x400-mts-identifier:\\|^x400-content-type:"
 	  "\\|^\\(resent-\\|\\)message-id:\\|^summary-line:\\|^resent-date:"
@@ -254,14 +254,17 @@ It is useful to set this variable in the site customization file.")
 	  "\\|^x-mailer:\\|^delivered-to:\\|^lines:\\|^mime-version:"
 	  "\\|^content-transfer-encoding:\\|^x-coding-system:"
 	  "\\|^return-path:\\|^errors-to:\\|^return-receipt-to:"
-	  "\\|^x-sign:\\|^x-beenthere:\\|^x-mailman-version:"
+	  "\\|^x-sign:\\|^x-beenthere:\\|^x-mailman-version:\\|^x-mailman-copy:"
 	  "\\|^precedence:\\|^list-help:\\|^list-post:\\|^list-subscribe:"
 	  "\\|^list-id:\\|^list-unsubscribe:\\|^list-archive:"
 	  "\\|^content-type:\\|^content-length:"
 	  "\\|^x-attribution:\\|^x-disclaimer:\\|^x-trace:"
 	  "\\|^x-complaints-to:\\|^nntp-posting-date:\\|^user-agent"
 	  "\\|^importance:\\|^envelope-to:\\|^delivery-date"
-	  "\\|^x.*-priority:\\|^x-mimeole:")
+	  "\\|^x.*-priority:\\|^x-mimeole:\\|^x-archive:"
+	  "\\|^resent-face:\\|^resent-x.*:\\|^resent-organization\\|^resent-openpgp"
+	  "\\|^openpgp:\\|^x-request-pgp:\\|^x-original.*:"
+	  "\\|^x-virus-scanned:\\|^x-spam-[^s].*:")
   "*Regexp to match header fields that Rmail should normally hide.
 This variable is used for reformatting the message header,
 which normally happens once for each message,
@@ -653,17 +656,18 @@ The first parenthesized expression should match the MIME-charset name.")
 	      . font-lock-function-name-face)
 	    '("^Reply-To:.*$" . font-lock-function-name-face)
 	    '("^Subject:" . font-lock-comment-face)
+	    '("^X-Spam-Status:" . font-lock-keyword-face)
 	    '("^\\(To\\|Apparently-To\\|Cc\\|Newsgroups\\):"
 	      . font-lock-keyword-face)
 	    ;; Use MATCH-ANCHORED to effectively anchor the regexp left side.
 	    `(,cite-chars
 	      (,(concat "\\=[ \t]*"
-			"\\(\\([" cite-prefix "]+[" cite-suffix "]*\\)?"
-			"\\(" cite-chars "[ \t]*\\)\\)+"
+			"\\(\\(\\([" cite-prefix "]+[" cite-suffix "]*\\)?"
+			"\\(" cite-chars "[ \t]*\\)\\)+\\)"
 			"\\(.*\\)")
 	       (beginning-of-line) (end-of-line)
-	       (2 font-lock-constant-face nil t)
-	       (4 font-lock-comment-face nil t)))
+	       (1 font-lock-comment-delimiter-face nil t)
+	       (5 font-lock-comment-face nil t)))
 	    '("^\\(X-[a-z0-9-]+\\|In-reply-to\\|Date\\):.*\\(\n[ \t]+.*\\)*$"
 	      . font-lock-string-face))))
   "Additional expressions to highlight in Rmail mode.")
@@ -1152,7 +1156,7 @@ Instead, these commands are available:
       (when rmail-display-summary
 	(rmail-summary))
       (rmail-construct-io-menu))
-    (run-hooks 'rmail-mode-hook)))
+    (run-mode-hooks 'rmail-mode-hook)))
 
 (defun rmail-mode-2 ()
   (kill-all-local-variables)
@@ -1622,13 +1626,15 @@ a remote mailbox, PASSWORD is the password if it should be
 supplied as a separate argument to `movemail' or nil otherwise, GOT-PASSWORD
 is non-nil if the user has supplied the password interactively.
 "
-  (if (string-match "^\\([^:]+\\)://\\(\\([^:@]+\\)\\(:\\([^@]+\\)\\)?@\\)?.*" file)
+  (cond
+   ((string-match "^\\([^:]+\\)://\\(\\([^:@]+\\)\\(:\\([^@]+\\)\\)?@\\)?.*" file)
       (let (got-password supplied-password
 	    (proto (match-string 1 file))
 	    (user  (match-string 3 file))
 	    (pass  (match-string 5 file))
 	    (host  (substring file (or (match-end 2)
 				       (+ 3 (match-end 1))))))
+	
 	(if (not pass)
 	    (when rmail-remote-password-required
 	      (setq got-password (not (rmail-have-password)))
@@ -1645,8 +1651,22 @@ is non-nil if the user has supplied the password interactively.
 	  (list file
 		(or (string-equal proto "pop") (string-equal proto "imap"))
 		supplied-password
-		got-password)))
-    (list file nil nil nil)))
+		got-password))))
+   
+   ((string-match "^po:\\([^:]+\\)\\(:\\(.*\\)\\)?" file)
+    (let (got-password supplied-password
+          (proto "pop")
+	  (user  (match-string 1 file))
+	  (host  (match-string 3 file)))
+      
+      (when rmail-remote-password-required
+	(setq got-password (not (rmail-have-password)))
+	(setq supplied-password (rmail-get-remote-password nil)))
+
+      (list file "pop" supplied-password got-password)))
+   
+   (t
+    (list file nil nil nil))))
 
 (defun rmail-insert-inbox-text (files renamep)
   ;; Detect a locked file now, so that we avoid moving mail
@@ -1686,15 +1706,7 @@ is non-nil if the user has supplied the password interactively.
 		     (expand-file-name buffer-file-name))))
       ;; Always use movemail to rename the file,
       ;; since there can be mailboxes in various directories.
-      (setq movemail t)
-;;;      ;; If getting from mail spool directory,
-;;;      ;; use movemail to move rather than just renaming,
-;;;      ;; so as to interlock with the mailer.
-;;;      (setq movemail (string= file
-;;;			      (file-truename
-;;;			       (concat rmail-spool-directory
-;;;				       (file-name-nondirectory file)))))
-      (if (and movemail (not popmail))
+      (if (not popmail)
 	  (progn
 	    ;; On some systems, /usr/spool/mail/foo is a directory
 	    ;; and the actual inbox is /usr/spool/mail/foo/foo.
@@ -1716,23 +1728,6 @@ is non-nil if the user has supplied the password interactively.
 	    ((or (file-exists-p tofile) (and (not popmail)
 					     (not (file-exists-p file))))
 	     nil)
-	    ((and (not movemail) (not popmail))
-	     ;; Try copying.  If that fails (perhaps no space) and
-	     ;; we're allowed to blow away the inbox, rename instead.
-	     (if rmail-preserve-inbox
-		 (copy-file file tofile nil)
-	       (condition-case nil
-		   (copy-file file tofile nil)
-		 (error
-		  ;; Third arg is t so we can replace existing file TOFILE.
-		  (rename-file file tofile t))))
-	     ;; Make the real inbox file empty.
-	     ;; Leaving it deleted could cause lossage
-	     ;; because mailers often won't create the file.
-	     (if (not rmail-preserve-inbox)
-		 (condition-case ()
-		     (write-region (point) (point) file)
-		   (file-error nil))))
 	    (t
 	     (with-temp-buffer
 	       (let ((errors (current-buffer)))
@@ -1995,7 +1990,7 @@ is non-nil if the user has supplied the password interactively.
 					      header-end t)
 			      (let ((beg (point))
 				    (eol (progn (end-of-line) (point))))
-				(string-to-int (buffer-substring beg eol)))))))
+				(string-to-number (buffer-substring beg eol)))))))
 		 (and size
 		      (if (and (natnump size)
 			       (<= (+ header-end size) (point-max))
@@ -3449,7 +3444,11 @@ use \\[mail-yank-original] to yank the original message into it."
      ;; I don't know whether there are other mailers that still
      ;; need the names to be stripped.
 ;;;     (mail-strip-quoted-names reply-to)
-     reply-to
+     ;; Remove unwanted names from reply-to, since Mail-Followup-To
+     ;; header causes all the names in it to wind up in reply-to, not
+     ;; in cc.  But if what's left is an empty list, use the original.
+     (let* ((reply-to-list (rmail-dont-reply-to reply-to)))
+       (if (string= reply-to-list "") reply-to reply-to-list))
      subject
      (rmail-make-in-reply-to-field from date message-id)
      (if just-sender

@@ -93,7 +93,7 @@ URIs have the form @var{scheme}:@var{scheme-specific-part}, where the
 @var{scheme}s supported by this library are described below.
 @xref{Supported URL Types}.
 
-FTP NFS, HTTP, HTTPS, @code{rlogin}, @code{telnet}, tn3270,
+FTP, NFS, HTTP, HTTPS, @code{rlogin}, @code{telnet}, tn3270,
 IRC and gopher URLs all have the form
 
 @example
@@ -110,9 +110,8 @@ the possible exception of @code{telnet}, it is rare for ports to be
 specified, and it is possible using a non-standard port may have
 undesired consequences if a different service is listening on that
 port (e.g., an HTTP URL specifying the SMTP port can cause mail to be
-sent).@c , but @xref{Other Variables, url-bad-port-list}.
-The meaning of
-the @var{path} component depends on the service.
+sent). @c , but @xref{Other Variables, url-bad-port-list}.
+The meaning of the @var{path} component depends on the service.
 
 @menu
 * Configuration::
@@ -319,10 +318,14 @@ Default is one hour.
 HTTP allows clients to express preferences for the language and
 encoding of documents which servers may honour.  For each of these
 variables, the value is a string; it can specify a single choice, or
-it can be a comma-separated list in descending order of preference.
-Each element can be followed by @samp{;q=@var{priority}} to specify
-its preference level; e.g., for @code{url-mime-language-string},
-@w{@code{"de, en-gb;q=0.8, en;q=0.7"}}.
+it can be a comma-separated list.
+
+Normally this list ordered by descending preference.  However, each
+element can be followed by @samp{;q=@var{priority}} to specify its
+preference level, a decimal number from 0 to 1; e.g., for
+@code{url-mime-language-string}, @w{@code{"de, en-gb;q=0.8,
+en;q=0.7"}}.  An element that has no @samp{;q} specification has
+preference level 1.
 
 @defopt url-mime-charset-string
 @cindex character sets

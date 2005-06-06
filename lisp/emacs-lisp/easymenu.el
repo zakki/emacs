@@ -1,6 +1,7 @@
 ;;; easymenu.el --- support the easymenu interface for defining a menu
 
-;; Copyright (C) 1994,96,98,1999,2000,2004  Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1996, 1998, 1999, 2000, 2004, 2005
+;;           Free Software Foundation, Inc.
 
 ;; Keywords: emulations
 ;; Author: Richard Stallman <rms@gnu.org>
@@ -65,7 +66,7 @@ It returns the remaining items of the displayed menu.
    :visible INCLUDE
 
 INCLUDE is an expression; this menu is only visible if this
-expression has a non-nil value.  `:include' is an alias for `:visible'.
+expression has a non-nil value.  `:included' is an alias for `:visible'.
 
    :active ENABLE
 
@@ -110,10 +111,10 @@ keyboard equivalent.
 ENABLE is an expression; the item is enabled for selection
 whenever this expression's value is non-nil.
 
-   :included INCLUDE
+   :visible INCLUDE
 
 INCLUDE is an expression; this item is only visible if this
-expression has a non-nil value.
+expression has a non-nil value.  `:included' is an alias for `:visible'.
 
    :suffix FORM
 
@@ -160,18 +161,18 @@ A menu item can be a list with the same format as MENU.  This is a submenu."
   (let ((keymap (easy-menu-create-menu (car menu) (cdr menu))))
     (when symbol
       (set symbol keymap)
-      (fset symbol
-	    `(lambda (event) ,doc (interactive "@e")
-	       ;; FIXME: XEmacs uses popup-menu which calls the binding
-	       ;; while x-popup-menu only returns the selection.
-	       (x-popup-menu event
-			     (or (and (symbolp ,symbol)
-				      (funcall
-				       (or (plist-get (get ,symbol 'menu-prop)
-						      :filter)
-					   'identity)
-				       (symbol-function ,symbol)))
-				 ,symbol)))))
+      (defalias symbol
+	`(lambda (event) ,doc (interactive "@e")
+	   ;; FIXME: XEmacs uses popup-menu which calls the binding
+	   ;; while x-popup-menu only returns the selection.
+	   (x-popup-menu event
+			 (or (and (symbolp ,symbol)
+				  (funcall
+				   (or (plist-get (get ,symbol 'menu-prop)
+						  :filter)
+				       'identity)
+				   (symbol-function ,symbol)))
+			     ,symbol)))))
     (mapcar (lambda (map)
 	      (define-key map (vector 'menu-bar (easy-menu-intern (car menu)))
 		(cons 'menu-item
@@ -471,11 +472,15 @@ Contrary to XEmacs, this is a nop on Emacs since menus are automatically
 
 (defun easy-menu-add (menu &optional map)
   "Add the menu to the menubar.
-This is a nop on Emacs since menus are automatically activated when the
-corresponding keymap is activated.  On XEmacs this is needed to actually
-add the menu to the current menubar.
-Maybe precalculate equivalent key bindings.
-Do it only if `easy-menu-precalculate-equivalent-keybindings' is on."
+On Emacs, menus are already automatically activated when the
+corresponding keymap is activated.  On XEmacs this is needed to
+actually add the menu to the current menubar.
+
+This also precalculates equivalent key bindings when
+`easy-menu-precalculate-equivalent-keybindings' is on.
+
+You should call this once the menu and keybindings are set up
+completely and menu filter functions can be expected to work."
   (when easy-menu-precalculate-equivalent-keybindings
     (if (and (symbolp menu) (not (keymapp menu)) (boundp menu))
 	(setq menu (symbol-value menu)))
@@ -530,7 +535,7 @@ earlier by `easy-menu-define' or `easy-menu-create-menu'."
     (easy-menu-do-add-item map item before)))
 
 (defun easy-menu-item-present-p (map path name)
-  "In submenu of MAP with path PATH, return true iff item NAME is present.
+  "In submenu of MAP with path PATH, return non-nil iff item NAME is present.
 MAP and PATH are defined as in `easy-menu-add-item'.
 NAME should be a string, the name of the element to be looked for."
   (easy-menu-return-item (easy-menu-get-map map path) name))
@@ -548,7 +553,14 @@ NAME should be a string, the name of the element to be removed."
   "In menu MENU try to look for menu item with name NAME.
 If a menu item is found, return (NAME . item), otherwise return nil.
 If item is an old format item, a new format item is returned."
-  (let ((item (lookup-key menu (vector (easy-menu-intern name))))
+  ;; The call to `lookup-key' also calls the C function `get_keyelt' which
+  ;; looks inside a menu-item to only return the actual command.  This is
+  ;; not what we want here.  We should either add an arg to lookup-key to be
+  ;; able to turn off this "feature", or else we could use map-keymap here.
+  ;; In the mean time, I just use `assq' which is an OK approximation since
+  ;; menus are rarely built from vectors or char-tables.
+  (let ((item (or (cdr (assq name menu))
+                  (lookup-key menu (vector (easy-menu-intern name)))))
 	ret enable cache label)
     (cond
      ((stringp (car-safe item))

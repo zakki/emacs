@@ -144,9 +144,9 @@ the previous line when starting from a line beginning."
   "Eliminate whitespace at ends of lines, if the cursor is free."
   (if (and (buffer-modified-p) tpu-cursor-free) (tpu-trim-line-ends)))
 
-(or (memq 'tpu-write-file-hook write-file-hooks)
-    (setq write-file-hooks
-	  (cons 'tpu-write-file-hook write-file-hooks)))
+(or (memq 'tpu-write-file-hook write-file-functions)
+    (setq write-file-functions
+	  (cons 'tpu-write-file-hook write-file-functions)))
 
 
 ;;;  Utility routines for implementing scroll margins
@@ -440,16 +440,16 @@ version that respects the bottom scroll margin."
   ;; set top scroll margin
   (or (string= top "")
       (if (string= "%" (substring top -1))
-	  (setq tpu-top-scroll-margin (string-to-int top))
+	  (setq tpu-top-scroll-margin (string-to-number top))
 	(setq tpu-top-scroll-margin
-	      (/ (1- (+ (* (string-to-int top) 100) (window-height)))
+	      (/ (1- (+ (* (string-to-number top) 100) (window-height)))
 		 (window-height)))))
   ;; set bottom scroll margin
   (or (string= bottom "")
       (if (string= "%" (substring bottom -1))
-	  (setq tpu-bottom-scroll-margin (string-to-int bottom))
+	  (setq tpu-bottom-scroll-margin (string-to-number bottom))
 	(setq tpu-bottom-scroll-margin
-	      (/ (1- (+ (* (string-to-int bottom) 100) (window-height)))
+	      (/ (1- (+ (* (string-to-number bottom) 100) (window-height)))
 		 (window-height)))))
   ;; report scroll margin settings if running interactively
   (and (interactive-p)

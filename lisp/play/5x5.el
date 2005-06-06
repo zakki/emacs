@@ -1,6 +1,6 @@
 ;;; 5x5.el --- simple little puzzle game
 
-;; Copyright (C) 1999,2000 Free Software Foundation, Inc.
+;; Copyright (C) 1999,2000,2005 Free Software Foundation, Inc.
 
 ;; Author: Dave Pearson <davep@davep.org>
 ;; Maintainer: Dave Pearson <davep@davep.org>
@@ -178,10 +178,10 @@ The key bindings for 5x5-mode are:
   (use-local-map 5x5-mode-map)
   (setq major-mode '5x5-mode
         mode-name  "5x5")
-  (run-hooks '5x5-mode-hook)
+  (run-mode-hooks '5x5-mode-hook)
   (setq buffer-read-only t
         truncate-lines   t)
-  (buffer-disable-undo (current-buffer)))
+  (buffer-disable-undo))
 
 ;;;###autoload
 (defun 5x5 (&optional size)

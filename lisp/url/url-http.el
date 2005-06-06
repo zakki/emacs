@@ -500,7 +500,8 @@ should be shown to the user."
 		 (url-request-data url-http-data)
 		 (url-request-extra-headers url-http-extra-headers))
 	     (url-retrieve redirect-uri url-callback-function
-			   url-callback-arguments)
+			   (cons redirect-uri
+				 (cdr url-callback-arguments)))
 	     (url-mark-buffer-as-dead (current-buffer))))))
       (4				; Client error
        ;; 400 Bad Request
@@ -827,10 +828,10 @@ the end of the document."
 						 'text-cursor
 					       'cursor)
 				       'invisible t))
-	    (setq url-http-chunked-length (string-to-int (buffer-substring
-							  (match-beginning 1)
-							  (match-end 1))
-							 16)
+	    (setq url-http-chunked-length (string-to-number (buffer-substring
+                                                             (match-beginning 1)
+                                                             (match-end 1))
+                                                            16)
 		  url-http-chunked-counter (1+ url-http-chunked-counter)
 		  url-http-chunked-start (set-marker
 					  (or url-http-chunked-start
@@ -849,7 +850,7 @@ the end of the document."
 		  (url-display-percentage nil nil)
 		  (goto-char (match-end 1))
 		  (if (re-search-forward "^\r*$" nil t)
-		      (message "Saw end of trailers..."))
+		      (url-http-debug "Saw end of trailers..."))
 		  (if (url-http-parse-headers)
 		      (url-http-activate-callback))))))))))
 
@@ -904,7 +905,7 @@ the end of the document."
 		    url-http-content-type (mail-fetch-field "content-type"))
 	      (if (mail-fetch-field "content-length")
 		  (setq url-http-content-length
-			(string-to-int (mail-fetch-field "content-length"))))
+			(string-to-number (mail-fetch-field "content-length"))))
 	      (widen)))
 	  (if url-http-transfer-encoding
 	      (setq url-http-transfer-encoding

@@ -738,6 +738,11 @@ struct glyph_row
      position of the next row.  */
   struct display_pos end;
 
+  /* Non-zero means the overlay arrow bitmap is on this line.
+     -1 means use default overlay arrow bitmap, else
+     it specifies actual fringe bitmap number.  */
+  int overlay_arrow_bitmap;
+
   /* Left fringe bitmap number (enum fringe_bitmap_type).  */
   unsigned left_user_fringe_bitmap : FRINGE_ID_BITS;
 
@@ -775,9 +780,6 @@ struct glyph_row
      right side.  */
   unsigned truncated_on_left_p : 1;
   unsigned truncated_on_right_p : 1;
-
-  /* 1 means the overlay arrow is on this line.  */
-  unsigned overlay_arrow_p : 1;
 
   /* 1 means that this row displays a continued line, i.e. it has a
      continuation mark at the right side.  */
@@ -2806,7 +2808,7 @@ int lookup_face P_ ((struct frame *, Lisp_Object *, int, struct face *));
 int lookup_named_face P_ ((struct frame *, Lisp_Object, int, int));
 int smaller_face P_ ((struct frame *, int, int));
 int face_with_height P_ ((struct frame *, int, int));
-int lookup_derived_face P_ ((struct frame *, Lisp_Object, int, int));
+int lookup_derived_face P_ ((struct frame *, Lisp_Object, int, int, int));
 void init_frame_faces P_ ((struct frame *));
 void free_frame_faces P_ ((struct frame *));
 void recompute_basic_faces P_ ((struct frame *));

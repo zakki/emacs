@@ -69,7 +69,7 @@ Preserves the `buffer-modified-p' state of the current buffer."
   :group 'jit-lock)
 
 
-(defcustom jit-lock-stealth-time 3
+(defcustom jit-lock-stealth-time 16
   "*Time in seconds to wait before beginning stealth fontification.
 Stealth fontification occurs if there is no input within this time.
 If nil, stealth fontification is never performed.
@@ -80,7 +80,7 @@ The value of this variable is used when JIT Lock mode is turned on."
   :group 'jit-lock)
 
 
-(defcustom jit-lock-stealth-nice 0.125
+(defcustom jit-lock-stealth-nice 0.5
   "*Time in seconds to pause between chunks of stealth fontification.
 Each iteration of stealth fontification is separated by this amount of time,
 thus reducing the demand that stealth fontification makes on the system.
@@ -137,8 +137,9 @@ The value of this variable is used when JIT Lock mode is turned on."
 
 (defcustom jit-lock-context-time 0.5
   "Idle time after which text is contextually refontified, if applicable."
-  :type '(number :tag "seconds"))
-  
+  :type '(number :tag "seconds")
+  :group 'jit-lock)
+
 (defcustom jit-lock-defer-time nil ;; 0.25
   "Idle time after which deferred fontification should take place.
 If nil, fontification is not deferred."
@@ -297,7 +298,7 @@ Only applies to the current buffer."
   "Fontify current buffer starting at position START.
 This function is added to `fontification-functions' when `jit-lock-mode'
 is active."
-  (when jit-lock-mode
+  (when (and jit-lock-mode (not (memory-full-p)))
     (if (null jit-lock-defer-time)
 	;; No deferral.
 	(jit-lock-fontify-now start (+ start jit-lock-chunk-size))
@@ -539,7 +540,7 @@ is the pre-change length.
 This function ensures that lines following the change will be refontified
 in case the syntax of those lines has changed.  Refontification
 will take place when text is fontified stealthily."
-  (when jit-lock-mode
+  (when (and jit-lock-mode (not (memory-full-p)))
     (save-excursion
       (with-buffer-prepared-for-jit-lock
        ;; It's important that the `fontified' property be set from the

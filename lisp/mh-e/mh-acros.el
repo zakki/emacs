@@ -40,6 +40,7 @@
 ;;; Code:
 
 (require 'cl)
+(require 'advice)
 
 ;; The Emacs coding conventions require that the cl package not be required at
 ;; runtime. However, the cl package in versions of Emacs prior to 21.4 left cl
@@ -68,8 +69,9 @@ recognizes that and loads `cl' where appropriate."
 
 (defmacro mh-funcall-if-exists (function &rest args)
   "Call FUNCTION with ARGS as parameters if it exists."
-  (if (fboundp function)
-      `(funcall ',function ,@args)))
+  (when (fboundp function)
+    `(when (fboundp ',function)
+       (funcall ',function ,@args))))
 
 (defmacro mh-make-local-hook (hook)
   "Make HOOK local if needed.

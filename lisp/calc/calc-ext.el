@@ -1,6 +1,6 @@
 ;;; calc-ext.el --- various extension functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -42,6 +42,9 @@
 (defvar math-comp-sel-vpos nil)
 (defvar math-comp-sel-cpos nil)
 (defvar math-compose-hash-args nil)
+
+(defvar calc-alg-map)
+(defvar calc-alg-esc-map)
 
 ;;; The following was made a function so that it could be byte-compiled.
 (defun calc-init-extensions ()
@@ -378,6 +381,7 @@
   (define-key calc-mode-map "m?" 'calc-m-prefix-help)
   (define-key calc-mode-map "ma" 'calc-algebraic-mode)
   (define-key calc-mode-map "md" 'calc-degrees-mode)
+  (define-key calc-mode-map "me" 'calc-embedded-preserve-modes)
   (define-key calc-mode-map "mf" 'calc-frac-mode)
   (define-key calc-mode-map "mg" 'calc-get-modes)
   (define-key calc-mode-map "mh" 'calc-hms-mode)
@@ -415,6 +419,7 @@
   (define-key calc-mode-map "sd" 'calc-declare-variable)
   (define-key calc-mode-map "se" 'calc-edit-variable)
   (define-key calc-mode-map "si" 'calc-insert-variables)
+  (define-key calc-mode-map "sk" 'calc-copy-special-constant)
   (define-key calc-mode-map "sl" 'calc-let)
   (define-key calc-mode-map "sm" 'calc-store-map)
   (define-key calc-mode-map "sn" 'calc-store-neg)
@@ -737,7 +742,8 @@ math-polar math-want-polar)
 
  ("calc-embed" calc-do-embedded
 calc-do-embedded-activate calc-embedded-evaluate-expr
-calc-embedded-modes-change calc-embedded-var-change)
+calc-embedded-modes-change calc-embedded-var-change
+calc-embedded-preserve-modes)
 
  ("calc-fin" calc-to-percentage calcFunc-ddb
 calcFunc-fv calcFunc-fvb calcFunc-fvl calcFunc-irr calcFunc-irrb
@@ -1073,7 +1079,8 @@ calc-vector-pop-covariance calc-vector-pop-sdev
 calc-vector-pop-variance calc-vector-product calc-vector-sdev
 calc-vector-sum calc-vector-variance)
 
- ("calc-store" calc-assign calc-copy-variable calc-declare-variable
+ ("calc-store" calc-assign calc-copy-special-constant
+calc-copy-variable calc-declare-variable
 calc-edit-AlgSimpRules calc-edit-Decls calc-edit-EvalRules
 calc-edit-ExtSimpRules calc-edit-FitRules calc-edit-GenCount
 calc-edit-Holidays calc-edit-IntegLimit calc-edit-LineStyles
@@ -1188,8 +1195,9 @@ calc-kill calc-kill-region calc-yank))))
 	   (math-normalize val)))))
 
 
+(defvar calc-help-map nil)
 
-(if (boundp 'calc-help-map)
+(if calc-help-map
     nil
   (setq calc-help-map (make-keymap))
   (define-key calc-help-map "b" 'calc-describe-bindings)
@@ -2815,7 +2823,7 @@ calc-kill calc-kill-region calc-yank))))
 
    ;; Integer+fraction with explicit radix
    ((string-match "^\\([0-9]+\\)\\(#\\|\\^\\^\\)\\([0-9a-zA-Z]*\\)[:/]\\([0-9a-zA-Z]*\\)[:/]\\([0-9a-zA-Z]\\)$" s)
-    (let ((radix (string-to-int (math-match-substring s 1)))
+    (let ((radix (string-to-number (math-match-substring s 1)))
 	  (int (math-match-substring s 3))
 	  (num (math-match-substring s 4))
 	  (den (math-match-substring s 5)))
@@ -2829,7 +2837,7 @@ calc-kill calc-kill-region calc-yank))))
 
    ;; Fraction with explicit radix
    ((string-match "^\\([0-9]+\\)\\(#\\|\\^\\^\\)\\([0-9a-zA-Z]*\\)[:/]\\([0-9a-zA-Z]*\\)$" s)
-    (let ((radix (string-to-int (math-match-substring s 1)))
+    (let ((radix (string-to-number (math-match-substring s 1)))
 	  (num (math-match-substring s 3))
 	  (den (math-match-substring s 4)))
       (let ((num (if (> (length num) 0) (math-read-radix num radix) 1))
@@ -2839,7 +2847,7 @@ calc-kill calc-kill-region calc-yank))))
    ;; Float with explicit radix and exponent
    ((or (string-match "^0*\\(\\([2-9]\\|1[0-4]\\)\\(#\\|\\^\\^\\)[0-9a-dA-D.]+\\)[eE]\\([-+]?[0-9]+\\)$" s)
 	(string-match "^\\(\\([0-9]+\\)\\(#\\|\\^\\^\\)[0-9a-zA-Z.]+\\) *\\* *\\2\\.? *\\^ *\\([-+]?[0-9]+\\)$" s))
-    (let ((radix (string-to-int (math-match-substring s 2)))
+    (let ((radix (string-to-number (math-match-substring s 2)))
 	  (mant (math-match-substring s 1))
 	  (exp (math-match-substring s 4)))
       (let ((mant (math-read-number mant))
@@ -2849,7 +2857,7 @@ calc-kill calc-kill-region calc-yank))))
 
    ;; Float with explicit radix, no exponent
    ((string-match "^\\([0-9]+\\)\\(#\\|\\^\\^\\)\\([0-9a-zA-Z]*\\)\\.\\([0-9a-zA-Z]*\\)$" s)
-    (let ((radix (string-to-int (math-match-substring s 1)))
+    (let ((radix (string-to-number (math-match-substring s 1)))
 	  (int (math-match-substring s 3))
 	  (fracs (math-match-substring s 4)))
       (let ((int (if (> (length int) 0) (math-read-radix int radix) 0))
@@ -2861,7 +2869,7 @@ calc-kill calc-kill-region calc-yank))))
    ;; Integer with explicit radix
    ((string-match "^\\([0-9]+\\)\\(#\\|\\^\\^\\)\\([0-9a-zA-Z]+\\)$" s)
     (math-read-radix (math-match-substring s 3)
-		     (string-to-int (math-match-substring s 1))))
+		     (string-to-number (math-match-substring s 1))))
 
    ;; C language hexadecimal notation
    ((and (eq calc-language 'c)

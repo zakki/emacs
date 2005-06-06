@@ -22,7 +22,6 @@ Boston, MA 02111-1307, USA.  */
 
 #include <config.h>
 
-#include <signal.h>
 #include <stdio.h>
 #include <math.h>
 #include <limits.h>
@@ -1895,7 +1894,7 @@ x_set_name (f, name, explicit)
 #if TARGET_API_MAC_CARBON
 	name = ENCODE_UTF_8 (name);
 #else
-        return;
+	name = ENCODE_SYSTEM (name);
 #endif
 
       BLOCK_INPUT;
@@ -1977,7 +1976,7 @@ x_set_title (f, name, old_name)
 #if TARGET_API_MAC_CARBON
 	name = ENCODE_UTF_8 (name);
 #else
-        return;
+	name = ENCODE_SYSTEM (name);
 #endif
 
       BLOCK_INPUT;
@@ -2632,6 +2631,8 @@ This function is an internal primitive--use `make-frame' instead.  */)
       font = x_new_font (f, "-ETL-fixed-medium-r-*--*-160-*-*-*-*-iso8859-1");
     /* If those didn't work, look for something which will at least work.  */
     if (! STRINGP (font))
+      font = x_new_fontset (f, "fontset-mac");
+    if (! STRINGP (font))
       font = x_new_font (f, "-*-monaco-*-12-*-mac-roman");
     if (! STRINGP (font))
       font = x_new_font (f, "-*-courier-*-10-*-mac-roman");
@@ -2967,8 +2968,13 @@ If omitted or nil, that stands for the selected frame's display.  */)
 {
   int mac_major_version;
   SInt32 response;
+  OSErr err;
 
-  if (Gestalt (gestaltSystemVersion, &response) != noErr)
+  BLOCK_INPUT;
+  err = Gestalt (gestaltSystemVersion, &response);
+  UNBLOCK_INPUT;
+
+  if (err != noErr)
     error ("Cannot get Mac OS version");
 
   mac_major_version = (response >> 8) & 0xff;
@@ -3635,9 +3641,6 @@ x_create_tip_frame (dpyinfo, parms, text)
 
   check_mac ();
 
-  /* Use this general default value to start with until we know if
-     this frame has a specified name.  */
-  Vx_resource_name = Vinvocation_name;
 
 #ifdef MULTI_KBOARD
   kb = dpyinfo->kboard;
@@ -3651,7 +3654,6 @@ x_create_tip_frame (dpyinfo, parms, text)
       && !EQ (name, Qunbound)
       && !NILP (name))
     error ("Invalid frame name--not a string or nil");
-  Vx_resource_name = name;
 
   frame = Qnil;
   GCPRO3 (parms, name, frame);
@@ -3731,6 +3733,8 @@ x_create_tip_frame (dpyinfo, parms, text)
     if (! STRINGP (font))
       font = x_new_font (f, "-ETL-fixed-medium-r-*--*-160-*-*-*-*-iso8859-1");
     /* If those didn't work, look for something which will at least work.  */
+    if (! STRINGP (font))
+      font = x_new_fontset (f, "fontset-mac");
     if (! STRINGP (font))
       font = x_new_font (f, "-*-monaco-*-12-*-mac-roman");
     if (! STRINGP (font))
@@ -4248,8 +4252,7 @@ If ONLY-DIR-P is non-nil, the user can only select directories.  */)
     options.optionFlags |= kNavSelectAllReadableItem;
     if (!NILP(prompt))
       {
-	message =
-	  cfstring_create_with_utf8_cstring (SDATA (ENCODE_UTF_8 (prompt)));
+	message = cfstring_create_with_string (prompt);
 	options.message = message;
       }
     /* Don't set the application, let it use default.
@@ -4358,7 +4361,12 @@ If ONLY-DIR-P is non-nil, the user can only select directories.  */)
 		  filename[len++] = '/';
 		CFStringGetCString(reply.saveFileName, filename+len, 
 				   sizeof (filename) - len,
-				   kCFStringEncodingUTF8);
+#if MAC_OSX
+				   kCFStringEncodingUTF8
+#else
+				   CFStringGetSystemEncoding ()
+#endif
+				   );
 	      }
 	    file = DECODE_FILE (make_unibyte_string (filename,
 						     strlen (filename)));

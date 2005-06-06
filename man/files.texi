@@ -1,6 +1,6 @@
 @c This is part of the Emacs manual.
-@c Copyright (C) 1985,86,87,93,94,95,97,99, 2000, 2001, 2004
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 1999, 2000,
+@c   2001, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @node Files, Buffers, Keyboard Macros, Top
 @chapter File Handling
@@ -37,6 +37,7 @@ on file directories.
 * Quoted File Names::   Quoting special characters in file names.
 * File Name Cache::     Completion against a list of files you often use.
 * File Conveniences::   Convenience Features for Finding Files.
+* Filesets::            Handling sets of files.
 @end menu
 
 @node File Names
@@ -207,15 +208,6 @@ While in the minibuffer, you can abort @kbd{C-x C-f} by typing
 @kbd{C-g}.  File-name completion ignores certain filenames; for more
 about this, see @ref{Completion Options}.
 
-@cindex file selection dialog
-  When Emacs is built with a suitable GUI toolkit, commands invoked
-with the mouse or the menu bar use the toolkit's standard File
-Selection dialog instead of prompting for the file name in the
-minibuffer.  On Unix and GNU/Linux platforms, Emacs does that when
-built with GTK, LessTif, and Motif toolkits; on MS-Windows, the GUI
-version does that by default.  @xref{Dialog Boxes}, for info
-on customization of this.
-
   Your confirmation that @kbd{C-x C-f} has completed successfully is the
 appearance of new text on the screen and a new buffer name in the mode
 line.  If the specified file does not exist and could not be created, or
@@ -228,11 +220,33 @@ However, before doing so, it checks that the file itself has not changed
 since you visited or saved it last.  If the file has changed, a warning
 message is shown.  @xref{Interlocking,,Simultaneous Editing}.
 
+@vindex large-file-warning-threshold
 @cindex maximum buffer size exceeded, error message
-  Since Emacs reads the visited file in its entirety, files whose size
-is larger than the maximum Emacs buffer size (@pxref{Buffers}) cannot be
-visited; if you try, Emacs will display an error message saying that the
-maximum buffer size has been exceeded.
+  If you try to visit a file larger than
+@code{large-file-warning-threshold} (the default is 10000000, which is
+about 10 megabytes), Emacs will ask you for confirmation first.  You
+can answer @kbd{y} to proceed with visiting the file.  Note, however,
+that Emacs cannot visit files that are larger than the maximum Emacs
+buffer size, which is around 256 megabytes on 32-bit machines
+(@pxref{Buffers}).  If you try, Emacs will display an error message
+saying that the maximum buffer size has been exceeded.
+
+@cindex file selection dialog
+  On graphical terminals, there are two additional methods for
+visiting files.  Firstly, when Emacs is built with a suitable GUI
+toolkit, commands invoked with the mouse (by clicking on the menu bar
+or tool bar) use the toolkit's standard File Selection dialog instead
+of prompting for the file name in the minibuffer.  On Unix and
+GNU/Linux platforms, Emacs does that when built with GTK, LessTif, and
+Motif toolkits; on MS-Windows, the GUI version does that by default.
+For information on how to customize this, see @ref{Dialog Boxes}.
+
+  Secondly, Emacs supports the ``drag and drop'' protocol on the X
+window system.  Dropping a file into an ordinary Emacs window visits
+the file using that window.  However, dropping a file into a window
+displaying a Dired buffer moves or copies the file into the displayed
+directory.  For details, see @ref{Drag and Drop}, @ref{Misc Dired
+Features}.
 
 @cindex creating files
   What if you want to create a new file?  Just visit it.  Emacs displays
@@ -491,8 +505,7 @@ you can control how these modes handle final newlines.
 * Backup::              How Emacs saves the old version of your file.
 * Interlocking::        How Emacs protects against simultaneous editing
                           of one file by two users.
-* Shadowing: File Shadowing.
-                        Copying files to "shadows" automatically.
+* Shadowing: File Shadowing.  Copying files to "shadows" automatically.
 * Time Stamps::         Emacs can update time stamps on saved files.
 @end menu
 
@@ -905,15 +918,30 @@ discard your changes.)
 @cindex mode, Auto-Revert
 @findex global-auto-revert-mode
 @findex auto-revert-mode
+@findex auto-revert-tail-mode
+
+  You may find it useful to have Emacs revert files automatically when
+they change.  Three minor modes are available to do this.
+
+  @kbd{M-x global-auto-revert-mode} runs Global Auto-Revert mode,
+which periodically checks all file buffers and reverts when the
+corresponding file has changed.  @kbd{M-x auto-revert-mode} runs a
+local version, Auto-Revert mode, which applies only to the buffer in
+which it was activated.  Auto-Revert mode can be used to ``tail'' a
+file, such as a system log, so that changes made to that file by other
+programs are continuously displayed.  To do this, just move the point
+to the end of the buffer, and it will stay there as the file contents
+change.  However, if you are sure that the file will only change by
+growing at the end, you can tail the file more efficiently using
+Auto-Revert Tail mode, @kbd{M-x auto-revert-tail-mode}.
+
 @vindex auto-revert-interval
-You may find it useful to have Emacs revert files automatically when
-they change.  Two minor modes are available to do this.  In Global
-Auto-Revert mode, Emacs periodically checks all file buffers and
-reverts any when the corresponding file has changed.  The local
-variant, Auto-Revert mode, applies only to buffers in which it was
-activated.  The variable @code{auto-revert-interval} controls how
-often to check for a changed file.  Since checking a remote file is
-too slow, these modes do not check or revert remote files.
+  The variable @code{auto-revert-interval} controls how often to check
+for a changed file.  Since checking a remote file is too slow, these
+modes do not check or revert remote files.
+
+@xref{VC Mode Line}, for Auto Revert peculiarities in buffers that
+visit files under version control.
 
 @node Auto Save
 @section Auto-Saving: Protection Against Disasters
@@ -1225,7 +1253,7 @@ and deletes.  It can be used via http or via its own protocol.
 
 @cindex MCVS
 @cindex Meta-CVS
-  Meta-CVS is another attempt to solve problems, arising in CVS.  It
+  Meta-CVS is another attempt to solve problems arising in CVS.  It
 supports directory structure versioning, improved branching and
 merging, and use of symbolic links and meta-data in repositories.
 
@@ -1237,6 +1265,10 @@ example) by implementing them itself, but some other VC features, such
 as multiple branches, are not available with SCCS.  You should use
 SCCS only if for some reason you cannot use RCS, or one of the
 higher-level systems such as CVS or GNU Arch.
+
+In the following, we discuss mainly RCS, SCCS and CVS.  Nearly
+everything said about CVS applies to Gnu Arch, Subversion and Meta-CVS
+as well.
 
 @node VC Concepts
 @subsubsection Concepts of Version Control
@@ -1336,6 +1368,18 @@ the work file is not locked (if locking is in use), or not modified (if
 locking is not in use).  @samp{:} indicates that the file is locked, or
 that it is modified.  If the file is locked by some other user (for
 instance, @samp{jim}), that is displayed as @samp{RCS:jim:1.3}.
+
+@vindex auto-revert-check-vc-info
+  When Auto Revert mode (@pxref{Reverting}) reverts a buffer that is
+under version control, it updates the version control information in
+the mode line.  However, Auto Revert mode may not properly update this
+information if the version control status changes without changes to
+the work file, from outside the current Emacs session.  If you set
+@code{auto-revert-check-vc-info} to @code{t}, Auto Revert mode updates
+the version control status information every
+@code{auto-revert-interval} seconds, even if the work file itself is
+unchanged.  The resulting CPU usage depends on the version control
+system, but is usually not excessive.
 
 @node Basic VC Editing
 @subsection Basic Editing under Version Control
@@ -1438,9 +1482,9 @@ informs you if another user has checked in changes in the same file
 since you began editing it, and when this happens, his changes will be
 effectively removed when you check in your version (though they will
 remain in the master file, so they will not be entirely lost).  You must
-therefore verify the current version is unchanged, before you check in your
-changes.  We hope to eliminate this risk and provide automatic merging
-with RCS in a future Emacs version.
+therefore verify that the current version is unchanged, before you
+check in your changes.  We hope to eliminate this risk and provide
+automatic merging with RCS in a future Emacs version.
 
   In addition, locking is possible with RCS even in this mode, although
 it is not required; @kbd{C-x v v} with an unmodified file locks the
@@ -1482,8 +1526,29 @@ Version Control}).
 
   When you check in changes, @kbd{C-x v v} first reads a log entry.  It
 pops up a buffer called @samp{*VC-Log*} for you to enter the log entry.
-When you are finished, type @kbd{C-c C-c} in the @samp{*VC-Log*} buffer.
-That is when check-in really happens.
+
+Sometimes the @samp{*VC-Log*} buffer contains default text when you enter it,
+typically the last log message entered.  If it does, mark and point
+are set around the entire contents of the buffer so that it is easy to
+kill the contents of the buffer with @kbd{C-w}.
+
+@findex log-edit-insert-changelog
+If you work by writing entries in the @file{ChangeLog}
+(@pxref{Change Log}) and then commit the change under revision
+control, you can generate the Log Edit text from the ChangeLog using
+@kbd{C-c C-a} (@kbd{log-edit-insert-changelog}).  This looks for
+entries for the file(s) concerned in the top entry in the ChangeLog
+and uses those paragraphs as the log text.  This text is only inserted
+if the top entry was made under your user name on the current date.
+@xref{Change Logs and VC}, for the opposite way of
+working---generating ChangeLog entries from the revision control log.
+
+In the @samp{*VC-Log*} buffer, @kbd{C-c C-f} (@kbd{M-x log-edit-show-files})
+shows the list of files to be committed in case you need to check
+that.
+
+When you have finished editing the log message, type @kbd{C-c C-c} to
+exit the buffer and commit the change.
 
   To abort check-in, just @strong{don't} type @kbd{C-c C-c} in that
 buffer.  You can switch buffers and do other editing.  As long as you
@@ -1664,13 +1729,10 @@ there is more than one system in use for a directory, Emacs uses the one
 that appears first in @code{vc-handled-backends} (@pxref{Customizing VC}).
 On the other hand, if there are no files already registered,
 Emacs uses the first system from @code{vc-handled-backends} that could
-register the file---for example, you cannot register a file under CVS if
-its directory is not already part of a CVS tree.
-
-  With the default value of @code{vc-handled-backends}, this means
-that Emacs uses RCS if there are any files under RCS control, CVS if
-there are any files under CVS, SCCS if any files are under SCCS, or
-RCS as the ultimate default.
+register the file (for example, you cannot register a file under CVS if
+its directory is not already part of a CVS tree); with the default
+value of @code{vc-handled-backends}, this means that Emacs uses RCS in
+this situation.
 
   If locking is in use, @kbd{C-x v i} leaves the file unlocked and
 read-only.  Type @kbd{C-x v v} if you wish to start editing it.  After
@@ -1858,7 +1920,8 @@ marked files, so that you can lock or check in several files at once.
 If it operates on more than one file, it handles each file according to
 its current state; thus, it might lock one file, but check in another
 file.  This could be confusing; it is up to you to avoid confusing
-behavior by marking a set of files that are in a similar state.
+behavior by marking a set of files that are in a similar state.  If no
+files are marked, @kbd{v v} operates on the file in the current line.
 
   If any files call for check-in, @kbd{v v} reads a single log entry,
 then uses it for all the files being checked in.  This is convenient for
@@ -1886,8 +1949,7 @@ program in which you are gradually adding various unfinished new
 features.  Each such independent line of development is called a
 @dfn{branch}.  VC allows you to create branches, switch between
 different branches, and merge changes from one branch to another.
-Please note, however, that branches are only supported for RCS at the
-moment.
+Please note, however, that branches are not supported for SCCS.
 
   A file's main line of development is usually called the @dfn{trunk}.
 The versions on the trunk are normally numbered 1.1, 1.2, 1.3, etc.  At
@@ -2230,7 +2292,8 @@ But if you do this, the revision numbers in the RCS master no longer
 correspond to those of CVS.  Technically, this is not a problem, but
 it can become difficult to keep track of what is in the CVS repository
 and what is not.  So we suggest that you return from time to time to
-CVS-only operation, using @kbd{C-u C-x v v cvs @key{RET}}.
+CVS-only operation, by committing your local changes back to the
+repository using @kbd{C-u C-x v v cvs @key{RET}}.
 
 @node Snapshots
 @subsection Snapshots
@@ -2518,13 +2581,11 @@ insert a suitable header string.
 Insert headers in a file for use with your version-control system.
 @end table
 
-@vindex vc-header-alist
+@vindex vc-@var{backend}-header
   The default header string is @samp{@w{$}Id$} for RCS and
 @samp{@w{%}W%} for SCCS.  You can specify other headers to insert by
-setting the variable @code{vc-header-alist}.  Its value is a list of
-elements of the form @code{(@var{program} . @var{string})} where
-@var{program} is @code{RCS} or @code{SCCS} and @var{string} is the
-string to use.
+setting the variables @code{vc-@var{backend}-header} where
+@var{backend} is @code{rcs} or @code{sccs}.
 
   Instead of a single string, you can specify a list of strings; then
 each string in the list is inserted as a separate header on a line of
@@ -2552,8 +2613,8 @@ elements of the form @code{(@var{regexp} . @var{format})}.  Whenever
 @var{regexp} matches the buffer name, @var{format} is inserted as part
 of the header.  A header line is inserted for each element that matches
 the buffer name, and for each string specified by
-@code{vc-header-alist}.  The header line is made by processing the
-string from @code{vc-header-alist} with the format taken from the
+@code{vc-@var{backend}-header}.  The header line is made by processing the
+string from @code{vc-@var{backend}-header} with the format taken from the
 element.  The default value for @code{vc-static-header-alist} is as follows:
 
 @example
@@ -2590,10 +2651,10 @@ headers.
 @vindex vc-handled-backends
 The variable @code{vc-handled-backends} determines which version
 control systems VC should handle.  The default value is @code{(RCS CVS
-SCCS)}, so it contains all three version systems that are currently
-supported.  If you want VC to ignore one or more of these systems,
-exclude its name from the list.  To disable VC entirely, set this
-variable to @code{nil}.
+SVN SCCS Arch MCVS)}, so it contains all six version systems that are
+currently supported.  If you want VC to ignore one or more of these
+systems, exclude its name from the list.  To disable VC entirely, set
+this variable to @code{nil}.
 
 The order of systems in the list is significant: when you visit a file
 registered in more than one system (@pxref{Local Version Control}),
@@ -2746,8 +2807,9 @@ pick up any recent changes from the repository first, using @kbd{C-x v m
 @key{RET}}, @pxref{Merging}).
 
 @vindex vc-cvs-global-switches
-  The variable @code{vc-cvs-global-switches} should be a string
-specifying switches to pass to CVS for all CVS operations.
+  The variable @code{vc-cvs-global-switches}, if non-@code{nil},
+should be a string specifying switches to pass to CVS for all CVS
+operations.
 
   When @code{vc-cvs-stay-local} is @code{t}, VC also makes local
 version backups, so that simple diff and revert operations are
@@ -2839,14 +2901,12 @@ running the @code{diff} program, using options taken from the variable
 @code{diff-switches}.  The value of @code{diff-switches} should be a
 string; the default is @code{"-c"} to specify a context diff.
 
-  The buffer @samp{*diff*} has Compilation mode as its major mode, so
-you can use @kbd{C-x `} to visit successive changed locations in the two
-source files.  You can also move to a particular hunk of changes and
-type @key{RET} or @kbd{C-c C-c}, or click @kbd{Mouse-2} on it, to move
-to the corresponding source location.  You can also use the other
-special commands of Compilation mode: @key{SPC} and @key{DEL} for
-scrolling, and @kbd{M-p} and @kbd{M-n} for cursor motion.
-@xref{Compilation}.
+@findex diff-goto-source
+  After running @kbd{M-x diff}, you can use @kbd{C-x `} to visit
+successive changed locations in the two source files, as in
+Compilation mode (@pxref{Compilation}.)  In the @samp{*diff*} buffer,
+you can move to a particular hunk of changes and type @kbd{C-c C-c}
+(@code{diff-goto-source}) to visit the corresponding source location.
 
 @findex diff-backup
   The command @kbd{M-x diff-backup} compares a specified file with its most
@@ -2864,9 +2924,13 @@ the command is finished.  For more information about windows in Emacs,
 @ref{Windows}.
 
 @vindex compare-ignore-case
+@vindex compare-ignore-whitespace
   With a numeric argument, @code{compare-windows} ignores changes in
 whitespace.  If the variable @code{compare-ignore-case} is
-non-@code{nil}, it ignores differences in case as well.
+non-@code{nil}, the comparison ignores differences in case as well.
+If the variable @code{compare-ignore-whitespace} is non-@code{nil},
+@code{compare-windows} normally ignores changes in whitespace, and a
+prefix argument turns that off.
 
 @findex diff-mode
 @cindex diffs
@@ -2943,36 +3007,40 @@ done; this is because renaming causes the old meaning of the name @var{new}
 to be lost.  If @var{old} and @var{new} are on different file systems, the
 file @var{old} is copied and deleted.
 
+  If the argument @var{new} is just a directory name, the real new
+name is in that directory, with the same non-directory component as
+@var{old}.  For example, @kbd{M-x rename-file RET ~/foo RET /tmp RET}
+renames @file{~/foo} to @file{/tmp/foo}.  The same rule applies to all
+the remaining commands in this section.  All of them ask for
+confirmation when the new file name already exists, too.
+
 @findex add-name-to-file
 @cindex hard links (creation)
   The similar command @kbd{M-x add-name-to-file} is used to add an
 additional name to an existing file without removing its old name.
 The new name is created as a ``hard link'' to the existing file.
 The new name must belong on the same file system that the file is on.
-On Windows, this command works only if the file resides in an NTFS
+On MS-Windows, this command works only if the file resides in an NTFS
 file system.  On MS-DOS, it works by copying the file.
 
 @findex copy-file
 @cindex copying files
-  @kbd{M-x copy-file} reads the file @var{old} and writes a new file named
-@var{new} with the same contents.  Confirmation is required if a file named
-@var{new} already exists, because copying has the consequence of overwriting
-the old contents of the file @var{new}.
+  @kbd{M-x copy-file} reads the file @var{old} and writes a new file
+named @var{new} with the same contents.
 
 @findex make-symbolic-link
 @cindex symbolic links (creation)
   @kbd{M-x make-symbolic-link} reads two file names @var{target} and
-@var{linkname}, then creates a symbolic link named @var{linkname}, which
-points at @var{target}.  The effect is that future attempts to open file
-@var{linkname} will refer to whatever file is named @var{target} at the
-time the opening is done, or will get an error if the name @var{target} is
-not in use at that time.  This command does not expand the argument
-@var{target}, so that it allows you to specify a relative name
-as the target of the link.
+@var{linkname}, then creates a symbolic link named @var{linkname},
+which points at @var{target}.  The effect is that future attempts to
+open file @var{linkname} will refer to whatever file is named
+@var{target} at the time the opening is done, or will get an error if
+the name @var{target} is nonexistent at that time.  This command does
+not expand the argument @var{target}, so that it allows you to specify
+a relative name as the target of the link.
 
-  Confirmation is required when creating the link if @var{linkname} is
-in use.  Note that not all systems support symbolic links; on systems
-that don't support them, this command is not defined.
+  Not all systems support symbolic links; on systems that don't
+support them, this command is not defined.
 
 @node Compressed Files
 @section Accessing Compressed Files
@@ -2982,23 +3050,22 @@ that don't support them, this command is not defined.
 @cindex mode, Auto Compression
 @pindex gzip
 
-@findex auto-compression-mode
-@vindex auto-compression-mode
-  Emacs comes with a library that can automatically uncompress
-compressed files when you visit them, and automatically recompress them
-if you alter them and save them.  To enable this feature, type the
-command @kbd{M-x auto-compression-mode}.  You can enable it permanently
-by customizing the variable @code{auto-compression-mode}.
-
-  When automatic compression (which implies automatic uncompression as
-well) is enabled, Emacs recognizes compressed files by their file names.
-File names ending in @samp{.gz} indicate a file compressed with
+  Emacs automatically uncompresses compressed files when you visit
+them, and automatically recompress them if you alter them and save
+them.  Emacs recognizes compressed files by their file names.  File
+names ending in @samp{.gz} indicate a file compressed with
 @code{gzip}.  Other endings indicate other compression programs.
 
   Automatic uncompression and compression apply to all the operations in
 which Emacs uses the contents of a file.  This includes visiting it,
 saving it, inserting its contents into a buffer, loading it, and byte
 compiling it.
+
+@findex auto-compression-mode
+@vindex auto-compression-mode
+  To disable this feature, type the command @kbd{M-x
+auto-compression-mode}.  You can disenable it permanently by
+customizing the variable @code{auto-compression-mode}.
 
 @node File Archives
 @section File Archives
@@ -3258,6 +3325,10 @@ Clear the cache; that is, remove all file names from it.
 @node File Conveniences
 @section Convenience Features for Finding Files
 
+  In this section, we introduce some convenient facilities for finding
+recently-opened files, reading file names from a buffer, and viewing
+image files.
+
 @findex recentf-mode
 @vindex recentf-mode
 @findex recentf-save-list
@@ -3268,24 +3339,67 @@ opened files.  @kbd{M-x recentf-save-list} saves the current
 @code{recent-file-list} to a file, and @kbd{M-x recentf-edit-list}
 edits it.
 
-@findex auto-image-file-mode
-@findex mode, auto-image-file
-@cindex images, visiting
-@cindex visiting image files
-@vindex image-file-name-regexps
-@vindex image-file-name-extensions
-  When Auto-image-file minor mode is enabled, visiting an image file
-displays it as an image, not as text.  Likewise, inserting an image
-file into a buffer inserts it as an image.  This works only when Emacs
-can display the relevant image type.  The variables
-@code{image-file-name-extensions} or @code{image-file-name-regexps}
-control which file names are recognized as containing images.
-
   The @kbd{M-x ffap} command generalizes @code{find-file} with more
 powerful heuristic defaults (@pxref{FFAP}), often based on the text at
 point.  Partial Completion mode offers other features extending
 @code{find-file}, which can be used with @code{ffap}.
 @xref{Completion Options}.
+
+@findex image-mode
+@findex image-toggle-display
+@cindex images, viewing
+  Visiting image files automatically selects Image mode.  This major
+mode allows you to toggle between displaying the file as an image in
+the Emacs buffer, and displaying its underlying text representation,
+using the command @kbd{C-c C-c} (@code{image-toggle-display}).  This
+works only when Emacs can display the specific image type.
+
+@findex thumbs-mode
+@findex mode, thumbs
+  Thumbs mode is a major mode for viewing directories containing many
+image files.  To use it, type @kbd{M-x thumbs} and specify the
+directory to view.  The images in that directory will be displayed in
+a @samp{Thumbs} buffer as @dfn{thumbnails}; type @kbd{RET} on a
+thumbnail to view the full-size image.  Thumbs mode requires the
+@file{convert} program, which is part of the ImageMagick software
+package.
+
+@node Filesets
+@section Filesets
+@cindex filesets
+
+@findex filesets-init
+  If you regularly edit a certain group of files, you can define them
+as a @dfn{fileset}.  This lets you perform certain operations, such as
+visiting, @code{query-replace}, and shell commands on all the files
+at once.  To make use of filesets, you must first add the expression
+@code{(filesets-init)} to your @file{.emacs} file (@pxref{Init File}).
+This adds a @samp{Filesets} menu to the menu bar.
+
+@findex filesets-add-buffer
+@findex filesets-remove-buffer
+  The simplest way to define filesets is by adding files to them one
+at a time.  To add a file to fileset @var{name}, visit the file and
+type @kbd{M-x filesets-add-buffer @kbd{RET} @var{name} @kbd{RET}}.  If
+there is no fileset @var{name}, this creates a new one, which
+initially creates only the current file.  The command @kbd{M-x
+filesets-remove-buffer} removes the current file from a fileset.
+
+  You can also edit the list of filesets directly, with @kbd{M-x
+filesets-edit} (or by choosing @samp{Edit Filesets} from the
+@samp{Filesets} menu).  The editing is performed in a Customize buffer
+(@pxref{Easy Customization}).  Filesets need not be a simple list of
+files---you can also define filesets using regular expression matching
+file names.  Some examples of these more complicated filesets are
+shown in the Customize buffer.  Remember to select @samp{Save for
+future sessions} if you want to use the same filesets in future Emacs
+sessions.
+
+  You can use the command @kbd{M-x filesets-open} to visit all the
+files in a fileset, and @kbd{M-x filesets-close} to close them.  Use
+@kbd{M-x filesets-run-cmd} to run a shell command on all the files in
+a fileset.  These commands are also available from the @samp{Filesets}
+menu, where each existing fileset is represented by a submenu.
 
 @ignore
    arch-tag: 768d32cb-e15a-4cc1-b7bf-62c00ee12250

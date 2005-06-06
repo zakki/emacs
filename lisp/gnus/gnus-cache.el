@@ -1,6 +1,6 @@
 ;;; gnus-cache.el --- cache interface for Gnus
-;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003
-;;        Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
+;; 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: news
@@ -421,6 +421,7 @@ Returns the list of articles removed."
       (and (not unread) (not ticked) (not dormant) (memq 'read class))))
 
 (defun gnus-cache-file-name (group article)
+  (setq group (gnus-group-decoded-name group))
   (expand-file-name
    (if (stringp article) article (int-to-string article))
    (file-name-as-directory
@@ -486,7 +487,7 @@ Returns the list of articles removed."
 	articles)
     (when (file-exists-p dir)
       (setq articles
-	    (sort (mapcar (lambda (name) (string-to-int name))
+	    (sort (mapcar (lambda (name) (string-to-number name))
 			  (directory-files dir nil "^[0-9]+$" t))
 		  '<))
       ;; Update the cache active file, just to synch more.
@@ -680,7 +681,7 @@ If LOW, update the lower bound instead."
     ;; Separate articles from all other files and directories.
     (while files
       (if (string-match "^[0-9]+$" (file-name-nondirectory (car files)))
-	  (push (string-to-int (file-name-nondirectory (pop files))) nums)
+	  (push (string-to-number (file-name-nondirectory (pop files))) nums)
 	(push (pop files) alphs)))
     ;; If we have nums, then this is probably a valid group.
     (when (setq nums (sort nums '<))

@@ -575,7 +575,7 @@ CYGWIN_OBJ = sheap.o
 
 #ifdef HAVE_CARBON
 mac = $(dot)$(dot)/mac/
-MAC_OBJ = mac.o macterm.o macfns.o macmenu.o fontset.o fringe.o image.o
+MAC_OBJ = mac.o macterm.o macfns.o macmenu.o macselect.o fontset.o fringe.o image.o
 emacsapp = $(PWD)/$(mac)Emacs.app/
 emacsappsrc = ${srcdir}/../mac/Emacs.app/
 #endif
@@ -602,7 +602,7 @@ obj=    dispnew.o frame.o scroll.o xdisp.o $(XMENU_OBJ) window.o \
    in case they are needed there.  */
 SOME_MACHINE_OBJECTS = sunfns.o dosfns.o msdos.o \
   xterm.o xfns.o xmenu.o xselect.o xrdb.o xsmfns.o fringe.o image.o \
-  mac.o macterm.o macfns.o macmenu.o fontset.o \
+  mac.o macterm.o macfns.o macmenu.o macselect.o fontset.o \
   w32.o w32bdf.o w32console.o w32fns.o w32heap.o w32inevt.o \
   w32menu.o w32proc.o w32reg.o w32select.o w32term.o w32xfns.o
 
@@ -689,6 +689,12 @@ otherobj= $(termcapobj) lastfile.o $(mallocobj) $(allocaobj) $(widgetobj) $(LIBO
   ${lispsource}w32-fns.elc
 #else
 #define WINNT_SUPPORT
+#endif
+
+#ifdef HAVE_WINDOW_SYSTEM
+#define TOOLTIP_SUPPORT ${lispsource}tooltip.elc
+#else
+#define TOOLTIP_SUPPORT
 #endif
 
 /* List of Lisp files loaded into the dumped Emacs.  It's arranged
@@ -782,8 +788,10 @@ lisp= \
 	${lispsource}textmodes/paragraphs.elc \
 	${lispsource}textmodes/text-mode.elc \
 	${lispsource}emacs-lisp/timer.elc \
+	${lispsource}jka-cmpr-hook.elc \
 	${lispsource}vc-hooks.elc \
 	${lispsource}ediff-hook.elc \
+	TOOLTIP_SUPPORT \
 	VMS_SUPPORT \
 	MSDOS_SUPPORT \
 	WINNT_SUPPORT \
@@ -874,6 +882,7 @@ shortlisp= \
 	../lisp/textmodes/text-mode.elc \
 	../lisp/emacs-lisp/timer.elc \
 	../lisp/vc-hooks.elc \
+	../lisp/jka-cmpr-hook.elc \
 	../lisp/ediff-hook.elc \
 	../lisp/widget.elc \
 	../lisp/window.elc \
@@ -890,6 +899,7 @@ SOME_MACHINE_LISP = ${dotdot}/lisp/mouse.elc \
   ${dotdot}/lisp/ls-lisp.elc ${dotdot}/lisp/dos-fns.elc \
   ${dotdot}/lisp/w32-fns.elc ${dotdot}/lisp/dos-w32.elc \
   ${dotdot}/lisp/disp-table.elc ${dotdot}/lisp/dos-vars.elc \
+  ${dotdot}/lisp/tooltip.elc \
   ${dotdot}/lisp/international/ccl.elc \
   ${dotdot}/lisp/international/codepage.elc
 
@@ -1231,7 +1241,8 @@ abbrev.o buffer.o callint.o cmds.o dispnew.o editfns.o fileio.o frame.o \
   fontset.o indent.o insdel.o keyboard.o macros.o minibuf.o msdos.o process.o \
   scroll.o sysdep.o term.o widget.o window.o xdisp.o xfaces.o xfns.o xmenu.o \
   xterm.o xselect.o sound.o: macgui.h
-mac.o: mac.c process.h sysselect.h blockinput.h atimer.h systime.h $(config_h)
+mac.o: mac.c process.h sysselect.h blockinput.h atimer.h systime.h charset.h \
+  coding.h ccl.h $(config_h)
 macfns.o: macfns.c charset.h macterm.h macgui.h frame.h window.h buffer.h \
   dispextern.h macgui.h fontset.h $(INTERVAL_SRC) keyboard.h blockinput.h \
   atimer.h systime.h epaths.h termhooks.h coding.h systime.h $(config_h)
@@ -1241,6 +1252,7 @@ macterm.o: blockinput.h atimer.h systime.h syssignal.h macterm.h macgui.h \
   frame.h charset.h ccl.h dispextern.h fontset.h termhooks.h termopts.h \
   termchar.h gnu.h disptab.h buffer.h window.h keyboard.h $(INTERVAL_SRC) \
   process.h coding.h $(config_h)
+macselect.o: blockinput.h macterm.h macgui.h frame.h $(config_h)
 
 ${emacsapp}Contents/Resources/English.lproj:
 	mkdir -p $@

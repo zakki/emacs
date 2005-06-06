@@ -450,11 +450,6 @@ Lisp_Object Qecho_area_clear_hook;
 Lisp_Object Qpre_command_hook, Vpre_command_hook;
 Lisp_Object Qpost_command_hook, Vpost_command_hook;
 Lisp_Object Qcommand_hook_internal, Vcommand_hook_internal;
-/* Hook run after a command if there's no more input soon.  */
-Lisp_Object Qpost_command_idle_hook, Vpost_command_idle_hook;
-
-/* Delay time in microseconds before running post-command-idle-hook.  */
-EMACS_INT post_command_idle_delay;
 
 /* List of deferred actions to be performed at a later time.
    The precise format isn't relevant here; we just check whether it is nil.  */
@@ -523,10 +518,14 @@ Lisp_Object Qmake_frame_visible;
 Lisp_Object Qselect_window;
 Lisp_Object Qhelp_echo;
 
+#ifdef HAVE_MOUSE
+Lisp_Object Qmouse_fixup_help_message;
+#endif
+
 /* Symbols to denote kinds of events.  */
 Lisp_Object Qfunction_key;
 Lisp_Object Qmouse_click;
-#ifdef WINDOWSNT
+#if defined (WINDOWSNT) || defined (MAC_OS)
 Lisp_Object Qlanguage_change;
 #endif
 Lisp_Object Qdrag_n_drop;
@@ -1021,7 +1020,7 @@ DEFUN ("recursive-edit", Frecursive_edit, Srecursive_edit, 0, 0, "",
        doc: /* Invoke the editor command loop recursively.
 To get out of the recursive edit, a command can do `(throw 'exit nil)';
 that tells this function to return.
-Alternately, `(throw 'exit t)' makes this function signal an error.
+Alternatively, `(throw 'exit t)' makes this function signal an error.
 This function is called by the editor initialization to begin editing.  */)
      ()
 {
@@ -1169,21 +1168,21 @@ cmd_error (data)
     cancel_hourglass ();
 #endif
 
-  if (!NILP (executing_macro))
+  if (!NILP (executing_kbd_macro))
     {
-      if (executing_macro_iterations == 1)
+      if (executing_kbd_macro_iterations == 1)
 	sprintf (macroerror, "After 1 kbd macro iteration: ");
       else
 	sprintf (macroerror, "After %d kbd macro iterations: ",
-		 executing_macro_iterations);
+		 executing_kbd_macro_iterations);
     }
   else
     *macroerror = 0;
 
   Vstandard_output = Qt;
   Vstandard_input = Qt;
-  Vexecuting_macro = Qnil;
-  executing_macro = Qnil;
+  Vexecuting_kbd_macro = Qnil;
+  executing_kbd_macro = Qnil;
   current_kboard->Vprefix_arg = Qnil;
   current_kboard->Vlast_prefix_arg = Qnil;
   cancel_echoing ();
@@ -1284,7 +1283,7 @@ command_loop ()
     {
       Lisp_Object val;
       val = internal_catch (Qexit, command_loop_2, Qnil);
-      executing_macro = Qnil;
+      executing_kbd_macro = Qnil;
       return val;
     }
   else
@@ -1296,7 +1295,7 @@ command_loop ()
 	   other reason.  */
 	any_kboard_state ();
 	internal_catch (Qtop_level, command_loop_2, Qnil);
-	executing_macro = Qnil;
+	executing_kbd_macro = Qnil;
 
 	/* End of file in -batch run causes exit here.  */
 	if (noninteractive)
@@ -1443,16 +1442,6 @@ command_loop_1 ()
 
       if (!NILP (Vdeferred_action_list))
 	safe_run_hooks (Qdeferred_action_function);
-
-      if (!NILP (Vpost_command_idle_hook) && !NILP (Vrun_hooks))
-	{
-	  if (NILP (Vunread_command_events)
-	      && NILP (Vunread_input_method_events)
-	      && NILP (Vunread_post_input_method_events)
-	      && NILP (Vexecuting_macro)
-	      && !NILP (sit_for (0, post_command_idle_delay, 0, 1, 1)))
-	    safe_run_hooks (Qpost_command_idle_hook);
-	}
     }
 
   Vmemory_full = Qnil;
@@ -1578,11 +1567,11 @@ command_loop_1 ()
 	}
 
       cmd = read_key_sequence_cmd;
-      if (!NILP (Vexecuting_macro))
+      if (!NILP (Vexecuting_kbd_macro))
 	{
 	  if (!NILP (Vquit_flag))
 	    {
-	      Vexecuting_macro = Qt;
+	      Vexecuting_kbd_macro = Qt;
 	      QUIT;		/* Make some noise. */
 				/* Will return since macro now empty. */
 	    }
@@ -1681,7 +1670,7 @@ command_loop_1 ()
 		      && EQ (current_buffer->selective_display, Qnil)
 		      && !detect_input_pending ()
 		      && NILP (XWINDOW (selected_window)->column_number_displayed)
-		      && NILP (Vexecuting_macro))
+		      && NILP (Vexecuting_kbd_macro))
 		    direct_output_forward_char (1);
 		  goto directly_done;
 		}
@@ -1716,7 +1705,7 @@ command_loop_1 ()
 		      && EQ (current_buffer->selective_display, Qnil)
 		      && !detect_input_pending ()
 		      && NILP (XWINDOW (selected_window)->column_number_displayed)
-		      && NILP (Vexecuting_macro))
+		      && NILP (Vexecuting_kbd_macro))
 		    direct_output_forward_char (-1);
 		  goto directly_done;
 		}
@@ -1729,7 +1718,7 @@ command_loop_1 ()
 		    = translate_char (Vtranslation_table_for_input,
 				      XFASTINT (last_command_char), 0, 0, 0);
 		  int value;
-		  if (NILP (Vexecuting_macro)
+		  if (NILP (Vexecuting_kbd_macro)
 		      && !EQ (minibuf_window, selected_window))
 		    {
 		      if (!nonundocount || nonundocount >= 20)
@@ -1751,7 +1740,7 @@ command_loop_1 ()
 			  || !EQ (current_buffer->selective_display, Qnil)
 			  || detect_input_pending ()
 			  || !NILP (XWINDOW (selected_window)->column_number_displayed)
-			  || !NILP (Vexecuting_macro));
+			  || !NILP (Vexecuting_kbd_macro));
 
 		  value = internal_self_insert (c, 0);
 
@@ -1779,7 +1768,7 @@ command_loop_1 ()
             int scount = SPECPDL_INDEX ();
 
             if (display_hourglass_p
-                && NILP (Vexecuting_macro))
+                && NILP (Vexecuting_kbd_macro))
               {
                 record_unwind_protect (cancel_hourglass_unwind, Qnil);
                 start_hourglass ();
@@ -1797,7 +1786,7 @@ command_loop_1 ()
 	     hourglass cursor anyway.
 	     But don't cancel the hourglass within a macro
 	     just because a command in the macro finishes.  */
-	  if (NILP (Vexecuting_macro))
+	  if (NILP (Vexecuting_kbd_macro))
             unbind_to (scount, Qnil);
 #endif
           }
@@ -1817,16 +1806,6 @@ command_loop_1 ()
 
       if (!NILP (Vdeferred_action_list))
 	safe_run_hooks (Qdeferred_action_function);
-
-      if (!NILP (Vpost_command_idle_hook) && !NILP (Vrun_hooks))
-	{
-	  if (NILP (Vunread_command_events)
-	      && NILP (Vunread_input_method_events)
-	      && NILP (Vunread_post_input_method_events)
-	      && NILP (Vexecuting_macro)
-	      && !NILP (sit_for (0, post_command_idle_delay, 0, 1, 1)))
-	    safe_run_hooks (Qpost_command_idle_hook);
-	}
 
       /* If there is a prefix argument,
 	 1) We don't want Vlast_command to be ``universal-argument''
@@ -1943,10 +1922,13 @@ adjust_point_for_property (last_pt, modified)
 	      ? get_property_and_range (PT, Qdisplay, &val, &beg, &end, Qnil)
 	      : (beg = OVERLAY_POSITION (OVERLAY_START (overlay)),
 		 end = OVERLAY_POSITION (OVERLAY_END (overlay))))
-	  && beg < PT) /* && end > PT   <- It's always the case.  */
+	  && (beg < PT /* && end > PT   <- It's always the case.  */
+	      || (beg <= PT && STRINGP (val) && SCHARS (val) == 0)))
 	{
 	  xassert (end > PT);
-	  SET_PT (PT < last_pt ? beg : end);
+	  SET_PT (PT < last_pt
+		  ? (STRINGP (val) && SCHARS (val) == 0 ? beg - 1 : beg)
+		  : end);
 	  check_composition = check_invisible = 1;
 	}
       check_display = 0;
@@ -2111,7 +2093,11 @@ poll_for_input (timer)
      struct atimer *timer;
 {
   if (poll_suppress_count == 0)
+#ifdef SYNC_INPUT
+    interrupt_input_pending = 1;
+#else
     poll_for_input_1 ();
+#endif
 }
 
 #endif /* POLL_FOR_INPUT */
@@ -2254,12 +2240,16 @@ make_ctrl_char (c)
   return c;
 }
 
-/* Display help echo in the echo area.
+/* Display the help-echo property of the character after the mouse pointer.
+   Either show it in the echo area, or call show-help-function to display
+   it by other means (maybe in a tooltip).
 
-   HELP a string means display that string, HELP nil means clear the
-   help echo.  If HELP is a function, call it with OBJECT and POS as
-   arguments; the function should return a help string or nil for
-   none.  For all other types of HELP evaluate it to obtain a string.
+   If HELP is nil, that means clear the previous help echo.
+
+   If HELP is a string, display that string.  If HELP is a function,
+   call it with OBJECT and POS as arguments; the function should
+   return a help string or nil for none.  For all other types of HELP,
+   evaluate it to obtain a string.
 
    WINDOW is the window in which the help was generated, if any.
    It is nil if not in a window.
@@ -2303,6 +2293,11 @@ show_help_echo (help, window, object, pos, ok_to_overwrite_keystroke_echo)
       if (!STRINGP (help))
 	return;
     }
+
+#ifdef HAVE_MOUSE
+  if (!noninteractive && STRINGP (help))
+    help = call1 (Qmouse_fixup_help_message, help);
+#endif
 
   if (STRINGP (help) || NILP (help))
     {
@@ -2482,7 +2477,7 @@ read_char (commandflag, nmaps, maps, prev_event, used_mouse_menu)
 
   this_command_key_count_reset = 0;
 
-  if (!NILP (Vexecuting_macro))
+  if (!NILP (Vexecuting_kbd_macro))
     {
       /* We set this to Qmacro; since that's not a frame, nobody will
 	 try to switch frames on us, and the selected window will
@@ -2499,19 +2494,19 @@ read_char (commandflag, nmaps, maps, prev_event, used_mouse_menu)
       /* Exit the macro if we are at the end.
 	 Also, some things replace the macro with t
 	 to force an early exit.  */
-      if (EQ (Vexecuting_macro, Qt)
-	  || executing_macro_index >= XFASTINT (Flength (Vexecuting_macro)))
+      if (EQ (Vexecuting_kbd_macro, Qt)
+	  || executing_kbd_macro_index >= XFASTINT (Flength (Vexecuting_kbd_macro)))
 	{
 	  XSETINT (c, -1);
 	  goto exit;
 	}
 
-      c = Faref (Vexecuting_macro, make_number (executing_macro_index));
-      if (STRINGP (Vexecuting_macro)
+      c = Faref (Vexecuting_kbd_macro, make_number (executing_kbd_macro_index));
+      if (STRINGP (Vexecuting_kbd_macro)
 	  && (XINT (c) & 0x80) && (XUINT (c) <= 0xff))
 	XSETFASTINT (c, CHAR_META | (XINT (c) & ~0x80));
 
-      executing_macro_index++;
+      executing_kbd_macro_index++;
 
       goto from_macro;
     }
@@ -3514,9 +3509,11 @@ readable_events (flags)
      READABLE_EVENTS_FILTER_EVENTS is set, report it as empty.  */
   if (kbd_fetch_ptr != kbd_store_ptr)
     {
-      int have_live_event = 1;
-
-      if (flags & READABLE_EVENTS_FILTER_EVENTS)
+      if (flags & (READABLE_EVENTS_FILTER_EVENTS
+#ifdef USE_TOOLKIT_SCROLL_BARS
+		   | READABLE_EVENTS_IGNORE_SQUEEZABLES
+#endif
+		   ))
         {
           struct input_event *event;
 
@@ -3524,16 +3521,29 @@ readable_events (flags)
                    ? kbd_fetch_ptr
                    : kbd_buffer);
 
-          while (have_live_event && event->kind == FOCUS_IN_EVENT)
-            {
-              event++;
+	  do
+	    {
+	      if (!(
+#ifdef USE_TOOLKIT_SCROLL_BARS
+		    (flags & READABLE_EVENTS_FILTER_EVENTS) &&
+#endif
+		    event->kind == FOCUS_IN_EVENT)
+#ifdef USE_TOOLKIT_SCROLL_BARS
+		  && !((flags & READABLE_EVENTS_IGNORE_SQUEEZABLES)
+		       && event->kind == SCROLL_BAR_CLICK_EVENT
+		       && event->part == scroll_bar_handle
+		       && event->modifiers == 0)
+#endif
+		  )
+		return 1;
+	      event++;
               if (event == kbd_buffer + KBD_BUFFER_SIZE)
                 event = kbd_buffer;
-              if (event == kbd_store_ptr)
-                have_live_event = 0;
-            }
+	    }
+	  while (event != kbd_store_ptr);
         }
-      if (have_live_event) return 1;
+      else
+	return 1;
     }
 
 #ifdef HAVE_MOUSE
@@ -4019,11 +4029,16 @@ kbd_buffer_get_event (kbp, used_mouse_menu)
 	    x_activate_menubar (XFRAME (event->frame_or_window));
 	}
 #endif
-#ifdef WINDOWSNT
+#if defined (WINDOWSNT) || defined (MAC_OS)
       else if (event->kind == LANGUAGE_CHANGE_EVENT)
 	{
+#ifdef MAC_OS
+	  /* Make an event (language-change (KEY_SCRIPT)).  */
+	  obj = Fcons (make_number (event->code), Qnil);
+#else
 	  /* Make an event (language-change (FRAME CHARSET LCID)).  */
 	  obj = Fcons (event->frame_or_window, Qnil);
+#endif
 	  obj = Fcons (Qlanguage_change, Fcons (obj, Qnil));
 	  kbd_fetch_ptr = event + 1;
 	}
@@ -6523,7 +6538,7 @@ lucid_event_type_list_p (object)
    If READABLE_EVENTS_FILTER_EVENTS is set in FLAGS, ignore internal
    events (FOCUS_IN_EVENT).
    If READABLE_EVENTS_IGNORE_SQUEEZABLES is set in FLAGS, ignore mouse
-   movements. */
+   movements and toolkit scroll bar thumb drags. */
 
 static void
 get_input_pending (addr, flags)
@@ -9795,7 +9810,7 @@ DEFUN ("execute-extended-command", Fexecute_extended_command, Sexecute_extended_
 
   /* If enabled, show which key runs this command.  */
   if (!NILP (Vsuggest_key_bindings)
-      && NILP (Vexecuting_macro)
+      && NILP (Vexecuting_kbd_macro)
       && SYMBOLP (function))
     bindings = Fwhere_is_internal (function, Voverriding_local_map,
 				   Qt, Qnil, Qnil);
@@ -10533,7 +10548,7 @@ The elements of this list correspond to the arguments of
 DEFUN ("posn-at-x-y", Fposn_at_x_y, Sposn_at_x_y, 2, 4, 0,
        doc: /* Return position information for pixel coordinates X and Y.
 By default, X and Y are relative to text area of the selected window.
-Optional third arg FRAME_OR_WINDOW non-nil specifies frame or window.
+Optional third arg FRAME-OR-WINDOW non-nil specifies frame or window.
 If optional fourth arg WHOLE is non-nil, X is relative to the left
 edge of the window.
 
@@ -10815,9 +10830,6 @@ syms_of_keyboard ()
   Qpost_command_hook = intern ("post-command-hook");
   staticpro (&Qpost_command_hook);
 
-  Qpost_command_idle_hook = intern ("post-command-idle-hook");
-  staticpro (&Qpost_command_idle_hook);
-
   Qdeferred_action_function = intern ("deferred-action-function");
   staticpro (&Qdeferred_action_function);
 
@@ -10828,7 +10840,7 @@ syms_of_keyboard ()
   staticpro (&Qfunction_key);
   Qmouse_click = intern ("mouse-click");
   staticpro (&Qmouse_click);
-#ifdef WINDOWSNT
+#if defined (WINDOWSNT) || defined (MAC_OS)
   Qlanguage_change = intern ("language-change");
   staticpro (&Qlanguage_change);
 #endif
@@ -10836,7 +10848,7 @@ syms_of_keyboard ()
   staticpro (&Qdrag_n_drop);
 
   Qsave_session = intern ("save-session");
-  staticpro(&Qsave_session);
+  staticpro (&Qsave_session);
 
   Qusr1_signal = intern ("usr1-signal");
   staticpro (&Qusr1_signal);
@@ -10874,6 +10886,11 @@ syms_of_keyboard ()
   staticpro (&Qvertical_scroll_bar);
   Qmenu_bar = intern ("menu-bar");
   staticpro (&Qmenu_bar);
+
+#ifdef HAVE_MOUSE
+  Qmouse_fixup_help_message = intern ("mouse-fixup-help-message");
+  staticpro (&Qmouse_fixup_help_message);
+#endif
 
   Qabove_handle = intern ("above-handle");
   staticpro (&Qabove_handle);
@@ -11257,16 +11274,6 @@ If an unhandled error happens in running this hook,
 the hook value is set to nil, since otherwise the error
 might happen repeatedly and make Emacs nonfunctional.  */);
   Vpost_command_hook = Qnil;
-
-  DEFVAR_LISP ("post-command-idle-hook", &Vpost_command_idle_hook,
-	       doc: /* Normal hook run after each command is executed, if idle.
-Errors running the hook are caught and ignored.  */);
-  Vpost_command_idle_hook = Qnil;
-
-  DEFVAR_INT ("post-command-idle-delay", &post_command_idle_delay,
-	      doc: /* Delay time before running `post-command-idle-hook'.
-This is measured in microseconds.  */);
-  post_command_idle_delay = 100000;
 
 #if 0
   DEFVAR_LISP ("echo-area-clear-hook", ...,

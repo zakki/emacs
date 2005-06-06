@@ -1,6 +1,7 @@
 ;;; eldoc.el --- show function arglist or variable docstring in echo area
 
-;; Copyright (C) 1996, 97, 98, 99, 2000, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2003, 2005
+;;   Free Software Foundation, Inc.
 
 ;; Author: Noah Friedman <friedman@splode.com>
 ;; Maintainer: friedman@splode.com
@@ -44,7 +45,7 @@
 
 ;; Major modes for other languages may use Eldoc by defining an
 ;; appropriate function as the buffer-local value of
-;; `eldoc-print-current-symbol-info-function'.
+;; `eldoc-documentation-function'.
 
 ;;; Code:
 
@@ -138,19 +139,14 @@ truncated to make more of the arglist or documentation string visible."
 ;;;###autoload
 (define-minor-mode eldoc-mode
   "Toggle ElDoc mode on or off.
-Show the defined parameters for the elisp function near point.
-
-For the emacs lisp function at the beginning of the sexp which point is
-within, show the defined parameters for the function in the echo area.
-This information is extracted directly from the function or macro if it is
-in pure lisp.  If the emacs function is a subr, the parameters are obtained
-from the documentation string if possible.
-
-If point is over a documented variable, print that variable's docstring
-instead.
+In ElDoc mode, the echo area displays information about a
+function or variable in the text where point is.  If point is
+on a documented variable, it displays the first line of that
+variable's doc string.  Otherwise it displays the argument list
+of the function called in the expression point is on.
 
 With prefix ARG, turn ElDoc mode on if and only if ARG is positive."
-  nil eldoc-minor-mode-string nil
+  :group 'eldoc :lighter eldoc-minor-mode-string
   (setq eldoc-last-message nil)
   (if eldoc-mode
       (progn
@@ -166,7 +162,6 @@ With prefix ARG, turn ElDoc mode on if and only if ARG is positive."
   (eldoc-mode 1))
 
 
-;; Idle timers are part of Emacs 19.31 and later.
 (defun eldoc-schedule-timer ()
   (or (and eldoc-timer
            (memq eldoc-timer timer-idle-list))
@@ -234,7 +229,8 @@ With prefix ARG, turn ElDoc mode on if and only if ARG is positive."
        (not (eq (selected-window) (minibuffer-window)))))
 
 
-(defvar eldoc-print-current-symbol-info-function nil
+;;;###autoload
+(defvar eldoc-documentation-function nil
   "If non-nil, function to call to return doc string.
 The function of no args should return a one-line string for displaying
 doc about a function etc. appropriate to the context around point.
@@ -248,8 +244,8 @@ Emacs Lisp mode) that support Eldoc.")
 (defun eldoc-print-current-symbol-info ()
   (condition-case err
       (and (eldoc-display-message-p)
-	   (if eldoc-print-current-symbol-info-function
-	       (eldoc-message (funcall eldoc-print-current-symbol-info-function))
+	   (if eldoc-documentation-function
+	       (eldoc-message (funcall eldoc-documentation-function))
 	     (let* ((current-symbol (eldoc-current-symbol))
 		    (current-fnsym  (eldoc-fnsym-in-current-sexp))
 		    (doc (cond

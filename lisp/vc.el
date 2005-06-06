@@ -1,7 +1,7 @@
 ;;; vc.el --- drive a version-control system from within Emacs
 
 ;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998,
-;;   2000, 2001, 2003, 2004  Free Software Foundation, Inc.
+;;   2000, 2001, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 ;; Author:     FSF (see below for full credits)
 ;; Maintainer: Andre Spiegel <spiegel@gnu.org>
@@ -46,7 +46,8 @@
 
 ;; This mode is fully documented in the Emacs user's manual.
 ;;
-;; Supported version-control systems presently include SCCS, RCS, and CVS.
+;; Supported version-control systems presently include CVS, RCS, GNU Arch,
+;; Subversion, Meta-CVS, and SCCS (or its free replacement, CSSC).
 ;;
 ;; Some features will not work with old RCS versions.  Where
 ;; appropriate, VC finds out which version you have, and allows or
@@ -68,7 +69,7 @@
 ;;
 ;; The vc code maintains some internal state in order to reduce expensive
 ;; version-control operations to a minimum.  Some names are only computed
-;; once.  If you perform version control operations with RCS/SCCS/CVS while
+;; once.  If you perform version control operations with the backend while
 ;; vc's back is turned, or move/rename master files while vc is running,
 ;; vc may get seriously confused.  Don't do these things!
 ;;
@@ -616,23 +617,23 @@ version control backend imposes itself."
 
 ;; Annotate customization
 (defcustom vc-annotate-color-map
-  '(( 20. . "#FF0000")
-    ( 40. . "#FF3800")
-    ( 60. . "#FF7000")
-    ( 80. . "#FFA800")
-    (100. . "#FFE000")
-    (120. . "#E7FF00")
-    (140. . "#AFFF00")
-    (160. . "#77FF00")
-    (180. . "#3FFF00")
-    (200. . "#07FF00")
-    (220. . "#00FF31")
-    (240. . "#00FF69")
-    (260. . "#00FFA1")
-    (280. . "#00FFD9")
-    (300. . "#00EEFF")
-    (320. . "#00B6FF")
-    (340. . "#007EFF"))
+  '(( 20. . "#FFCC00")
+    ( 40. . "#FF6666")
+    ( 60. . "#FF6600")
+    ( 80. . "#FF3300")
+    (100. . "#FF00FF")
+    (120. . "#FF0000")
+    (140. . "#CCCC00")
+    (160. . "#CC00CC")
+    (180. . "#BC8F8F")
+    (200. . "#99CC00")
+    (220. . "#999900")
+    (240. . "#7AC5CD")
+    (260. . "#66CC00")
+    (280. . "#33CC33")
+    (300. . "#00CCFF")
+    (320. . "#00CC99")
+    (340. . "#0099FF"))
   "*Association list of age versus color, for \\[vc-annotate].
 Ages are given in units of fractional days.  Default is eighteen steps
 using a twenty day increment."
@@ -737,6 +738,7 @@ in their implementation of vc-BACKEND-diff.")
 ;; functions that operate on RCS revision numbers.  This code should
 ;; also be moved into the backends.  It stays for now, however, since
 ;; it is used in code below.
+;;;###autoload
 (defun vc-trunk-p (rev)
   "Return t if REV is a revision on the trunk."
   (not (eq nil (string-match "\\`[0-9]+\\.[0-9]+\\'" rev))))
@@ -962,8 +964,10 @@ that is inserted into the command line before the filename."
 	    ;; start-process does not support remote execution
 	    (setq okstatus nil))
 	(if (eq okstatus 'async)
-	    (let ((proc (apply 'start-process command (current-buffer) command
-			       squeezed)))
+	    (let ((proc
+		   (let ((process-connection-type nil))
+		     (apply 'start-process command (current-buffer) command
+			    squeezed))))
               (unless (active-minibuffer-window)
                 (message "Running %s in the background..." command))
 	      ;;(set-process-sentinel proc (lambda (p msg) (delete-process p)))

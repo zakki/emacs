@@ -1,6 +1,6 @@
 ;;; cc-fonts.el --- font lock support for CC Mode
 
-;; Copyright (C) 2002, 03 Free Software Foundation, Inc.
+;; Copyright (C) 2002, 2003, 2005 Free Software Foundation, Inc.
 
 ;; Authors:    2003- Alan Mackenzie
 ;;             2002- Martin Stjernholm
@@ -194,7 +194,7 @@
 (unless (c-face-name-p c-invalid-face-name)
   (defconst c-invalid-face 'c-invalid-face) ; Necessary in Emacs 19.
   (defface c-invalid-face
-    '((((class color) (background light)) (:foreground "red"))
+    '((((class color) (background light)) (:foreground "red1"))
       (((class color)) (:foreground "hotpink"))
       (t (:inverse-video t)))
     "Face used to highlight invalid syntax."
@@ -495,6 +495,12 @@ stuff.  Used on level 1 and higher."
 			 "[" (c-lang-const c-symbol-chars) "]+"
 			 "\\)")
 		 `(,(1+ ncle-depth) c-preprocessor-face-name t)))
+
+	      ;; fontify the n in ifndef
+	      (,(concat noncontinued-line-end
+			(c-lang-const c-opt-cpp-prefix)
+			"if\\(n\\)def\\>")
+	       ,(+ ncle-depth 1) font-lock-negation-char-face prepend)
 	      )))
 
       ,@(when (c-major-mode-is 'pike-mode)
@@ -666,6 +672,8 @@ casts and declarations are fontified.  Used on level 2 and higher."
 		      (narrow-to-region (point-min) limit)
 		      (c-font-lock-objc-iip-decl)))
 		  nil))))))
+
+      ("\\(!\\)[^=]" 1 font-lock-negation-char-face)
       ))
 
 (defun c-font-lock-complex-decl-prepare (limit)
@@ -867,7 +875,7 @@ casts and declarations are fontified.  Used on level 2 and higher."
 	       ;; with array initializers.  Otherwise stop at braces
 	       ;; to avoid going past full function and class blocks.
 	       (and (if (and (eq got-init ?=)
-			     (= (c-forward-token-2) 0)
+			     (= (c-forward-token-2 1 nil limit) 0)
 			     (looking-at "{"))
 			(c-safe (c-forward-sexp) t)
 		      t)

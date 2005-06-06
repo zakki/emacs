@@ -683,7 +683,9 @@ height."
   :group 'table)
 
 (defface table-cell-face
-  '((((class color))
+  '((((min-colors 88) (class color))
+     (:foreground "gray90" :background "blue1"))
+    (((class color))
      (:foreground "gray90" :background "blue"))
     (t (:bold t)))
   "*Face used for table cell contents."
@@ -840,7 +842,8 @@ simply by any key input."
   :group 'table-hooks)
 
 (defcustom table-yank-handler '(nil nil t nil)
-  "*yank-handler for table.")
+  "*yank-handler for table."
+  :group 'table)
 
 (setplist 'table-disable-incompatibility-warning nil)
 
@@ -1269,7 +1272,7 @@ This is always set to nil at the entry to `table-with-cache-buffer' before execu
   (if (featurep 'xemacs)
       (progn
 	(easy-menu-add-item nil '("Tools") table-global-menu-map))
-    (easy-menu-add-item (current-global-map) '("menu-bar" "tools") '("--"))
+    (easy-menu-add-item (current-global-map) '("menu-bar" "tools") "--")
     (easy-menu-add-item (current-global-map) '("menu-bar" "tools") table-global-menu-map)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

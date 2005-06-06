@@ -1,6 +1,6 @@
 ;;; midnight.el --- run something every midnight, e.g., kill old buffers
 
-;;; Copyright (C) 1998, 2004 Free Software Foundation, Inc.
+;;; Copyright (C) 1998, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Sam Steingold <sds@usa.net>
 ;; Maintainer: Sam Steingold <sds@usa.net>
@@ -47,6 +47,11 @@
   "Run something every day at midnight."
   :group 'calendar
   :version "20.3")
+
+(defvar midnight-timer nil
+  "Timer running the `midnight-hook' `midnight-delay' seconds after midnight.
+Use `cancel-timer' to stop it and `midnight-delay-set' to change
+the time when it is run.")
 
 (defcustom midnight-mode nil
   "*Non-nil means run `midnight-hook' at midnight.
@@ -204,18 +209,13 @@ The default value is `clean-buffer-list'."
   (multiple-value-bind (sec min hrs) (decode-time)
     (- (* 24 60 60) (* 60 60 hrs) (* 60 min) sec)))
 
-(defvar midnight-timer nil
-  "Timer running the `midnight-hook' `midnight-delay' seconds after midnight.
-Use `cancel-timer' to stop it and `midnight-delay-set' to change
-the time when it is run.")
-
 ;;;###autoload
 (defun midnight-delay-set (symb tm)
   "Modify `midnight-timer' according to `midnight-delay'.
 Sets the first argument SYMB (which must be symbol `midnight-delay')
 to its second argument TM."
   (assert (eq symb 'midnight-delay) t
-          "Illegal argument to `midnight-delay-set': `%s'")
+          "Invalid argument to `midnight-delay-set': `%s'")
   (set symb tm)
   (when (timerp midnight-timer) (cancel-timer midnight-timer))
   (setq midnight-timer

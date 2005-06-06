@@ -1,3 +1,429 @@
+2005-05-29  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* modes.texi (Major Mode Conventions): A derived mode only needs
+	to put the call to the parent mode inside `delay-mode-hooks'.
+
+2005-05-29  Richard M. Stallman  <rms@gnu.org>
+
+	* modes.texi (Mode Hooks): Explain that after-change-major-mode-hook is
+	new, and what that implies.  Clarify.
+
+	* files.texi (Locating Files): Clean up the text.
+
+	* frames.texi (Window Frame Parameters): Document user-size.
+	Shorten entry for top by referring to left.
+
+2005-05-26  Richard M. Stallman  <rms@gnu.org>
+
+	* modes.texi (Mode Hooks): Explain that after-change-major-mode-hook
+	is new, and what the implications are.  Other clarifications.
+
+2005-05-24  Richard M. Stallman  <rms@gnu.org>
+
+	* frames.texi (Dialog Boxes): Minor fixes.
+
+2005-05-25  Masatake YAMATO  <jet@gyve.org>
+
+	* display.texi (Standard Faces): Write about `mode-line-highlight'.
+
+2005-05-24  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* frames.texi (Dialog Boxes): HEADER argument to `x-popup-dialog'
+	is optional.
+
+2005-05-24  Nick Roberts  <nickrob@snap.net.nz>
+
+	* frames.texi (Dialog Boxes): Descibe new optional argument.
+
+2005-05-23  Lute Kamstra  <lute@gnu.org>
+
+	* modes.texi (Font Lock Basics, Syntactic Font Lock): Recommend
+	syntax-begin-function over font-lock-beginning-of-syntax-function.
+
+2005-05-21  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* minibuf.texi (Reading File Names): Update description of
+	`read-directory-name'.
+
+	* modes.texi (Derived Modes): Clarify :group keyword.
+
+2005-05-21  Eli Zaretskii  <eliz@gnu.org>
+
+	* files.texi (Locating Files): New subsection.  Describe
+	locate-file and executable-find.
+
+2005-05-21  Kevin Ryde  <user42@zip.com.au>
+
+	* frames.texi (Initial Parameters): Update cross reference to
+	"Emacs Invocation".
+
+2005-05-19  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* keymaps.texi (Active Keymaps): Add anchor.
+
+	* modes.texi (Hooks): Delete confusing and unnecessary sentence.
+	(Major Mode Conventions): Refer to `Auto Major Mode' in more
+	appropriate place.
+	(Derived Modes): Small clarifications.
+	(Minor Mode Conventions, Keymaps and Minor Modes): Replace
+	references to nodes with references to anchors.
+	(Mode Line Data): Warn that `(:eval FORM)' should not load any files.
+	Clarify description of lists whose first element is an integer.
+	(Mode Line Variables): Add anchor.
+	(%-Constructs): Clarify description of integer after %.
+	(Emulating Mode Line): Describe nil value for FACE.
+
+2005-05-18  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* modes.texi (Derived Modes): Correct references to non-existing
+	variable standard-syntax-table.
+
+2005-05-17  Lute Kamstra  <lute@gnu.org>
+
+	* modes.texi (Defining Minor Modes): Mention the mode hook.
+
+2005-05-15  Kim F. Storm  <storm@cua.dk>
+
+	* processes.texi (Network): Remove open-network-stream-nowait.
+	(Network Servers): Remove open-network-stream-server.
+
+2005-05-15  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* elisp.texi (Top): Update detailed menu.
+
+	* variables.texi: Reorder nodes.
+	(Variables): Update menu.
+	(File Local Variables): Do not refer to the `-*-' line as
+	a "local variables list".  Add pxref.
+
+2005-05-14  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* elisp.texi (Top): Update detailed menu for node changes.
+
+	* modes.texi (Modes): Update Menu.
+	(Hooks):  Move to beginning of chapter.
+	Most minor modes run mode hooks too.
+	`add-hook' can handle void hooks or hooks whose value is a single
+	function.
+	(Major Modes): Update Menu.
+	(Major Mode Basics): New node, split off from `Major Modes'.
+	(Major Mode Conventions): Correct xref.  Explain how to handle
+	auto-mode-alist if the major mode command has an autoload cookie.
+	(Auto Major Mode): Major update.  Add magic-mode-alist.
+	(Derived Modes): Major update.
+	(Mode Line Format): Update Menu.
+	(Mode Line Basics): New node, split off from `Mode Line Format'.
+
+	* loading.texi (Autoload): Mention `autoload cookie' as synonym
+	for `magic autoload comment'.  Add index entries and anchor.
+
+2005-05-14  Richard M. Stallman  <rms@gnu.org>
+
+	* tips.texi (Coding Conventions): Explain how important it is
+	that just loading certain files not change Emacs behavior.
+
+	* modes.texi (Defining Minor Modes): Define define-global-minor-mode.
+
+2005-05-12  Lute Kamstra  <lute@gnu.org>
+
+	* modes.texi (Generic Modes): Update.
+	(Major Modes): Refer to node "Generic Modes".
+
+	* elisp.texi (Top): Update to the current structure of the manual.
+	* processes.texi (Processes): Add menu description.
+	* customize.texi (Customization): Add menu descriptions.
+
+2005-05-11  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	* processes.texi (Signals to Processes)
+	(Low-Level Network): Fix typos.
+
+2005-05-11  Lute Kamstra  <lute@gnu.org>
+
+	* elisp.texi (Top): Add some nodes from the chapter "Major and
+	Minor Modes" to the detailed node listing.
+
+2005-05-10  Richard M. Stallman  <rms@gnu.org>
+
+	* keymaps.texi (Extended Menu Items): Menu item filter functions
+	can be called at any time.
+
+2005-05-08  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* variables.texi (File Local Variables): `(hack-local-variables t)'
+	now also checks whether a mode is specified in the local variables
+	list.
+
+2005-05-05  Kevin Ryde  <user42@zip.com.au>
+
+	* display.texi (The Echo Area): Correct format function cross
+	reference.
+
+2005-05-05  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* variables.texi (Variable Aliases): Change description of
+	`define-obsolete-variable-alias'.
+
+	* functions.texi (Functions): Add "Obsolete Functions" to menu.
+	(Defining Functions): Add xref.
+	(Obsolete Functions): New node.
+	(Function Safety): Standardize capitalization of section title.
+
+	* frames.texi (Pop-Up Menus): Complete description of `x-popup-menu'.
+	(Dialog Boxes): Complete description of `x-popup-dialog'.
+
+2005-05-04  Richard M. Stallman  <rms@gnu.org>
+
+	* commands.texi (Interactive Codes): Fix Texinfo usage.
+	Document U more clearly.
+
+2005-05-01  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* variables.texi (Variable Aliases): `make-obsolete-variable' is a
+	function and not a macro.
+
+	* frames.texi (Pop-Up Menus): Correct and clarify description of
+	`x-popup-menu'.
+	(Dialog Boxes): Clarify description of `x-popup-dialog'.
+
+2005-05-01  Richard M. Stallman  <rms@gnu.org>
+
+	* edebug.texi (Checking Whether to Stop): Fix previous change.
+
+2005-05-01  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* display.texi: Fix typos and Texinfo usage.
+
+	* edebug.texi (Checking Whether to Stop): executing-macro ->
+	executing-kbd-macro.
+
+2005-05-01  Richard M. Stallman  <rms@gnu.org>
+
+	* display.texi (Invisible Text): Correct add-to-invisibility-spec.
+
+2005-04-30  Richard M. Stallman  <rms@gnu.org>
+
+	* files.texi (Magic File Names): Document `operations' property.
+
+2005-04-29  Lute Kamstra  <lute@gnu.org>
+
+	* modes.texi (Generic Modes): New node.
+	(Major Modes): Add it to the menu.
+	(Derived Modes): Add "derived mode" to concept index.
+
+2005-04-28  Lute Kamstra  <lute@gnu.org>
+
+	* modes.texi (Defining Minor Modes): Fix previous change.
+	(Font Lock Mode): Simplify.
+	(Font Lock Basics): Say that font-lock-defaults is buffer-local
+	when set and that some parts are optional.  Add cross references.
+	(Search-based Fontification): Say how to specify font-lock-keywords.
+	Add cross references.  Add font-lock-multiline to index.  Move
+	font-lock-keywords-case-fold-search here from node "Other Font
+	Lock Variables".  Document font-lock-add-keywords and
+	font-lock-remove-keywords
+	(Other Font Lock Variables): Move font-lock-keywords-only,
+	font-lock-syntax-table, font-lock-beginning-of-syntax-function,
+	and font-lock-syntactic-face-function to node "Syntactic Font
+	Lock".  Move font-lock-keywords-case-fold-search to node
+	"Search-based Fontification".  Document font-lock-inhibit-thing-lock
+	and font-lock-{,un}fontify-{buffer,region}-function.
+	(Precalculated Fontification): Remove reference to deleted variable
+	font-lock-core-only.
+	(Faces for Font Lock): Add font-lock-comment-delimiter-face.
+	(Syntactic Font Lock): Add intro.  Move font-lock-keywords-only,
+	font-lock-syntax-table, font-lock-beginning-of-syntax-function,
+	and font-lock-syntactic-face-function here from node "Other Font
+	Lock Variables".  Move font-lock-syntactic-keywords to "Setting
+	Syntax Properties".  Add cross references.
+	(Setting Syntax Properties): New node.  Move
+	font-lock-syntactic-keywords here from "Syntactic Font Lock".
+	* syntax.texi (Syntax Properties): Add cross reference.
+	* hooks.texi (Standard Hooks): Add Font-Lock hooks.
+
+2005-04-26  Richard M. Stallman  <rms@gnu.org>
+
+	* display.texi (Defining Faces):
+	Document `default' elements of defface spec.
+
+	* modes.texi (Major Mode Conventions): Explain customizing ElDoc mode.
+
+	* variables.texi (Variable Aliases): Clarify text.
+
+2005-04-25  Chong Yidong  <cyd@stupidchicken.com>
+
+	* windows.texi (Window Hooks): Remove reference to obsolete Lazy Lock.
+
+2005-04-25  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* hooks.texi (Standard Hooks): Most minor modes have mode hooks too.
+
+2005-04-24  Eli Zaretskii  <eliz@gnu.org>
+
+	* syntax.texi (Syntax Table Internals): Elaborate documentation of
+	syntax-after and syntax-class.
+
+	* files.texi (Changing Files): Fix last change's cross-reference.
+	(Unique File Names): Don't mention "numbers" in the documentation
+	of make-temp-file and make-temp-name.
+
+2005-04-23  Richard M. Stallman  <rms@gnu.org>
+
+	* files.texi (Changing Files): Document MUSTBENEW arg in copy-file.
+
+2005-04-22  Nick Roberts  <nickrob@snap.net.nz>
+
+	* windows.texi (Cyclic Window Ordering): Clarify window-list.
+
+2005-04-22  Nick Roberts  <nickrob@snap.net.nz>
+
+	* variables.texi (Variable Aliases): Describe make-obsolete-variable
+	and define-obsolete-variable-alias.
+
+2005-04-22  Kim F. Storm  <storm@cua.dk>
+
+	* symbols.texi (Symbol Plists): Remove safe-get, as get is now safe.
+	(Other Plists): Remove safe-plist-get, as plist-get is now safe.
+
+2005-04-21  Lute Kamstra  <lute@gnu.org>
+
+	* lists.texi (Association Lists): Document rassq-delete-all.
+
+2005-04-19  Richard M. Stallman  <rms@gnu.org>
+
+	* modes.texi (Search-based Fontification): Explain that
+	facespec is an expression to be evaluated.
+
+2005-04-19  Kevin Ryde  <user42@zip.com.au>
+
+        * streams.texi (Output Functions): Fix xref.
+	* strings.texi (String Conversion): Fix xref.
+
+2005-04-19  Kim F. Storm  <storm@cua.dk>
+
+	* symbols.texi (Symbol Plists): Add safe-get.
+	Mention that `get' may signal an error.
+
+2005-04-18  Nick Roberts  <nickrob@snap.net.nz>
+
+	* customize.texi (Variable Definitions): Replace tooltip-mode
+	example with save-place.
+
+2005-04-17  Richard M. Stallman  <rms@gnu.org>
+
+	* buffers.texi (Indirect Buffers): Clarify.
+
+	* positions.texi (Positions): Clarify converting marker to integer.
+
+	* strings.texi (String Basics): Mention string-match; clarify.
+
+2005-04-08  Lute Kamstra  <lute@gnu.org>
+
+	* modes.texi (Search-based Fontification): Fix cross references.
+	Use consistent terminology.  Document anchored highlighting.
+
+2005-04-05  Lute Kamstra  <lute@gnu.org>
+
+	* modes.texi (Defining Minor Modes): Document :group keyword
+	argument and its default value.
+
+2005-04-03  Lute Kamstra  <lute@gnu.org>
+
+	* hooks.texi (Standard Hooks): Add some hooks.  Add cross
+	references and/or descriptions.  Delete major mode hooks; mention
+	them as a category instead.  Rename or delete obsolete hooks.
+
+2005-04-02  Richard M. Stallman  <rms@gnu.org>
+
+	* nonascii.texi (Coding System Basics): Another wording cleanup.
+
+2005-04-01  Richard M. Stallman  <rms@gnu.org>
+
+	* nonascii.texi (Coding System Basics): Clarify previous change.
+
+2005-04-01  Kenichi Handa  <handa@m17n.org>
+
+	* nonascii.texi (Coding System Basics): Describe about rondtrip
+	identity of coding systems.
+
+2005-03-29  Chong Yidong  <cyd@stupidchicken.com>
+
+	* text.texi (Buffer Contents): Add filter-buffer-substring and
+	buffer-substring-filters.
+
+2005-03-26  Chong Yidong  <cyd@stupidchicken.com>
+
+	* anti.texi (Antinews): Mention `G' interactive code.
+
+	* tips.texi (Compilation Tips): Mention benchmark.el.
+
+2005-03-27  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* modes.texi (Other Font Lock Variables): `font-lock-fontify-block'
+	is now bound to M-o M-o.
+
+	* keymaps.texi (Prefix Keys): `facemenu-keymap' is now on M-o.
+
+2005-03-26  Glenn Morris  <gmorris@ast.cam.ac.uk>
+
+	* calendar.texi: Delete file (and move contents to emacs-xtra.texi
+	in the Emacs Manual).
+	* Makefile.in (srcs): Remove calendar.texi.
+	* makefile.w32-in (srcs): Remove calendar.texi.
+	* display.texi (Display): Change name of next node.
+	* os.texi (System In): Change name of previous node.
+	* elisp.texi (Top): Remove Calendar references.
+	* vol1.texi (Top): Remove Calendar references.
+	* vol2.texi (Top): Remove Calendar references.
+
+2005-03-25  Richard M. Stallman  <rms@gnu.org>
+
+	* display.texi (Standard Faces, Fringe Bitmaps, Customizing Bitmaps):
+	Cleanup previous change.
+
+2005-03-25  Chong Yidong  <cyd@stupidchicken.com>
+
+	* display.texi (Face Attributes): Faces earlier in an :inherit
+	list take precedence.
+	(Scroll Bars): Fix description of vertical-scroll-bars.
+	Document frame-current-scroll-bars and window-current-scroll-bars.
+
+	* markers.texi (The Mark): Document temporary Transient Mark mode.
+
+	* minibuf.texi (Reading File Names): Document
+	read-file-name-completion-ignore-case.
+
+	* positions.texi (Screen Lines): Document nil for width argument
+	to compute-motion.
+
+2005-03-23  Kim F. Storm  <storm@cua.dk>
+
+	* display.texi (Standard Faces): Other faces used in the fringe
+	implicitly inherits from the fringe face.
+	(Fringe Bitmaps): FACE in right-fringe and left-fringe display
+	properties implicitly inherits from fringe face.
+	(Customizing Bitmaps): Likewise for set-fringe-bitmap-face.
+
+2005-03-20  Chong Yidong  <cyd@stupidchicken.com>
+
+	* display.texi (Invisible Text): State default value of
+	line-move-ignore-invisible.
+	(Managing Overlays): Document remove-overlays.
+	(Standard Faces): Document escape-glyph face.
+
+	* minibuf.texi (Reading File Names): Document
+	read-file-name-function.
+
+	* modes.texi (Other Font Lock Variables): Document
+	font-lock-lines-before.
+
+	* positions.texi (Skipping Characters): skip-chars-forward allows
+	character classes.
+
+2005-03-18  Lute Kamstra  <lute@gnu.org>
+
+	* edebug.texi (Instrumenting Macro Calls): Fix another typo.
+
 2005-03-17  Richard M. Stallman  <rms@gnu.org>
 
 	* text.texi (Undo): Document extensible undo entries.
@@ -909,7 +1335,7 @@
 
 	* hooks.texi (Standard Hooks): `disabled-command-hook' has been
 	renamed to `disabled-command-function'.
-	* commands.texi (Key Sequence Input): Remove unnecessary anchor,
+	* commands.texi (Key Sequence Input): Remove unnecessary anchor.
 	(Command Loop Info): Replace reference to it.
 	(Disabling Commands): `disabled-command-hook' has been renamed to
 	`disabled-command-function'.
@@ -2246,7 +2672,7 @@
 
 	* files.texi (Changing Files): copy-file allows dir as NEWNAME.
 	(Magic File Names): Specify precedence order of handlers.
-o
+
 	* commands.texi (Command Overview): Emacs server runs pre-command-hook
 	and post-command-hook.
 	(Waiting): New calling convention for sit-for.

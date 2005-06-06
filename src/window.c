@@ -1,7 +1,7 @@
 /* Window creation, deletion and examination for GNU Emacs.
    Does not include redisplay.
-   Copyright (C) 1985,86,87, 1993,94,95,96,97,98, 2000,01,02,03,04
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1996, 1997, 1998, 2000,
+     2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -78,10 +78,6 @@ static int foreach_window_1 P_ ((struct window *,
 				 int (* fn) (struct window *, void *),
 				 void *));
 static Lisp_Object window_list_1 P_ ((Lisp_Object, Lisp_Object, Lisp_Object));
-
-/* The value of `window-size-fixed'.  */
-
-int window_size_fixed;
 
 /* This is the window in which the terminal's cursor should
    be left when nothing is being done with it.  This must
@@ -286,7 +282,6 @@ make_window ()
   p->fringes_outside_margins = Qnil;
   p->scroll_bar_width = Qnil;
   p->vertical_scroll_bar_type = Qt;
-  p->overlay_arrow_bitmap = 0;
 
   Vwindow_list = Qnil;
   return val;
@@ -549,7 +544,7 @@ display margins, fringes, header line, and/or mode line.  */)
 			     + WINDOW_LEFT_FRINGE_COLS (w)),
 		make_number (WINDOW_TOP_EDGE_LINE (w)
 			     + WINDOW_HEADER_LINE_LINES (w)),
-		make_number (WINDOW_RIGHT_EDGE_COL (w)
+		make_number (WINDOW_BOX_RIGHT_EDGE_COL (w)
 			     - WINDOW_RIGHT_MARGIN_COLS (w)
 			     - WINDOW_RIGHT_FRINGE_COLS (w)),
 		make_number (WINDOW_BOTTOM_EDGE_LINE (w)
@@ -573,7 +568,7 @@ display margins, fringes, header line, and/or mode line.  */)
 			     + WINDOW_LEFT_FRINGE_WIDTH (w)),
 		make_number (WINDOW_TOP_EDGE_Y (w)
 			     + WINDOW_HEADER_LINE_HEIGHT (w)),
-		make_number (WINDOW_RIGHT_EDGE_X (w)
+		make_number (WINDOW_BOX_RIGHT_EDGE_X (w)
 			     - WINDOW_RIGHT_MARGIN_WIDTH (w)
 			     - WINDOW_RIGHT_FRINGE_WIDTH (w)),
 		make_number (WINDOW_BOTTOM_EDGE_Y (w)
@@ -3171,6 +3166,9 @@ selects the buffer of the selected window before each command.  */)
   if (EQ (window, selected_window))
     return window;
 
+  /* Store the current buffer's actual point into the
+     old selected window.  It belongs to that window,
+     and when the window is not selected, must be in the window.  */
   if (!NILP (selected_window))
     {
       ow = XWINDOW (selected_window);
@@ -3265,9 +3263,10 @@ display_buffer_1 (window)
 
 DEFUN ("special-display-p", Fspecial_display_p, Sspecial_display_p, 1, 1, 0,
        doc: /* Returns non-nil if a buffer named BUFFER-NAME gets a special frame.
-If the value is t, a frame would be created for that buffer
-using the default frame parameters.  If the value is a list,
-it is a list of frame parameters that would be used
+If the value is t, `display-buffer' or `pop-to-buffer' would create a
+special frame for that buffer using the default frame parameters.
+
+If the value is a list, it is a list of frame parameters that would be used
 to make a frame for that buffer.
 The variables `special-display-buffer-names'
 and `special-display-regexps' control this.  */)
@@ -3301,7 +3300,9 @@ and `special-display-regexps' control this.  */)
 }
 
 DEFUN ("same-window-p", Fsame_window_p, Ssame_window_p, 1, 1, 0,
-       doc: /* Returns non-nil if a new buffer named BUFFER-NAME would use the same window.
+       doc: /* Returns non-nil if a buffer named BUFFER-NAME would use the same window.
+More precisely, if `display-buffer' or `pop-to-buffer' would display
+that buffer in the selected window rather than (as usual) in some other window.
 See `same-window-buffer-names' and `same-window-regexps'.  */)
      (buffer_name)
      Lisp_Object buffer_name;
@@ -5591,7 +5592,20 @@ the return value is nil.  Otherwise the value is t.  */)
       if (XBUFFER (new_current_buffer) == current_buffer)
 	old_point = PT;
       else
-	old_point = BUF_PT (XBUFFER (new_current_buffer));
+	/* BUF_PT (XBUFFER (new_current_buffer)) gives us the position of
+	   point in new_current_buffer as of the last time this buffer was
+	   used.  This can be non-deterministic since it can be changed by
+	   things like jit-lock by mere temporary selection of some random
+	   window that happens to show this buffer.
+	   So if possible we want this arbitrary choice of "which point" to
+	   be the one from the to-be-selected-window so as to prevent this
+	   window's cursor from being copied from another window.  */
+	if (EQ (XWINDOW (data->current_window)->buffer, new_current_buffer)
+	    /* If current_window = selected_window, its point is in BUF_PT.  */
+	    && !EQ (selected_window, data->current_window))
+	  old_point = XMARKER (XWINDOW (data->current_window)->pointm)->charpos;
+	else
+	  old_point = BUF_PT (XBUFFER (new_current_buffer));
     }
 
   frame = XWINDOW (SAVED_WINDOW_N (saved_windows, 0)->window)->frame;
@@ -5636,8 +5650,9 @@ the return value is nil.  Otherwise the value is t.  */)
 #endif
 #endif
 
-      /* "Swap out" point from the selected window
-	 into its buffer.  We do this now, before
+      /* "Swap out" point from the selected window's buffer
+	 into the window itself.  (Normally the pointm of the selected
+	 window holds garbage.)  We do this now, before
 	 restoring the window contents, and prevent it from
 	 being done later on when we select a new window.  */
       if (! NILP (XWINDOW (selected_window)->buffer))
@@ -5787,10 +5802,11 @@ the return value is nil.  Otherwise the value is t.  */)
       FRAME_ROOT_WINDOW (f) = data->root_window;
       /* Prevent "swapping out point" in the old selected window
 	 using the buffer that has been restored into it.
-	 Use the point value from the beginning of this function
-	 since unshow_buffer (called from delete_all_subwindows)
-	 could have altered it.  */
+	 We already swapped out point that from that window's old buffer.  */
       selected_window = Qnil;
+
+      /* Arrange *not* to restore point in the buffer that was
+	 current when the window configuration was saved.  */
       if (EQ (XWINDOW (data->current_window)->buffer, new_current_buffer))
 	set_marker_restricted (XWINDOW (data->current_window)->pointm,
 			       make_number (old_point),
@@ -6652,6 +6668,7 @@ syms_of_window ()
 {
   Qwindow_size_fixed = intern ("window-size-fixed");
   staticpro (&Qwindow_size_fixed);
+  Fset (Qwindow_size_fixed, Qnil);
 
   staticpro (&Qwindow_configuration_change_hook);
   Qwindow_configuration_change_hook
@@ -6734,7 +6751,8 @@ where `pop-up-frame-alist' would hold the default frame parameters.  */);
 
   DEFVAR_LISP ("special-display-buffer-names", &Vspecial_display_buffer_names,
 	       doc: /* *List of buffer names that should have their own special frames.
-Displaying a buffer whose name is in this list makes a special frame for it
+Displaying a buffer with `display-buffer' or `pop-to-buffer',
+if its name is in this list, makes a special frame for it
 using `special-display-function'.  See also `special-display-regexps'.
 
 An element of the list can be a list instead of just a string.
@@ -6759,9 +6777,9 @@ Those variables take precedence over this one.  */);
 
   DEFVAR_LISP ("special-display-regexps", &Vspecial_display_regexps,
 	       doc: /* *List of regexps saying which buffers should have their own special frames.
-If a buffer name matches one of these regexps, it gets its own frame.
-Displaying a buffer whose name is in this list makes a special frame for it
-using `special-display-function'.
+When displaying a buffer with `display-buffer' or `pop-to-buffer',
+if any regexp in this list matches the buffer name, it makes a
+special frame for the buffer by calling `special-display-function'.
 
 An element of the list can be a list instead of just a string.
 There are two ways to use a list as an element:
@@ -6859,16 +6877,6 @@ scroll as specified.  */);
 	       doc: /* Functions to call when window configuration changes.
 The selected frame is the one whose configuration has changed.  */);
   Vwindow_configuration_change_hook = Qnil;
-
-  DEFVAR_BOOL ("window-size-fixed", &window_size_fixed,
-	       doc: /* Non-nil in a buffer means windows displaying the buffer are fixed-size.
-If the value is`height', then only the window's height is fixed.
-If the value is `width', then only the window's width is fixed.
-Any other non-nil value fixes both the width and the height.
-Emacs won't change the size of any window displaying that buffer,
-unless you explicitly change the size, or Emacs has no other choice.  */);
-  Fmake_variable_buffer_local (Qwindow_size_fixed);
-  window_size_fixed = 0;
 
   defsubr (&Sselected_window);
   defsubr (&Sminibuffer_window);

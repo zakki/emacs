@@ -1,6 +1,6 @@
 ;;; calc-aent.el --- algebraic entry functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: Dave Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -519,7 +519,22 @@ T means abort and give an error message.")
     ("⁽" "(")  ; (
     ("⁾" ")")  ; )
     ("ⁿ" "n")  ; n
-    ("ⁱ" "i")) ; i
+    ("ⁱ" "i")  ; i
+    ;; subscripts
+    ("₀"  "0")  ; 0
+    ("₁"  "1")  ; 1
+    ("₂"  "2")  ; 2
+    ("₃"  "3")  ; 3
+    ("₄"  "4")  ; 4
+    ("₅"  "5")  ; 5
+    ("₆"  "6")  ; 6
+    ("₇"  "7")  ; 7
+    ("₈"  "8")  ; 8
+    ("₉"  "9")  ; 9
+    ("₊"  "+")  ; +
+    ("₋"  "-")  ; -
+    ("₍"  "(")  ; (
+    ("₎"  ")"))  ; )
   "A list whose elements (old new) indicate replacements to make
 in Calc algebraic input.")
 
@@ -527,11 +542,18 @@ in Calc algebraic input.")
   "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁽⁾ⁿⁱ" ; 0123456789+-()ni
   "A string consisting of the superscripts allowed by Calc.")
 
+(defvar math-read-subscripts
+  "₀₁₂₃₄₅₆₇₈₉₊₋₍₎" ; 0123456789+-()
+  "A string consisting of the subscripts allowed by Calc.")
+
 (defun math-read-preprocess-string (str)
   "Replace some substrings of STR by Calc equivalents."
   (setq str
         (replace-regexp-in-string (concat "[" math-read-superscripts "]+")
                                   "^(\\&)" str))
+  (setq str
+        (replace-regexp-in-string (concat "[" math-read-subscripts "]+")
+                                  "_(\\&)" str))
   (let ((rep-list math-read-replacement-list))
     (while rep-list
       (setq str
@@ -712,7 +734,7 @@ in Calc algebraic input.")
 		       math-exp-pos (match-end 1))
 	       (if (eq (string-match "\\$\\([1-9][0-9]*\\)" math-exp-str math-exp-pos)
 		       math-exp-pos)
-		   (setq math-expr-data (- (string-to-int (math-match-substring
+		   (setq math-expr-data (- (string-to-number (math-match-substring
 						     math-exp-str 1))))
 		 (string-match "\\$+" math-exp-str math-exp-pos)
 		 (setq math-expr-data (- (match-end 0) (match-beginning 0))))
@@ -721,7 +743,7 @@ in Calc algebraic input.")
 	    ((eq ch ?\#)
 	     (if (eq (string-match "#\\([1-9][0-9]*\\)" math-exp-str math-exp-pos)
 		     math-exp-pos)
-		 (setq math-expr-data (string-to-int
+		 (setq math-expr-data (string-to-number
 				 (math-match-substring math-exp-str 1))
 		       math-exp-pos (match-end 0))
 	       (setq math-expr-data 1
@@ -924,6 +946,9 @@ in Calc algebraic input.")
 			     (math-read-expr-level (nth 3 op) exp-term))))
 	    first nil))
     x))
+
+;; calc-arg-values is defined in calc-ext.el, but is used here.
+(defvar calc-arg-values)
 
 (defun calc-check-user-syntax (&optional x prec)
   (let ((p calc-user-parse-table)

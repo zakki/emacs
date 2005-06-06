@@ -1,3 +1,31 @@
+2005-06-04  Richard M. Stallman  <rms@gnu.org>
+
+	* emacs-pretesters: Refer to etc/DEBUG instead of duplicating it.
+	Other cleanups.
+
+2005-04-19  Lute Kamstra  <lute@gnu.org>
+
+	* make-tarball.txt: Don't commit lisp/loaddefs.el.
+
+2005-04-14  Lute Kamstra  <lute@gnu.org>
+
+	* nt/makedist.bat (elfiles): Update.
+
+	* admin.el (add-release-logs): Fix require call.
+
+2005-03-30  Marcelo Toledo  <marcelo@marcelotoledo.org>
+
+	* FOR-RELEASE (Documentation): Added check the Emacs Tutorial. The
+        first line of every tutorial must begin with a sentence saying
+        "Emacs Tutorial" in the respective language.  This should be
+        followed by "See end for copying conditions", likewise in the
+        respective language.
+
+2005-03-29  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* FOR-RELEASE (TO BE DONE SHORTLY BEFORE RELEASE): New section.
+	Add `undo-ask-before-discard' to it.
+
 2005-03-02  Miles Bader  <miles@gnu.org>
 
 	* quick-install-emacs: Only use the mkdir --verbose option if the

@@ -1,8 +1,10 @@
 ;;; mule.el --- basic commands for mulitilingual environment
 
-;; Copyright (C) 1995 Electrotechnical Laboratory, JAPAN.
-;; Licensed to the Free Software Foundation.
-;; Copyright (C) 2001, 2002 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;;   Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;;   National Institute of Advanced Industrial Science and Technology (AIST)
+;;   Registration Number H14PRO021
 
 ;; Keywords: mule, multilingual, character set, coding system
 
@@ -485,9 +487,6 @@ See also `coding-category-list'."
 A base coding system is what made by `make-coding-system'.
 Any alias nor subsidiary coding systems are not base coding system."
   (car (coding-system-get coding-system 'alias-coding-systems)))
-
-(defalias 'coding-system-parent 'coding-system-base)
-(make-obsolete 'coding-system-parent 'coding-system-base "20.3")
 
 ;; Coding system also has a property `eol-type'.
 ;;
@@ -1542,10 +1541,11 @@ text, and convert it in the temporary buffer.  Otherwise, convert in-place."
 ;;; FILE I/O
 
 (defcustom auto-coding-alist
-  '(("\\.\\(arc\\|zip\\|lzh\\|zoo\\|[jew]ar\\)\\'" . no-conversion)
-    ("\\.\\(ARC\\|ZIP\\|LZH\\|ZOO\\|[JEW]AR\\)\\'" . no-conversion)
+  '(("\\.\\(arc\\|zip\\|lzh\\|zoo\\|[jew]ar\\|xpi\\)\\'" . no-conversion)
+    ("\\.\\(ARC\\|ZIP\\|LZH\\|ZOO\\|[JEW]AR\\|XPI\\)\\'" . no-conversion)
     ("\\.\\(sx[dmicw]\\|tar\\|tgz\\)\\'" . no-conversion)
     ("\\.\\(gz\\|Z\\|bz\\|bz2\\|gpg\\)\\'" . no-conversion)
+    ("\\.\\(jpe?g\\|png\\|gif\\|tiff?\\|p[bpgn]m\\)\\'" . no-conversion)
     ("/#[^/]+#\\'" . emacs-mule))
   "Alist of filename patterns vs corresponding coding systems.
 Each element looks like (REGEXP . CODING-SYSTEM).
@@ -2182,9 +2182,9 @@ This function is intended to be added to `auto-coding-functions'."
   (when (re-search-forward "\\`[[:space:]\n]*<\\?xml" size t)
     (let ((end (save-excursion
 		 ;; This is a hack.
-		 (re-search-forward "\"\\s-*\\?>" size t))))
+		 (re-search-forward "[\"']\\s-*\\?>" size t))))
       (when end
-	(if (re-search-forward "encoding=\"\\(.+?\\)\"" end t)
+	(if (re-search-forward "encoding=[\"']\\(.+?\\)[\"']" end t)
 	    (let* ((match (match-string 1))
 		   (sym (intern (downcase match))))
 	      (if (coding-system-p sym)

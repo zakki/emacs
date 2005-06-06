@@ -1,6 +1,6 @@
 ;;; calc-lang.el --- calc language functions
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -388,6 +388,9 @@
      ( \\arg	   . calcFunc-arg )
      ( \\cos	   . calcFunc-cos )
      ( \\cosh	   . calcFunc-cosh )
+     ( \\cot	   . calcFunc-cot )
+     ( \\coth	   . calcFunc-coth )
+     ( \\csc	   . calcFunc-csc )
      ( \\det	   . calcFunc-det )
      ( \\exp	   . calcFunc-exp )
      ( \\gcd	   . calcFunc-gcd )
@@ -395,10 +398,11 @@
      ( \\log	   . calcFunc-log10 )
      ( \\max	   . calcFunc-max )
      ( \\min	   . calcFunc-min )
-     ( \\tan	   . calcFunc-tan )
+     ( \\sec	   . calcFunc-sec )
      ( \\sin	   . calcFunc-sin )
      ( \\sinh	   . calcFunc-sinh )
      ( \\sqrt	   . calcFunc-sqrt )
+     ( \\tan	   . calcFunc-tan )
      ( \\tanh	   . calcFunc-tanh )
      ( \\phi	   . calcFunc-totient )
      ( \\mu	   . calcFunc-moebius )))
@@ -686,6 +690,10 @@
      ( Conjugate   . calcFunc-conj )
      ( Cos	   . calcFunc-cos )
      ( Cosh	   . calcFunc-cosh )
+     ( Cot	   . calcFunc-cot )
+     ( Coth	   . calcFunc-coth )
+     ( Csc	   . calcFunc-csc )
+     ( Csch	   . calcFunc-csch )
      ( D	   . calcFunc-deriv )
      ( Dt	   . calcFunc-tderiv )
      ( Det	   . calcFunc-det )
@@ -708,6 +716,8 @@
      ( Random	   . calcFunc-random )
      ( Round	   . calcFunc-round )
      ( Re	   . calcFunc-re )
+     ( Sec	   . calcFunc-sec )
+     ( Sech	   . calcFunc-sech )
      ( Sign	   . calcFunc-sign )
      ( Sin	   . calcFunc-sin )
      ( Sinh	   . calcFunc-sinh )

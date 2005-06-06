@@ -1,6 +1,6 @@
 ;;; calc-embed.el --- embed Calc in a buffer
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -48,48 +48,18 @@
 (defvar calc-embedded-some-active nil)
 (make-variable-buffer-local 'calc-embedded-some-active)
 
-(defvar calc-embedded-open-formula "\\`\\|^\n\\|\\$\\$?\\|\\\\\\[\\|^\\\\begin[^{].*\n\\|^\\\\begin{.*[^x]}.*\n\\|^@.*\n\\|^\\.EQ.*\n\\|\\\\(\\|^%\n\\|^\\.\\\\\"\n"
-  "*A regular expression for the opening delimiter of a formula used by
-calc-embedded.")
-
-(defvar calc-embedded-close-formula "\\'\\|\n$\\|\\$\\$?\\|\\\\]\\|^\\\\end[^{].*\n\\|^\\\\end{.*[^x]}.*\n\\|^@.*\n\\|^\\.EN.*\n\\|\\\\)\\|\n%\n\\|^\\.\\\\\"\n"
-  "*A regular expression for the closing delimiter of a formula used by
-calc-embedded.")
-
-(defvar calc-embedded-open-word "^\\|[^-+0-9.eE]"
-  "*A regular expression for the opening delimiter of a formula used by
-calc-embedded-word.")
-
-(defvar calc-embedded-close-word "$\\|[^-+0-9.eE]"
-  "*A regular expression for the closing delimiter of a formula used by
-calc-embedded-word.")
-
-(defvar calc-embedded-open-plain "%%% "
-  "*A string which is the opening delimiter for a \"plain\" formula.
-If calc-show-plain mode is enabled, this is inserted at the front of
-each formula.")
-
-(defvar calc-embedded-close-plain " %%%\n"
-  "*A string which is the closing delimiter for a \"plain\" formula.
-See calc-embedded-open-plain.")
-
-(defvar calc-embedded-open-new-formula "\n\n"
-  "*A string which is inserted at front of formula by calc-embedded-new-formula.")
-
-(defvar calc-embedded-close-new-formula "\n\n"
-  "*A string which is inserted at end of formula by calc-embedded-new-formula.")
-
-(defvar calc-embedded-announce-formula "%Embed\n\\(% .*\n\\)*"
-  "*A regular expression which is sure to be followed by a calc-embedded formula." )
-
-(defvar calc-embedded-open-mode "% "
-  "*A string which should precede calc-embedded mode annotations.
-This is not required to be present for user-written mode annotations.")
-
-(defvar calc-embedded-close-mode "\n"
-  "*A string which should follow calc-embedded mode annotations.
-This is not required to be present for user-written mode annotations.")
-
+;; The following variables are customizable and defined in calc.el.
+(defvar calc-embedded-announce-formula)
+(defvar calc-embedded-open-formula)
+(defvar calc-embedded-close-formula)
+(defvar calc-embedded-open-word)
+(defvar calc-embedded-close-word)
+(defvar calc-embedded-open-plain)
+(defvar calc-embedded-close-plain)
+(defvar calc-embedded-open-new-formula)
+(defvar calc-embedded-close-new-formula)
+(defvar calc-embedded-open-mode)
+(defvar calc-embedded-close-mode)
 
 (defconst calc-embedded-mode-vars '(("precision" . calc-internal-prec)
 				    ("word-size" . calc-word-size)
@@ -149,6 +119,68 @@ This is not required to be present for user-written mode annotations.")
 ;;; rather than using buffer-local variables because the latter are
 ;;; thrown away when a buffer changes major modes.
 
+(defvar calc-embedded-original-modes nil
+  "The mode settings for Calc buffer when put in embedded mode.")
+
+(defun calc-embedded-save-original-modes ()
+  "Save the current Calc modes when entereding embedded mode."
+  (let ((calcbuf (save-excursion
+                   (calc-create-buffer)
+                   (current-buffer)))
+        lang modes)
+    (if calcbuf
+        (with-current-buffer calcbuf
+          (setq lang
+                (cons calc-language calc-language-option))
+          (setq modes
+                (list (cons 'calc-display-just
+                            calc-display-just)
+                      (cons 'calc-display-origin
+                            calc-display-origin)))
+          (let ((v calc-embedded-mode-vars))
+            (while v
+              (let ((var (cdr (car v))))
+                (unless (memq var '(the-language the-display-just))
+                  (setq modes
+                        (cons (cons var (symbol-value var)) 
+                              modes))))
+              (setq v (cdr v))))
+          (setq calc-embedded-original-modes (cons lang modes)))
+      (setq calc-embedded-original-modes nil))))
+
+(defun calc-embedded-preserve-modes ()
+  "Preserve the current modes when leaving embedded mode."
+  (interactive)
+  (if calc-embedded-info
+      (progn
+        (calc-embedded-save-original-modes)
+        (message "Current modes will be preserved when leaving embedded mode."))
+    (message "Not in embedded mode.")))
+
+(defun calc-embedded-restore-original-modes ()
+  "Restore the original Calc modes when leaving embedded mode."
+  (let ((calcbuf (get-buffer "*Calculator*"))
+        (changed nil)
+        (lang (car calc-embedded-original-modes))
+        (modes (cdr calc-embedded-original-modes)))
+    (if (and calcbuf calc-embedded-original-modes)
+        (with-current-buffer calcbuf
+          (unless (and
+                   (equal calc-language (car lang))
+                   (equal calc-language-option (cdr lang)))
+            (calc-set-language (car lang) (cdr lang))
+            (setq changed t))
+          (while modes
+            (let ((mode (car modes)))
+              (unless (equal (symbol-value (car mode)) (cdr mode))
+                (set (car mode) (cdr mode))
+                (setq changed t)))
+            (setq modes (cdr modes)))
+          (when changed
+            (calc-refresh)
+            (calc-set-mode-line))))
+    (setq calc-embedded-original-modes nil)))
+
 ;; The variables calc-embed-outer-top, calc-embed-outer-bot, 
 ;; calc-embed-top and calc-embed-bot are
 ;; local to calc-do-embedded, calc-embedded-mark-formula,
@@ -160,8 +192,15 @@ This is not required to be present for user-written mode annotations.")
 (defvar calc-embed-top)
 (defvar calc-embed-bot)
 
+;; The variable calc-embed-arg is local to calc-do-embedded,
+;; calc-embedded-update-formula, calc-embedded-edit and
+;; calc-do-embedded-activate, but is used by 
+;; calc-embedded-make-info, which is called by the above
+;; functions.
+(defvar calc-embed-arg)
+
 (defvar calc-embedded-quiet nil)
-(defun calc-do-embedded (arg end obeg oend)
+(defun calc-do-embedded (calc-embed-arg end obeg oend)
   (if calc-embedded-info
 
       ;; Turn embedded mode off or switch to a new buffer.
@@ -193,6 +232,7 @@ This is not required to be present for user-written mode annotations.")
 		     buffer-read-only nil)
 	       (use-local-map (nth 1 mode))
 	       (set-buffer-modified-p (buffer-modified-p))
+               (calc-embedded-restore-original-modes)
 	       (or calc-embedded-quiet
 		   (message "Back to %s mode" mode-name))))
 
@@ -204,7 +244,7 @@ This is not required to be present for user-written mode annotations.")
 					 (buffer-name)))
 		       (keyboard-quit))
 		   (calc-embedded nil)))
-	     (calc-embedded arg end obeg oend)))
+	     (calc-embedded calc-embed-arg end obeg oend)))
 
     ;; Turn embedded mode on.
     (calc-plain-buffer-only)
@@ -214,11 +254,14 @@ This is not required to be present for user-written mode annotations.")
 	  calc-embed-top calc-embed-bot calc-embed-outer-top calc-embed-outer-bot
 	  info chg ident)
       (barf-if-buffer-read-only)
+      (calc-embedded-save-original-modes)
       (or calc-embedded-globals
 	  (calc-find-globals))
-      (setq info (calc-embedded-make-info (point) nil t arg end obeg oend))
+      (setq info 
+            (calc-embedded-make-info (point) nil t calc-embed-arg end obeg oend))
       (if (eq (car-safe (aref info 8)) 'error)
 	  (progn
+            (setq calc-embedded-original-modes nil)
 	    (goto-char (nth 1 (aref info 8)))
 	    (error (nth 2 (aref info 8)))))
       (let ((mode-line-buffer-identification mode-line-buffer-identification)
@@ -227,10 +270,13 @@ This is not required to be present for user-written mode annotations.")
 	(calc-wrapper
 	 (let* ((okay nil)
 		(calc-no-refresh-evaltos t))
-	   (setq chg (calc-embedded-set-modes
-		      (aref info 15) (aref info 12) (aref info 13)))
 	   (if (aref info 8)
-	       (calc-push (calc-normalize (aref info 8)))
+               (progn
+                 (calc-push (calc-normalize (aref info 8)))
+                 (setq chg (calc-embedded-set-modes
+                            (aref info 15) (aref info 12) (aref info 13))))
+             (setq chg (calc-embedded-set-modes
+                        (aref info 15) (aref info 12) (aref info 13)))
 	     (calc-alg-entry)))
 	 (setq calc-undo-list nil
 	       calc-redo-list nil
@@ -273,13 +319,13 @@ This is not required to be present for user-written mode annotations.")
        (calc-select-part 2)))
 
 
-(defun calc-embedded-update-formula (arg)
+(defun calc-embedded-update-formula (calc-embed-arg)
   (interactive "P")
-  (if arg
+  (if calc-embed-arg
       (let ((entry (assq (current-buffer) calc-embedded-active)))
 	(while (setq entry (cdr entry))
 	  (and (eq (car-safe (aref (car entry) 8)) 'calcFunc-evalto)
-	       (or (not (consp arg))
+	       (or (not (consp calc-embed-arg))
 		   (and (<= (aref (car entry) 2) (region-beginning))
 			(>= (aref (car entry) 3) (region-end))))
 	       (save-excursion
@@ -299,9 +345,9 @@ This is not required to be present for user-written mode annotations.")
 	      (goto-char (+ (aref info 4) pt))))))))
 
 
-(defun calc-embedded-edit (arg)
+(defun calc-embedded-edit (calc-embed-arg)
   (interactive "P")
-  (let ((info (calc-embedded-make-info (point) nil t arg))
+  (let ((info (calc-embedded-make-info (point) nil t calc-embed-arg))
 	str)
     (if (eq (car-safe (aref info 8)) 'error)
 	(progn
@@ -336,12 +382,12 @@ This is not required to be present for user-written mode annotations.")
       (aset info 8 val)
       (calc-embedded-update info 14 t t))))
 
-(defun calc-do-embedded-activate (arg cbuf)
+(defun calc-do-embedded-activate (calc-embed-arg cbuf)
   (calc-plain-buffer-only)
-  (if arg
+  (if calc-embed-arg
       (calc-embedded-forget))
   (calc-find-globals)
-  (if (< (prefix-numeric-value arg) 0)
+  (if (< (prefix-numeric-value calc-embed-arg) 0)
       (message "Deactivating %s for Calc Embedded mode" (buffer-name))
     (message "Activating %s for Calc Embedded mode..." (buffer-name))
     (save-excursion
@@ -394,7 +440,7 @@ This is not required to be present for user-written mode annotations.")
 
 (defun calc-embedded-word ()
   (interactive)
-  (calc-embedded '(4)))
+  (calc-embedded '(t)))
 
 (defun calc-embedded-mark-formula (&optional body-only)
   "Put point at the beginning of this Calc formula, mark at the end.
@@ -761,16 +807,26 @@ The command \\[yank] can retrieve it from there."
       (aset info 1 (or cbuf (save-excursion
 			      (calc-create-buffer)
 			      (current-buffer)))))
-    (if (and (integerp calc-embed-top) (not calc-embed-bot))  
+    (if (and 
+         (or (integerp calc-embed-top) (equal calc-embed-top '(4)))
+         (not calc-embed-bot))  
                                         ; started with a user-supplied argument
 	(progn
-	  (if (= (setq arg (prefix-numeric-value arg)) 0)
-	      (progn
-		(aset info 2 (copy-marker (region-beginning)))
-		(aset info 3 (copy-marker (region-end))))
-	    (aset info (if (> arg 0) 2 3) (point-marker))
-	    (forward-line arg)
-	    (aset info (if (> arg 0) 3 2) (point-marker)))
+          (if (equal calc-embed-top '(4))
+              (progn
+                (aset info 2 (copy-marker (line-beginning-position)))
+                (aset info 3 (copy-marker (line-end-position))))
+            (if (= (setq calc-embed-arg (prefix-numeric-value calc-embed-arg)) 0)
+                (progn
+                  (aset info 2 (copy-marker (region-beginning)))
+                  (aset info 3 (copy-marker (region-end))))
+              (aset info (if (> calc-embed-arg 0) 2 3) (point-marker))
+              (if (> calc-embed-arg 0)
+                  (progn
+                    (forward-line (1- calc-embed-arg))
+                    (end-of-line))
+                (forward-line (1+ calc-embed-arg)))
+              (aset info (if (> calc-embed-arg 0) 3 2) (point-marker))))
 	  (aset info 4 (copy-marker (aref info 2)))
 	  (aset info 5 (copy-marker (aref info 3))))
       (if (aref info 4)
@@ -1197,7 +1253,9 @@ The command \\[yank] can retrieve it from there."
 		       (prin1-to-string (car values)) "]"
 		       calc-embedded-close-mode))))
 	      (setq vars (cdr vars)
-		    values (cdr values))))))))
+		    values (cdr values))))))
+    (when (and vars (eq calc-mode-save-mode 'save))
+      (calc-embedded-save-original-modes))))
 
 (defun calc-embedded-var-change (var &optional buf)
   (if (symbolp var)

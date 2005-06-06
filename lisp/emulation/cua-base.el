@@ -1,6 +1,6 @@
 ;;; cua-base.el --- emulate CUA key bindings
 
-;; Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;; Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2005
 ;;        Free Software Foundation, Inc.
 
 ;; Author: Kim F. Storm <storm@cua.dk>
@@ -159,13 +159,13 @@
 ;; left edge of a rectangle start in the middle of a TAB character.
 ;; Sounds strange? Try it!
 ;;
-;; To start a rectangle, use [S-return] and extend it using the normal
+;; To start a rectangle, use [C-return] and extend it using the normal
 ;; movement keys (up, down, left, right, home, end, C-home,
 ;; C-end). Once the rectangle has the desired size, you can cut or
 ;; copy it using C-x and C-c (or C-w and M-w), and you can
 ;; subsequently insert it - as a rectangle - using C-v (or C-y).  So
 ;; the only new command you need to know to work with cua-mode
-;; rectangles is S-return!
+;; rectangles is C-return!
 ;;
 ;; Normally, when you paste a rectangle using C-v (C-y), each line of
 ;; the rectangle is inserted into the existing lines in the buffer.
@@ -183,7 +183,7 @@
 ;; entire rectangle overlay (but not the contents) in the given
 ;; direction.
 ;;
-;; [S-return] cancels the rectangle
+;; [C-return] cancels the rectangle
 ;; [C-space] activates the region bounded by the rectangle
 
 ;; If you type a normal (self-inserting) character when the rectangle is
@@ -194,7 +194,7 @@
 ;; bottom of the rectangle.  So, for example, to comment out an entire
 ;; paragraph like this one, just place the cursor on the first character
 ;; of the first line, and enter the following:
-;;     S-return M-} ; ; <space>  S-return
+;;     C-return M-} ; ; <space>  C-return
 
 ;; cua-mode's rectangle support also includes all the normal rectangle
 ;; functions with easy access:
@@ -330,12 +330,12 @@ interpreted as a register number."
   :group 'cua)
 
 (defcustom cua-use-hyper-key nil
-  "*If non-nil, bind rectangle commands to H-? instead of M-?.
-If set to 'also, toggle region command is also on S-return.
+  "*If non-nil, bind rectangle commands to H-... instead of M-....
+If set to 'also, toggle region command is also on C-return.
 Must be set prior to enabling CUA."
-  :type '(choice (const :tag "Meta key and S-return" nil)
+  :type '(choice (const :tag "Meta key and C-return" nil)
 		 (const :tag "Hyper key only" only)
-		 (const :tag "Hyper key and S-return" also))
+		 (const :tag "Hyper key and C-return" also))
   :group 'cua)
 
 (defcustom cua-enable-region-auto-help nil
@@ -384,11 +384,15 @@ and after the region marked by the rectangle to search."
   :type 'boolean
   :group 'cua)
 
-(defface cua-rectangle-face 'nil
+(defface cua-rectangle-face
+  '((default :inherit region)
+    (((class color)) :foreground "white" :background "maroon"))
   "*Font used by CUA for highlighting the rectangle."
   :group 'cua)
 
-(defface cua-rectangle-noselect-face 'nil
+(defface cua-rectangle-noselect-face
+  '((default :inherit region)
+    (((class color)) :foreground "white" :background "dimgray"))
   "*Font used by CUA for highlighting the non-selected rectangle lines."
   :group 'cua)
 
@@ -400,10 +404,10 @@ and after the region marked by the rectangle to search."
   :type 'boolean
   :group 'cua)
 
-(defface cua-global-mark-face '((((class color))
-				 :foreground "black"
-				 :background "yellow")
-				(t :bold t))
+(defface cua-global-mark-face
+  '((((min-colors 88)(class color)) :foreground "black" :background "yellow1")
+    (((class color)) :foreground "black" :background "yellow")
+    (t :bold t))
   "*Font used by CUA for highlighting the global mark."
   :group 'cua)
 
@@ -773,9 +777,13 @@ With numeric prefix arg, copy to register 0-9 instead."
   (let ((start (mark)) (end (point)))
     (or (<= start end)
 	(setq start (prog1 end (setq end start))))
-    (if cua--register
-	(copy-to-register cua--register start end nil)
-      (copy-region-as-kill start end))
+    (cond
+     (cua--register
+      (copy-to-register cua--register start end nil))
+     ((eq this-original-command 'clipboard-kill-ring-save)
+      (clipboard-kill-ring-save start end))
+     (t
+      (copy-region-as-kill start end)))
     (if cua-keep-region-after-copy
 	(cua--keep-active)
       (cua--deactivate))))
@@ -791,9 +799,13 @@ With numeric prefix arg, copy to register 0-9 instead."
     (let ((start (mark)) (end (point)))
       (or (<= start end)
 	  (setq start (prog1 end (setq end start))))
-      (if cua--register
-	  (copy-to-register cua--register start end t)
-	(kill-region start end)))
+      (cond
+       (cua--register
+	(copy-to-register cua--register start end t))
+       ((eq this-original-command 'clipboard-kill-region)
+	(clipboard-kill-region start end))
+       (t
+	(kill-region start end))))
     (cua--deactivate)))
 
 ;;; Generic commands for regions, rectangles, and global marks
@@ -860,6 +872,8 @@ If global mark is active, copy from register or one character."
 	  (cua--insert-rectangle (cdr cua--last-killed-rectangle)
 				 nil paste-column paste-lines)
 	  (if arg (goto-char pt))))
+       ((eq this-original-command 'clipboard-yank)
+	(clipboard-yank))
        (t (yank arg)))))))
 
 (defun cua-paste-pop (arg)
@@ -1016,7 +1030,7 @@ If ARG is the atom `-', scroll upward by nearly full screen."
 	(scroll-down arg)
       (beginning-of-buffer (goto-char (point-min)))))))
 
-(put 'cua-scroll-up 'CUA 'move)
+(put 'cua-scroll-down 'CUA 'move)
 
 ;;; Cursor indications
 
@@ -1062,10 +1076,20 @@ If ARG is the atom `-', scroll upward by nearly full screen."
 	;; If rectangle is active, expand rectangle in specified direction and ignore the movement.
 	(if movement
 	    (cond
-	     ((memq 'shift (event-modifiers
-			    (aref (if window-system
-				      (this-single-command-raw-keys)
-				    (this-single-command-keys)) 0)))
+	     ((if window-system
+		  (memq 'shift (event-modifiers
+				(aref (this-single-command-raw-keys) 0)))
+		(or
+		 (memq 'shift (event-modifiers
+			       (aref (this-single-command-keys) 0)))
+		 ;; See if raw escape sequence maps to a shifted event, e.g. S-up or C-S-home.
+		 (and (boundp 'function-key-map)
+		      function-key-map
+		      (let ((ev (lookup-key function-key-map
+					   (this-single-command-raw-keys))))
+			(and (vector ev)
+			     (symbolp (setq ev (aref ev 0)))
+			     (string-match "S-" (symbol-name ev)))))))
 	      (unless mark-active
 		(push-mark-command nil t))
 	      (setq cua--last-region-shifted t)
@@ -1211,7 +1235,7 @@ If ARG is the atom `-', scroll upward by nearly full screen."
 
 (defun cua--init-keymaps ()
   (unless (eq cua-use-hyper-key 'only)
-    (define-key cua-global-keymap [(shift return)]	'cua-set-rectangle-mark))
+    (define-key cua-global-keymap [(control return)]	'cua-set-rectangle-mark))
   (when cua-use-hyper-key
     (cua--M/H-key cua-global-keymap 'space	'cua-set-rectangle-mark)
     (define-key cua-global-keymap [(hyper mouse-1)] 'cua-mouse-set-rectangle-mark))
@@ -1268,9 +1292,11 @@ If ARG is the atom `-', scroll upward by nearly full screen."
   (define-key cua--region-keymap [remap delete-char]		'cua-delete-region)
   ;; kill region
   (define-key cua--region-keymap [remap kill-region]		'cua-cut-region)
+  (define-key cua--region-keymap [remap clipboard-kill-region]	'cua-cut-region)
   ;; copy region
   (define-key cua--region-keymap [remap copy-region-as-kill]	'cua-copy-region)
   (define-key cua--region-keymap [remap kill-ring-save]		'cua-copy-region)
+  (define-key cua--region-keymap [remap clipboard-kill-ring-save] 'cua-copy-region)
   ;; cancel current region/rectangle
   (define-key cua--region-keymap [remap keyboard-escape-quit]	'cua-cancel)
   (define-key cua--region-keymap [remap keyboard-quit]		'cua-cancel)
@@ -1307,6 +1333,7 @@ highlight the region using `transient-mark-mode'), and typed text replaces
 the active selection.  C-z, C-x, C-c, and C-v will undo, cut, copy, and
 paste (in addition to the normal emacs bindings)."
   :global t
+  :group 'cua
   :set-after '(cua-enable-modeline-indications cua-use-hyper-key)
   :require 'cua-base
   :link '(emacs-commentary-link "cua-base.el")
@@ -1382,10 +1409,11 @@ paste (in addition to the normal emacs bindings)."
 ;;;###autoload  '(error (concat "\n\n"
 ;;;###autoload  "CUA-mode is now part of the standard GNU Emacs distribution,\n"
 ;;;###autoload  "so you may now enable and customize CUA via the Options menu.\n\n"
-;;;###autoload  "Your " (file-name-nondirectory user-init-file) " loads an older version of CUA-mode which does\n"
-;;;###autoload  "not work correctly with this version of GNU Emacs.\n"
+;;;###autoload  "You have loaded an older version of CUA-mode which does\n"
+;;;###autoload  "not work correctly with this version of GNU Emacs.\n\n"
+;;;###autoload  (if user-init-file (concat
 ;;;###autoload  "To correct this, remove the loading and customization of the\n"
-;;;###autoload  "old version from the " user-init-file " file.\n\n")))
+;;;###autoload  "old version from the " user-init-file " file.\n\n")))))
 
 (provide 'cua)
 

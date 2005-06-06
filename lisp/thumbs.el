@@ -1,6 +1,6 @@
 ;;; thumbs.el --- Thumbnails previewer for images files
 
-;; Copyright 2004 Free Software Foundation, Inc
+;; Copyright 2004, 2005 Free Software Foundation, Inc
 
 ;; Author: Jean-Philippe Theberge <jphiltheberge@videotron.ca>
 ;; Keywords: Multimedia
@@ -83,7 +83,7 @@
 
 (defcustom thumbs-thumbsdir-max-size 50000000
   "Max size for thumbnails directory.
-When it reach that size (in bytes), a warning is send."
+When it reachs that size (in bytes), a warning is sent."
   :type 'string
   :group 'thumbs)
 
@@ -142,7 +142,7 @@ see some of your images."
 ;; Initialize some variable, for later use.
 (defvar thumbs-temp-file
   (concat thumbs-temp-dir thumbs-temp-prefix)
-  "Temporary filesname for images.")
+  "Temporary filename for images.")
 
 (defvar thumbs-current-tmp-filename
   nil
@@ -188,8 +188,8 @@ The name is made by appending a number to PREFIX, default \"Thumbs\"."
 
 (defun thumbs-cleanup-thumbsdir ()
   "Clean the thumbnails directory.
-If the total size of all files in 'thumbs-thumbsdir' is bigger than
-'thumbs-thumbsdir-max-size', files are deleted until the max size is
+If the total size of all files in `thumbs-thumbsdir' is bigger than
+`thumbs-thumbsdir-max-size', files are deleted until the max size is
 reached."
   (let* ((filesL
 	  (sort
@@ -217,11 +217,11 @@ reached."
 FILEIN is the input file,
 FILEOUT is the output file,
 ACTION is the command to send to convert.
-Optional argument are:
+Optional arguments are:
 ARG any arguments to the ACTION command,
-OUTPUT-FORMAT is the file format to output, default is jpeg
+OUTPUT-FORMAT is the file format to output (default is jpeg),
 ACTION-PREFIX is the symbol to place before the ACTION command
-              (default to '-' but can sometime be '+')."
+              (defaults to '-' but can sometimes be '+')."
   (let ((command (format "%s %s%s %s \"%s\" \"%s:%s\""
 			 thumbs-conversion-program
 			 (or action-prefix "-")
@@ -241,7 +241,7 @@ ACTION-PREFIX is the symbol to place before the ACTION command
   (round (- n (/ (* d n) 100))))
 
 (defun thumbs-increment-image-size (s)
-  "Increment S (a cons of width x heigh)."
+  "Increment S (a cons of width x height)."
   (cons
    (thumbs-increment-image-size-element (car s)
 					thumbs-image-resizing-step)
@@ -249,7 +249,7 @@ ACTION-PREFIX is the symbol to place before the ACTION command
 					thumbs-image-resizing-step)))
 
 (defun thumbs-decrement-image-size (s)
-  "Decrement S (a cons of width x heigh)."
+  "Decrement S (a cons of width x height)."
   (cons
    (thumbs-decrement-image-size-element (car s)
 					thumbs-image-resizing-step)
@@ -302,18 +302,21 @@ Or, alternatively, a SIZE may be specified."
 
 (defun thumbs-thumbname (img)
   "Return a thumbnail name for the image IMG."
-  (concat thumbs-thumbsdir "/"
-	  (subst-char-in-string
-	   ?\  ?\_
-	   (apply
-	    'concat
-	    (split-string
-	     (expand-file-name img) "/")))))
+  (convert-standard-filename
+   (let ((filename (expand-file-name img)))
+     (format "%s/%08x-%s.jpg"
+             thumbs-thumbsdir
+             (sxhash filename)
+             (subst-char-in-string
+              ?\s ?\_
+              (apply
+               'concat
+               (split-string filename "/")))))))
 
 (defun thumbs-make-thumb (img)
   "Create the thumbnail for IMG."
-  (let* ((fn (expand-file-name img))
-	 (tn (thumbs-thumbname img)))
+  (let ((fn (expand-file-name img))
+        (tn (thumbs-thumbname img)))
     (if (or (not (file-exists-p tn))
 	    ;;  This is not the right fix, but I don't understand
 	    ;;  the external program or why it produces a geometry
@@ -349,7 +352,7 @@ Or, alternatively, a SIZE may be specified."
   "Insert image IMG at point.
 TYPE and RELIEF will be used in constructing the image; see `image'
 in the emacs-lisp manual for further documentation.
-if MARKED is non-nil, the image is marked."
+If MARKED is non-nil, the image is marked."
   (let ((i `(image :type ,type
 		   :file ,img
 		   :relief ,relief
@@ -361,7 +364,7 @@ if MARKED is non-nil, the image is marked."
 
 (defun thumbs-insert-thumb (img &optional marked)
   "Insert the thumbnail for IMG at point.
-if MARKED is non-nil, the image is marked"
+If MARKED is non-nil, the image is marked."
   (thumbs-insert-image
    (thumbs-make-thumb img) 'jpeg thumbs-relief marked)
   (put-text-property (1- (point)) (point)
@@ -378,8 +381,9 @@ if MARKED is non-nil, the image is marked"
     (unless (bobp) (newline))))
 
 (defun thumbs-show-thumbs-list (L &optional buffer-name same-window)
-  (when (not (display-images-p))
-    (error "Images are not supported in this Emacs session"))
+  (unless (and (display-images-p)
+               (image-type-available-p 'jpeg))
+    (error "Required image type is not supported in this Emacs session"))
   (funcall (if same-window 'switch-to-buffer 'pop-to-buffer)
 	   (or buffer-name "*THUMB-View*"))
   (let ((inhibit-read-only t))
@@ -403,7 +407,7 @@ and SAME-WINDOW to show thumbs in the same window."
 
 ;;;###autoload
 (defun thumbs-dired-show-marked ()
-  "In Dired, make a thumbs buffer with all marked files."
+  "In dired, make a thumbs buffer with all marked files."
   (interactive)
   (thumbs-show-thumbs-list (dired-get-marked-files) nil t))
 
@@ -435,7 +439,7 @@ and SAME-WINDOW to show thumbs in the same window."
 
 (defun thumbs-find-image-at-point (&optional img otherwin)
   "Display image IMG for thumbnail at point.
-use another window it OTHERWIN is t."
+Use another window if OTHERWIN is t."
   (interactive)
   (let* ((i (or img (thumbs-current-image))))
     (thumbs-find-image i (point) otherwin)))
@@ -499,7 +503,7 @@ Open another window."
       (nreverse list))))
 
 (defun thumbs-delete-images ()
-  "Delete the image at point (and it's thumbnail) (or marked files if any)."
+  "Delete the image at point (and its thumbnail) (or marked files if any)."
   (interactive)
   (let ((files (or thumbs-markedL (list (thumbs-current-image)))))
     (if (yes-or-no-p (format "Really delete %d files? " (length files)))
@@ -520,7 +524,7 @@ Open another window."
 		      (delq x thumbs-markedL)))))))))
 
 (defun thumbs-rename-images (newfile)
-  "Rename the image at point (and it's thumbnail) (or marked files if any)."
+  "Rename the image at point (and its thumbnail) (or marked files if any)."
   (interactive "FRename to file or directory: ")
   (let ((files (or thumbs-markedL (list (thumbs-current-image))))
 	failures)
@@ -574,7 +578,7 @@ Open another window."
 	    thumbs-current-image-filename i))))
 
 (defun thumbs-next-image ()
-  "Show next image."
+  "Show the next image."
   (interactive)
   (let* ((i (1+ thumbs-image-num))
 	 (list (thumbs-file-alist))
@@ -630,7 +634,7 @@ Open another window."
 
 (defun thumbs-modify-image (action &optional arg)
   "Call convert to do ACTION on image with argument ARG.
-ACTION and ARG should be legal convert command."
+ACTION and ARG should be a valid convert command."
   (interactive "sAction: \nsValue: ")
   ;; cleaning of old temp file
   (mapc 'delete-file
@@ -754,9 +758,8 @@ ACTION and ARG should be legal convert command."
 (define-derived-mode thumbs-mode
   fundamental-mode "thumbs"
   "Preview images in a thumbnails buffer"
-  (make-variable-buffer-local 'thumbs-markedL)
   (setq buffer-read-only t)
-  (setq thumbs-markedL nil))
+  (set (make-local-variable 'thumbs-markedL) nil))
 
 (defvar thumbs-view-image-mode-map
   (let ((map (make-sparse-keymap)))
@@ -782,7 +785,7 @@ ACTION and ARG should be legal convert command."
 
 ;;;###autoload
 (defun thumbs-dired-setroot ()
-  "In dired, Call the setroot program on the image at point."
+  "In dired, call the setroot program on the image at point."
   (interactive)
   (thumbs-call-setroot-command (dired-get-filename)))
 
@@ -793,7 +796,5 @@ ACTION and ARG should be legal convert command."
 
 (provide 'thumbs)
 
+;; arch-tag: f9ac1ef8-83fc-42c0-8069-1fae43fd2e5c
 ;;; thumbs.el ends here
-
-
-;;; arch-tag: f9ac1ef8-83fc-42c0-8069-1fae43fd2e5c

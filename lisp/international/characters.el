@@ -1,8 +1,10 @@
 ;;; characters.el --- set syntax and category for multibyte characters
 
-;; Copyright (C) 1995, 1997 Electrotechnical Laboratory, JAPAN.
-;; Licensed to the Free Software Foundation.
-;; Copyright (C) 2001, 2002 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2000, 2001, 2002, 2003, 2004
+;;   Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1997, 1998, 1999, 2000, 2001, 2003, 2004, 2005
+;;   National Institute of Advanced Industrial Science and Technology (AIST)
+;;   Registration Number H14PRO021
 
 ;; Keywords: multibyte character, character set, syntax, category
 
@@ -884,8 +886,8 @@
 	 (set-case-syntax-pair
 	  (decode-char 'ucs (1- c)) (decode-char 'ucs c) tbl))
     (setq c (1+ c)))
-  ;;(set-downcase-syntax  ?$,1 P(B ?i tbl)
-  ;;(set-upcase-syntax    ?I ?$,1 Q(B tbl)
+  (set-downcase-syntax  ?$,1 P(B ?i tbl)
+  (set-upcase-syntax    ?I ?$,1 Q(B tbl)
   (set-case-syntax-pair ?$,1 R(B ?$,1 S(B tbl)
   (set-case-syntax-pair ?$,1 T(B ?$,1 U(B tbl)
   (set-case-syntax-pair ?$,1 V(B ?$,1 W(B tbl)

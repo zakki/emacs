@@ -1,6 +1,6 @@
 ;;; re-builder.el --- building Regexps with visual feedback
 
-;; Copyright (C) 1999, 2000, 2001, 2002, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1999, 2000, 2001, 2002, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Detlev Zundel <dzu@gnu.org>
 ;; Keywords: matching, lisp, tools
@@ -177,7 +177,9 @@ Set it to nil if you don't want limits here."
   :group 're-builder)
 
 (defface reb-match-3
-  '((((class color) (background light))
+  '((((min-colors 88) (class color) (background light))
+     :background "yellow1")
+    (((class color) (background light))
      :background "yellow")
     (((class color) (background dark))
      :background "sienna4")
@@ -252,7 +254,7 @@ Except for Lisp syntax this is the same as `reb-regexp'.")
         mode-name "RE Builder")
   (use-local-map reb-mode-map)
   (reb-mode-common)
-  (run-hooks 'reb-mode-hook))
+  (run-mode-hooks 'reb-mode-hook))
 
 (define-derived-mode reb-lisp-mode
   emacs-lisp-mode "RE Builder Lisp"
@@ -555,7 +557,7 @@ optional fourth argument FORCE is non-nil."
   (interactive)
 
   (setq reb-subexp-displayed
-	(or subexp (string-to-int (format "%c" last-command-char))))
+	(or subexp (string-to-number (format "%c" last-command-char))))
   (reb-update-modestring)
   (reb-do-update reb-subexp-displayed))
 

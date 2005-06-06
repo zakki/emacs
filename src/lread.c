@@ -1,6 +1,6 @@
 /* Lisp parsing and input streams.
    Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994, 1995, 1997, 1998,
-     1999, 2000, 2001, 2003, 2004  Free Software Foundation, Inc.
+     1999, 2000, 2001, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -89,7 +89,7 @@ Lisp_Object Qinhibit_file_name_operation;
 extern Lisp_Object Qevent_symbol_element_mask;
 extern Lisp_Object Qfile_exists_p;
 
-/* non-zero if inside `load' */
+/* non-zero iff inside `load' */
 int load_in_progress;
 
 /* Directory in which the sources were found.  */
@@ -206,6 +206,7 @@ static Lisp_Object Vbytecomp_version_regexp;
 static void to_multibyte P_ ((char **, char **, int *));
 static void readevalloop P_ ((Lisp_Object, FILE*, Lisp_Object,
 			      Lisp_Object (*) (), int,
+			      Lisp_Object, Lisp_Object,
 			      Lisp_Object, Lisp_Object));
 static Lisp_Object load_unwind P_ ((Lisp_Object));
 static Lisp_Object load_descriptor_unwind P_ ((Lisp_Object));
@@ -912,7 +913,8 @@ Return t if file exists.  */)
   load_descriptor_list
     = Fcons (make_number (fileno (stream)), load_descriptor_list);
   load_in_progress++;
-  readevalloop (Qget_file_char, stream, file, Feval, 0, Qnil, Qnil);
+  readevalloop (Qget_file_char, stream, file, Feval,
+		0, Qnil, Qnil, Qnil, Qnil);
   unbind_to (count, Qnil);
 
   /* Run any load-hooks for this file.  */
@@ -1003,6 +1005,7 @@ complete_filename_p (pathname)
 
 DEFUN ("locate-file-internal", Flocate_file_internal, Slocate_file_internal, 2, 4, 0,
        doc: /* Search for FILENAME through PATH.
+Returns the file's name in absolute form, or nil if not found.
 If SUFFIXES is non-nil, it should be a list of suffixes to append to
 file name when searching.
 If non-nil, PREDICATE is used instead of `file-readable-p'.
@@ -1290,16 +1293,19 @@ end_of_file_error ()
 
 /* UNIBYTE specifies how to set load_convert_to_unibyte
    for this invocation.
-   READFUN, if non-nil, is used instead of `read'.  */
+   READFUN, if non-nil, is used instead of `read'.
+   START, END is region in current buffer (from eval-region).  */
 
 static void
-readevalloop (readcharfun, stream, sourcename, evalfun, printflag, unibyte, readfun)
+readevalloop (readcharfun, stream, sourcename, evalfun,
+	      printflag, unibyte, readfun, start, end)
      Lisp_Object readcharfun;
      FILE *stream;
      Lisp_Object sourcename;
      Lisp_Object (*evalfun) ();
      int printflag;
      Lisp_Object unibyte, readfun;
+     Lisp_Object start, end;
 {
   register int c;
   register Lisp_Object val;
@@ -1327,28 +1333,41 @@ readevalloop (readcharfun, stream, sourcename, evalfun, printflag, unibyte, read
   continue_reading_p = 1;
   while (continue_reading_p)
     {
+      int count1 = SPECPDL_INDEX ();
+
       if (b != 0 && NILP (b->name))
 	error ("Reading from killed buffer");
 
+      if (!NILP (start))
+	{
+	  record_unwind_protect (save_excursion_restore, save_excursion_save ());
+	  record_unwind_protect (save_restriction_restore, save_restriction_save ());
+	  Fgoto_char (start);
+	  Fnarrow_to_region (make_number (BEGV), end);
+	}
+
       instream = stream;
+    read_next:
       c = READCHAR;
       if (c == ';')
 	{
 	  while ((c = READCHAR) != '\n' && c != -1);
-	  continue;
+	  goto read_next;
 	}
-      if (c < 0) break;
+      if (c < 0)
+	{
+	  unbind_to (count1, Qnil);
+	  break;
+	}
 
       /* Ignore whitespace here, so we can detect eof.  */
       if (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r')
-	continue;
+	goto read_next;
 
       if (!NILP (Vpurify_flag) && c == '(')
 	{
-	  int count1 = SPECPDL_INDEX ();
 	  record_unwind_protect (unreadpure, Qnil);
 	  val = read_list (-1, readcharfun);
-	  unbind_to (count1, Qnil);
 	}
       else
 	{
@@ -1373,6 +1392,10 @@ readevalloop (readcharfun, stream, sourcename, evalfun, printflag, unibyte, read
 	  else
 	    val = read_internal_start (readcharfun, Qnil, Qnil);
 	}
+
+      if (!NILP (start) && continue_reading_p)
+	start = Fpoint_marker ();
+      unbind_to (count1, Qnil);
 
       val = (*evalfun) (val);
 
@@ -1432,7 +1455,8 @@ This function preserves the position of point.  */)
   specbind (Qstandard_output, tem);
   record_unwind_protect (save_excursion_restore, save_excursion_save ());
   BUF_SET_PT (XBUFFER (buf), BUF_BEGV (XBUFFER (buf)));
-  readevalloop (buf, 0, filename, Feval, !NILP (printflag), unibyte, Qnil);
+  readevalloop (buf, 0, filename, Feval,
+		!NILP (printflag), unibyte, Qnil, Qnil, Qnil);
   unbind_to (count, Qnil);
 
   return Qnil;
@@ -1464,15 +1488,10 @@ This function does not move point.  */)
     tem = printflag;
   specbind (Qstandard_output, tem);
 
-  if (NILP (printflag))
-    record_unwind_protect (save_excursion_restore, save_excursion_save ());
-  record_unwind_protect (save_restriction_restore, save_restriction_save ());
-
-  /* This both uses start and checks its type.  */
-  Fgoto_char (start);
-  Fnarrow_to_region (make_number (BEGV), end);
+  /* readevalloop calls functions which check the type of start and end.  */
   readevalloop (cbuf, 0, XBUFFER (cbuf)->filename, Feval,
-		!NILP (printflag), Qnil, read_function);
+		!NILP (printflag), Qnil, read_function,
+		start, end);
 
   return unbind_to (count, Qnil);
 }

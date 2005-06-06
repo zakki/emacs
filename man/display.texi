@@ -177,13 +177,9 @@ style of this face (@pxref{Face Customization}).  @xref{Transient Mark},
 for more information about Transient Mark mode and activation and
 deactivation of the mark.
 
-  One easy way to use faces is to turn on Font Lock mode.  This minor
-mode, which is always local to a particular buffer, arranges to
-choose faces according to the syntax of the text you are editing.  It
-can recognize comments and strings in most languages; in several
-languages, it can also recognize and properly highlight various other
-important constructs.  @xref{Font Lock}, for more information about
-Font Lock mode and syntactic highlighting.
+  One easy way to use faces is to turn on Font Lock mode.  @xref{Font
+Lock}, for more information about Font Lock mode and syntactic
+highlighting.
 
   You can print out the buffer with the highlighting that appears
 on your screen using the command @code{ps-print-buffer-with-faces}.
@@ -206,11 +202,12 @@ specialized ways of assigning fonts for Font Lock mode.
 
 @findex font-lock-mode
 @findex turn-on-font-lock
-  The command @kbd{M-x font-lock-mode} turns Font Lock mode on or off
-according to the argument, and toggles the mode when it has no argument.
-The function @code{turn-on-font-lock} unconditionally enables Font Lock
-mode.  This is useful in mode-hook functions.  For example, to enable
-Font Lock mode whenever you edit a C file, you can do this:
+  The command @kbd{M-x font-lock-mode} turns Font Lock mode on with
+positive argument, off with negative or zero argument, and toggles the
+mode when it has no argument.  The function @code{turn-on-font-lock}
+unconditionally enables Font Lock mode.  This is useful in mode-hook
+functions.  For example, to enable Font Lock mode whenever you edit a
+C file, you can do this:
 
 @example
 (add-hook 'c-mode-hook 'turn-on-font-lock)
@@ -219,9 +216,9 @@ Font Lock mode whenever you edit a C file, you can do this:
 @findex global-font-lock-mode
 @vindex global-font-lock-mode
   To turn on Font Lock mode automatically in all modes which support
-it, customize the variable @code{global-font-lock-mode} or use the
-function @code{global-font-lock-mode} in your @file{.emacs} file, like
-this:
+it, customize the variable @code{global-font-lock-mode} using the
+Customize interface (@pxref{Easy Customization}) or use the function
+@code{global-font-lock-mode} in your @file{.emacs} file, like this:
 
 @example
 (global-font-lock-mode 1)
@@ -326,7 +323,7 @@ delays when a file is visited, Emacs fontifies only the visible
 portion of a buffer.  As you scroll through the buffer, each portion
 that becomes visible is fontified as soon as it is displayed.  The
 parts of the buffer that are not displayed are fontified
-``stealthily'', in the background, i.e.@: when Emacs is idle.  You can
+``stealthily,'' in the background, i.e.@: when Emacs is idle.  You can
 control this background fontification, also called @dfn{Just-In-Time}
 (or @dfn{JIT}) Lock, by customizing variables in the customization
 group @samp{jit-lock}.  @xref{Specific Customization}.
@@ -641,7 +638,7 @@ last, indicating that ``this is not the real end.''
 meaning ``there's more text on this line which is scrolled
 horizontally out of view;'' clicking the mouse on one of the arrows
 scrolls the display horizontally in the direction of the arrow.   The
-fringes also indicate other things such as empty lines, or where a
+fringes can also indicate other things, such as empty lines, or where a
 program you are debugging is executing (@pxref{Debuggers}).
 
 @findex set-fringe-style
@@ -679,7 +676,7 @@ accessible portion (@pxref{Narrowing}), type @kbd{M-x
 delete-trailing-whitespace @key{RET}}.  (This command does not remove
 the form-feed characters.)
 
-@vindex indicate-unused-lines
+@vindex indicate-empty-lines
 @vindex default-indicate-empty-lines
 @cindex unused lines
 @cindex fringes, and unused line indication
@@ -690,9 +687,9 @@ lines at the end of the buffer then stand out because they do not have
 this image in the fringe.
 
   To enable this feature, set the buffer-local variable
-@code{indicate-unused-lines} to a non-@code{nil} value.  The default
+@code{indicate-empty-lines} to a non-@code{nil} value.  The default
 value of this variable is controlled by the variable
-@code{default-indicate-unused-lines}; by setting that variable, you
+@code{default-indicate-empty-lines}; by setting that variable, you
 can enable or disable this feature for all new buffers.  (This feature
 currently doesn't work on character terminals.)
 
@@ -728,11 +725,12 @@ one large window.
 of columns (you specify how many columns).  You can use this to get an
 overview of a part of a program.
 
-  To hide lines, type @kbd{C-x $} (@code{set-selective-display}) with a
-numeric argument @var{n}.  Then lines with at least @var{n} columns of
-indentation disappear from the screen.  The only indication of their
-presence is that three dots (@samp{@dots{}}) appear at the end of each
-visible line that is followed by one or more hidden ones.
+  To hide lines in the current buffer, type @kbd{C-x $}
+(@code{set-selective-display}) with a numeric argument @var{n}.  Then
+lines with at least @var{n} columns of indentation disappear from the
+screen.  The only indication of their presence is that three dots
+(@samp{@dots{}}) appear at the end of each visible line that is
+followed by one or more hidden ones.
 
   The commands @kbd{C-n} and @kbd{C-p} move across the hidden lines as
 if they were not there.
@@ -913,6 +911,17 @@ they are displayed using their graphics (assuming your terminal supports
 them), otherwise as escape sequences.  @xref{Single-Byte Character
 Support}.
 
+@vindex show-nonbreak-escape
+@cindex no-break space, display
+@cindex no-break hyphen, display
+  Some character sets define ``no-break'' versions of the space
+and hyphen characters, which are used where a line should not be
+broken.  Emacs displays these with an escape character in order to
+distinguish them from ordinary spaces and hyphens.  For example, a
+non-breaking space is displayed as @samp{\ }.  You can turn off this
+behavior by setting the variable @code{show-nonbreak-escape} to
+@code{nil}.
+
 @node Cursor Display
 @section Displaying the Cursor
 
@@ -1075,7 +1084,7 @@ bitmaps are displayed in the left or right fringe, respectively.
 The @var{indicator} must be one of @code{top}, @code{bottom},
 @code{up}, @code{down}, or @code{t} which specifies the default
 position for the indicators not present in the alist.
-The @var{position} is one of @code{left}, @code{right}, or @code{ni}
+The @var{position} is one of @code{left}, @code{right}, or @code{nil}
 which specifies not to show this indicator.
 
   For example, @code{((top . left) (t . right))} places the top angle

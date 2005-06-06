@@ -1,6 +1,6 @@
 ;;; calc-mode.el --- calculator modes for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -304,7 +304,9 @@
 	       vals (cdr vals))))
      (run-hooks 'calc-mode-save-hook)
      (insert ";;; End of mode settings\n")
-     (save-buffer))))
+     (save-buffer)
+     (if calc-embedded-info
+         (calc-embedded-save-original-modes)))))
 
 (defun calc-settings-file-name (name &optional arg)
   (interactive

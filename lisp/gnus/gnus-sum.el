@@ -2250,7 +2250,7 @@ gnus-summary-show-article-from-menu-as-charset-%s" cs))))
 	       ,@(if (featurep 'xemacs) '(t)
 		   '(:help "Generate and print a PostScript image"))])
 	     ("Copy, move,... (Backend)"
-	      ,@(if (featurep 'xemacs) '(t)
+	      ,@(if (featurep 'xemacs) nil
 		  '(:help "Copying, moving, expiring articles..."))
 	      ["Respool article..." gnus-summary-respool-article t]
 	      ["Move article..." gnus-summary-move-article
@@ -2722,7 +2722,7 @@ The following commands are available:
   (make-local-variable 'gnus-summary-mark-positions)
   (gnus-make-local-hook 'pre-command-hook)
   (add-hook 'pre-command-hook 'gnus-set-global-variables nil t)
-  (gnus-run-hooks 'gnus-summary-mode-hook)
+  (gnus-run-mode-hooks 'gnus-summary-mode-hook)
   (turn-on-gnus-mailing-list-mode)
   (mm-enable-multibyte)
   (gnus-update-format-specifications nil 'summary 'summary-mode 'summary-dummy)
@@ -5660,7 +5660,7 @@ The resulting hash table is returned, or nil if no Xrefs were found."
 						    (match-end 1)))
 			(substring xrefs (match-beginning 1) (match-end 1))))
 	  (setq number
-		(string-to-int (substring xrefs (match-beginning 2)
+		(string-to-number (substring xrefs (match-beginning 2)
 					  (match-end 2))))
 	  (if (setq entry (gnus-gethash group xref-hashtb))
 	      (setcdr entry (cons number (cdr entry)))
@@ -7254,11 +7254,12 @@ If BACKWARD, the previous article is selected instead of the next."
 	     (if (and group
 		      (not (gnus-ephemeral-group-p gnus-newsgroup-name)))
 		 (format " (Type %s for %s [%s])"
-			 (single-key-description cmd) group
+			 (single-key-description cmd)
+			 (gnus-group-decoded-name group)
 			 (car (gnus-gethash group gnus-newsrc-hashtb)))
 	       (format " (Type %s to exit %s)"
 		       (single-key-description cmd)
-		       gnus-newsgroup-name))))
+		       (gnus-group-decoded-name gnus-newsgroup-name)))))
       ;; Confirm auto selection.
       (setq key (car (setq keve (gnus-read-event-char prompt)))
 	    ended t)

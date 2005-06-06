@@ -1,6 +1,6 @@
 ;;; webjump.el --- programmable Web hotlist
 
-;; Copyright (C) 1996, 1997, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 2005 Free Software Foundation, Inc.
 
 ;; Author:    Neil W. Van Dyke <nwv@acm.org>
 ;; Created:   09-Aug-1996
@@ -274,9 +274,9 @@ Please submit bug reports and other feedback to the author, Neil W. Van Dyke
 <nwv@acm.org>."
   (interactive)
   (let* ((completion-ignore-case t)
-	 (item (assoc-ignore-case
+	 (item (assoc-string
 		(completing-read "WebJump to site: " webjump-sites nil t)
-		webjump-sites))
+		webjump-sites t))
 	 (name (car item))
 	 (expr (cdr item)))
     (browse-url (webjump-url-fix

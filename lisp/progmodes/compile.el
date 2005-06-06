@@ -1,7 +1,7 @@
 ;;; compile.el --- run compiler as inferior of Emacs, parse error messages
 
 ;; Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-;;   2001, 2003, 2004  Free Software Foundation, Inc.
+;;   2001, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 ;; Authors: Roland McGrath <roland@gnu.org>,
 ;;	    Daniel Pfeiffer <occitan@esperanto.org>
@@ -119,6 +119,10 @@ nil means compute the name with `(concat \"*\" (downcase major-mode) \"*\")'.")
 It is called with two arguments: the compilation buffer, and a string
 describing how the process finished.")
 
+(make-obsolete-variable 'compilation-finish-function
+  "Use `compilation-finish-functions', but it works a little differently."
+  "22.1")
+
 ;;;###autoload
 (defvar compilation-finish-functions nil
   "Functions to call when a compilation process finishes.
@@ -227,9 +231,9 @@ of[ \t]+\"?\\([a-zA-Z]?:?[^\":\n]+\\)\"?:" 3 2 nil (1))
 
     (makepp
      "^makepp: \\(?:\\(?:warning\\(:\\).*?\\|\\(Scanning\\|[LR]e?l?oading makefile\\) \\|.*?\\)\
-`\\(\\(\\S +?\\)\\(?::\\([0-9]+\\)\\)?\\)'\\)"
+`\\(\\(\\S +?\\)\\(?::\\([0-9]+\\)\\)?\\)['(]\\)"
      4 5 nil (1 . 2) 3
-     ("`\\(\\(\\S +?\\)\\(?::\\([0-9]+\\)\\)?\\)'" nil nil
+     ("`\\(\\(\\S +?\\)\\(?::\\([0-9]+\\)\\)?\\)['(]" nil nil
       (2 compilation-info-face)
       (3 compilation-line-face nil t)
       (1 (compilation-error-properties 2 3 nil nil nil 0 nil)
@@ -280,7 +284,18 @@ File = \\(.+\\), Line = \\([0-9]+\\)\\(?:, Column = \\([0-9]+\\)\\)?"
 
     (4bsd
      "\\(?:^\\|::  \\|\\S ( \\)\\(/[^ \n\t()]+\\)(\\([0-9]+\\))\
-\\(?:: \\(warning:\\)?\\|$\\| ),\\)" 1 2 nil (3)))
+\\(?:: \\(warning:\\)?\\|$\\| ),\\)" 1 2 nil (3))
+
+    (gcov-file
+     "^ +-:    \\(0\\):Source:\\(.+\\)$" 2 1 nil 0)    
+    (gcov-bb-file
+     "^ +-:    \\(0\\):Object:\\(?:.+\\)$" nil 1 nil 0)    
+    (gcov-never-called-line
+     "^ +\\(#####\\): +\\([0-9]+\\):.+$" nil 2 nil 2 nil 
+     (1 compilation-error-face))
+    (gcov-called-line
+     "^ +[-0-9]+: +\\([1-9]\\|[0-9]\\{2,\\}\\):.*$" nil 1 nil 0)
+)
   "Alist of values for `compilation-error-regexp-alist'.")
 
 (defcustom compilation-error-regexp-alist
@@ -464,6 +479,8 @@ starting the compilation process.")
 (defface compilation-info-face
   '((((class color) (min-colors 16) (background light))
      (:foreground "Green3" :weight bold))
+    (((class color) (min-colors 88) (background dark))
+     (:foreground "Green1" :weight bold))
     (((class color) (min-colors 16) (background dark))
      (:foreground "Green" :weight bold))
     (((class color)) (:foreground "green" :weight bold))
@@ -697,7 +714,7 @@ FILE should be (ABSOLUTE-FILENAME) or (RELATIVE-FILENAME . DIRNAME) or nil."
 			`(,(car elt)
 			  (compilation-directory-properties
 			   ,(car elt) ,(cdr elt))
-			  t))
+			  t t))
 		      (cdr compilation-directory-matcher)))))
 
      ;; Compiler warning/error lines.
@@ -720,11 +737,12 @@ FILE should be (ABSOLUTE-FILENAME) or (RELATIVE-FILENAME . DIRNAME) or nil."
 	      ;; allowed `line' to be a function that computed the actual
 	      ;; error location.  Let's do our best.
 	      `(,(car item)
-		(0 (compilation-compat-error-properties
-		    (funcall ',line (cons (match-string ,file)
-					  (cons default-directory
-						',(nthcdr 4 item)))
-			     ,(if col `(match-string ,col)))))
+		(0 (save-match-data
+		     (compilation-compat-error-properties
+		      (funcall ',line (cons (match-string ,file)
+					    (cons default-directory
+						  ',(nthcdr 4 item)))
+			       ,(if col `(match-string ,col))))))
 		(,file compilation-error-face t))
 
 	    (unless (or (null (nth 5 item)) (integerp (nth 5 item)))
@@ -917,12 +935,20 @@ Returns the compilation buffer created."
 		    (substitute-env-vars (match-string 1 command))
 		  "~")
 	      default-directory))
+	;; Select the desired mode.
+	(if (not (eq mode t))
+	    (funcall mode)
+	  (setq buffer-read-only nil)
+	  (with-no-warnings (comint-mode))
+	  (compilation-shell-minor-mode))
+	(if highlight-regexp
+	    (set (make-local-variable 'compilation-highlight-regexp)
+		 highlight-regexp))
 	(erase-buffer)
-	;; output a mode setter, for saving and later reloading this buffer
+	;; Output a mode setter, for saving and later reloading this buffer.
 	(insert "-*- mode: " name-of-mode
 		"; default-directory: " (prin1-to-string default-directory)
-		" -*-\n" command "\n")
-	(setq thisdir default-directory))
+		" -*-\n" command "\n")	(setq thisdir default-directory))
       (set-buffer-modified-p nil))
     ;; If we're already in the compilation buffer, go to the end
     ;; of the buffer, so point will track the compilation output.
@@ -945,14 +971,6 @@ Returns the compilation buffer created."
 	      ;; don't override users' setting of $EMACS.
 	      (unless (getenv "EMACS") '("EMACS=t"))
 	      (copy-sequence process-environment))))
-	(if (not (eq mode t))
-	    (funcall mode)
-	  (setq buffer-read-only nil)
-	  (with-no-warnings (comint-mode))
-	  (compilation-shell-minor-mode))
-	(if highlight-regexp
-	    (set (make-local-variable 'compilation-highlight-regexp)
-		 highlight-regexp))
 	(set (make-local-variable 'compilation-arguments)
 	     (list command mode name-function highlight-regexp))
 	(set (make-local-variable 'revert-buffer-function)
@@ -1233,6 +1251,10 @@ Optional argument MINOR indicates this is called from
   (make-local-variable 'compilation-messages-start)
   (make-local-variable 'compilation-error-screen-columns)
   (make-local-variable 'overlay-arrow-position)
+  (set (make-local-variable 'overlay-arrow-string) "")
+  (setq next-error-overlay-arrow-position nil)
+  (add-hook 'kill-buffer-hook
+	    (lambda () (setq next-error-overlay-arrow-position nil)) nil t)
   ;; Note that compilation-next-error-function is for interfacing
   ;; with the next-error function in simple.el, and it's only
   ;; coincidentally named similarly to compilation-next-error.
@@ -1556,9 +1578,12 @@ region and the first line of the next region."
       (setcdr loc (list line file marker)))
     loc))
 
-(defcustom compilation-context-lines 0
-  "*Display this many lines of leading context before message.
-If nil, don't scroll the compilation output window."
+(defcustom compilation-context-lines nil
+  "Display this many lines of leading context before the current message.
+If nil and the left fringe is displayed, don't scroll the
+compilation output window; an arrow in the left fringe points to
+the current message.  If nil and there is no left fringe, the message
+displays at the top of the window; there is no arrow."
   :type '(choice integer (const :tag "No window scrolling" nil))
   :group 'compilation
   :version "22.1")
@@ -1567,10 +1592,19 @@ If nil, don't scroll the compilation output window."
   "Align the compilation output window W with marker MK near top."
   (if (integerp compilation-context-lines)
       (set-window-start w (save-excursion
-                            (goto-char mk)
-                            (beginning-of-line (- 1 compilation-context-lines))
-                            (point))))
-  (set-window-point w mk))
+			    (goto-char mk)
+			    (beginning-of-line
+			     (- 1 compilation-context-lines))
+			    (point)))
+    ;; If there is no left fringe.
+    (if (equal (car (window-fringes)) 0)
+	(set-window-start w (save-excursion
+			      (goto-char mk)
+			    (beginning-of-line 1)
+			    (point)))))
+    (set-window-point w mk))
+
+(defvar next-error-highlight-timer)
 
 (defun compilation-goto-locus (msg mk end-mk)
   "Jump to an error corresponding to MSG at MK.
@@ -1613,6 +1647,8 @@ and overlay is highlighted between MK and END-MK."
     (compilation-set-window-height w)
 
     (when highlight-regexp
+      (if (timerp next-error-highlight-timer)
+	  (cancel-timer next-error-highlight-timer))
       (unless compilation-highlight-overlay
 	(setq compilation-highlight-overlay
 	      (make-overlay (point-min) (point-min)))
@@ -1632,12 +1668,16 @@ and overlay is highlighted between MK and END-MK."
 	      (move-overlay compilation-highlight-overlay
 			    (point) end (current-buffer)))
 	    (if (numberp next-error-highlight)
-		(sit-for next-error-highlight))
-	    (if (not (eq next-error-highlight t))
+		(setq next-error-highlight-timer
+		      (run-at-time next-error-highlight nil 'delete-overlay
+				   compilation-highlight-overlay)))
+	    (if (not (or (eq next-error-highlight t)
+			 (numberp next-error-highlight)))
 		(delete-overlay compilation-highlight-overlay))))))
     (when (and (eq next-error-highlight 'fringe-arrow))
-      (set (make-local-variable 'overlay-arrow-position)
-	   (copy-marker (line-beginning-position))))))
+      (setq next-error-overlay-arrow-position
+	    (copy-marker (line-beginning-position))))))
+
 
 (defun compilation-find-file (marker filename dir &rest formats)
   "Find a buffer for file FILENAME.
@@ -1833,6 +1873,9 @@ FILE should be (ABSOLUTE-FILENAME) or (RELATIVE-FILENAME . DIRNAME)."
 	  ;; than at the insertion point.  If that's not possible, then
 	  ;; don't use a marker.  --Stef
 	  (if (> pos (point-min)) (copy-marker (1- pos)) pos))))
+
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.gcov\\'" . compilation-mode))
 
 (provide 'compile)
 

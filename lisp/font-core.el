@@ -32,7 +32,7 @@
   "Defaults for Font Lock mode specified by the major mode.
 Defaults should be of the form:
 
- (KEYWORDS KEYWORDS-ONLY CASE-FOLD SYNTAX-ALIST SYNTAX-BEGIN ...)
+ (KEYWORDS [KEYWORDS-ONLY [CASE-FOLD [SYNTAX-ALIST [SYNTAX-BEGIN ...]]]])
 
 KEYWORDS may be a symbol (a variable or function whose value is the keywords to
 use for fontification) or a list of symbols.  If KEYWORDS-ONLY is non-nil,
@@ -66,11 +66,10 @@ textual modes (i.e., the mode-dependent function is known to put point and mark
 around a text block relevant to that mode).
 
 Other variables include that for syntactic keyword fontification,
-`font-lock-syntactic-keywords'
-and those for buffer-specialized fontification functions,
-`font-lock-fontify-buffer-function', `font-lock-unfontify-buffer-function',
-`font-lock-fontify-region-function', `font-lock-unfontify-region-function',
-`font-lock-inhibit-thing-lock' and `font-lock-maximum-size'.")
+`font-lock-syntactic-keywords' and those for buffer-specialized fontification
+functions, `font-lock-fontify-buffer-function',
+`font-lock-unfontify-buffer-function', `font-lock-fontify-region-function',
+`font-lock-unfontify-region-function', and `font-lock-inhibit-thing-lock'.")
 (make-variable-buffer-local 'font-lock-defaults)
 
 (defvar font-lock-defaults-alist nil
@@ -89,6 +88,8 @@ settings.  See the variable `font-lock-defaults', which takes precedence.")
 It will be passed one argument, which is the current value of
 `font-lock-mode'.")
 
+;; The mode for which font-lock was initialized, or nil if none.
+(defvar font-lock-mode-major-mode)
 (define-minor-mode font-lock-mode
   "Toggle Font Lock mode.
 With arg, turn Font Lock mode off if and only if arg is a non-positive
@@ -148,7 +149,7 @@ buffer local value for `font-lock-defaults', via its mode hook.
 The above is the default behavior of `font-lock-mode'; you may specify
 your own function which is called when `font-lock-mode' is toggled via
 `font-lock-function'. "
-  nil nil nil
+  :group 'font-lock
   ;; Don't turn on Font Lock mode if we don't have a display (we're running a
   ;; batch job) or if the buffer is invisible (the name starts with a space).
   (when (or noninteractive (eq (aref (buffer-name) 0) ?\ ))
@@ -157,7 +158,9 @@ your own function which is called when `font-lock-mode' is toggled via
   ;; Arrange to unfontify this buffer if we change major mode later.
   (if font-lock-mode
       (add-hook 'change-major-mode-hook 'font-lock-change-mode nil t)
-    (remove-hook 'change-major-mode-hook 'font-lock-change-mode t)))
+    (remove-hook 'change-major-mode-hook 'font-lock-change-mode t))
+  (when font-lock-mode
+    (setq font-lock-mode-major-mode major-mode)))
 
 ;; Get rid of fontification for the old major mode.
 ;; We do this when changing major modes.
@@ -176,6 +179,7 @@ this function onto `change-major-mode-hook'."
 				      '(font-lock-face)))
     (restore-buffer-modified-p modp)))
 
+(defvar font-lock-set-defaults)
 (defun font-lock-default-function (mode)
   ;; Turn on Font Lock mode.
   (when mode
@@ -202,9 +206,14 @@ this function onto `change-major-mode-hook'."
   ;; Only do hard work if the mode has specified stuff in
   ;; `font-lock-defaults'.
   (when (or font-lock-defaults
-	    (and (boundp 'font-lock-keywords) font-lock-keywords)
+	    (if (boundp 'font-lock-keywords) font-lock-keywords)
 	    (with-no-warnings
-	     (cdr (assq major-mode font-lock-defaults-alist))))
+	      (cdr (assq major-mode font-lock-defaults-alist)))
+	    (and mode
+		 (boundp 'font-lock-set-defaults)
+		 font-lock-set-defaults
+		 font-lock-mode-major-mode
+		 (not (eq font-lock-mode-major-mode major-mode))))
     (font-lock-mode-internal mode)))
 
 (defun turn-on-font-lock ()
@@ -232,24 +241,20 @@ this function onto `change-major-mode-hook'."
 ;; hook is run, the major mode is in the process of being changed and we do not
 ;; know what the final major mode will be.  So, `font-lock-change-major-mode'
 ;; only (a) notes the name of the current buffer, and (b) adds our function
-;; `turn-on-font-lock-if-enabled' to the hook variables `find-file-hook' and
-;; `post-command-hook' (for buffers that are not visiting files).  By the time
+;; `turn-on-font-lock-if-enabled' to the hook variables
+;; `after-change-major-mode-hook' and `post-command-hook' (for modes
+;; that do not yet run `after-change-major-mode-hook').  By the time
 ;; the functions on the first of these hooks to be run are run, the new major
 ;; mode is assumed to be in place.  This way we get a Font Lock function run
 ;; when a major mode is turned on, without knowing major modes or their hooks.
 ;;
-;; Naturally this requires that (a) major modes run `kill-all-local-variables',
-;; as they are supposed to do, and (b) the major mode is in place after the
-;; file is visited or the command that ran `kill-all-local-variables' has
-;; finished, whichever the sooner.  Arguably, any major mode that does not
-;; follow the convension (a) is broken, and I can't think of any reason why (b)
-;; would not be met (except `gnudoit' on non-files).  However, it is not clean.
-;;
-;; Probably the cleanest solution is to have each major mode function run some
-;; hook, e.g., `major-mode-hook', but maybe implementing that change is
-;; impractical.  I am personally against making `setq' a macro or be advised,
-;; or have a special function such as `set-major-mode', but maybe someone can
-;; come up with another solution?
+;; Naturally this requires that major modes run `kill-all-local-variables'
+;; and `after-change-major-mode-hook', as they are supposed to.  For modes
+;; that do not run `after-change-major-mode-hook' yet, `post-command-hook'
+;; takes care of things if the mode is set directly or indirectly by
+;; an interactive command; however, problems can occur if the mode is
+;; set by a timer or process: in that case, proper handling of Font Lock mode
+;; may be delayed until the next interactive command.
 
 ;; User interface.
 ;;

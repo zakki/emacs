@@ -534,6 +534,12 @@ memory_full ()
     Fsignal (Qnil, Vmemory_signal_data);
 }
 
+DEFUN ("memory-full-p", Fmemory_full_p, Smemory_full_p, 0, 0, 0,
+       doc: /* t if memory is nearly full, nil otherwise.  */)
+  ()
+{
+  return (spare_memory ? Qnil : Qt);
+}
 
 /* Called if we can't allocate relocatable space for a buffer.  */
 
@@ -1502,7 +1508,7 @@ mark_interval_tree (tree)
 #ifndef make_number
 Lisp_Object
 make_number (n)
-     int n;
+     EMACS_INT n;
 {
   Lisp_Object obj;
   obj.s.val = n;
@@ -1678,7 +1684,7 @@ static int total_string_size;
 
 /* We check for overrun in string data blocks by appending a small
    "cookie" after each allocated string data block, and check for the
-   presense of this cookie during GC.  */
+   presence of this cookie during GC.  */
 
 #define GC_STRING_OVERRUN_COOKIE_SIZE	4
 static char string_overrun_cookie[GC_STRING_OVERRUN_COOKIE_SIZE] =
@@ -1933,14 +1939,18 @@ allocate_string_data (s, nchars, nbytes)
          mmap'ed data typically have an address towards the top of the
          address space, which won't fit into an EMACS_INT (at least on
          32-bit systems with the current tagging scheme).  --fx  */
+      BLOCK_INPUT;
       mallopt (M_MMAP_MAX, 0);
+      UNBLOCK_INPUT;
 #endif
 
       b = (struct sblock *) lisp_malloc (size + GC_STRING_EXTRA, MEM_TYPE_NON_LISP);
 
 #ifdef DOUG_LEA_MALLOC
       /* Back to a reasonable maximum of mmap'ed areas. */
+      BLOCK_INPUT;
       mallopt (M_MMAP_MAX, MMAP_MAX_AREAS);
+      UNBLOCK_INPUT;
 #endif
 
       b->next_free = &b->first_data;
@@ -3010,18 +3020,18 @@ The property's value should be an integer between 0 and 10.  */)
 }
 
 
-/* Return a newly created sub char table with default value DEFALT.
+/* Return a newly created sub char table with slots initialized by INIT.
    Since a sub char table does not appear as a top level Emacs Lisp
    object, we don't need a Lisp interface to make it.  */
 
 Lisp_Object
-make_sub_char_table (defalt)
-     Lisp_Object defalt;
+make_sub_char_table (init)
+     Lisp_Object init;
 {
   Lisp_Object vector
-    = Fmake_vector (make_number (SUB_CHAR_TABLE_STANDARD_SLOTS), Qnil);
+    = Fmake_vector (make_number (SUB_CHAR_TABLE_STANDARD_SLOTS), init);
   XCHAR_TABLE (vector)->top = Qnil;
-  XCHAR_TABLE (vector)->defalt = defalt;
+  XCHAR_TABLE (vector)->defalt = Qnil;
   XSETCHAR_TABLE (vector, XCHAR_TABLE (vector));
   return vector;
 }
@@ -4683,6 +4693,8 @@ returns nil, because real GC can't be done.  */)
   if (pure_bytes_used_before_overflow)
     return Qnil;
 
+  CHECK_CONS_LIST ();
+
   /* Don't keep undo information around forever.
      Do this early on, so it is no problem if the user quits.  */
   {
@@ -4875,6 +4887,8 @@ returns nil, because real GC can't be done.  */)
 #endif
 
   UNBLOCK_INPUT;
+
+  CHECK_CONS_LIST ();
 
   /* clear_marks (); */
   gc_in_progress = 0;
@@ -6070,6 +6084,7 @@ The time is in seconds as a floating point value.  */);
   DEFVAR_INT ("gcs-done", &gcs_done,
 	      doc: /* Accumulated number of garbage collections done.  */);
 
+  defsubr (&Smemory_full_p);
   defsubr (&Scons);
   defsubr (&Slist);
   defsubr (&Svector);

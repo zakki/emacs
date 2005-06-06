@@ -1,6 +1,7 @@
 ;;; easy-mmode.el --- easy definition for major and minor modes
 
-;; Copyright (C) 1997,2000,01,02,03,2004  Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2000, 2001, 2002, 2003, 2004, 2005
+;;   Free Software Foundation, Inc.
 
 ;; Author: Georges Brun-Cottan <Georges.Brun-Cottan@inria.fr>
 ;; Maintainer: Stefan Monnier <monnier@gnu.org>
@@ -35,7 +36,6 @@
 ;; For each mode, easy-mmode defines the following:
 ;; <mode>      : The minor mode predicate. A buffer-local variable.
 ;; <mode>-map  : The keymap possibly associated to <mode>.
-;; <mode>-hook : The hook run at the end of the toggle function.
 ;;       see `define-minor-mode' documentation
 ;;
 ;; eval
@@ -57,16 +57,31 @@
 
 (defun easy-mmode-pretty-mode-name (mode &optional lighter)
   "Turn the symbol MODE into a string intended for the user.
-If provided LIGHTER will be used to help choose capitalization."
+If provided, LIGHTER will be used to help choose capitalization by,
+replacing its case-insensitive matches with the literal string in LIGHTER."
   (let* ((case-fold-search t)
+	 ;; Produce "Foo-Bar minor mode" from foo-bar-minor-mode.
 	 (name (concat (replace-regexp-in-string
+			;; If the original mode name included "-minor" (some
+			;; of them don't, e.g. auto-revert-mode), then
+			;; replace it with " minor".
 			"-Minor" " minor"
+			;; "foo-bar-minor" -> "Foo-Bar-Minor"
 			(capitalize (replace-regexp-in-string
+				     ;; "foo-bar-minor-mode" -> "foo-bar-minor"
 				     "-mode\\'" "" (symbol-name mode))))
 		       " mode")))
     (if (not (stringp lighter)) name
-      (setq lighter (replace-regexp-in-string "\\`\\s-+\\|\\-s+\\'" "" lighter))
-      (replace-regexp-in-string lighter lighter name t t))))
+      ;; Strip leading and trailing whitespace from LIGHTER.
+      (setq lighter (replace-regexp-in-string "\\`\\s-+\\|\\s-+\\'" ""
+					      lighter))
+      ;; Replace any (case-insensitive) matches for LIGHTER in NAME
+      ;; with a literal LIGHTER.  E.g., if NAME is "Iimage mode" and
+      ;; LIGHTER is " iImag", then this will produce "iImage mode".
+      ;; (LIGHTER normally comes from the mode-line string passed to
+      ;; define-minor-mode, and normally includes at least one leading
+      ;; space.)
+      (replace-regexp-in-string (regexp-quote lighter) lighter name t t))))
 
 ;;;###autoload
 (defalias 'easy-mmode-define-minor-mode 'define-minor-mode)
@@ -74,7 +89,7 @@ If provided LIGHTER will be used to help choose capitalization."
 (defmacro define-minor-mode (mode doc &optional init-value lighter keymap &rest body)
   "Define a new minor mode MODE.
 This function defines the associated control variable MODE, keymap MODE-map,
-toggle command MODE, and hook MODE-hook.
+and toggle command MODE.
 
 DOC is the documentation for the mode toggle command.
 Optional INIT-VALUE is the initial value of the mode's variable.
@@ -87,14 +102,17 @@ The above three arguments can be skipped if keyword arguments are
 used (see below).
 
 BODY contains code that will be executed each time the mode is (dis)activated.
-  It will be executed after any toggling but before running the hooks.
-  Before the actual body code, you can write
-  keyword arguments (alternating keywords and values).
-  These following keyword arguments are supported (other keywords
-  will be passed to `defcustom' if the minor mode is global):
+  It will be executed after any toggling but before running the hook variable
+  `mode-HOOK'.
+  Before the actual body code, you can write keyword arguments (alternating
+  keywords and values).  These following keyword arguments are supported (other
+  keywords will be passed to `defcustom' if the minor mode is global):
 :group GROUP	Custom group name to use in all generated `defcustom' forms.
+		Defaults to MODE without the possible trailing \"-mode\".
+		Don't use this default group name unless you have written a
+		`defgroup' to define that group properly.
 :global GLOBAL	If non-nil specifies that the minor mode is not meant to be
-              	buffer-local, so don't make the variable MODE buffer-local.
+		buffer-local, so don't make the variable MODE buffer-local.
 		By default, the mode is buffer-local.
 :init-value VAL	Same as the INIT-VALUE argument.
 :lighter SPEC	Same as the LIGHTER argument.
@@ -152,9 +170,8 @@ For example, you could write
     (unless group
       ;; We might as well provide a best-guess default group.
       (setq group
-	    `(:group ',(or (custom-current-group)
-			   (intern (replace-regexp-in-string
-				    "-mode\\'" "" mode-name))))))
+	    `(:group ',(intern (replace-regexp-in-string
+				"-mode\\'" "" mode-name)))))
 
     `(progn
        ;; Define the variable to enable or disable the mode.
@@ -219,15 +236,9 @@ With zero or negative ARG turn mode off.
 	 ;; Return the new setting.
 	 ,mode)
 
-       ;; Autoloading an easy-mmode-define-minor-mode autoloads
-       ;; everything up-to-here.
+       ;; Autoloading a define-minor-mode autoloads everything
+       ;; up-to-here.
        :autoload-end
-
-       ;; The toggle's hook.
-       (defcustom ,hook nil
-	 ,(format "Hook run at the end of function `%s'." mode-name)
-	 ,@group
-	 :type 'hook)
 
        ;; Define the minor-mode keymap.
        ,(unless (symbolp keymap)	;nil is also a symbol.
@@ -253,20 +264,33 @@ With zero or negative ARG turn mode off.
 ;;;
 
 ;;;###autoload
-(defmacro easy-mmode-define-global-mode (global-mode mode turn-on
-						     &rest keys)
+(defalias 'easy-mmode-define-global-mode 'define-global-minor-mode)
+;;;###autoload
+(defmacro define-global-minor-mode (global-mode mode turn-on &rest keys)
   "Make GLOBAL-MODE out of the buffer-local minor MODE.
 TURN-ON is a function that will be called with no args in every buffer
   and that should try to turn MODE on if applicable for that buffer.
 KEYS is a list of CL-style keyword arguments:
-:group to specify the custom group."
+:group to specify the custom group.
+
+If MODE's set-up depends on the major mode in effect when it was
+enabled, then disabling and reenabling MODE should make MODE work
+correctly with the current major mode.  This is important to
+prevent problems with derived modes, that is, major modes that
+call another major mode in their body."
+
   (let* ((global-mode-name (symbol-name global-mode))
 	 (pretty-name (easy-mmode-pretty-mode-name mode))
 	 (pretty-global-name (easy-mmode-pretty-mode-name global-mode))
 	 (group nil)
 	 (extra-args nil)
-	 (buffers (intern (concat global-mode-name "-buffers")))
-	 (cmmh (intern (concat global-mode-name "-cmmh"))))
+	 (MODE-buffers (intern (concat global-mode-name "-buffers")))
+	 (MODE-enable-in-buffers
+	  (intern (concat global-mode-name "-enable-in-buffers")))
+	 (MODE-check-buffers
+	  (intern (concat global-mode-name "-check-buffers")))
+	 (MODE-cmhh (intern (concat global-mode-name "-cmhh")))
+	 (MODE-major-mode (intern (concat (symbol-name mode) "-major-mode"))))
 
     ;; Check keys.
     (while (keywordp (car keys))
@@ -278,11 +302,12 @@ KEYS is a list of CL-style keyword arguments:
     (unless group
       ;; We might as well provide a best-guess default group.
       (setq group
-	    `(:group ',(or (custom-current-group)
-			   (intern (replace-regexp-in-string
-				    "-mode\\'" "" (symbol-name mode)))))))
+	    `(:group ',(intern (replace-regexp-in-string
+				"-mode\\'" "" (symbol-name mode))))))
 
     `(progn
+       (defvar ,MODE-major-mode nil)
+       (make-variable-buffer-local ',MODE-major-mode)
        ;; The actual global minor-mode
        (define-minor-mode ,global-mode
 	 ,(format "Toggle %s in every buffer.
@@ -295,37 +320,51 @@ in which `%s' turns it on."
 	 ;; Setup hook to handle future mode changes and new buffers.
 	 (if ,global-mode
 	     (progn
-	       (add-hook 'find-file-hook ',buffers)
-	       (add-hook 'change-major-mode-hook ',cmmh))
-	   (remove-hook 'find-file-hook ',buffers)
-	   (remove-hook 'change-major-mode-hook ',cmmh))
+	       (add-hook 'after-change-major-mode-hook
+			 ',MODE-enable-in-buffers)
+	       (add-hook 'find-file-hook ',MODE-check-buffers)
+	       (add-hook 'change-major-mode-hook ',MODE-cmhh))
+	   (remove-hook 'after-change-major-mode-hook ',MODE-enable-in-buffers)
+	   (remove-hook 'find-file-hook ',MODE-check-buffers)
+	   (remove-hook 'change-major-mode-hook ',MODE-cmhh))
 
 	 ;; Go through existing buffers.
 	 (dolist (buf (buffer-list))
 	   (with-current-buffer buf
 	     (if ,global-mode (,turn-on) (when ,mode (,mode -1))))))
 
-       ;; Autoloading easy-mmode-define-global-mode
-       ;; autoloads everything up-to-here.
+       ;; Autoloading define-global-minor-mode autoloads everything
+       ;; up-to-here.
        :autoload-end
 
        ;; List of buffers left to process.
-       (defvar ,buffers nil)
+       (defvar ,MODE-buffers nil)
 
        ;; The function that calls TURN-ON in each buffer.
-       (defun ,buffers ()
-	 (remove-hook 'post-command-hook ',buffers)
-	 (while ,buffers
-	   (let ((buf (pop ,buffers)))
-	     (when (buffer-live-p buf)
-	       (with-current-buffer buf (,turn-on))))))
-       (put ',buffers 'definition-name ',global-mode)
+       (defun ,MODE-enable-in-buffers ()
+	 (dolist (buf ,MODE-buffers)
+	   (when (buffer-live-p buf)
+	     (with-current-buffer buf
+	       (if ,mode
+		   (unless (eq ,MODE-major-mode major-mode)
+		     (,mode -1)
+		     (,turn-on)
+		     (setq ,MODE-major-mode major-mode))
+		 (,turn-on)
+		 (setq ,MODE-major-mode major-mode))))))
+       (put ',MODE-enable-in-buffers 'definition-name ',global-mode)
+
+       (defun ,MODE-check-buffers ()
+	 (,MODE-enable-in-buffers)
+	 (setq ,MODE-buffers nil)
+	 (remove-hook 'post-command-hook ',MODE-check-buffers))
+       (put ',MODE-check-buffers 'definition-name ',global-mode)
 
        ;; The function that catches kill-all-local-variables.
-       (defun ,cmmh ()
-	 (add-to-list ',buffers (current-buffer))
-	 (add-hook 'post-command-hook ',buffers))
-       (put ',cmmh 'definition-name ',global-mode))))
+       (defun ,MODE-cmhh ()
+	 (add-to-list ',MODE-buffers (current-buffer))
+	 (add-hook 'post-command-hook ',MODE-check-buffers))
+       (put ',MODE-cmhh 'definition-name ',global-mode))))
 
 ;;;
 ;;; easy-mmode-defmap

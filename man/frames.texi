@@ -48,7 +48,7 @@ so that you can use many of the features described in this chapter.
 * Menu Bars::	        Enabling and disabling the menu bar.
 * Tool Bars::           Enabling and disabling the tool bar.
 * Dialog Boxes::        Controlling use of dialog boxes.
-* Tooltips::            Showing "tooltips", AKA "balloon help" for active text.
+* Tooltips::            Displaying information at the current mouse position.
 * Mouse Avoidance::     Moving the mouse pointer out of the way.
 * Non-Window Terminals::  Multiple frames on terminals that show only one.
 * XTerm Mouse::         Using the mouse in an XTerm terminal emulator.
@@ -83,6 +83,18 @@ in between the mouse command and @key{DELETE}, it does not do this.
 Move point to where you click (@code{mouse-set-point}).
 This is normally the left button.
 
+@vindex x-mouse-click-focus-ignore-position
+Normally, Emacs does not distinguish between ordinary mouse clicks and
+clicks that select a frame.  When you click on a frame to select it,
+that also changes the selected window and cursor position according to
+the mouse click position.  On the X window system, you can change this
+behavior by setting the variable
+@code{x-mouse-click-focus-ignore-position} to @code{t}.  Then the
+first click selects the frame, but does not affect the selected window
+or cursor position.  If you click again in the same place, since that
+click will be in the selected frame, it will change the window or
+cursor position.
+
 @item Drag-Mouse-1
 Set the region to the text you select by dragging, and copy it to the
 kill ring (@code{mouse-set-region}).  You can specify both ends of the
@@ -95,6 +107,10 @@ back into the window.  This way, you can select regions that don't fit
 entirely on the screen.  The number of lines scrolled per step depends
 on how far away from the window edge the mouse has gone; the variable
 @code{mouse-scroll-min-lines} specifies a minimum step size.
+
+@vindex mouse-drag-copy-region
+If the variable @code{mouse-drag-copy-region} is @code{nil}, this
+mouse command does not copy the selected region into the kill ring.
 
 @item Mouse-2
 Yank the last killed text, where you click (@code{mouse-yank-at-click}).
@@ -303,16 +319,14 @@ you go to the source code for that error message.  If you click
 @kbd{Mouse-2} on a completion in the @samp{*Completions*} buffer, you
 choose that completion.
 
-@vindex mouse-1-click-follows-link
   However, most applications use @kbd{Mouse-1} to do this sort of
 thing, so Emacs implements this too.  If you click @kbd{Mouse-1}
 quickly on a reference or button, it follows or activates.  If you
 click slowly, it moves point as usual.  Dragging, meaning moving the
 mouse while it is held down, also has its usual behavior of setting
-the region.  The variable @code{mouse-1-click-follows-link} controls
-whether @kbd{Mouse-1} has this behavior.
+the region.
 
-@vindex mouse-1-click-follows-link
+@vindex mouse-1-click-in-non-selected-windows
   Normally, the @kbd{Mouse-1} click behavior is performed on links in
 any window.  The variable @code{mouse-1-click-in-non-selected-windows}
 controls whether @kbd{Mouse-1} has this behavior even in non-selected
@@ -325,6 +339,14 @@ move the mouse over it.  The variable @code{mouse-highlight} controls
 whether to do this highlighting always (even when such text appears
 where the mouse already is), never, or only immediately after you move
 the mouse.
+
+@vindex mouse-1-click-follows-link
+  In Emacs versions before 22, only @kbd{Mouse-2} follows links and
+@kbd{Mouse-1} always sets points.  If you prefer this behavior, set
+the variable @code{mouse-1-click-follows-link} to @code{nil}.  This
+variable also lets you choose various other alternatives for following
+links with the mouse.  Type @kbd{C-h v mouse-1-click-follows-link @key{RET}}
+for more details.
 
 @node Menu Mouse Clicks
 @section Mouse Clicks for Menus
@@ -371,6 +393,14 @@ This menu is for specifying the frame's principal font.
   You can use mouse clicks on window mode lines to select and manipulate
 windows.
 
+  Some areas of the mode line, such as the buffer name and the major
+mode name, have their own special mouse bindings.  These areas are
+highlighted when you hold the mouse over them, and information about
+the special bindings will be displayed (@pxref{Tooltips}).
+
+  You can also click on areas of the mode line that do not have
+special mouse bindings of their own.  This has the following effects:
+
 @table @kbd
 @item Mouse-1
 @kindex Mouse-1 @r{(mode line)}
@@ -397,12 +427,6 @@ horizontally, above the place in the mode line where you click.
 @kindex C-Mouse-2 @r{(scroll bar)}
   @kbd{C-Mouse-2} on a scroll bar splits the corresponding window
 vertically.  @xref{Split Window}.
-
-  The commands above apply to areas of the mode line which do not have
-special mouse bindings of their own.  Some areas, such as the buffer
-name and the major mode name, have their own special mouse bindings.
-Emacs displays information about these bindings when you hold the
-mouse over such a place (@pxref{Tooltips}).
 
 @node Creating Frames
 @section Creating Frames
@@ -810,16 +834,18 @@ command @kbd{M-x toggle-scroll-bar}.
 usually click the wheel to act as either @kbd{Mouse-2} or
 @kbd{Mouse-3}, depending on the setup.  You can also use the wheel to
 scroll windows instead of using the scroll bar or keyboard commands.
-To do so, turn on Mouse Wheel global minor mode with the command
-@kbd{M-x mouse-wheel-mode} or by customizing the variable
-@code{mouse-wheel-mode}.  Support for the wheel depends on the system
-generating appropriate events for Emacs.
+Mouse wheel support only works if the system generates appropriate
+events; whenever possible, it is turned on by default.  To toggle this
+feature, use @kbd{M-x mouse-wheel-mode}.
 
 @vindex mouse-wheel-follow-mouse
 @vindex mouse-wheel-scroll-amount
+@vindex mouse-wheel-progressive-speed
   The variables @code{mouse-wheel-follow-mouse} and
 @code{mouse-wheel-scroll-amount} determine where and by how much
-buffers are scrolled.
+buffers are scrolled.  The variable
+@code{mouse-wheel-progressive-speed} determines whether the the scroll
+speed is linked to how fast you move the wheel.
 
 @node Drag and Drop
 @section Drag and Drop
@@ -945,20 +971,25 @@ value.  If Emacs is built with a Gtk+ version that has only one file dialog,
 the setting of this variable has no effect.
 
 @node Tooltips
-@section Tooltips (or ``Balloon Help'')
+@section Tooltips
+@cindex tooltips
 
-@cindex balloon help
-  Tooltips are small X windows displaying a help string at the current
-mouse position, typically over text---including the mode line---which
-can be activated with the mouse or other keys.  (This facility is
-sometimes known as @dfn{balloon help}.)  Help text may be available for
-menu items too.
+  @dfn{Tooltips} are small windows that display text information at the
+current mouse position.  They activate when there is a pause in mouse
+movement.  There are two types of tooltip: help tooltips and GUD
+tooltips.
+
+  @dfn{Help tooltips} typically display over text---including the mode
+line---but may be also available for many other parts of the Emacs
+frame such as the tool bar and menu items.
 
 @findex tooltip-mode
-  To use tooltips, enable Tooltip mode with the command @kbd{M-x
-tooltip-mode}.  The customization group @code{tooltip} controls
-various aspects of how tooltips work.  When Tooltip mode is disabled,
-the help text is displayed in the echo area instead.
+  You can toggle help tooltips (Tooltip mode) with the command
+  @kbd{M-x tooltip-mode}.  When Tooltip mode is disabled, the help text
+is displayed in the echo area instead.
+
+  @dfn{GUD tooltips} show values of variables.  They are useful when
+you are debugging a program.  @xref{Debugger Operation}.
 
 @vindex tooltip-delay
   The variables @code{tooltip-delay} specifies how long Emacs should
@@ -1037,12 +1068,14 @@ when the frame is selected.
 
 Some terminal emulators under X support mouse clicks in the terminal
 window.  In a terminal emulator which is compatible with @code{xterm},
-you can use @kbd{M-x xterm-mouse-mode} to enable simple use of the
-mouse---only single clicks are supported.  The normal @code{xterm} mouse
-functionality is still available by holding down the @kbd{SHIFT} key
-when you press the mouse button.  The Linux console supports this
-mode if it has support for the mouse enabled, e.g.@: using the
-@command{gpm} daemon.
+you can use @kbd{M-x xterm-mouse-mode} to give Emacs control over
+simple use of the mouse---basically, only non-modified single clicks
+are supported.  The normal @code{xterm} mouse functionality for such
+clicks is still available by holding down the @kbd{SHIFT} key when you
+press the mouse button.
+
+  Xterm Mouse mode is a global minor mode (@pxref{Minor Modes}).
+Repeating the command turns the mode off again.
 
 @ignore
    arch-tag: 7dcf3a31-a43b-45d4-a900-445b10d77e49

@@ -340,13 +340,13 @@ nongregorian-diary-marking-hook."
                       (buffer-substring
                        (match-beginning m-name-pos)
                        (match-end m-name-pos))))
-                 (mm (string-to-int
+                 (mm (string-to-number
                       (if m-pos
                           (buffer-substring
                            (match-beginning m-pos)
                            (match-end m-pos))
                         "")))
-                 (dd (string-to-int
+                 (dd (string-to-number
                       (if d-pos
                           (buffer-substring
                            (match-beginning d-pos)
@@ -365,29 +365,31 @@ nongregorian-diary-marking-hook."
                                     (calendar-bahai-from-absolute
                                      (calendar-absolute-from-gregorian
                                       (calendar-current-date)))))
-                                  (y (+ (string-to-int y-str)
+                                  (y (+ (string-to-number y-str)
                                         (* 100 (/ current-y 100)))))
                              (if (> (- y current-y) 50)
                                  (- y 100)
                                (if (> (- current-y y) 50)
                                    (+ y 100)
                                  y)))
-                         (string-to-int y-str)))))
+                         (string-to-number y-str)))))
             (if dd-name
                 (mark-calendar-days-named
-                 (cdr (assoc-ignore-case (substring dd-name 0 3)
-                                         (calendar-make-alist
-                                          calendar-day-name-array
-                                          0
-                                          '(lambda (x) (substring x 0 3))))))
+                 (cdr (assoc-string (substring dd-name 0 3)
+                                    (calendar-make-alist
+                                     calendar-day-name-array
+                                     0
+                                     '(lambda (x) (substring x 0 3)))
+                                    t)))
               (if mm-name
                   (if (string-equal mm-name "*")
                       (setq mm 0)
                     (setq mm
-                          (cdr (assoc-ignore-case
+                          (cdr (assoc-string
                                 mm-name
                                 (calendar-make-alist
-                                  bahai-calendar-month-name-array))))))
+                                  bahai-calendar-month-name-array)
+                                t)))))
               (mark-bahai-calendar-date-pattern mm dd yy)))))
       (setq d (cdr d)))))
 

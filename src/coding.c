@@ -6260,6 +6260,7 @@ decode_coding_string (str, coding, nocopy)
       produced += coding->produced;
       produced_char += coding->produced_char;
       if (result == CODING_FINISH_NORMAL
+	  || result == CODING_FINISH_INTERRUPT
 	  || (result == CODING_FINISH_INSUFFICIENT_SRC
 	      && coding->consumed == 0))
 	break;
@@ -6675,7 +6676,7 @@ highest priority.  */)
 			       STRING_MULTIBYTE (string));
 }
 
-/*  Subroutine for Fsafe_coding_systems_region_internal.
+/*  Subroutine for Ffind_coding_systems_region_internal.
 
     Return a list of coding systems that safely encode the multibyte
     text between P and PEND.  SAFE_CODINGS, if non-nil, is an alist of
@@ -7825,8 +7826,7 @@ associated with each coding-category one by one in this order.  When
 one algorithm agrees with a byte sequence of source text, the coding
 system bound to the corresponding coding-category is selected.
 
-When you modify this variable, `update-coding-systems-internal' must
-be called.  */);
+Don't modify this variable directly, but use `set-coding-priority'.  */);
   {
     int i;
 

@@ -486,6 +486,7 @@ If INSERT (the prefix arg) is non-nil, insert the message in the buffer."
   (let ((func (indirect-function definition))
         (defs nil)
         (standard-output (if insert (current-buffer) t)))
+    ;; In DEFS, find all symbols that are aliases for DEFINITION.
     (mapatoms (lambda (symbol)
 		(and (fboundp symbol)
 		     (not (eq symbol definition))
@@ -493,27 +494,37 @@ If INSERT (the prefix arg) is non-nil, insert the message in the buffer."
 				  (indirect-function symbol)
 				(error symbol)))
 		     (push symbol defs))))
-    (princ (mapconcat
-            #'(lambda (symbol)
-                (let* ((remapped (command-remapping symbol))
-		       (keys (where-is-internal
-			      symbol overriding-local-map nil nil remapped))
-                       (keys (mapconcat 'key-description keys ", ")))
-                  (if insert
-                      (if (> (length keys) 0)
-                          (if remapped
-                              (format "%s (%s) (remapped from %s)"
-                                      keys remapped symbol)
-                            (format "%s (%s)" keys symbol))
-                        (format "M-x %s RET" symbol))
-                    (if (> (length keys) 0)
-                        (if remapped
-                            (format "%s is remapped to %s which is on %s"
-                                    definition symbol keys)
-                          (format "%s is on %s" symbol keys))
-                      (format "%s is not on any key" symbol)))))
-            (cons definition defs)
-            ";\nand ")))
+    ;; Look at all the symbols--first DEFINITION,
+    ;; then its aliases.
+    (dolist (symbol (cons definition defs))
+      (let* ((remapped (command-remapping symbol))
+	     (keys (where-is-internal
+		    symbol overriding-local-map nil nil remapped))
+	     (keys (mapconcat 'key-description keys ", "))
+	     string)
+	(setq string
+	      (if insert
+		  (if (> (length keys) 0)
+		      (if remapped
+			  (format "%s (%s) (remapped from %s)"
+				  keys remapped symbol)
+			(format "%s (%s)" keys symbol))
+		    (format "M-x %s RET" symbol))
+		(if (> (length keys) 0)
+		    (if remapped
+			(format "%s is remapped to %s which is on %s"
+				definition symbol keys)
+		      (format "%s is on %s" symbol keys))
+		  ;; If this is the command the user asked about,
+		  ;; and it is not on any key, say so.
+		  ;; For other symbols, its aliases, say nothing
+		  ;; about them unless they are on keys.
+		  (if (eq symbol definition)
+		      (format "%s is not on any key" symbol)))))
+	(when string
+	  (unless (eq symbol definition)
+	    (princ ";\n its alias "))
+	  (princ string)))))
   nil)
 
 (defun string-key-binding (key)
@@ -575,7 +586,16 @@ the last key hit are used."
       ;; Ok, now look up the key and name the command.
       (let ((defn (or (string-key-binding key)
 		      (key-binding key)))
-	    (key-desc (help-key-description key untranslated)))
+	    key-desc)
+	;; Don't bother user with strings from (e.g.) the select-paste menu.
+	(if (stringp (aref key (1- (length key))))
+	    (aset key (1- (length key)) "(any string)"))
+	(if (and (> (length untranslated) 0)
+		 (stringp (aref untranslated (1- (length untranslated)))))
+	    (aset untranslated (1- (length untranslated))
+		  "(any string)"))
+	;; Now describe the key, perhaps as changed.
+	(setq key-desc (help-key-description key untranslated))
 	(if (or (null defn) (integerp defn) (equal defn 'undefined))
 	    (princ (format "%s is undefined" key-desc))
 	  (princ (format (if (windowp window)
@@ -584,7 +604,6 @@ the last key hit are used."
 			 key-desc
 			 (if (symbolp defn) defn (prin1-to-string defn)))))))))
 
-
 (defun describe-key (key &optional untranslated up-event)
   "Display documentation of the function invoked by KEY.
 KEY should be a key sequence--when calling from a program,
@@ -592,6 +611,7 @@ pass a string or a vector.
 If non-nil UNTRANSLATED is a vector of the untranslated events.
 It can also be a number in which case the untranslated events from
 the last key hit are used."
+  ;; UP-EVENT is the up-event that was discarded by reading KEY, or nil.
   (interactive "kDescribe key: \np\nU")
   (if (numberp untranslated)
       (setq untranslated (this-single-command-raw-keys)))
@@ -612,6 +632,13 @@ the last key hit are used."
 	(if (or (null defn) (integerp defn) (equal defn 'undefined))
 	    (message "%s is undefined" (help-key-description key untranslated))
 	  (help-setup-xref (list #'describe-function defn) (interactive-p))
+	  ;; Don't bother user with strings from (e.g.) the select-paste menu.
+	  (if (stringp (aref key (1- (length key))))
+	      (aset key (1- (length key)) "(any string)"))
+	  (if (and untranslated
+		   (stringp (aref untranslated (1- (length untranslated)))))
+	      (aset untranslated (1- (length untranslated))
+		    "(any string)"))
 	  (with-output-to-temp-buffer (help-buffer)
 	    (princ (help-key-description key untranslated))
 	    (if (windowp window)
@@ -671,8 +698,8 @@ the last key hit are used."
 		    (princ " runs the command ")
 		    (prin1 defn)
 		    (princ "\n   which is ")
-		    (describe-function-1 defn))))
-	    (print-help-return-message))))))))
+		    (describe-function-1 defn)))))
+	    (print-help-return-message)))))))
 
 
 (defun describe-mode (&optional buffer)

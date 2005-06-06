@@ -1,6 +1,6 @@
 ;;; eudc.el --- Emacs Unified Directory Client
 
-;; Copyright (C) 1998, 1999, 2000, 2002 Free Software Foundation, Inc.
+;; Copyright (C) 1998, 1999, 2000, 2002, 2005 Free Software Foundation, Inc.
 
 ;; Author: Oscar Figueiredo <oscar@cpe.fr>
 ;; Maintainer: Pavel Janík <Pavel@Janik.cz>
@@ -670,8 +670,7 @@ These are the special commands of EUDC mode:
   (if eudc-emacs-p
       (easy-menu-define eudc-emacs-menu eudc-mode-map "" (eudc-menu))
     (setq mode-popup-menu (eudc-menu)))
-  (run-hooks 'eudc-mode-hook)
-  )
+  (run-mode-hooks 'eudc-mode-hook))
 
 ;;}}}
 

@@ -1,7 +1,8 @@
 ;;; nntp.el --- nntp access for Gnus
 
 ;; Copyright (C) 1987, 1988, 1989, 1990, 1992, 1993, 1994, 1995, 1996,
-;; 1997, 1998, 2000, 2001, 2002, 2003 Free Software Foundation, Inc.
+;; 1997, 1998, 2000, 2001, 2002, 2003, 2004, 2005
+;;        Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: news
@@ -1127,7 +1128,7 @@ password contained in '~/.nntp-authinfo'."
       (nntp-kill-buffer pbuffer))
     (when (and (buffer-name pbuffer)
 	       process)
-      (process-kill-without-query process)
+      (gnus-set-process-query-on-exit-flag process nil)
       (if (and (nntp-wait-for process "^2.*\n" buffer nil t)
 	       (memq (process-status process) '(open run)))
 	  (prog1
@@ -1147,9 +1148,10 @@ password contained in '~/.nntp-authinfo'."
 (defun nntp-open-network-stream (buffer)
   (open-network-stream "nntpd" buffer nntp-address nntp-port-number))
 
-(autoload 'format-spec "format")
-(autoload 'format-spec-make "format")
-(autoload 'open-tls-stream "tls")
+(eval-and-compile
+  (autoload 'format-spec "format-spec")
+  (autoload 'format-spec-make "format-spec")
+  (autoload 'open-tls-stream "tls"))
 
 (defun nntp-open-ssl-stream (buffer)
   (let* ((process-connection-type nil)
@@ -1160,7 +1162,7 @@ password contained in '~/.nntp-authinfo'."
 					   (format-spec-make
 					    ?s nntp-address
 					    ?p nntp-port-number)))))
-    (process-kill-without-query proc)
+    (gnus-set-process-query-on-exit-flag proc nil)
     (save-excursion
       (set-buffer buffer)
       (let ((nntp-connection-alist (list proc buffer nil)))
@@ -1171,7 +1173,7 @@ password contained in '~/.nntp-authinfo'."
 
 (defun nntp-open-tls-stream (buffer)
   (let ((proc (open-tls-stream "nntpd" buffer nntp-address nntp-port-number)))
-    (process-kill-without-query proc)
+    (gnus-set-process-query-on-exit-flag proc nil)
     (save-excursion
       (set-buffer buffer)
       (let ((nntp-connection-alist (list proc buffer nil)))
@@ -1497,7 +1499,7 @@ password contained in '~/.nntp-authinfo'."
         (when (<= count 1)
           (goto-char (point-min))
           (when (re-search-forward "^[0-9][0-9][0-9] .*\n\\([0-9]+\\)" nil t)
-            (let ((low-limit (string-to-int
+            (let ((low-limit (string-to-number
 			      (buffer-substring (match-beginning 1) 
 						(match-end 1)))))
               (while (and articles (<= (car articles) low-limit))
@@ -1569,7 +1571,7 @@ password contained in '~/.nntp-authinfo'."
       (goto-char (point-min))
       ;; We first find the number by looking at the status line.
       (let ((number (and (looking-at "2[0-9][0-9] +\\([0-9]+\\) ")
-			 (string-to-int
+			 (string-to-number
 			  (buffer-substring (match-beginning 1)
 					    (match-end 1)))))
 	    newsgroups xref)
@@ -1607,7 +1609,7 @@ password contained in '~/.nntp-authinfo'."
 		    "\\([^ :]+\\):\\([0-9]+\\)")
 		  xref))
 	    (setq group (match-string 1 xref)
-		  number (string-to-int (match-string 2 xref))))
+		  number (string-to-number (match-string 2 xref))))
 	   ((and (setq newsgroups
 		       (mail-fetch-field "newsgroups"))
 		 (not (string-match "," newsgroups)))

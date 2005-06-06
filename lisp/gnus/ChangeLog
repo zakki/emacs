@@ -1,3 +1,569 @@
+2005-06-04  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* gnus-art.el (article-update-date-lapsed): Use `save-match-data'.
+
+2005-06-04  Lute Kamstra  <lute@gnu.org>
+
+	* nnfolder.el (nnfolder-read-folder): Make sure that undo
+	information is never recorded.
+
+2005-06-03  Stefan Monnier  <monnier@iro.umontreal.ca>
+
+	* gnus-art.el (gnus-emphasis-alist): Disable the strikethru thingy.
+
+2005-06-02  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* pop3.el (pop3-md5): Run md5 in the binary mode.
+	(pop3-md5-program-args): New variable.
+
+	* starttls.el (starttls-set-process-query-on-exit-flag):
+	Use eval-and-compile.
+
+2005-05-31  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-art.el (article-display-x-face): Replace
+	process-kill-without-query by gnus-set-process-query-on-exit-flag.
+
+	* gnus-group.el: Bind gnus-cache-active-hashtb when compiling.
+
+	* gnus-util.el (gnus-set-process-query-on-exit-flag): Alias to
+	set-process-query-on-exit-flag or process-kill-without-query.
+
+	* html2text.el (html2text-fix-paragraphs): Use `while - re-search'
+	loop instead of replace-regexp.
+
+	* imap.el (imap-ssl-open): Use set-process-query-on-exit-flag
+	instead of process-kill-without-query if it is available.
+
+	* mm-util.el (mm-insert-file-contents): Bind find-file-hook
+	instead of find-file-hooks if it is available.
+
+	* mml1991.el: Bind pgg-default-user-id when compiling.
+
+	* mml2015.el: Bind pgg-default-user-id when compiling.
+
+	* nndraft.el (nndraft-request-associate-buffer):
+	Use write-contents-functions instead of write-contents-hooks if it is
+	available.
+
+	* nnheader.el (nnheader-find-file-noselect): Bind find-file-hook
+	instead of find-file-hooks if it is available.
+
+	* nntp.el (nntp-open-connection): Replace
+	process-kill-without-query by gnus-set-process-query-on-exit-flag.
+	(nntp-open-ssl-stream): Ditto.
+	(nntp-open-tls-stream): Ditto.
+
+	* pgg.el: Don't bind itimer vars; don't autoload itimer functions.
+	(pgg-run-at-time-1): New macro.
+	(pgg-run-at-time): Use it.
+
+	* starttls.el (starttls-set-process-query-on-exit-flag): Alias to
+	set-process-query-on-exit-flag or process-kill-without-query.
+	(starttls-open-stream-gnutls): Use it instead of
+	process-kill-without-query.
+	(starttls-open-stream): Ditto.
+
+2005-05-31  Simon Josefsson  <jas@extundo.com>
+
+	* imap.el (imap-ssl-open): Use imap-process-connection-type,
+	instead of hard coding to nil.
+
+2005-05-31  Kevin Greiner  <kgreiner@xpediantsolutions.com>
+
+	* gnus-group.el (): Require gnus-sum and autoload functions to
+	resolve warnings when gnus-group.el compiled alone.
+
+2005-05-30  Reiner Steib  <Reiner.Steib@gmx.de>
+
+	* gnus-agent.el (gnus-agent-regenerate-group)
+	(gnus-agent-fetch-articles): Replace `string-to-int' by
+	`string-to-number'.
+	* gnus-art.el (gnus-button-fetch-group): Ditto.
+	* gnus-cache.el (gnus-cache-generate-active)
+	(gnus-cache-articles-in-group): Ditto.
+	* gnus-group.el (gnus-group-set-current-level)
+	(gnus-group-insert-group-line): Ditto.
+	* gnus-score.el (gnus-score-set-expunge-below)
+	(gnus-score-set-mark-below, gnus-summary-score-effect)
+	(gnus-summary-score-entry): Ditto.
+	* gnus-soup.el (gnus-soup-send-packet, gnus-soup-parse-areas)
+	(gnus-soup-pack): Ditto.
+	* gnus-spec.el (gnus-xmas-format): Ditto.
+	* gnus-start.el (gnus-newsrc-to-gnus-format): Ditto.
+	* gnus-sum.el (gnus-create-xref-hashtb): Ditto.
+	* gnus-uu.el (gnus-uu-expand-numbers): Ditto.
+	* nnbabyl.el (nnbabyl-article-group-number): Ditto.
+	* nndb.el (nndb-get-remote-expire-response): Ditto.
+	* nndiary.el (nndiary-parse-schedule-value)
+	(nndiary-string-to-number, nndiary-request-replace-article)
+	(nndiary-request-article): Ditto.
+	* nndoc.el (nndoc-rnews-body-end, nndoc-mbox-body-end): Ditto.
+	* nndraft.el (nndraft-articles, nndraft-request-group): Ditto.
+	* nneething.el (nneething-make-head): Ditto.
+	* nnfolder.el (nnfolder-request-article)
+	(nnfolder-retrieve-headers): Ditto.
+	* nnheader.el (nnheader-file-to-number): Ditto.
+	* nnkiboze.el (nnkiboze-request-article): Ditto.
+	* nnmail.el (nnmail-process-unix-mail-format)
+	(nnmail-process-babyl-mail-format): Ditto.
+	* nnmbox.el (nnmbox-read-mbox, nnmbox-article-group-number): Ditto.
+	* nnmh.el (nnmh-update-gnus-unreads, nnmh-active-number)
+	(nnmh-request-create-group, nnmh-request-list-1)
+	(nnmh-request-group, nnmh-request-article): Ditto.
+	* nnml.el (nnml-request-replace-article, nnml-request-article): Ditto.
+	* nnrss.el (nnrss-find-rss-via-syndic8): Ditto.
+	* nnsoup.el (nnsoup-make-active): Ditto.
+	* nnspool.el (nnspool-find-id, nnspool-request-group): Ditto.
+	* nntp.el (nntp-find-group-and-number)
+	(nntp-retrieve-headers-with-xover): Ditto.
+	* pgg-gpg.el (pgg-gpg-snarf-keys-region): Ditto.
+	* pgg-parse.el (pgg-read-body, pgg-read-bytes)
+	(pgg-format-key-identifier): Ditto.
+	* pop3.el (pop3-last, pop3-stat): Ditto.
+	* qp.el (quoted-printable-decode-region): Ditto.
+
+	* spam-report.el (spam-report-url-ping-mm-url): Use format instead
+	of concat.
+
+2005-05-30  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-agent.el (gnus-category-mode): Use gnus-run-mode-hooks.
+
+	* gnus-art.el (gnus-article-mode): Use gnus-run-mode-hooks.
+
+	* gnus-cus.el (gnus-custom-mode): Use gnus-run-mode-hooks.
+
+	* gnus-eform.el (gnus-edit-form-mode): Use gnus-run-mode-hooks.
+
+	* gnus-group.el (gnus-group-mode): Use gnus-run-mode-hooks.
+
+	* gnus-kill.el (gnus-kill-file-mode): Use gnus-run-mode-hooks.
+
+	* gnus-salt.el (gnus-tree-mode): Use gnus-run-mode-hooks.
+	(gnus-carpal-mode): Ditto.
+
+	* gnus-srvr.el (gnus-server-mode): Use gnus-run-mode-hooks.
+	(gnus-browse-mode): Ditto.
+
+	* gnus-sum.el (gnus-summary-mode): Use gnus-run-mode-hooks.
+
+	* gnus-util.el (gnus-run-mode-hooks): Save current buffer.
+
+2005-05-29  Richard M. Stallman  <rms@gnu.org>
+
+	* gnus-cite.el (gnus-cite-add-face): Set overlay's evaporate property.
+
+2005-05-27  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-util.el (gnus-run-mode-hooks): New function.
+
+	* score-mode.el (gnus-score-mode): Use gnus-run-mode-hooks.
+
+2005-05-26  Luc Teirlinck  <teirllm@auburn.edu>
+
+	* gnus-agent.el (gnus-agent-make-mode-line-string):
+	Use mode-line-highlight as mouse-face.
+
+2005-05-17  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* canlock.el (canlock): Change the parent group to news.
+
+	* deuglify.el (gnus-outlook-deuglify): Add :group.
+
+	* dig.el (dig): Add :group.
+
+	* gnus-art.el (gnus-inhibit-mime-unbuttonizing): Add :group.
+
+	* gnus-cite.el (gnus-cite-attribution-face): Add :group.
+	(gnus-cite-face-1, gnus-cite-face-2, gnus-cite-face-3): Ditto.
+	(gnus-cite-face-4, gnus-cite-face-5, gnus-cite-face-6): Ditto.
+	(gnus-cite-face-7, gnus-cite-face-8, gnus-cite-face-9): Ditto.
+	(gnus-cite-face-10, gnus-cite-face-11): Ditto.
+
+	* gnus-diary.el (gnus-diary): Add :group.
+
+	* gnus.el (gnus-group-news-1-face): Add :group.
+	(gnus-group-news-1-empty-face): Ditto.
+	(gnus-group-news-2-face, gnus-group-news-2-empty-face): Ditto.
+	(gnus-group-news-3-face, gnus-group-news-3-empty-face): Ditto.
+	(gnus-group-news-4-face, gnus-group-news-4-empty-face): Ditto.
+	(gnus-group-news-5-face, gnus-group-news-5-empty-face): Ditto.
+	(gnus-group-news-6-face, gnus-group-news-6-empty-face): Ditto.
+	(gnus-group-news-low-face, gnus-group-news-low-empty-face): Ditto.
+	(gnus-group-mail-1-face, gnus-group-mail-1-empty-face): Ditto.
+	(gnus-group-mail-2-face, gnus-group-mail-2-empty-face): Ditto.
+	(gnus-group-mail-3-face, gnus-group-mail-3-empty-face): Ditto.
+	(gnus-group-mail-low-face, gnus-group-mail-low-empty-face): Ditto.
+	(gnus-summary-selected-face, gnus-summary-cancelled-face): Ditto.
+	(gnus-summary-high-ticked-face): Ditto.
+	(gnus-summary-low-ticked-face): Ditto.
+	(gnus-summary-normal-ticked-face): Ditto.
+	(gnus-summary-high-ancient-face): Ditto.
+	(gnus-summary-low-ancient-face): Ditto.
+	(gnus-summary-normal-ancient-face): Ditto.
+	(gnus-summary-high-undownloaded-face): Ditto.
+	(gnus-summary-low-undownloaded-face): Ditto.
+	(gnus-summary-normal-undownloaded-face): Ditto.
+	(gnus-summary-high-unread-face): Ditto.
+	(gnus-summary-low-unread-face): Ditto.
+	(gnus-summary-normal-unread-face): Ditto.
+	(gnus-summary-high-read-face, gnus-summary-low-read-face): Ditto.
+	(gnus-summary-normal-read-face, gnus-splash-face): Ditto.
+
+	* message.el (message-minibuffer-local-map): Add :group.
+
+	* sieve-manage.el (sieve-manage-log): Add :group.
+	(sieve-manage-default-user): Diito.
+	(sieve-manage-server-eol, sieve-manage-client-eol): Ditto.
+	(sieve-manage-streams, sieve-manage-stream-alist): Ditto.
+	(sieve-manage-authenticators): Ditto.
+	(sieve-manage-authenticator-alist): Ditto.
+	(sieve-manage-default-port): Ditto.
+
+	* sieve-mode.el (sieve-control-commands-face): Add :group.
+	(sieve-action-commands-face): Ditto.
+	(sieve-test-commands-face): Ditto.
+	(sieve-tagged-arguments-face): Ditto.
+
+	* smime.el (smime): Add :group.
+
+	* spam-report.el (spam-report): Add :group.
+
+	* spam.el (spam, spam-face): Add :group.
+
+2005-05-26  Lute Kamstra  <lute@gnu.org>
+
+	* score-mode.el (gnus-score-mode): Use run-mode-hooks.
+
+2005-05-16  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-art.el: Don't autoload mail-extract-address-components.
+
+	* gnus.el: Use eval-and-compile to autoload message-y-or-n-p.
+
+	* nndb.el: Don't declare the nndb back end two or more times; don't
+	autoload news-reply-mode, news-setup, cancel-timer and telnet.
+
+	* nntp.el: Autoload format-spec instead of format; use
+	eval-and-compile to evaluate autoload forms.
+
+	* spam-report.el (spam-report-process-queue): Use gnus-point-at-eol.
+
+2005-04-28  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-art.el (article-date-ut): Support converting date in
+	forwarded parts as well.
+	(gnus-article-save-original-date): New macro.
+	(gnus-display-mime): Use it.
+
+2005-04-28  David Hansen  <david.hansen@physik.fu-berlin.de>
+
+	* nnrss.el (nnrss-check-group, nnrss-request-article): Support the
+	enclosure element of <item>.
+
+2005-04-24  Teodor Zlatanov  <tzz@lifelogs.com>
+
+	* spam-report.el (spam-report-unplug-agent)
+	(spam-report-plug-agent, spam-report-deagentize)
+	(spam-report-agentize, spam-report-url-ping-temp-agent-function):
+	support for the Agent in spam-report: when unplugged, report to a
+	file; when plugged, submit all the requests.
+	[Added missing offline functionality from trunk.]
+
+2005-04-24  Reiner Steib  <Reiner.Steib@gmx.de>
+
+	* spam-report.el (spam-report-url-to-file)
+	(spam-report-requests-file): New function and variable for offline
+	reporting.
+	(spam-report-url-ping-function): Add `spam-report-url-to-file'
+	and user defined function.
+	(spam-report-process-queue): New function.
+	Process requests from `spam-report-requests-file'.
+	(spam-report-url-ping-mm-url): Autoload.
+	[Added missing offline functionality from trunk.]
+
+2005-04-18  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* qp.el (quoted-printable-encode-region): Save excursion.
+
+2005-04-13  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-art.el (gnus-mime-inline-part): Use mm-string-to-multibyte.
+	* qp.el (quoted-printable-encode-region): Use mm-string-to-multibyte.
+
+2005-04-13  Miles Bader  <miles@gnu.org>
+
+	* mm-util.el (mm-string-to-multibyte): Use Gnus trunk definition.
+
+2005-04-12  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* nnrss.el (nnrss-node-text): Replace CRLFs (which might be
+	contained in text because xml.el decodes entities) with LFs.
+
+2005-04-11  Lute Kamstra  <lute@gnu.org>
+
+	* message.el (message-make-date): Handle byte-compiler warnings
+	differently.
+	* nnimap.el (nnimap-date-days-ago): Ditto.
+
+2005-04-10  Stefan Monnier  <monnier@iro.umontreal.ca>
+
+	* mm-util.el (mm-string-to-multibyte): New function.
+	(mm-detect-coding-region): Typo.
+
+2005-04-11  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-art.el (gnus-article-read-summary-keys): Fix misplaced parens.
+
+2005-04-06  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* mm-util.el (mm-coding-system-p): Don't return binary for the nil
+	argument in XEmacs.
+
+	* nnrss.el (nnrss-compatible-encoding-alist): New variable.
+	(nnrss-request-group): Decode group name first.
+	(nnrss-request-article): Make a text/plain article if mml-to-mime
+	failed.
+	(nnrss-get-encoding): Return a compatible encoding according to
+	nnrss-compatible-encoding-alist.
+	(nnrss-opml-export): Use dolist.
+	(nnrss-find-el): Use consp instead of listp.
+	(nnrss-order-hrefs): Use dolist.
+
+2005-04-06  Arne J,Ax(Brgensen  <arne@arnested.dk>
+
+	* nnrss.el (nnrss-verbose): Remove.
+	(nnrss-request-group): Use `nnheader-message' instead.
+
+2005-04-06  Mark Plaksin  <happy@usg.edu>  (tiny change)
+
+	* nnrss.el (nnrss-verbose): New variable.
+	(nnrss-request-group): Make it say nnrss is requesting a group.
+
+2005-04-06  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-agent.el (gnus-agent-group-path): Decode group name.
+	(gnus-agent-group-pathname): Ditto.
+
+	* gnus-cache.el (gnus-cache-file-name): Decode group name.
+
+	* gnus-group.el (gnus-group-line-format-alist): Use decoded group
+	name for only %g and %c.
+	(gnus-group-insert-group-line): Bind gnus-tmp-decoded-group
+	instead of gnus-tmp-group to decoded group name.
+	(gnus-group-make-group): Decode group name.
+	(gnus-group-delete-group): Ditto.
+	(gnus-group-make-rss-group): Exclude `/'s from group names;
+	register the group data after opening the nnrss group; unify
+	non-ASCII group names; encode group name.
+	(gnus-group-catchup-current): Decode group name.
+	(gnus-group-expire-articles-1): Ditto.
+	(gnus-group-set-current-level): Ditto.
+	(gnus-group-kill-group): Ditto.
+
+	* gnus-spec.el (gnus-update-format-specifications): Flush the
+	group format spec cache if it doesn't support decoded group names.
+
+	* mm-url.el (mm-url-predefined-programs): Add --silent arg to curl.
+
+	* nnrss.el: Require rfc2047 and mml.
+	(nnrss-file-coding-system): New variable.
+	(nnrss-format-string): Redefine it as an inline function.
+	(nnrss-decode-group-name): New function.
+	(nnrss-string-as-multibyte): Remove.
+	(nnrss-retrieve-headers): Decode group name; don't use
+	nnrss-format-string.
+	(nnrss-request-group): Decode group name.
+	(nnrss-request-article): Decode group name; allow a Message-ID as
+	well as an article number; don't use nnrss-format-string; encode a
+	Message-ID string which may contain non-ASCII characters; use
+	mml-to-mime to compose a MIME article; use search-forward instead
+	of re-search-forward.
+	(nnrss-request-expire-articles): Decode group name.
+	(nnrss-request-delete-group): Delete entries in nnrss-group-alist
+	as well; decode group name.
+	(nnrss-get-encoding): Fix regexp.
+	(nnrss-fetch): Clarify error message.
+	(nnrss-read-server-data): Use insert-file-contents instead of load;
+	bind file-name-coding-system; use multibyte buffer.
+	(nnrss-save-server-data): Insert newline; bind
+	coding-system-for-write to the value of nnrss-file-coding-system;
+	bind file-name-coding-system; add coding cookie.
+	(nnrss-read-group-data): Use insert-file-contents instead of load;
+	bind file-name-coding-system; use multibyte buffer.
+	(nnrss-save-group-data): Bind coding-system-for-write to the
+	value of nnrss-file-coding-system; bind file-name-coding-system.
+	(nnrss-decode-entities-string): Rename from n-d-e-unibyte-string;
+	make it work with non-ASCII text.
+	(nnrss-opml-export): Use mm-set-buffer-file-coding-system instead
+	of set-buffer-file-coding-system.
+	(nnrss-find-el): Check carefully whether there's a list of string
+	which old xml.el may return rather than a string; make it work
+	with old xml.el as well.
+
+2005-04-06  Tsuyoshi AKIHO  <akiho@kawachi.zaq.ne.jp>
+
+	* gnus-sum.el (gnus-summary-walk-group-buffer): Decode group name.
+
+	* nnrss.el (nnrss-get-encoding): New function.
+	(nnrss-fetch): Use unibyte buffer initially; bind
+	coding-system-for-read while performing mm-url-insert; remove ^Ms;
+	decode contents according to the encoding attribute.
+	(nnrss-save-group-data): Add coding cookie.
+	(nnrss-mime-encode-string): New function.
+	(nnrss-check-group): Use it to encode subject and author.
+
+2005-04-06  Maciek Pasternacki  <maciekp@japhy.fnord.org>  (tiny change)
+
+	* nnrss.el (nnrss-fetch): Signal an error if w3-parse-buffer also
+	failed.
+
+2005-04-06  Jesper Harder  <harder@ifa.au.dk>
+
+	* mm-util.el (mm-subst-char-in-string): Support inplace.
+
+	* nnrss.el: Pedantic docstring and whitespace fixes (courtesy of
+	checkdoc.el).
+	(nnrss-request-article): Cleanup.
+	(nnrss-request-delete-group): Use nnrss-make-filename.
+	(nnrss-read-server-data): Use nnrss-make-filename; use load.
+	(nnrss-save-server-data): Use nnrss-make-filename; use gnus-prin1.
+	(nnrss-read-group-data): Fix off-by-one error.  From Joakim Verona
+	<joakim@verona.se>; hash on description if link is missing; use
+	nnrss-make-filename; use load.
+	(nnrss-save-group-data): Use nnrss-make-filename; use gnus-prin1.
+	(nnrss-make-filename): New function.
+	(nnrss-close): New function.
+	(nnrss-check-group): Hash on description if link is missing.
+	(nnrss-get-namespace-prefix): Use string= to compare strings!
+	Reported by David D. Smith <davidsmith@acm.org>.
+	(nnrss-opml-export): Turn on sgml-mode.
+
+2005-04-06  Mark A. Hershberger  <mah@everybody.org>
+
+	* nnrss.el (nnrss-opml-import, nnrss-opml-export): New functions.
+
+2005-04-04  Reiner Steib  <Reiner.Steib@gmx.de>
+
+	* message.el (message-make-date): Add defvars in order to silence
+	the byte compiler inside the defun.
+
+	* nnimap.el (nnimap-date-days-ago): Ditto.
+
+	* gnus-demon.el (parse-time-string): Add autoload.
+
+	* gnus-delay.el (parse-time-string): Add autoload.
+
+	* gnus-art.el (parse-time-string): Add autoload.
+
+	* nnultimate.el (parse-time): Require for `parse-time-string'.
+
+2005-04-03  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus-sum.el (gnus-summary-make-menu-bar): Avoid the
+	"Unrecognized menu descriptor" error in XEmacs.
+
+2005-03-25  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* message.el (message-resend): Bind rfc2047-encode-encoded-words.
+
+	* mm-util.el (mm-replace-in-string): New function.
+	(mm-xemacs-find-mime-charset-1): Ignore errors while loading
+	latin-unity, which cannot be used with XEmacs 21.1.
+
+	* rfc2047.el (rfc2047-encode-function-alist): Rename from
+	rfc2047-encoding-function-alist in order to avoid conflicting with
+	the old version.
+	(rfc2047-encode-message-header): Remove useless goto-char.
+	(rfc2047-encodable-p): Don't move point.
+	(rfc2047-syntax-table): Treat `(' and `)' as is.
+	(rfc2047-encode-region): Concatenate words containing non-ASCII
+	characters in structured fields; don't encode space-delimited
+	ASCII words even in unstructured fields; don't break words at
+	char-category boundaries; encode encoded words in structured
+	fields; treat text within parentheses as special; show the
+	original text when error has occurred; move point to the end of
+	the region after encoding, suggested by IRIE Tetsuya
+	<irie@t.email.ne.jp>; treat backslash-quoted characters as
+	non-special; check carefully whether to encode special characters;
+	fix some kind of misconfigured headers; signal a real error if
+	debug-on-quit or debug-on-error is non-nil; don't infloop,
+	suggested by Hiroshi Fujishima <pooh@nature.tsukuba.ac.jp>; assume
+	the close parenthesis may be included in the encoded word; encode
+	bogus delimiters.
+	(rfc2047-encode-string): Use mm-with-multibyte-buffer.
+	(rfc2047-encode-max-chars): New variable.
+	(rfc2047-encode-1): New function.
+	(rfc2047-encode): Use it; encode text so that it occupies the
+	maximum width within 76-column; work correctly on Q encoding for
+	iso-2022-* charsets; fold the line before encoding; don't append a
+	space if the encoded word includes close parenthesis.
+	(rfc2047-fold-region): Use existing whitespace for LWSP; make it
+	sure not to break a line just after the header name.
+	(rfc2047-b-encode-region): Remove.
+	(rfc2047-b-encode-string): New function.
+	(rfc2047-q-encode-region): Remove.
+	(rfc2047-q-encode-string): New function.
+	(rfc2047-encode-parameter): New function.
+	(rfc2047-encoded-word-regexp): Don't use shy group.
+	(rfc2047-decode-region): Follow rfc2047-encoded-word-regexp change.
+	(rfc2047-parse-and-decode): Ditto.
+	(rfc2047-decode): Treat the ascii coding-system as raw-text by default.
+
+2005-03-25  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* rfc2047.el (rfc2047-encode-encoded-words): New variable.
+	(rfc2047-field-value): Strip props.
+	(rfc2047-encode-message-header): Disable header folding -- not
+	all headers can be folded, and this should be done by the message
+	composition mode.  Probably.  I think.
+	(rfc2047-encodable-p): Say that =? needs encoding.
+	(rfc2047-encode-region): Encode =? strings.
+
+2005-03-25  Jesper Harder  <harder@ifa.au.dk>
+
+	* rfc2047.el (rfc2047-encoded-word-regexp): Support RFC 2231
+	language tags; remove unnecessary '+'.  Reported by Stefan Wiens
+	<s.wi@gmx.net>.
+	(rfc2047-decode-string): Don't cons a string unnecessarily.
+	(rfc2047-parse-and-decode, rfc2047-decode): Use a character for
+	the encoding to avoid consing a string.
+	(rfc2047-decode): Use mm-subst-char-in-string instead of
+	mm-replace-chars-in-string.
+
+2005-03-25  TSUCHIYA Masatoshi  <tsuchiya@namazu.org>
+
+	* rfc2047.el (rfc2047-encode): Use uppercase letters to specify
+	encodings of MIME-encoded words, in order to improve
+	interoperability with several broken MUAs.
+
+2005-03-21  Reiner Steib  <Reiner.Steib@gmx.de>
+
+	* gnus-srvr.el (gnus-browse-select-group): Add NUMBER argument and
+	pass it to `gnus-browse-read-group'.
+	(gnus-browse-read-group): Add NUMBER argument and pass it to
+	`gnus-group-read-ephemeral-group'.
+
+	* gnus-group.el (gnus-group-read-ephemeral-group): Add NUMBER
+	argument and pass it to `gnus-group-read-group'.
+
+2005-03-19  Aidan Kehoe  <kehoea@parhasard.net>
+
+	* mm-util.el (mm-xemacs-find-mime-charset): Only call
+	mm-xemacs-find-mime-charset-1 if we have the mule feature
+	available at runtime.
+
+2005-03-25  Werner Lemberg  <wl@gnu.org>
+
+	* nnmaildir.el: Replace `illegal' with `invalid'.
+
+2005-03-22  Stefan Monnier  <monnier@iro.umontreal.ca>
+
+	* gnus-start.el (gnus-display-time-event-handler):
+	Check display-time-timer at runtime rather than only at load time
+	in case display-time-mode is turned off in the mean time.
+
 2005-03-16  Reiner Steib  <Reiner.Steib@gmx.de>
 
 	* nnimap.el (nnimap-open-connection): Print which authinfo file is
@@ -11,8 +577,8 @@
 
 2005-03-15  Reiner Steib  <Reiner.Steib@gmx.de>
 
-	* nnmaildir.el (nnmaildir-request-accept-article): Use
-	`nnheader-cancel-timer' for compatibility with current XEmacs.
+	* nnmaildir.el (nnmaildir-request-accept-article):
+	Use `nnheader-cancel-timer' for compatibility with current XEmacs.
 
 2005-03-13  Steve Youngs  <steve@sxemacs.org>
 
@@ -26,12 +592,9 @@
 	for `with-timeout'.
 
 	* mail-source.el: Require timer-funcs at compile time when in
-	XEmacs for `run-with-idle-timer'.  
+	XEmacs for `run-with-idle-timer'.
 
 	* gnus-async.el: Ditto.
-
-	* dgnushack.el: No need to ignore `run-with-idle-timer', XEmacs
-	has this function now. 
 
 2005-03-16  Lute Kamstra  <lute@gnu.org>
 
@@ -43,8 +606,7 @@
 
 2005-03-10  Arne J,Ax(Brgensen <arne@arnested.dk>  (tiny change)
 
-	* nnimap.el (nnimap-retrieve-headers-from-server): Fix off-by-one
-	flaw.
+	* nnimap.el (nnimap-retrieve-headers-from-server): Fix off-by-one flaw.
 
 2005-03-08  Bjorn Solberg <bjorn_ding@hekneby.org>  (tiny change)
 
@@ -273,9 +835,6 @@
 
 2004-11-26  Katsumi Yamaoka  <yamaoka@jpl.org>
 
-	* lpath.el: Remove bbdb-create-internal, bbdb-records,
-	spam-BBDB-register-routine and spam-enter-ham-BBDB.
-
 	* nnrss.el (nnrss-string-as-multibyte): Redefine it as a macro in
 	order to silence the byte compiler.
 
@@ -383,7 +942,7 @@
 
 2004-11-04  Katsumi Yamaoka  <yamaoka@jpl.org>
 
-	* gnus-art. (gnus-article-edit-article): Don't associate the
+	* gnus-art.el (gnus-article-edit-article): Don't associate the
 	article buffer with a draft file.  This is a temporary measure
 	against the 2004-08-22 change to gnus-article-edit-mode.
 
@@ -609,7 +1168,7 @@
 	unless plugged.  Disable the agent so that an open failure causes
 	an error.
 
-2004-10-18  Kevin Greiner  <kevin.greiner@compsol.cc> for Reiner Steib  <Reiner.Steib@gmx.de>
+2004-10-18  Reiner Steib  <Reiner.Steib@gmx.de>
 
 	* gnus-agent.el (gnus-agent-fetched-hook): Add :version.
 	(gnus-agent-go-online): Change :version.
@@ -651,21 +1210,21 @@
 	(gnus-convert-mark-converter-prompt)
 	(gnus-convert-converter-needs-prompt): Fix use of property list.
 
-2004-10-18  Kevin Greiner  <kevin.greiner@compsol.cc> for Katsumi Yamaoka  <yamaoka@jpl.org>
+2004-10-18  Katsumi Yamaoka  <yamaoka@jpl.org>
 
 	* gnus-agent.el (gnus-agent-restore-gcc): Use ^ and regexp-quote.
 
-2004-10-18  Kevin Greiner  <kevin.greiner@compsol.cc> for Lars Magne Ingebrigtsen  <larsi@gnus.org>
+2004-10-18  Lars Magne Ingebrigtsen  <larsi@gnus.org>
 
 	* gnus-start.el (gnus-get-unread-articles-in-group): Don't do
 	stuff for non-living groups.
 
-2004-10-18  Kevin Greiner  <kevin.greiner@compsol.cc> for Lars Magne Ingebrigtsen  <larsi@gnus.org>
+2004-10-18  Lars Magne Ingebrigtsen  <larsi@gnus.org>
 
 	* gnus-agent.el (gnus-agent-synchronize-flags): Default to nil.
 	(gnus-agent-regenerate-group): Using nil messages aren't valid.
 
-2004-10-18  Kevin Greiner  <kevin.greiner@compsol.cc> for Lars Magne Ingebrigtsen  <larsi@gnus.org>
+2004-10-18  Lars Magne Ingebrigtsen  <larsi@gnus.org>
 
 	* gnus-agent.el (gnus-agent-read-agentview):
 	Inline gnus-uncompress-range.
@@ -682,7 +1241,7 @@
 	message-send-mail-function.  The change makes the agent real-time
 	responsive to user changes to message-send-mail-function.
 
-2004-10-18  Kevin Greiner  <kevin.greiner@compsol.cc> for Reiner Steib  <Reiner.Steib@gmx.de>
+2004-10-18  Reiner Steib  <Reiner.Steib@gmx.de>
 
 	* gnus-start.el (gnus-get-unread-articles): Fix last commit.
 
@@ -723,12 +1282,12 @@
 
 	* gnus-util.el (gnus-rename-file): New function.
 
-2004-10-18  Kevin Greiner  <kevin.greiner@compsol.cc> for Katsumi Yamaoka  <yamaoka@jpl.org>
+2004-10-18  Katsumi Yamaoka  <yamaoka@jpl.org>
 
 	* gnus-agent.el (gnus-agent-regenerate-group): Activate the group
 	when the group's active is not available.
 
-2004-10-18  Kevin Greiner  <kevin.greiner@compsol.cc> for Katsumi Yamaoka  <yamaoka@jpl.org>
+2004-10-18  Katsumi Yamaoka  <yamaoka@jpl.org>
 
 	* gnus-agent.el (gnus-agent-read-agentview): Add a missing arg to
 	error.

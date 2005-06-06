@@ -1,6 +1,6 @@
 @c This is part of the Emacs manual.
-@c Copyright (C) 1985, 86, 87, 93, 94, 95, 97, 2000, 2001, 2004
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 2000, 2001,
+@c   2004, 2005  Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @iftex
 @chapter Miscellaneous Commands
@@ -342,6 +342,7 @@ Start the Emacs shell.
 * Single Shell::           How to run one shell command and return.
 * Interactive Shell::      Permanent shell taking input via Emacs.
 * Shell Mode::             Special Emacs commands used with permanent shell.
+* Shell Prompts::          Two ways to recognize shell prompts.
 * History: Shell History.  Repeating previous commands in a shell buffer.
 * Directory Tracking::     Keeping track when the subshell changes directory.
 * Options: Shell Options.  Options for customizing Shell mode.
@@ -405,7 +406,7 @@ searched; this list is initialized based on the environment variable
 either or both of these default initializations.@refill
 
   Both @kbd{M-!} and @kbd{M-|} wait for the shell command to complete,
-unless you end the command with @samp{&} to make it asyncronous.  To
+unless you end the command with @samp{&} to make it asynchronous.  To
 stop waiting, type @kbd{C-g} to quit; that terminates the shell
 command with the signal @code{SIGINT}---the same signal that @kbd{C-c}
 normally generates in the shell.  Emacs waits until the command
@@ -506,8 +507,8 @@ of the special key bindings of Shell mode:
 At end of buffer send line as input; otherwise, copy current line to
 end of buffer and send it (@code{comint-send-input}).  When a line is
 copied, any prompt at the beginning of the line (text output by
-programs preceding your input) is omitted.  (See also the variable
-@code{comint-use-prompt-regexp-instead-of-fields}.)
+programs preceding your input) is omitted.  @xref{Shell Prompts}, for
+how Shell mode recognizes prompts.
 
 @item @key{TAB}
 @kindex TAB @r{(Shell mode)}
@@ -562,7 +563,8 @@ the newline that separates them), when you type @key{RET}.
 @kindex C-c C-u @r{(Shell mode)}
 @findex comint-kill-input
 Kill all text pending at end of buffer to be sent as input
-(@code{comint-kill-input}).
+(@code{comint-kill-input}).  If point is not at end of buffer,
+this only kills the part of this text that precedes point.
 
 @item C-c C-w
 @kindex C-c C-w @r{(Shell mode)}
@@ -684,10 +686,6 @@ subshell:
 @end example
 @end table
 
-  Shell mode also customizes the paragraph commands so that only shell
-prompts start new paragraphs.  Thus, a paragraph consists of an input
-command plus the output that follows it in the buffer.
-
 @cindex Comint mode
 @cindex mode, Comint
   Shell mode is a derivative of Comint mode, a general-purpose mode for
@@ -703,6 +701,45 @@ the directory tracking feature, and a few user commands.
   You can use @kbd{M-x comint-run} to execute any program of your choice
 in a subprocess using unmodified Comint mode---without the
 specializations of Shell mode.
+
+@node Shell Prompts
+@subsection Shell Prompts
+
+@vindex shell-prompt-pattern
+@vindex comint-prompt-regexp
+@vindex comint-use-prompt-regexp
+@cindex prompt, shell
+  A prompt is text output by a program to show that it is ready to
+accept new user input.  Normally, Comint mode (and thus Shell mode)
+considers the prompt to be any text output by a program at the
+beginning of an input line.  However, if the variable
+@code{comint-use-prompt-regexp} is non-@code{nil}, then Comint mode
+uses a regular expression to recognize prompts.  In Shell mode,
+@code{shell-prompt-pattern} specifies the regular expression.
+
+  The value of @code{comint-use-prompt-regexp} also affects many
+motion and paragraph commands.  If the value is non-@code{nil}, the
+general Emacs motion commands behave as they normally do in buffers
+without special text properties.  However, if the value is @code{nil},
+the default, then Comint mode divides the buffer into two types of
+``fields'' (ranges of consecutive characters having the same
+@code{field} text property): input and output.  Prompts are part of
+the output.  Most Emacs motion commands do not cross field boundaries,
+unless they move over multiple lines.  For instance, when point is in
+input on the same line as a prompt, @kbd{C-a} puts point at the
+beginning of the input if @code{comint-use-prompt-regexp} is
+@code{nil} and at the beginning of the line otherwise.
+
+  In Shell mode, only shell prompts start new paragraphs.  Thus, a
+paragraph consists of a prompt and the input and output that follow
+it.  However, if @code{comint-use-prompt-regexp} is @code{nil}, the
+default, most paragraph commands do not cross field boundaries.  This
+means that prompts, ranges of input, and ranges of non-prompt output
+behave mostly like separate paragraphs; with this setting, numeric
+arguments to most paragraph commands yield essentially undefined
+behavior.  For the purpose of finding paragraph boundaries, Shell mode
+uses @code{shell-prompt-pattern}, regardless of
+@code{comint-use-prompt-regexp}.
 
 @node Shell History
 @subsection Shell Command History
@@ -810,7 +847,7 @@ that these commands access.
 
 @vindex shell-input-ring-file-name
   Some shells store their command histories in files so that you can
-refer to previous commands from previous shell sessions.  Emacs reads
+refer to commands from previous shell sessions.  Emacs reads
 the command history file for your chosen shell, to initialize its own
 command history.  The file name is @file{~/.bash_history} for bash,
 @file{~/.sh_history} for ksh, and @file{~/.history} for other shells.
@@ -876,19 +913,8 @@ when you send them to the shell.  To request this, set the variable
 @key{SPC} perform history expansion by binding @key{SPC} to the
 command @code{comint-magic-space}.
 
-@vindex shell-prompt-pattern
-@vindex comint-prompt-regexp
-@vindex comint-use-prompt-regexp-instead-of-fields
-@cindex prompt, shell
   Shell mode recognizes history references when they follow a prompt.
-Normally, any text output by a program at the beginning of an input
-line is considered a prompt.  However, if the variable
-@code{comint-use-prompt-regexp-instead-of-fields} is non-@code{nil},
-then Comint mode uses a regular expression to recognize prompts.  In
-general, the variable @code{comint-prompt-regexp} specifies the
-regular expression; Shell mode uses the variable
-@code{shell-prompt-pattern} to set up @code{comint-prompt-regexp} in
-the shell buffer.
+@xref{Shell Prompts}, for how Shell mode recognizes prompts.
 
 @node Directory Tracking
 @subsection Directory Tracking
@@ -1119,8 +1145,11 @@ temporarily visible, but will be erased when you hit return.  (This
 happens automatically; there is no special password processing.)
 
   When you log in to a different machine, you need to specify the type
-of terminal you're using.  Terminal types @samp{ansi} or @samp{vt100}
-will work on most systems.
+of terminal you're using, by setting the @env{TERM} environment
+variable in the environment for the remote login command.  (If you use
+bash, you do that by writing the variable assignment before the remote
+login command, without separating comma.)  Terminal types @samp{ansi}
+or @samp{vt100} will work on most systems.
 
 @c   If you are talking to a Bourne-compatible
 @c shell, and your system understands the @env{TERMCAP} variable,
@@ -1185,7 +1214,7 @@ off directory tracking.
 
 @end ignore
 
-@node Emacs Server, Hardcopy, Shell, Top
+@node Emacs Server, Printing, Shell, Top
 @section Using Emacs as a Server
 @pindex emacsclient
 @cindex Emacs as a server
@@ -1247,6 +1276,14 @@ kills it if the file name matches the regular expression
   If you set the variable @code{server-window} to a window or a frame,
 @kbd{C-x #} displays the server buffer in that window or in that frame.
 
+@vindex server-name
+  You can run multiple Emacs servers on the same machine by giving
+each one a unique ``server name'', using the variable
+@code{server-name}.  For example, @kbd{M-x set-variable @key{RET}
+server-name @key{RET} foo @key{RET}} sets the server name to
+@samp{foo}.  The @code{emacsclient} program can visit a server by name
+using the @samp{-s} option.  @xref{Invoking emacsclient}.
+
   While @code{mail} or another application is waiting for
 @code{emacsclient} to finish, @code{emacsclient} does not read terminal
 input.  So the terminal that @code{mail} was using is effectively
@@ -1277,7 +1314,7 @@ in Emacs.  Note that server buffers created in this way are not killed
 automatically when you finish with them.
 
 @menu
-* Invoking emacsclient::
+* Invoking emacsclient:: Emacs client startup options.
 @end menu
 
 @node Invoking emacsclient,, Emacs Server, Emacs Server
@@ -1329,19 +1366,25 @@ open the given files with the option @samp{--display=@var{DISPLAY}}.
 This can be used typically when connecting from home to an Emacs
 server running on your machine at your workplace.
 
+If there is more than one Emacs server running, you can specify a
+server name with the option @samp{-s @var{name}}.
+
 You can also use @code{emacsclient} to execute any piece of Emacs Lisp
 code, using the option @samp{--eval}.  When this option is given, the
 rest of the arguments is not taken as a list of files to visit but as
 a list of expressions to evaluate.
 
-@node Hardcopy, PostScript, Emacs Server, Top
-@section Hardcopy Output
+@node Printing, Sorting, Emacs Server, Top
+@section Printing Hard Copies
 @cindex hardcopy
+@cindex printing
 
-  The Emacs commands for making hardcopy let you print either an entire
-buffer or just part of one, either with or without page headers.
-See also the hardcopy commands of Dired (@pxref{Misc File Ops})
-and the diary (@pxref{Diary Commands}).
+  Emacs provides commands for printing hard copies of either an entire
+buffer or just part of one, with or without page headers.  You can
+invoke the printing commands directly, as detailed in the following
+section, or using the @samp{File} menu on the menu bar.  See also the
+hardcopy commands of Dired (@pxref{Misc File Ops}) and the diary
+(@pxref{Displaying the Diary}).
 
 @table @kbd
 @item M-x print-buffer
@@ -1388,7 +1431,13 @@ whether to supply @samp{-T} and @samp{-J} options (suitable for
 @code{lpr-add-switches} should be @code{nil} if your printer program is
 not compatible with @code{lpr}.
 
-@node PostScript, PostScript Variables, Hardcopy, Top
+@menu
+* PostScript::	         Printing buffers or regions as PostScript.
+* PostScript Variables:: Customizing the PostScript printing commands.
+* Printing Package::     An optional advanced printing interface.
+@end menu
+
+@node PostScript, PostScript Variables,, Printing
 @section PostScript Hardcopy
 
   These commands convert buffer contents to PostScript,
@@ -1452,7 +1501,7 @@ supports ISO 8859-1 characters.
   The following section describes variables for customizing these commands.
 @end ifinfo
 
-@node PostScript Variables, Sorting, PostScript, Top
+@node PostScript Variables, Printing Package, PostScript, Printing
 @section Variables for PostScript Hardcopy
 
 @vindex ps-lpr-command
@@ -1544,7 +1593,33 @@ includes a single directory @file{/usr/local/share/emacs/fonts/bdf}.
   Many other customization variables for these commands are defined and
 described in the Lisp files @file{ps-print.el} and @file{ps-mule.el}.
 
-@node Sorting, Narrowing, PostScript Variables, Top
+@node Printing Package,, PostScript Variables, Printing
+@section Printing Package
+@cindex Printing package
+
+  The basic Emacs facilities for printing hardcopy can be extended
+using the Printing package.  This provides an easy-to-use interface
+for choosing what to print, previewing PostScript files before
+printing, and setting various printing options such as print headers,
+landscape or portrait modes, duplex modes, and so forth.  On GNU/Linux
+or Unix systems, the Printing package relies on the @file{gs} and
+@file{gv} utilities, which are distributed as part of the GhostScript
+program.  On MS-Windows, the @file{gstools} port of Ghostscript can be
+used.
+
+@findex pr-interface
+  To use the Printing package, add @code{(require 'printing)} to your
+init file (@pxref{Init File}).  The usual printing options in the menu
+bar will be replaced with a @samp{Printing} submenu, containing
+various printing options.  You can also type @kbd{M-x pr-interface
+RET}; this creates a @samp{*Printing Interface*} buffer, similar to a
+customization buffer , where you can set the printing options.  After
+selecting what and how to print, start the print job using the
+@samp{Print} button (click @kbd{mouse-2} on it, or move point over it
+and type @kbd{RET}).  For further information on the various options,
+use the @samp{Interface Help} button.
+
+@node Sorting, Narrowing, Printing, Top
 @section Sorting Text
 @cindex sorting
 
@@ -1926,7 +2001,15 @@ another directory by typing @kbd{M-x desktop-change-dir}.  Typing
 @kbd{M-x desktop-revert} reverts to the desktop previously reloaded.
 
   Specify the option @samp{--no-desktop} on the command line when you
-don't want it to reload any saved desktop.
+don't want it to reload any saved desktop.  This turns off
+@code{desktop-save-mode} for the current session.
+
+@vindex desktop-restore-eager
+  By default, all the buffers in the desktop are restored at one go.
+However, this may be slow if there are a lot of buffers in the
+desktop.  You can specify the maximum number of buffers to restore
+immediately with the variable @code{desktop-restore-eager}; the
+remaining buffers are restored ``lazily,'' when Emacs is idle.
 
 @findex desktop-clear
 @vindex desktop-globals-to-clear
@@ -2048,41 +2131,28 @@ Emacs key bindings are still available.  The EDT emulation rebindings
 are done in the global keymap, so there is no problem switching
 buffers or major modes while in EDT emulation.
 
-@item ``PC'' bindings
-@findex pc-bindings-mode
-@cindex ``PC'' key bindings
-The command @kbd{M-x pc-bindings-mode} sets up certain key bindings
-for ``PC compatibility''---what people are often used to on PCs---as
-follows: @kbd{M-Backspace} does undo, and @kbd{C-Escape} does
-@code{list-buffers}.
+@item CUA bindings
+@findex cua-mode
+@vindex cua-mode
+@cindex CUA key bindings
+@vindex cua-enable-cua-keys
+The command @kbd{M-x cua-mode} sets up key bindings that are
+compatible with the Common User Access (CUA) system used in many other
+applications.  @kbd{C-x} means cut (kill), @kbd{C-c} copy, @kbd{C-v}
+paste (yank), and @kbd{C-z} undo.  Standard Emacs commands like
+@kbd{C-x C-c} still work, because @kbd{C-x} and @kbd{C-c} only take
+effect when the mark is active.  However, if you don't want these
+bindings at all, set @code{cua-enable-cua-keys} to @code{nil}.
 
-@item PC Selection mode
-@findex pc-selection-mode
-@cindex PC Selection minor mode
-@cindex mode, PC selection
-@cindex selection, PC
-The command @kbd{M-x pc-selection-mode} toggles a global minor mode
-that emulates the mark, copy, cut and paste commands of various other
-systems---an interface known as CUA.  It establishes the key bindings
-of PC mode, and also modifies the bindings of the cursor keys and the
-@kbd{next}, @kbd{prior}, @kbd{home} and @kbd{end} keys.  It does not
-provide the full set of CUA key bindings---the fundamental Emacs keys
-@kbd{C-c}, @kbd{C-v} and @kbd{C-x} are not changed.
+In CUA mode, using @kbd{Shift} together with the movement keys
+activates the region over which they move.  The standard (unshifted)
+movement keys deactivate the mark, and typed text replaces the active
+region as in Delete-Selection mode (@pxref{Graphical Kill}).
 
-The standard keys for moving around (@kbd{right}, @kbd{left},
-@kbd{up}, @kbd{down}, @kbd{home}, @kbd{end}, @kbd{prior}, @kbd{next},
-called ``move-keys'') deactivate the mark in PC selection mode.
-However, using @kbd{Shift} together with the ``move keys'' activates
-the region over which they move.  The copy, cut and paste functions
-are available on @kbd{C-insert}, @kbd{S-delete} and @kbd{S-insert}
-respectively.
-
-Turning @code{pc-selection-mode} off restores the old key bindings of
-these keys.
-
-@cindex s-region package
-The @code{s-region} package provides similar, but less complete,
-facilities.
+CUA mode also provides enhanced rectangle support with visible
+rectangle highlighting.  Use @kbd{Shift-RET} to start a rectangle,
+extend it using the movement commands, and cut or copy it using
+@kbd{C-x} or @kbd{C-c}.
 
 @item TPU (DEC VMS editor)
 @findex tpu-edt-on

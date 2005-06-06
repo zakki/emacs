@@ -277,6 +277,8 @@ from being initialized."
 
 (defvar emacs-quick-startup nil)
 
+(defvar emacs-basic-display nil)
+
 (defvar init-file-debug nil)
 
 (defvar init-file-had-error nil)
@@ -366,11 +368,17 @@ or `CVS', and any subdirectory that contains a file named `.nosearch'."
     ;; of that dir into load-path,
     ;; Look for a leim-list.el file too.  Loading it will register
     ;; available input methods.
-    (dolist (dir load-path)
-      (let ((default-directory dir))
-	(load (expand-file-name "subdirs.el") t t t))
-      (let ((default-directory dir))
-	(load (expand-file-name "leim-list.el") t t t)))
+    (let ((tail load-path) dir)
+      (while tail
+        (setq dir (car tail))
+        (let ((default-directory dir))
+          (load (expand-file-name "subdirs.el") t t t))
+        (let ((default-directory dir))
+          (load (expand-file-name "leim-list.el") t t t))
+        ;; We don't use a dolist loop and we put this "setq-cdr" command at
+        ;; the end, because the subdirs.el files may add elements to the end
+        ;; of load-path and we want to take it into account.
+        (setq tail (cdr tail))))
     (unless (eq system-type 'vax-vms)
       ;; If the PWD environment variable isn't accurate, delete it.
       (let ((pwd (getenv "PWD")))
@@ -657,7 +665,7 @@ or `CVS', and any subdirectory that contains a file named `.nosearch'."
     (while (and (not done) args)
       (let* ((longopts '(("--no-init-file") ("--no-site-file") ("--user")
                          ("--debug-init") ("--iconic") ("--icon-type")
-			 ("--no-blinking-cursor")))
+			 ("--no-blinking-cursor") ("--bare-bones")))
              (argi (pop args))
              (orig-argi argi)
              argval)
@@ -677,11 +685,13 @@ or `CVS', and any subdirectory that contains a file named `.nosearch'."
 		(setq argval nil
                       argi orig-argi)))))
 	(cond
-	 ((equal argi "-Q")
+	 ((member argi '("-Q" "-quick"))
 	  (setq init-file-user nil
 		site-run-file nil
-		no-blinking-cursor t
-		emacs-quick-startup t)
+		emacs-quick-startup t))
+	 ((member argi '("-D" "-basic-display"))
+	  (setq no-blinking-cursor t
+		emacs-basic-display t)
 	  (push '(vertical-scroll-bars . nil) initial-frame-alist))
 	 ((member argi '("-q" "-no-init-file"))
 	  (setq init-file-user nil))
@@ -710,20 +720,29 @@ or `CVS', and any subdirectory that contains a file named `.nosearch'."
     (and command-line-args
          (setcdr command-line-args args)))
 
-  ;; Under X Windows, this creates the X frame and deletes the terminal frame.
+  ;; Under X Window, this creates the X frame and deletes the terminal frame.
   (when (fboundp 'frame-initialize)
     (frame-initialize))
 
+  ;; Turn off blinking cursor if so specified in X resources.  This is here
+  ;; only because all other settings of no-blinking-cursor are here.
+  (unless (or noninteractive
+	      emacs-basic-display
+	      (and (memq window-system '(x w32 mac))
+		   (not (member (x-get-resource "cursorBlink" "CursorBlink")
+				'("off" "false")))))
+    (setq no-blinking-cursor t))
+
   ;; If frame was created with a menu bar, set menu-bar-mode on.
   (unless (or noninteractive
-	      emacs-quick-startup
+	      emacs-basic-display
               (and (memq window-system '(x w32))
                    (<= (frame-parameter nil 'menu-bar-lines) 0)))
     (menu-bar-mode 1))
 
   ;; If frame was created with a tool bar, switch tool-bar-mode on.
   (unless (or noninteractive
-	      emacs-quick-startup
+	      emacs-basic-display
               (not (display-graphic-p))
               (<= (frame-parameter nil 'tool-bar-lines) 0))
     (tool-bar-mode 1))
@@ -733,8 +752,11 @@ or `CVS', and any subdirectory that contains a file named `.nosearch'."
   (custom-reevaluate-setting 'blink-cursor-mode)
   (custom-reevaluate-setting 'normal-erase-is-backspace)
 
+  ;; If you change the code below, you need to also change the
+  ;; corresponding code in the tooltip-mode defcustom.  The two need
+  ;; to be equivalent under all conditions, or Custom will get confused.
   (unless (or noninteractive
-	      emacs-quick-startup
+	      emacs-basic-display
               (not (display-graphic-p))
               (not (fboundp 'x-show-tip)))
     (tooltip-mode 1))
@@ -979,7 +1001,8 @@ or `CVS', and any subdirectory that contains a file named `.nosearch'."
   ;; the session manager and we have a session manager connection.
   (if (and (boundp 'x-session-previous-id)
            (stringp x-session-previous-id))
-      (emacs-session-restore x-session-previous-id)))
+      (with-no-warnings
+	(emacs-session-restore x-session-previous-id))))
 
 (defcustom initial-scratch-message (purecopy "\
 ;; This buffer is for notes you don't want to save, and for Lisp evaluation.
@@ -1004,8 +1027,27 @@ If this is nil, no message will be displayed."
 using the mouse.\n\n"
 	   :face (variable-pitch :weight bold)
 	   "Important Help menu items:\n"
-	   :face variable-pitch "\
-Emacs Tutorial\tLearn-by-doing tutorial for using Emacs efficiently
+	   :face variable-pitch
+           (lambda ()
+             (let* ((en "TUTORIAL")
+                    (tut (or (get-language-info current-language-environment
+                                                'tutorial)
+                             en))
+                    (title (with-temp-buffer
+                             (insert-file-contents
+                              (expand-file-name tut data-directory)
+                              nil 0 256)
+                             (search-forward ".")
+                             (buffer-substring (point-min) (1- (point))))))
+               ;; If there is a specific tutorial for the current language
+               ;; environment and it is not English, append its title.
+               (concat
+                "Emacs Tutorial\tLearn how to use Emacs efficiently"
+                (if (string= en tut)
+                    ""
+                  (concat " (" title ")"))
+                "\n")))
+           :face variable-pitch "\
 Emacs FAQ\tFrequently asked questions and answers
 Read the Emacs Manual\tView the Emacs manual using Info
 \(Non)Warranty\tGNU Emacs comes with "
@@ -1022,7 +1064,7 @@ using the mouse.\n\n"
 	   "Useful File menu items:\n"
 	   :face variable-pitch "\
 Exit Emacs\t(Or type Control-x followed by Control-c)
-Recover Session\tRecover files you were editing before a crash
+Recover Crashed Session\tRecover files you were editing before a crash
 
 
 
@@ -1040,15 +1082,15 @@ Each element in the list should be a list of strings or pairs
   :group 'initialization)
 
 
-(defcustom fancy-splash-delay 10
+(defcustom fancy-splash-delay 7
   "*Delay in seconds between splash screens."
   :group 'fancy-splash-screen
   :type 'integer)
 
 
-(defcustom fancy-splash-max-time 60
+(defcustom fancy-splash-max-time 30
   "*Show splash screens for at most this number of seconds.
-Values less than 60 seconds are ignored."
+Values less than twice `fancy-splash-delay' are ignored."
   :group 'fancy-splash-screen
   :type 'integer)
 
@@ -1069,14 +1111,18 @@ Values less than 60 seconds are ignored."
 
 (defun fancy-splash-insert (&rest args)
   "Insert text into the current buffer, with faces.
-Arguments from ARGS should be either strings or pairs `:face FACE',
+Arguments from ARGS should be either strings, functions called
+with no args that return a string, or pairs `:face FACE',
 where FACE is a valid face specification, as it can be used with
-`put-text-properties'."
+`put-text-property'."
   (let ((current-face nil))
     (while args
       (if (eq (car args) :face)
 	  (setq args (cdr args) current-face (car args))
-	(insert (propertize (car args)
+	(insert (propertize (let ((it (car args)))
+                              (if (functionp it)
+                                  (funcall it)
+                                it))
 			    'face current-face
 			    'help-echo fancy-splash-help-echo)))
       (setq args (cdr args)))))
@@ -1142,7 +1188,7 @@ where FACE is a valid face specification, as it can be used with
 			 (emacs-version)
 			 "\n"
 			 :face '(variable-pitch :height 0.5)
-			 "Copyright (C) 2004 Free Software Foundation, Inc.")
+			 "Copyright (C) 2005 Free Software Foundation, Inc.")
     (and auto-save-list-file-prefix
 	 ;; Don't signal an error if the
 	 ;; directory for auto-save-list files
@@ -1222,7 +1268,7 @@ mouse."
 		    mode-line-format (propertize "---- %b %-"
 						 'face '(:weight bold))
 		    fancy-splash-stop-time (+ (float-time)
-					      (max 60 fancy-splash-max-time))
+					      fancy-splash-max-time)
 		    timer (run-with-timer 0 fancy-splash-delay
 					  #'fancy-splash-screens-1
 					  splash-buffer))
@@ -1458,9 +1504,16 @@ normal otherwise."
 			    nil t))
 		       (error nil))
 		   (kill-buffer buffer)))))
-      ;; Stop any "Loading image..." message hiding echo-area-message.
-      (use-fancy-splash-screens-p)
-      (display-startup-echo-area-message))
+      ;; display-splash-screen at the end of command-line-1 calls
+      ;; use-fancy-splash-screens-p. This can cause image.el to be
+      ;; loaded, putting "Loading image... done" in the echo area.
+      ;; This hides startup-echo-area-message. So
+      ;; use-fancy-splash-screens-p is called here simply to get the
+      ;; loading of image.el (if needed) out of the way before
+      ;; display-startup-echo-area-message runs.
+      (progn
+        (use-fancy-splash-screens-p)
+        (display-startup-echo-area-message)))
 
   ;; Delay 2 seconds after an init file error message
   ;; was displayed, so user can read it.
@@ -1584,11 +1637,11 @@ normal otherwise."
                  (kill-emacs t))
 
                 ((string-match "^\\+[0-9]+\\'" argi)
-                 (setq line (string-to-int argi)))
+                 (setq line (string-to-number argi)))
 
                 ((string-match "^\\+\\([0-9]+\\):\\([0-9]+\\)\\'" argi)
-                 (setq line (string-to-int (match-string 1 argi))
-                       column (string-to-int (match-string 2 argi))))
+                 (setq line (string-to-number (match-string 1 argi))
+                       column (string-to-number (match-string 2 argi))))
 
                 ((setq tem (assoc argi command-line-x-option-alist))
                  ;; Ignore X-windows options and their args if not using X.

@@ -1,7 +1,7 @@
 ;;; add-log.el --- change log maintenance commands for Emacs
 
-;; Copyright (C) 1985, 86, 88, 93, 94, 97, 98, 2000, 03, 2004
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1988, 1993, 1994, 1997, 1998, 2000, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: tools
@@ -220,25 +220,25 @@ Note: The search is conducted only within 10%, at the beginning of the file."
     ("^\\sw.........[0-9:+ ]*"
      (0 'change-log-date-face)
      ;; Name and e-mail; some people put e-mail in parens, not angles.
-     ("\\([^<(]+?\\)[ \t]*[(<]\\([A-Za-z0-9_.-]+@[A-Za-z0-9_.-]+\\)[>)]" nil nil
+     ("\\([^<(]+?\\)[ \t]*[(<]\\([A-Za-z0-9_.+-]+@[A-Za-z0-9_.-]+\\)[>)]" nil nil
       (1 'change-log-name-face)
       (2 'change-log-email-face)))
     ;;
     ;; File names.
-    ("^\t\\* \\([^ ,:([\n]+\\)"
-     (1 'change-log-file-face)
+    ("^\\( +\\|\t\\)\\* \\([^ ,:([\n]+\\)"
+     (2 'change-log-file-face)
      ;; Possibly further names in a list:
      ("\\=, \\([^ ,:([\n]+\\)" nil nil (1 'change-log-file-face))
      ;; Possibly a parenthesized list of names:
-     ("\\= (\\([^() ,\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
+     ("\\= (\\([^(),\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
       nil nil (1 'change-log-list-face))
-     ("\\=, *\\([^() ,\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
+     ("\\=, *\\([^(),\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
       nil nil (1 'change-log-list-face)))
     ;;
     ;; Function or variable names.
-    ("^\t(\\([^() ,\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
-     (1 'change-log-list-face)
-     ("\\=, *\\([^() ,\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)" nil nil
+    ("^\\( +\\|\t\\)(\\([^(),\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
+     (2 'change-log-list-face)
+     ("\\=, *\\([^(),\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)" nil nil
       (1 'change-log-list-face)))
     ;;
     ;; Conditionals.
@@ -250,8 +250,11 @@ Note: The search is conducted only within 10%, at the beginning of the file."
     ;; Acknowledgements.
     ;; Don't include plain "From" because that is vague;
     ;; we want to encourage people to say something more specific.
-    ("\\(^\t\\|  \\)\\(Patch\\(es\\)? by\\|Report\\(ed by\\| from\\)\\|Suggest\\(ed by\\|ion from\\)\\)"
-     2 'change-log-acknowledgement-face))
+    ;; Note that the FSF does not use "Patches by"; our convention
+    ;; is to put the name of the author of the changes at the top
+    ;; of the change log entry.
+    ("\\(^\\( +\\|\t\\)\\|  \\)\\(Patch\\(es\\)? by\\|Report\\(ed by\\| from\\)\\|Suggest\\(ed by\\|ion from\\)\\)"
+     3 'change-log-acknowledgement-face))
   "Additional expressions to highlight in Change Log mode.")
 
 (defvar change-log-mode-map
@@ -375,10 +378,10 @@ nil, by matching `change-log-version-number-regexp-list'."
 
 Optional arg FILE-NAME specifies the file to use.
 If FILE-NAME is nil, use the value of `change-log-default-name'.
-If 'change-log-default-name' is nil, behave as though it were 'ChangeLog'
+If `change-log-default-name' is nil, behave as though it were 'ChangeLog'
 \(or whatever we use on this operating system).
 
-If 'change-log-default-name' contains a leading directory component, then
+If `change-log-default-name' contains a leading directory component, then
 simply find it in the current directory.  Otherwise, search in the current
 directory and its successive parents for a file so named.
 
@@ -489,13 +492,13 @@ non-nil, otherwise in local time."
 
     (if whoami
 	(progn
-	  (setq full-name (read-input "Full name: " full-name))
+	  (setq full-name (read-string "Full name: " full-name))
 	  ;; Note that some sites have room and phone number fields in
 	  ;; full name which look silly when inserted.  Rather than do
 	  ;; anything about that here, let user give prefix argument so that
 	  ;; s/he can edit the full name field in prompter if s/he wants.
 	  (setq mailing-address
-		(read-input "Mailing address: " mailing-address))))
+		(read-string "Mailing address: " mailing-address))))
 
     (unless (equal file-name buffer-file-name)
       (if (or other-window (window-dedicated-p (selected-window)))
@@ -812,7 +815,7 @@ Has a preference of looking backwards."
 				 (looking-at "[ \t\n]"))
 		       (forward-line -1))
 		     ;; See if this is using the DEFUN macro used in Emacs,
-		     ;; or the DEFUN macro used by the C library.
+		     ;; or the DEFUN macro used by the C library:
 		     (if (condition-case nil
 			     (and (save-excursion
 				    (end-of-line)
@@ -824,16 +827,20 @@ Has a preference of looking backwards."
 				    (looking-at "DEFUN\\b"))
 				  (>= location tem))
 			   (error nil))
+                         ;; DEFUN ("file-name-directory", Ffile_name_directory, Sfile_name_directory, ...) ==> Ffile_name_directory
+                         ;; DEFUN(POSIX::STREAM-LOCK, stream lockp &key BLOCK SHARED START LENGTH) ==> POSIX::STREAM-LOCK
 			 (progn
 			   (goto-char tem)
 			   (down-list 1)
-			   (if (= (char-after (point)) ?\")
-			       (progn
-				 (forward-sexp 1)
-				 (skip-chars-forward " ,")))
+			   (when (= (char-after (point)) ?\")
+                             (forward-sexp 1)
+                             (search-forward ","))
+                           (skip-syntax-forward " ")
 			   (buffer-substring-no-properties
 			    (point)
-			    (progn (forward-sexp 1)
+			    (progn (search-forward ",")
+                                   (forward-char -1)
+                                   (skip-syntax-backward " ")
 				   (point))))
 		       (if (looking-at "^[+-]")
 			   (change-log-get-method-definition)

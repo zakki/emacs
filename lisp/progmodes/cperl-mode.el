@@ -1,6 +1,6 @@
 ;;; cperl-mode.el --- Perl code editing commands for Emacs
 
-;; Copyright (C) 1985,86,87,91,92,93,94,95,96,97,98,99,2000,03,2004
+;; Copyright (C) 1985,86,87,91,92,93,94,95,96,97,98,99,2000,03,2004,2005
 ;;     Free Software Foundation, Inc.
 
 ;; Author: Ilya Zakharevich and Bob Olson
@@ -120,7 +120,7 @@
 	;; Probably will not work due to some save-excursion???
 	;; Or save-file-position?
 	;; (message "Did I get to line %s?" (elt (, elt) 1))
-	`(goto-line (string-to-int (elt ,elt 1))))
+	`(goto-line (string-to-number (elt ,elt 1))))
     ;;)
     (defmacro cperl-etags-goto-tag-location (elt)
       `(etags-goto-tag-location ,elt))))
@@ -342,10 +342,19 @@ Affects: `cperl-font-lock', `cperl-electric-lbrace-space',
   :type 'integer
   :group 'cperl-indentation-details)
 
-(defcustom cperl-vc-header-alist '((SCCS "($sccs) = ('%W\%' =~ /(\\d+(\\.\\d+)+)/) ;")
-				   (RCS "($rcs) = (' $Id\$ ' =~ /(\\d+(\\.\\d+)+)/) ;"))
-  "*What to use as `vc-header-alist' in CPerl."
-  :type '(repeat (list symbol string))
+(defvar cperl-vc-header-alist nil)
+(make-obsolete-variable 
+ 'cperl-vc-header-alist
+ "use cperl-vc-rcs-header or cperl-vc-sccs-header instead.")
+
+(defcustom cperl-vc-sccs-header '("($sccs) = ('%W\%' =~ /(\\d+(\\.\\d+)+)/) ;")
+  "*Special version of `vc-sccs-header' that is used in CPerl mode buffers."
+  :type '(repeat string)
+  :group 'cperl)
+
+(defcustom cperl-vc-rcs-header '("($rcs) = (' $Id\$ ' =~ /(\\d+(\\.\\d+)+)/) ;")
+  "*Special version of `vc-rcs-header' that is used in CPerl mode buffers."
+  :type '(repeat string)
   :group 'cperl)
 
 (defcustom cperl-clobber-mode-lists
@@ -713,7 +722,7 @@ should work if the balance of delimiters is not broken by POD).
 
 The main trick (to make $ a \"backslash\") makes constructions like
 ${aaa} look like unbalanced braces.  The only trick I can think of is
-to insert it as $ {aaa} (legal in perl5, not in perl4).
+to insert it as $ {aaa} (valid in perl5, not in perl4).
 
 Similar problems arise in regexps, when /(\\s|$)/ should be rewritten
 as /($|\\s)/.  Note that such a transposition is not always possible.
@@ -1485,8 +1494,10 @@ or as help on variables `cperl-tips', `cperl-problems',
 	(function cperl-imenu--create-perl-index))
   (make-local-variable 'imenu-sort-function)
   (setq imenu-sort-function nil)
-  (make-local-variable 'vc-header-alist)
-  (set 'vc-header-alist cperl-vc-header-alist) ; Avoid warning
+  (make-local-variable 'vc-rcs-header)
+  (set 'vc-rcs-header cperl-vc-rcs-header)
+  (make-local-variable 'vc-sccs-header)
+  (set 'vc-sccs-header cperl-vc-sccs-header)
   (make-local-variable 'font-lock-defaults)
   (setq	font-lock-defaults
 	(cond
@@ -1514,14 +1525,14 @@ or as help on variables `cperl-tips', `cperl-problems',
 	(set 'font-lock-unfontify-region-function ; not present with old Emacs
 	      'cperl-font-lock-unfontify-region-function)
 	(make-local-variable 'cperl-syntax-done-to)
-	;; Another bug: unless font-lock-syntactic-keywords, font-lock
-	;;  ignores syntax-table text-property.  (t) is a hack
-	;;  to make font-lock think that font-lock-syntactic-keywords
-	;;  are defined
 	(make-local-variable 'font-lock-syntactic-keywords)
 	(setq font-lock-syntactic-keywords
 	      (if cperl-syntaxify-by-font-lock
-		  '(t (cperl-fontify-syntaxically))
+		  '((cperl-fontify-syntaxically))
+                ;; unless font-lock-syntactic-keywords, font-lock (pre-22.1)
+                ;;  used to ignore syntax-table text-properties.  (t) is a hack
+                ;;  to make font-lock think that font-lock-syntactic-keywords
+                ;;  are defined.
 		'(t)))))
   (make-local-variable 'cperl-old-style)
   (if (boundp 'normal-auto-fill-function) ; 19.33 and later
@@ -4751,7 +4762,10 @@ indentation and initial hashes.  Behaves usually outside of comment."
 		  (t '("^[ \t{}]*\\(my\\|local\\our\\)[ \t]*\\(([ \t]*\\)?\\([$@%*][a-zA-Z0-9_:]+\\)"
 		       3 font-lock-variable-name-face)))
 	    '("\\<for\\(each\\)?\\([ \t]+\\(my\\|local\\|our\\)\\)?[ \t]*\\(\\$[a-zA-Z_][a-zA-Z_0-9]*\\)[ \t]*("
-	      4 font-lock-variable-name-face)))
+	      4 font-lock-variable-name-face)
+	    ;; Avoid $!, and s!!, qq!! etc. when not fontifying syntaxically
+	    '("\\(?:^\\|[^smywqrx$]\\)\\(!\\)" 1 font-lock-negation-char-face)
+	    '("\\[\\(\\^\\)" 1 font-lock-negation-char-face prepend)))
 	  (setq
 	   t-font-lock-keywords-1
 	   (and (fboundp 'turn-on-font-lock) ; Check for newer font-lock

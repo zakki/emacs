@@ -1,8 +1,9 @@
 ;;; reftex-index.el --- index support with RefTeX
-;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004, 2005
+;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.26
+;; Version: 4.28
 
 ;; This file is part of GNU Emacs.
 
@@ -309,7 +310,7 @@ Here are all local bindings.
   (easy-menu-add reftex-index-menu reftex-index-map)
   (add-hook 'post-command-hook 'reftex-index-post-command-hook nil t)
   (add-hook 'pre-command-hook  'reftex-index-pre-command-hook nil t)
-  (run-hooks 'reftex-index-mode-hook))
+  (run-mode-hooks 'reftex-index-mode-hook))
 
 (defconst reftex-index-help
 "                      AVAILABLE KEYS IN INDEX BUFFER
@@ -928,7 +929,7 @@ When index is restricted, select the previous section as restriction criterion."
            (error "Not changed"))
           ((string= npart "")
            (if dont-allow-empty
-               (error "Illegal value")
+               (error "Invalid value")
              (setf (nth n analyze) npart)))
           (t (setf (nth n analyze) (concat initial npart))))
     (setq new (apply 'concat analyze))
@@ -1307,7 +1308,7 @@ Here are all local bindings.
        reftex-index-phrases-font-lock-defaults)
   (easy-menu-add reftex-index-phrases-menu reftex-index-phrases-map)
   (set (make-local-variable 'reftex-index-phrases-marker) (make-marker))
-  (run-hooks 'reftex-index-phrases-mode-hook))
+  (run-mode-hooks 'reftex-index-phrases-mode-hook))
 (add-hook 'reftex-index-phrases-mode-hook 'turn-on-font-lock)
 
 ;; Font Locking stuff
@@ -1385,7 +1386,7 @@ match, the user will be asked to confirm the replacement."
                                (file-regular-p reftex-index-phrases-restrict-file))
                           (list reftex-index-phrases-restrict-file))
                          ((stringp reftex-index-phrases-restrict-file)
-                          (error "Illegal restriction file %s"
+                          (error "Invalid restriction file %s"
                                  reftex-index-phrases-restrict-file))
                          (t reftex-index-phrases-files)))
                   (as-words reftex-index-phrases-search-whole-words))

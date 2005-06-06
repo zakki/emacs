@@ -224,7 +224,7 @@ ARGLIST can also be t or a string of the form \"(FUN ARG1 ARG2 ...)\"."
 ;;;   (symbol-file (if (symbolp subr-or-var) subr-or-var
 ;;; 		 (subr-name subr-or-var))
 ;;; 	       (if (eq kind 'var) 'defvar 'defun)))
-
+;;;###autoload
 (defun help-C-file-name (subr-or-var kind)
   "Return the name of the C file where SUBR-OR-VAR is defined.
 KIND should be `var' for a variable or `subr' for a subroutine."
@@ -535,7 +535,9 @@ it is displayed along with the global value."
 		(terpri)
 		(let ((from (point)))
 		  (pp val)
-		  (help-xref-on-pp from (point))
+		  ;; Hyperlinks in variable's value are quite frequently
+		  ;; inappropriate e.g C-h v <RET> features <RET>
+		  ;; (help-xref-on-pp from (point))
 		  (if (< (point) (+ from 20))
 		      (delete-region (1- from) from)))))
 	    (terpri)
@@ -556,7 +558,8 @@ it is displayed along with the global value."
 		    ;; sensible size before prettyprinting.  -- fx
 		    (let ((from (point)))
 		      (pp val)
-		      (help-xref-on-pp from (point))
+		      ;; See previous comment for this function.
+		      ;; (help-xref-on-pp from (point))
 		      (if (< (point) (+ from 20))
 			(delete-region (1- from) from))))))
 	      (terpri))

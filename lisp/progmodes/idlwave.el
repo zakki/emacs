@@ -1,5 +1,6 @@
 ;; idlwave.el --- IDL editing mode for GNU Emacs
-;; Copyright (c) 1999, 2000, 2001, 2002, 2003, 2004 Free Software Foundation
+;; Copyright (c) 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;;  Free Software Foundation
 
 ;; Authors: J.D. Smith <jdsmith@as.arizona.edu>
 ;;          Carsten Dominik <dominik@science.uva.nl>
@@ -584,7 +585,7 @@ for which to assume this can be set here."
 (defcustom idlwave-completion-show-classes 1
   "*Number of classes to show when completing object methods and keywords.
 When completing methods or keywords for an object with unknown class,
-the *Completions* buffer will show the legal classes for each completion
+the *Completions* buffer will show the valid classes for each completion
 like this:
 
 MyMethod <Class1,Class2,Class3>
@@ -1953,7 +1954,7 @@ The main features of this mode are
   (idlwave-new-buffer-update)
 
   ;; Run the mode hook
-  (run-hooks 'idlwave-mode-hook))
+  (run-mode-hooks 'idlwave-mode-hook))
 
 (defvar idlwave-setup-done nil)
 (defun idlwave-setup ()
@@ -3547,7 +3548,7 @@ is non-nil."
   (let ((pos (point)))
     (if idlwave-file-header
 	(cond ((car idlwave-file-header)
-	       (insert-file (car idlwave-file-header)))
+	       (insert-file-contents (car idlwave-file-header)))
 	      ((stringp (car (cdr idlwave-file-header)))
 	       (insert (car (cdr idlwave-file-header))))))
     (goto-char pos)))
@@ -5337,7 +5338,7 @@ end
 
 (defun idlwave-complete (&optional arg module class)
   "Complete a function, procedure or keyword name at point.
-This function is smart and figures out what can be legally completed
+This function is smart and figures out what can be completed
 at this point.
 - At the beginning of a statement it completes procedure names.
 - In the middle of a statement it completes function names.
@@ -5587,7 +5588,7 @@ other completions will be tried.")
 		      (symbolp what)
 		      (assoc (symbol-name what) what-list))
 		 what)
-		(t (error "Illegal WHAT"))))
+		(t (error "Invalid WHAT"))))
 	 (nil-list '(nil nil nil nil))
 	 (class-list (list nil nil (or class t) nil)))
 
@@ -5656,7 +5657,7 @@ other completions will be tried.")
      ((eq what 'class)
       (list nil-list nil-list 'class nil-list nil))
      
-     (t (error "Illegal value for WHAT")))))
+     (t (error "Invalid value for WHAT")))))
 
 (defun idlwave-completing-read (&rest args)
   ;; Completing read, case insensitive
@@ -7728,7 +7729,7 @@ from all classes if class equals t."
     keywords))
 
 (defun idlwave-expand-keyword (keyword module)
-  "Expand KEYWORD to one of the legal keyword parameters of MODULE.
+  "Expand KEYWORD to one of the valid keyword parameters of MODULE.
 KEYWORD may be an exact match or an abbreviation of a keyword.
 If the match is exact, KEYWORD itself is returned, even if there may be other
 keywords of which KEYWORD is an abbreviation.  This is necessary because some
@@ -7926,7 +7927,7 @@ If we do not know about MODULE, just return KEYWORD literally."
 		     "\n          Source information truncated to %d entries."
 		     idlwave-rinfo-max-source-lines))
 	    (setq all nil)))
-	(beginning-of-buffer)
+	(goto-char (point-min))
 	(setq buffer-read-only t))
       (display-buffer "*Help*")
       (if (and (setq win (get-buffer-window "*Help*"))

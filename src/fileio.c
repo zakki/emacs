@@ -45,9 +45,7 @@ Boston, MA 02111-1307, USA.  */
 #  define S_ISREG(m) (((m) & S_IFMT) == S_IFREG)
 #endif
 
-#ifdef VMS
-#include "vms-pwd.h"
-#else
+#ifdef HAVE_PWD_H
 #include <pwd.h>
 #endif
 
@@ -176,6 +174,10 @@ Lisp_Object Vdefault_file_name_coding_system;
 /* Alist of elements (REGEXP . HANDLER) for file names
    whose I/O is done with a special handler.  */
 Lisp_Object Vfile_name_handler_alist;
+
+/* Property name of a file name handler,
+   which gives a list of operations it handles..  */
+Lisp_Object Qoperations;
 
 /* Lisp functions for translating file formats */
 Lisp_Object Qformat_decode, Qformat_annotate_function;
@@ -368,13 +370,19 @@ use the standard functions without calling themselves recursively.  */)
       elt = XCAR (chain);
       if (CONSP (elt))
 	{
-	  Lisp_Object string;
+	  Lisp_Object string = XCAR (elt);
 	  int match_pos;
-	  string = XCAR (elt);
+	  Lisp_Object handler = XCDR (elt);
+	  Lisp_Object operations = Qnil;
+
+	  if (SYMBOLP (handler))
+	    operations = Fget (handler, Qoperations);
+
 	  if (STRINGP (string)
-	      && (match_pos = fast_string_match (string, filename)) > pos)
+	      && (match_pos = fast_string_match (string, filename)) > pos
+	      && (NILP (operations) || ! NILP (Fmemq (operation, operations))))
 	    {
-	      Lisp_Object handler, tem;
+	      Lisp_Object tem;
 
 	      handler = XCDR (elt);
 	      tem = Fmemq (handler, inhibited_handlers);
@@ -1014,8 +1022,8 @@ probably use `make-temp-file' instead, except in three circumstances:
 DEFUN ("expand-file-name", Fexpand_file_name, Sexpand_file_name, 1, 2, 0,
        doc: /* Convert filename NAME to absolute, and canonicalize it.
 Second arg DEFAULT-DIRECTORY is directory to start with if NAME is relative
- (does not start with slash); if DEFAULT-DIRECTORY is nil or missing,
-the current buffer's value of default-directory is used.
+\(does not start with slash); if DEFAULT-DIRECTORY is nil or missing,
+the current buffer's value of `default-directory' is used.
 File name components that are `.' are removed, and
 so are file name components followed by `..', along with the `..' itself;
 note that these simplifications are done without checking the resulting
@@ -1464,7 +1472,7 @@ See also the function `substitute-in-file-name'.  */)
 	     indirectly by prepending newdir to nm if necessary, and using
 	     cwd (or the wd of newdir's drive) as the new newdir. */
 
-	  if (IS_DRIVE (newdir[0]) && newdir[1] == ':')
+	  if (IS_DRIVE (newdir[0]) && IS_DEVICE_SEP (newdir[1]))
 	    {
 	      drive = newdir[0];
 	      newdir += 2;
@@ -1487,7 +1495,7 @@ See also the function `substitute-in-file-name'.  */)
 	}
 
       /* Strip off drive name from prefix, if present. */
-      if (IS_DRIVE (newdir[0]) && newdir[1] == ':')
+      if (IS_DRIVE (newdir[0]) && IS_DEVICE_SEP (newdir[1]))
 	{
 	  drive = newdir[0];
 	  newdir += 2;
@@ -1643,8 +1651,16 @@ See also the function `substitute-in-file-name'.  */)
 	  p += 2;
 	}
       else if (IS_DIRECTORY_SEP (p[0]) && p[1] == '.' && p[2] == '.'
-	       /* `/../' is the "superroot" on certain file systems.  */
+	       /* `/../' is the "superroot" on certain file systems.
+		  Turned off on DOS_NT systems because they have no
+		  "superroot" and because this causes us to produce
+		  file names like "d:/../foo" which fail file-related
+		  functions of the underlying OS.  (To reproduce, try a
+		  long series of "../../" in default_directory, longer
+		  than the number of levels from the root.)  */
+#ifndef DOS_NT
 	       && o != target
+#endif
 	       && (IS_DIRECTORY_SEP (p[3]) || p[3] == 0))
 	{
 	  while (o != target && (--o) && !IS_DIRECTORY_SEP (*o))
@@ -1721,7 +1737,7 @@ See also the function `substitute-in-file-name'.  */)
 DEAFUN ("expand-file-name", Fexpand_file_name, Sexpand_file_name, 1, 2, 0,
   "Convert FILENAME to absolute, and canonicalize it.\n\
 Second arg DEFAULT is directory to start with if FILENAME is relative\n\
- (does not start with slash); if DEFAULT is nil or missing,\n\
+\(does not start with slash); if DEFAULT is nil or missing,\n\
 the current buffer's value of default-directory is used.\n\
 Filenames containing `.' or `..' as components are simplified;\n\
 initial `~/' expands to your home directory.\n\
@@ -2040,6 +2056,75 @@ See also the function `substitute-in-file-name'.")
 }
 #endif
 
+/* If /~ or // appears, discard everything through first slash.  */
+static int
+file_name_absolute_p (filename)
+     const unsigned char *filename;
+{
+  return
+    (IS_DIRECTORY_SEP (*filename) || *filename == '~'
+#ifdef VMS
+     /* ??? This criterion is probably wrong for '<'.  */
+     || index (filename, ':') || index (filename, '<')
+     || (*filename == '[' && (filename[1] != '-'
+			      || (filename[2] != '.' && filename[2] != ']'))
+	 && filename[1] != '.')
+#endif /* VMS */
+#ifdef DOS_NT
+     || (IS_DRIVE (*filename) && IS_DEVICE_SEP (filename[1])
+	 && IS_DIRECTORY_SEP (filename[2]))
+#endif
+     );
+}
+
+static unsigned char *
+search_embedded_absfilename (nm, endp)
+     unsigned char *nm, *endp;
+{
+  unsigned char *p, *s;
+
+  for (p = nm + 1; p < endp; p++)
+    {
+      if ((0
+#ifdef VMS
+	   || p[-1] == ':' || p[-1] == ']' || p[-1] == '>'
+#endif /* VMS */
+	   || IS_DIRECTORY_SEP (p[-1]))
+	  && file_name_absolute_p (p)
+#if defined (APOLLO) || defined (WINDOWSNT) || defined(CYGWIN)
+	  /* // at start of file name is meaningful in Apollo,
+	     WindowsNT and Cygwin systems.  */
+	  && !(IS_DIRECTORY_SEP (p[0]) && p - 1 == nm)
+#endif /* not (APOLLO || WINDOWSNT || CYGWIN) */
+	      )
+	{
+	  for (s = p; *s && (!IS_DIRECTORY_SEP (*s)
+#ifdef VMS
+			      && *s != ':'
+#endif /* VMS */
+			      ); s++);
+	  if (p[0] == '~' && s > p + 1)	/* we've got "/~something/" */
+	    {
+	      unsigned char *o = alloca (s - p + 1);
+	      struct passwd *pw;
+	      bcopy (p, o, s - p);
+	      o [s - p] = 0;
+
+	      /* If we have ~user and `user' exists, discard
+		 everything up to ~.  But if `user' does not exist, leave
+		 ~user alone, it might be a literal file name.  */
+	      if ((pw = getpwnam (o + 1)))
+		return p;
+	      else
+		xfree (pw);
+	    }
+	  else
+	    return p;
+	}
+    }
+  return NULL;
+}
+
 DEFUN ("substitute-in-file-name", Fsubstitute_in_file_name,
        Ssubstitute_in_file_name, 1, 1, 0,
        doc: /* Substitute environment variables referred to in FILENAME.
@@ -2061,7 +2146,6 @@ duplicates what `expand-file-name' does.  */)
   int total = 0;
   int substituted = 0;
   unsigned char *xnm;
-  struct passwd *pw;
   Lisp_Object handler;
 
   CHECK_STRING (filename);
@@ -2081,61 +2165,17 @@ duplicates what `expand-file-name' does.  */)
   endp = nm + SBYTES (filename);
 
   /* If /~ or // appears, discard everything through first slash.  */
-
-  for (p = nm; p != endp; p++)
-    {
-      if ((p[0] == '~'
-#if defined (APOLLO) || defined (WINDOWSNT) || defined(CYGWIN)
-	   /* // at start of file name is meaningful in Apollo,
-	      WindowsNT and Cygwin systems.  */
-	   || (IS_DIRECTORY_SEP (p[0]) && p - 1 != nm)
-#else /* not (APOLLO || WINDOWSNT || CYGWIN) */
-	   || IS_DIRECTORY_SEP (p[0])
-#endif /* not (APOLLO || WINDOWSNT || CYGWIN) */
-	   )
-	  && p != nm
-	  && (0
-#ifdef VMS
-	      || p[-1] == ':' || p[-1] == ']' || p[-1] == '>'
-#endif /* VMS */
-	      || IS_DIRECTORY_SEP (p[-1])))
-	{
-	  for (s = p; *s && (!IS_DIRECTORY_SEP (*s)
-#ifdef VMS
-			      && *s != ':'
-#endif /* VMS */
-			      ); s++);
-	  if (p[0] == '~' && s > p + 1)	/* we've got "/~something/" */
-	    {
-	      o = (unsigned char *) alloca (s - p + 1);
-	      bcopy ((char *) p, o, s - p);
-	      o [s - p] = 0;
-
-	      pw = (struct passwd *) getpwnam (o + 1);
-	    }
-	  /* If we have ~/ or ~user and `user' exists, discard
-	     everything up to ~.  But if `user' does not exist, leave
-	     ~user alone, it might be a literal file name.  */
-	  if (IS_DIRECTORY_SEP (p[0]) || s == p + 1 || pw)
-	    {
-	      nm = p;
-	      substituted = 1;
-	    }
-	}
-#ifdef DOS_NT
-      /* see comment in expand-file-name about drive specifiers */
-      else if (IS_DRIVE (p[0]) && p[1] == ':'
-	       && p > nm && IS_DIRECTORY_SEP (p[-1]))
-	{
-	  nm = p;
-	  substituted = 1;
-	}
-#endif /* DOS_NT */
-    }
+  p = search_embedded_absfilename (nm, endp);
+  if (p)
+    /* Start over with the new string, so we check the file-name-handler
+       again.  Important with filenames like "/home/foo//:/hello///there"
+       which whould substitute to "/:/hello///there" rather than "/there".  */
+    return Fsubstitute_in_file_name
+      (make_specified_string (p, -1, endp - p,
+			      STRING_MULTIBYTE (filename)));
 
 #ifdef VMS
-  return make_specified_string (nm, -1, strlen (nm),
-				STRING_MULTIBYTE (filename));
+  return filename;
 #else
 
   /* See if any variables are substituted into the string
@@ -2261,22 +2301,11 @@ duplicates what `expand-file-name' does.  */)
   *x = 0;
 
   /* If /~ or // appears, discard everything through first slash.  */
-
-  for (p = xnm; p != x; p++)
-    if ((p[0] == '~'
-#if defined (APOLLO) || defined (WINDOWSNT) || defined(CYGWIN)
-	 || (IS_DIRECTORY_SEP (p[0]) && p - 1 != xnm)
-#else /* not (APOLLO || WINDOWSNT || CYGWIN) */
-	 || IS_DIRECTORY_SEP (p[0])
-#endif /* not (APOLLO || WINDOWSNT || CYGWIN) */
-	 )
-	&& p != xnm && IS_DIRECTORY_SEP (p[-1]))
-      xnm = p;
-#ifdef DOS_NT
-    else if (IS_DRIVE (p[0]) && p[1] == ':'
-	     && p > xnm && IS_DIRECTORY_SEP (p[-1]))
-      xnm = p;
-#endif
+  while ((p = search_embedded_absfilename (xnm, x)))
+    /* This time we do not start over because we've already expanded envvars
+       and replaced $$ with $.  Maybe we should start over as well, but we'd
+       need to quote some $ to $$ first.  */
+    xnm = p;
 
   return make_specified_string (xnm, -1, x - xnm, STRING_MULTIBYTE (filename));
 
@@ -2377,7 +2406,7 @@ barf_or_query_if_file_exists (absname, querystring, interactive, statptr, quick)
   return;
 }
 
-DEFUN ("copy-file", Fcopy_file, Scopy_file, 2, 4,
+DEFUN ("copy-file", Fcopy_file, Scopy_file, 2, 5,
        "fCopy file: \nGCopy %s to file: \np\nP",
        doc: /* Copy FILE to NEWNAME.  Both args must be strings.
 If NEWNAME names a directory, copy FILE there.
@@ -2386,11 +2415,20 @@ unless a third argument OK-IF-ALREADY-EXISTS is supplied and non-nil.
 A number as third arg means request confirmation if NEWNAME already exists.
 This is what happens in interactive use with M-x.
 Always sets the file modes of the output file to match the input file.
+
 Fourth arg KEEP-TIME non-nil means give the output file the same
 last-modified time as the old one.  (This works on only some systems.)
-A prefix arg makes KEEP-TIME non-nil.  */)
-     (file, newname, ok_if_already_exists, keep_time)
-     Lisp_Object file, newname, ok_if_already_exists, keep_time;
+
+A prefix arg makes KEEP-TIME non-nil.
+
+The optional fifth arg MUSTBENEW, if non-nil, insists on a check
+for an existing file with the same name.  If MUSTBENEW is `excl',
+that means to get an error if the file already exists; never overwrite.
+If MUSTBENEW is neither nil nor `excl', that means ask for
+confirmation before overwriting, but do go ahead and overwrite the file
+if the user confirms.  */)
+  (file, newname, ok_if_already_exists, keep_time, mustbenew)
+     Lisp_Object file, newname, ok_if_already_exists, keep_time, mustbenew;
 {
   int ifd, ofd, n;
   char buf[16 * 1024];
@@ -2405,6 +2443,9 @@ A prefix arg makes KEEP-TIME non-nil.  */)
   GCPRO4 (file, newname, encoded_file, encoded_newname);
   CHECK_STRING (file);
   CHECK_STRING (newname);
+
+  if (!NILP (mustbenew) && !EQ (mustbenew, Qexcl))
+    barf_or_query_if_file_exists (newname, "overwrite", 1, 0, 1);
 
   if (!NILP (Ffile_directory_p (newname)))
     newname = Fexpand_file_name (Ffile_name_nondirectory (file), newname);
@@ -2506,9 +2547,15 @@ A prefix arg makes KEEP-TIME non-nil.  */)
 #else
 #ifdef MSDOS
   /* System's default file type was set to binary by _fmode in emacs.c.  */
-  ofd = creat (SDATA (encoded_newname), S_IREAD | S_IWRITE);
-#else /* not MSDOS */
-  ofd = creat (SDATA (encoded_newname), 0666);
+  ofd = emacs_open (SDATA (encoded_newname),
+		    O_WRONLY | O_TRUNC | O_CREAT
+		    | (EQ (mustbenew, Qexcl) ? O_EXCL : 0),
+		    S_IREAD | S_IWRITE);
+#else  /* not MSDOS */
+  ofd = emacs_open (SDATA (encoded_newname),
+		    O_WRONLY | O_TRUNC | O_CREAT
+		    | (EQ (mustbenew, Qexcl) ? O_EXCL : 0),
+		    0666);
 #endif /* not MSDOS */
 #endif /* VMS */
   if (ofd < 0)
@@ -2670,7 +2717,7 @@ internal_delete_file (filename)
 
 DEFUN ("rename-file", Frename_file, Srename_file, 2, 3,
        "fRename file: \nGRename %s to file: \np",
-       doc: /* Rename FILE as NEWNAME.  Both args strings.
+       doc: /* Rename FILE as NEWNAME.  Both args must be strings.
 If file has names other than FILE, it continues to have those names.
 Signals a `file-already-exists' error if a file NEWNAME already exists
 unless optional third argument OK-IF-ALREADY-EXISTS is non-nil.
@@ -2738,7 +2785,8 @@ This is what happens in interactive use with M-x.  */)
             Fcopy_file (file, newname,
                         /* We have already prompted if it was an integer,
                            so don't have copy-file prompt again.  */
-                        NILP (ok_if_already_exists) ? Qnil : Qt, Qt);
+                        NILP (ok_if_already_exists) ? Qnil : Qt,
+			Qt, Qnil);
 	  Fdelete_file (file);
 	}
       else
@@ -2758,7 +2806,7 @@ This is what happens in interactive use with M-x.  */)
 
 DEFUN ("add-name-to-file", Fadd_name_to_file, Sadd_name_to_file, 2, 3,
        "fAdd name to file: \nGName to add to %s: \np",
-       doc: /* Give FILE additional name NEWNAME.  Both args strings.
+       doc: /* Give FILE additional name NEWNAME.  Both args must be strings.
 Signals a `file-already-exists' error if a file NEWNAME already exists
 unless optional third argument OK-IF-ALREADY-EXISTS is non-nil.
 A number as third arg means request confirmation if NEWNAME already exists.
@@ -2825,7 +2873,8 @@ This is what happens in interactive use with M-x.  */)
 #ifdef S_IFLNK
 DEFUN ("make-symbolic-link", Fmake_symbolic_link, Smake_symbolic_link, 2, 3,
        "FMake symbolic link to file: \nGMake symbolic link to file %s: \np",
-       doc: /* Make a symbolic link to FILENAME, named LINKNAME.  Both args strings.
+       doc: /* Make a symbolic link to FILENAME, named LINKNAME.
+Both args must be strings.
 Signals a `file-already-exists' error if a file LINKNAME already exists
 unless optional third argument OK-IF-ALREADY-EXISTS is non-nil.
 A number as third arg means request confirmation if LINKNAME already exists.
@@ -2959,24 +3008,8 @@ On Unix, this is a name starting with a `/' or a `~'.  */)
      (filename)
      Lisp_Object filename;
 {
-  const unsigned char *ptr;
-
   CHECK_STRING (filename);
-  ptr = SDATA (filename);
-  if (IS_DIRECTORY_SEP (*ptr) || *ptr == '~'
-#ifdef VMS
-/* ??? This criterion is probably wrong for '<'.  */
-      || index (ptr, ':') || index (ptr, '<')
-      || (*ptr == '[' && (ptr[1] != '-' || (ptr[2] != '.' && ptr[2] != ']'))
-	  && ptr[1] != '.')
-#endif /* VMS */
-#ifdef DOS_NT
-      || (IS_DRIVE (*ptr) && ptr[1] == ':' && IS_DIRECTORY_SEP (ptr[2]))
-#endif
-      )
-    return Qt;
-  else
-    return Qnil;
+  return file_name_absolute_p (SDATA (filename)) ? Qt : Qnil;
 }
 
 /* Return nonzero if file FILENAME exists and can be executed.  */
@@ -3039,8 +3072,10 @@ check_writable (filename)
 }
 
 DEFUN ("file-exists-p", Ffile_exists_p, Sfile_exists_p, 1, 1, 0,
-       doc: /* Return t if file FILENAME exists.  (This does not mean you can read it.)
-See also `file-readable-p' and `file-attributes'.  */)
+       doc: /* Return t if file FILENAME exists (whether or not you can read it.)
+See also `file-readable-p' and `file-attributes'.
+This returns nil for a symlink to a nonexistent file.
+Use `file-symlink-p' to test for such links.  */)
      (filename)
      Lisp_Object filename;
 {
@@ -3186,7 +3221,7 @@ DEFUN ("file-writable-p", Ffile_writable_p, Sfile_writable_p, 1, 1, 0,
 DEFUN ("access-file", Faccess_file, Saccess_file, 2, 2, 0,
        doc: /* Access file FILENAME, and get an error if that does not work.
 The second argument STRING is used in the error message.
-If there is no error, we return nil.  */)
+If there is no error, returns nil.  */)
      (filename, string)
      Lisp_Object filename, string;
 {
@@ -3217,7 +3252,10 @@ If there is no error, we return nil.  */)
 DEFUN ("file-symlink-p", Ffile_symlink_p, Sfile_symlink_p, 1, 1, 0,
        doc: /* Return non-nil if file FILENAME is the name of a symbolic link.
 The value is the link target, as a string.
-Otherwise returns nil.  */)
+Otherwise it returns nil.
+
+This function returns t when given the name of a symlink that
+points to a nonexistent file.  */)
      (filename)
      Lisp_Object filename;
 {
@@ -3707,6 +3745,8 @@ actually used.  */)
   int set_coding_system = 0;
   int coding_system_decided = 0;
   int read_quit = 0;
+  Lisp_Object old_Vdeactivate_mark = Vdeactivate_mark;
+  int we_locked_file = 0;
 
   if (current_buffer->base_buffer && ! NILP (visit))
     error ("Cannot do file visiting in an indirect buffer");
@@ -4379,8 +4419,17 @@ actually used.  */)
     /* For a special file, all we can do is guess.  */
     total = READ_BUF_SIZE;
 
-  if (NILP (visit) && total > 0)
-    prepare_to_modify_buffer (PT, PT, NULL);
+  if (NILP (visit) && inserted > 0)
+    {
+#ifdef CLASH_DETECTION
+      if (!NILP (current_buffer->file_truename)
+	  /* Make binding buffer-file-name to nil effective.  */
+	  && !NILP (current_buffer->filename)
+	  && SAVE_MODIFF >= MODIFF)
+	we_locked_file = 1;
+#endif /* CLASH_DETECTION */
+      prepare_to_modify_buffer (GPT, GPT, NULL);
+    }
 
   move_gap (PT);
   if (GAP_SIZE < total)
@@ -4469,6 +4518,18 @@ actually used.  */)
 	inserted += this;
       }
   }
+
+  /* Now we have read all the file data into the gap.
+     If it was empty, undo marking the buffer modified.  */
+
+  if (inserted == 0)
+    {
+#ifdef CLASH_DETECTION
+      if (we_locked_file)
+	unlock_file (current_buffer->file_truename);
+#endif
+      Vdeactivate_mark = old_Vdeactivate_mark;
+    }
 
   /* Make the text read part of the buffer.  */
   GAP_SIZE -= inserted;
@@ -6015,7 +6076,10 @@ DEFUN ("clear-buffer-auto-save-failure", Fclear_buffer_auto_save_failure,
 
 DEFUN ("recent-auto-save-p", Frecent_auto_save_p, Srecent_auto_save_p,
        0, 0, 0,
-       doc: /* Return t if buffer has been auto-saved since last read in or saved.  */)
+       doc: /* Return t if current buffer has been auto-saved recently.
+More precisely, if it has been auto-saved since last read from or saved
+in the visited file.  If the buffer has no visited file,
+then any auto-save counts as "recent".  */)
      ()
 {
   return (SAVE_MODIFF < current_buffer->auto_save_modified) ? Qt : Qnil;
@@ -6423,6 +6487,7 @@ init_fileio_once ()
 void
 syms_of_fileio ()
 {
+  Qoperations = intern ("operations");
   Qexpand_file_name = intern ("expand-file-name");
   Qsubstitute_in_file_name = intern ("substitute-in-file-name");
   Qdirectory_file_name = intern ("directory-file-name");
@@ -6457,6 +6522,7 @@ syms_of_fileio ()
   Qset_visited_file_modtime = intern ("set-visited-file-modtime");
   Qauto_save_coding = intern ("auto-save-coding");
 
+  staticpro (&Qoperations);
   staticpro (&Qexpand_file_name);
   staticpro (&Qsubstitute_in_file_name);
   staticpro (&Qdirectory_file_name);

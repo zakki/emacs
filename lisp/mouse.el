@@ -49,7 +49,7 @@
   :version "22.1"
   :group 'mouse)
 
-(defcustom mouse-1-click-follows-link 350
+(defcustom mouse-1-click-follows-link 450
   "Non-nil means that clicking Mouse-1 on a link follows the link.
 
 With the default setting, an ordinary Mouse-1 click on a link
@@ -788,8 +788,7 @@ POS may be a mouse event location in any window.
 A clickable link is identified by one of the following methods:
 
 - If the character at POS has a non-nil `follow-link' text or
-overlay property, use the value of that property determines what
-to do.
+overlay property, the value of that property determines what to do.
 
 - If there is a local key-binding or a keybinding at position POS
 for the `follow-link' event, the binding of that event determines
@@ -837,6 +836,29 @@ at the same position."
 	    (funcall action pos))
 	   (t action)))))))
 
+(defun mouse-fixup-help-message (msg)
+  "Fix help message MSG for `mouse-1-click-follows-link'."
+  (let (mp pos)
+    (if (and mouse-1-click-follows-link
+	     (stringp msg)
+	     (save-match-data
+	       (string-match "^mouse-2" msg))
+	     (setq mp (mouse-pixel-position))
+	     (consp (setq pos (cdr mp)))
+	     (car pos) (>= (car pos) 0)
+	     (cdr pos) (>= (cdr pos) 0)
+	     (setq pos (posn-at-x-y (car pos) (cdr pos) (car mp)))
+	     (windowp (posn-window pos)))
+	(with-current-buffer (window-buffer (posn-window pos))
+	  (if (mouse-on-link-p pos)
+	      (setq msg (concat
+		    (cond
+		     ((eq mouse-1-click-follows-link 'double) "double-")
+		     ((and (integerp mouse-1-click-follows-link)
+			   (< mouse-1-click-follows-link 0)) "Long ")
+		     (t ""))
+		    "mouse-1" (substring msg 7)))))))
+  msg)
 
 (defun mouse-drag-region-1 (start-event)
   (mouse-minibuffer-check start-event)
@@ -997,7 +1019,7 @@ at the same position."
 			     (= (window-start start-window)
 				start-window-start)))
 		(if (and on-link
-			 (not end-point)
+			 (or (not end-point) (= end-point start-point))
 			 (consp event)
 			 (or remap-double-click
 			     (and

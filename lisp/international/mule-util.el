@@ -1,8 +1,10 @@
 ;;; mule-util.el --- utility functions for mulitilingual environment (mule)
 
-;; Copyright (C) 1995 Electrotechnical Laboratory, JAPAN.
-;; Licensed to the Free Software Foundation.
-;; Copyright (C) 2000, 2002, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1998, 2000, 2001, 2002, 2003, 2004
+;;   Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1997, 1998, 1999, 2004
+;;   National Institute of Advanced Industrial Science and Technology (AIST)
+;;   Registration Number H14PRO021
 
 ;; Keywords: mule, multilingual
 
@@ -208,12 +210,6 @@ defaults to \"...\"."
 ;; 			 (prin1-to-string (cdr ret)))
 ;; 	       (prin1-to-string ret))))))
 
-;;; For backward compatibility ...
-;;;###autoload
-(defalias 'truncate-string 'truncate-string-to-width)
-
-;;;###autoload
-(make-obsolete 'truncate-string 'truncate-string-to-width "20.1")
 
 ;;; Nested alist handler.  Nested alist is alist whose elements are
 ;;; also nested alist.
@@ -327,6 +323,8 @@ coding systems ordered by priority."
 	 (mapc (function (lambda (x) (set (car x) (cdr x))))
 	       prio-list)
 	 (set-coding-priority (mapcar #'car prio-list))
+	 ;; Changing the binding of a coding category requires this call.
+	 (update-coding-systems-internal)
 	 (detect-coding-region ,from ,to))
      ;; We must restore the internal database.
      (set-coding-priority coding-category-list)

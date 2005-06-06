@@ -693,7 +693,7 @@ Alternatively, click \\[occur-mode-mouse-goto] on an item to go to it.
   (make-local-variable 'occur-revert-arguments)
   (add-hook 'change-major-mode-hook 'font-lock-defontify nil t)
   (setq next-error-function 'occur-next-error)
-  (run-hooks 'occur-mode-hook))
+  (run-mode-hooks 'occur-mode-hook))
 
 (defun occur-revert-function (ignore1 ignore2)
   "Handle `revert-buffer' for Occur mode buffers."
@@ -977,32 +977,33 @@ See also `multi-occur'."
     (setq occur-buf (get-buffer-create buf-name))
 
     (with-current-buffer occur-buf
-      (setq buffer-read-only nil)
       (occur-mode)
-      (erase-buffer)
-      (let ((count (occur-engine
-		    regexp active-bufs occur-buf
-		    (or nlines list-matching-lines-default-context-lines)
-		    (and case-fold-search
-			 (isearch-no-upper-case-p regexp t))
-		    list-matching-lines-buffer-name-face
-		    nil list-matching-lines-face t)))
-	(let* ((bufcount (length active-bufs))
-	       (diff (- (length bufs) bufcount)))
-	  (message "Searched %d buffer%s%s; %s match%s for `%s'"
-		   bufcount (if (= bufcount 1) "" "s")
-		   (if (zerop diff) "" (format " (%d killed)" diff))
-		   (if (zerop count) "no" (format "%d" count))
-		   (if (= count 1) "" "es")
-		   regexp))
-	(setq occur-revert-arguments (list regexp nlines bufs)
-	      buffer-read-only t)
-	(if (> count 0)
-	    (progn
-	      (display-buffer occur-buf)
-	      (setq next-error-last-buffer occur-buf))
-	  (kill-buffer occur-buf)))
-      (run-hooks 'occur-hook))))
+      (let ((inhibit-read-only t))
+	(erase-buffer)
+	(let ((count (occur-engine
+		      regexp active-bufs occur-buf
+		      (or nlines list-matching-lines-default-context-lines)
+		      (and case-fold-search
+			   (isearch-no-upper-case-p regexp t))
+		      list-matching-lines-buffer-name-face
+		      nil list-matching-lines-face t)))
+	  (let* ((bufcount (length active-bufs))
+		 (diff (- (length bufs) bufcount)))
+	    (message "Searched %d buffer%s%s; %s match%s for `%s'"
+		     bufcount (if (= bufcount 1) "" "s")
+		     (if (zerop diff) "" (format " (%d killed)" diff))
+		     (if (zerop count) "no" (format "%d" count))
+		     (if (= count 1) "" "es")
+		     regexp))
+	  (setq occur-revert-arguments (list regexp nlines bufs))
+	  (if (> count 0)
+	      (progn
+		(display-buffer occur-buf)
+		(setq next-error-last-buffer occur-buf))
+	    (kill-buffer occur-buf)))
+	(run-hooks 'occur-hook))
+      (setq buffer-read-only t)
+      (set-buffer-modified-p nil))))
 
 (defun occur-engine-add-prefix (lines)
   (mapcar
@@ -1013,7 +1014,6 @@ See also `multi-occur'."
 (defun occur-engine (regexp buffers out-buf nlines case-fold-search
 			    title-face prefix-face match-face keep-props)
   (with-current-buffer out-buf
-    (setq buffer-read-only nil)
     (let ((globalcount 0)
 	  (coding nil))
       ;; Map over all the buffers
@@ -1288,14 +1288,14 @@ passed in.  If LITERAL is set, no checking is done, anyway."
     (while (string-match "\\(\\`\\|[^\\]\\)\\(\\\\\\\\\\)*\\(\\\\\\?\\)"
 			 newtext)
       (setq newtext
-	    (read-input "Edit replacement string: "
-			(prog1
-			    (cons
-			     (replace-match "" t t newtext 3)
-			     (1+ (match-beginning 3)))
-			  (setq match-data
-				(replace-match-data
-				 nil match-data match-data))))
+	    (read-string "Edit replacement string: "
+                         (prog1
+                             (cons
+                              (replace-match "" t t newtext 3)
+                              (1+ (match-beginning 3)))
+                           (setq match-data
+                                 (replace-match-data
+                                  nil match-data match-data))))
 	    noedit nil)))
   (set-match-data match-data)
   (replace-match newtext fixedcase literal)
@@ -1571,8 +1571,8 @@ make, or the user didn't cancel the call."
 						nil real-match-data
 						real-match-data)
 			       next-replacement
-			       (read-input "Edit replacement string: "
-					   next-replacement)
+			       (read-string "Edit replacement string: "
+                                            next-replacement)
 			       noedit nil)
 			 (if replaced
 			     (set-match-data real-match-data)

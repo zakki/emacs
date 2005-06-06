@@ -46,6 +46,7 @@
 (autoload 'gnus-msg-mail "gnus-msg" nil t)
 (autoload 'gnus-button-mailto "gnus-msg")
 (autoload 'gnus-button-reply "gnus-msg" nil t)
+(autoload 'parse-time-string "parse-time" nil nil)
 
 (defgroup gnus-article nil
   "Article display."
@@ -366,8 +367,12 @@ advertisements.  For example:
 		      (or (nth 4 spec) 3)
 		      (intern (format "gnus-emphasis-%s" (nth 2 spec)))))
 	      types))
-     '(("\\(\\s-\\|^\\)\\(-\\(\\(\\w\\|-[^-]\\)+\\)-\\)\\(\\s-\\|[?!.,;]\\)"
-	2 3 gnus-emphasis-strikethru)
+     '(;; I've never seen anyone use this strikethru convention whereas I've
+       ;; several times seen it triggered by normal text.  --Stef
+       ;; Miles suggests that this form is sometimes used but for italics,
+       ;; so maybe we should map it to `italic'.
+       ;; ("\\(\\s-\\|^\\)\\(-\\(\\(\\w\\|-[^-]\\)+\\)-\\)\\(\\s-\\|[?!.,;]\\)"
+       ;; 2 3 gnus-emphasis-strikethru)
        ("\\(\\s-\\|^\\)\\(_\\(\\(\\w\\|_[^_]\\)+\\)_\\)\\(\\s-\\|[?!.,;]\\)"
 	2 3 gnus-emphasis-underline))))
   "*Alist that says how to fontify certain phrases.
@@ -479,9 +484,6 @@ be fed to `format-time-string'."
   :type '(choice string symbol)
   :link '(custom-manual "(gnus)Article Date")
   :group 'gnus-article-washing)
-
-(eval-and-compile
-  (autoload 'mail-extract-address-components "mail-extr"))
 
 (defcustom gnus-save-all-headers t
   "*If non-nil, don't remove any headers before saving."
@@ -816,6 +818,7 @@ When nil (the default value), then some MIME parts do not get buttons,
 as described by the variables `gnus-buttonized-mime-types' and
 `gnus-unbuttonized-mime-types'."
   :version "22.1"
+  :group 'gnus-article-mime
   :type 'boolean)
 
 (defcustom gnus-body-boundary-delimiter "_"
@@ -2182,10 +2185,11 @@ unfolded."
 		   ;; The command is a string, so we interpret the command
 		   ;; as a, well, command, and fork it off.
 		   (let ((process-connection-type nil))
-		     (process-kill-without-query
+		     (gnus-set-process-query-on-exit-flag
 		      (start-process
 		       "article-x-face" nil shell-file-name
-		       shell-command-switch gnus-article-x-face-command))
+		       shell-command-switch gnus-article-x-face-command)
+		      nil)
 		     (with-temp-buffer
 		       (insert face)
 		       (process-send-region "article-x-face"
@@ -2823,72 +2827,76 @@ lines forward."
 	  (forward-line 1)
 	(setq ended t)))))
 
-(defun article-date-ut (&optional type highlight header)
+(defun article-date-ut (&optional type highlight)
   "Convert DATE date to universal time in the current article.
 If TYPE is `local', convert to local time; if it is `lapsed', output
 how much time has lapsed since DATE.  For `lapsed', the value of
 `gnus-article-date-lapsed-new-header' says whether the \"X-Sent:\" header
 should replace the \"Date:\" one, or should be added below it."
   (interactive (list 'ut t))
-  (let* ((header (or header
-		     (message-fetch-field "date")
-		     ""))
-	 (tdate-regexp "^Date:[ \t]\\|^X-Sent:[ \t]")
-	 (date-regexp
-	  (cond
-	   ((not gnus-article-date-lapsed-new-header)
-	    tdate-regexp)
-	   ((eq type 'lapsed)
-	    "^X-Sent:[ \t]")
-	   (t
-	    "^Date:[ \t]")))
-	 (date (if (vectorp header) (mail-header-date header)
-		 header))
+  (let* ((tdate-regexp "^Date:[ \t]\\|^X-Sent:[ \t]")
+	 (date-regexp (cond ((not gnus-article-date-lapsed-new-header)
+			     tdate-regexp)
+			    ((eq type 'lapsed)
+			     "^X-Sent:[ \t]")
+			    (article-lapsed-timer
+			     "^Date:[ \t]")
+			    (t
+			     tdate-regexp)))
+	 (case-fold-search t)
+	 (inhibit-read-only t)
 	 (inhibit-point-motion-hooks t)
-	 pos
-	 bface eface)
+	 pos date bface eface)
     (save-excursion
       (save-restriction
-	(article-narrow-to-head)
-	(when (re-search-forward tdate-regexp nil t)
-	  (setq bface (get-text-property (gnus-point-at-bol) 'face)
-		date (or (get-text-property (gnus-point-at-bol)
-					    'original-date)
-			 date)
-		eface (get-text-property (1- (gnus-point-at-eol)) 'face))
-	  (forward-line 1))
-	(when (and date (not (string= date "")))
+	(widen)
+	(goto-char (point-min))
+	(while (or (setq date (get-text-property (setq pos (point))
+						 'original-date))
+		   (when (setq pos (next-single-property-change
+				    (point) 'original-date))
+		     (setq date (get-text-property pos 'original-date))
+		     t))
+	  (narrow-to-region pos (or (text-property-any pos (point-max)
+						       'original-date nil)
+				    (point-max)))
 	  (goto-char (point-min))
-	  (let ((inhibit-read-only t))
-	    ;; Delete any old Date headers.
-	    (while (re-search-forward date-regexp nil t)
-	      (if pos
-		  (delete-region (progn (beginning-of-line) (point))
-				 (progn (gnus-article-forward-header)
-					(point)))
-		(delete-region (progn (beginning-of-line) (point))
-				 (progn (gnus-article-forward-header)
-					(forward-char -1)
-					(point)))
-		(setq pos (point))))
-	    (when (and (not pos)
-		       (re-search-forward tdate-regexp nil t))
-	      (forward-line 1))
-	    (when pos
-	      (goto-char pos))
-	    (insert (article-make-date-line date (or type 'ut)))
-	    (unless pos
-	      (insert "\n")
-	      (forward-line -1))
-	    ;; Do highlighting.
-	    (beginning-of-line)
-	    (when (looking-at "\\([^:]+\\): *\\(.*\\)$")
-	      (put-text-property (match-beginning 1) (1+ (match-end 1))
-				 'original-date date)
-	      (put-text-property (match-beginning 1) (1+ (match-end 1))
-				 'face bface)
-	      (put-text-property (match-beginning 2) (match-end 2)
-				 'face eface))))))))
+	  (when (re-search-forward tdate-regexp nil t)
+	    (setq bface (get-text-property (gnus-point-at-bol) 'face)
+		  eface (get-text-property (1- (gnus-point-at-eol)) 'face)))
+	  (goto-char (point-min))
+	  (setq pos nil)
+	  ;; Delete any old Date headers.
+	  (while (re-search-forward date-regexp nil t)
+	    (if pos
+		(delete-region (gnus-point-at-bol)
+			       (progn
+				 (gnus-article-forward-header)
+				 (point)))
+	      (delete-region (gnus-point-at-bol)
+			     (progn
+			       (gnus-article-forward-header)
+			       (forward-char -1)
+			       (point)))
+	      (setq pos (point))))
+	  (when (and (not pos)
+		     (re-search-forward tdate-regexp nil t))
+	    (forward-line 1))
+	  (gnus-goto-char pos)
+	  (insert (article-make-date-line date (or type 'ut)))
+	  (unless pos
+	    (insert "\n")
+	    (forward-line -1))
+	  ;; Do highlighting.
+	  (beginning-of-line)
+	  (when (looking-at "\\([^:]+\\): *\\(.*\\)$")
+	    (put-text-property (match-beginning 1) (1+ (match-end 1))
+			       'face bface)
+	    (put-text-property (match-beginning 2) (match-end 2)
+			       'face eface))
+	  (put-text-property (point-min) (1- (point-max)) 'original-date date)
+	  (goto-char (point-max))
+	  (widen))))))
 
 (defun article-make-date-line (date type)
   "Return a DATE line of TYPE."
@@ -3030,20 +3038,21 @@ function and want to see what the date was before converting."
 
 (defun article-update-date-lapsed ()
   "Function to be run from a timer to update the lapsed time line."
-  (let (deactivate-mark)
-    (save-excursion
-      (ignore-errors
-	(walk-windows
-	 (lambda (w)
-	   (set-buffer (window-buffer w))
-	   (when (eq major-mode 'gnus-article-mode)
-	     (let ((mark (point-marker)))
-	       (goto-char (point-min))
-	       (when (re-search-forward "^X-Sent:" nil t)
-		 (article-date-lapsed t))
-	       (goto-char (marker-position mark))
-	       (move-marker mark nil))))
-	 nil 'visible)))))
+  (save-match-data
+    (let (deactivate-mark)
+      (save-excursion
+	(ignore-errors
+	 (walk-windows
+	  (lambda (w)
+	    (set-buffer (window-buffer w))
+	    (when (eq major-mode 'gnus-article-mode)
+	      (let ((mark (point-marker)))
+		(goto-char (point-min))
+		(when (re-search-forward "^X-Sent:" nil t)
+		  (article-date-lapsed t))
+		(goto-char (marker-position mark))
+		(move-marker mark nil))))
+	  nil 'visible))))))
 
 (defun gnus-start-date-timer (&optional n)
   "Start a timer to update the X-Sent header in the article buffers.
@@ -3073,6 +3082,27 @@ This format is defined by the `gnus-article-time-format' variable."
   "Convert the current article date to ISO8601."
   (interactive (list t))
   (article-date-ut 'iso8601 highlight))
+
+(defmacro gnus-article-save-original-date (&rest forms)
+  "Save the original date as a text property and evaluate FORMS."
+  `(let* ((case-fold-search t)
+	  (start (progn
+		   (goto-char (point-min))
+		   (when (and (re-search-forward "^date:[\t\n ]+" nil t)
+			      (not (bolp)))
+		     (match-end 0))))
+	  (date (when (and start
+			   (re-search-forward "[\t ]*\n\\([^\t ]\\|\\'\\)"
+					      nil t))
+		  (buffer-substring-no-properties start
+						  (match-beginning 0)))))
+     (goto-char (point-max))
+     (skip-chars-backward "\n")
+     (put-text-property (point-min) (point) 'original-date date)
+     ,@forms
+     (goto-char (point-max))
+     (skip-chars-backward "\n")
+     (put-text-property (point-min) (point) 'original-date date)))
 
 ;; (defun article-show-all ()
 ;;   "Show all hidden text in the article buffer."
@@ -3718,7 +3748,7 @@ commands:
   (setq buffer-read-only t)
   (set-syntax-table gnus-article-mode-syntax-table)
   (mm-enable-multibyte)
-  (gnus-run-hooks 'gnus-article-mode-hook))
+  (gnus-run-mode-hooks 'gnus-article-mode-hook))
 
 (defun gnus-article-setup-buffer ()
   "Initialize the article buffer."
@@ -4357,21 +4387,16 @@ are decompressed."
 		    (mm-read-coding-system "Charset: "))))
 	 (t
 	  (if (mm-handle-undisplayer handle)
-	      (mm-remove-part handle))
-	  (setq contents
-		(if (fboundp 'string-to-multibyte)
-		    (string-to-multibyte contents)
-		  (mapconcat
-		   (lambda (ch) (mm-string-as-multibyte (char-to-string ch)))
-		   contents "")))))
+	      (mm-remove-part handle))))
 	(forward-line 2)
-	(mm-insert-inline handle
-			  (if (and charset
-				   (setq charset (mm-charset-to-coding-system
-						  charset))
-				   (not (eq charset 'ascii)))
-			      (mm-decode-coding-string contents charset)
-			    contents))
+	(mm-insert-inline
+	 handle
+	 (if (and charset
+		  (setq charset (mm-charset-to-coding-system
+				 charset))
+		  (not (eq charset 'ascii)))
+	     (mm-decode-coding-string contents charset)
+	   (mm-string-to-multibyte contents)))
 	(goto-char b)))))
 
 (defun gnus-mime-view-part-as-charset (&optional handle arg)
@@ -4690,7 +4715,8 @@ N is the numerical prefix."
 	    (save-restriction
 	      (article-goto-body)
 	      (narrow-to-region (point-min) (point))
-	      (gnus-treat-article 'head))))))))
+	      (gnus-article-save-original-date
+	       (gnus-treat-article 'head)))))))))
 
 (defcustom gnus-mime-display-multipart-as-mixed nil
   "Display \"multipart\" parts as  \"multipart/mixed\".
@@ -5308,7 +5334,7 @@ not have a face in `gnus-article-boring-faces'."
 	      (when (eq win (selected-window))
 		(setq new-sum-point (point)
 		      new-sum-start (window-start win)
-		      new-sum-hscroll (window-hscroll win))
+		      new-sum-hscroll (window-hscroll win)))
 	      (when (eq in-buffer (current-buffer))
 		(setq selected (gnus-summary-select-article))
 		(set-buffer obuf)
@@ -5324,7 +5350,7 @@ not have a face in `gnus-article-boring-faces'."
 			   new-sum-point)
 		  (set-window-point win new-sum-point)
 		  (set-window-start win new-sum-start)
-		  (set-window-hscroll win new-sum-hscroll)))))
+		  (set-window-hscroll win new-sum-hscroll))))
 	  (set-window-configuration owin)
 	  (ding))))))
 
@@ -6767,7 +6793,7 @@ specified by `gnus-button-alist'."
 				     (match-string 3 address)
 				   "nntp")))
        nil nil nil
-       (and (match-end 6) (list (string-to-int (match-string 6 address))))))))
+       (and (match-end 6) (list (string-to-number (match-string 6 address))))))))
 
 (defun gnus-url-parse-query-string (query &optional downcase)
   (let (retval pairs cur key val)

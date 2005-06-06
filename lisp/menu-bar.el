@@ -1,6 +1,7 @@
 ;;; menu-bar.el --- define a default menu bar
 
-;; Copyright (C) 1993,94,1995,2000,01,02,2003  Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1995, 2000, 2001, 2002, 2003, 2005
+;;           Free Software Foundation, Inc.
 
 ;; Author: RMS
 ;; Maintainer: FSF
@@ -135,7 +136,7 @@ A large number or nil slows down menu responsiveness."
   '(menu-item "--"))
 
 (define-key menu-bar-file-menu [recover-session]
-  '(menu-item "Recover Crashed Session..." recover-session
+  '(menu-item "Recover Crashed Session" recover-session
 	      :enable (and auto-save-list-file-prefix
 			   (file-directory-p
                             (file-name-directory auto-save-list-file-prefix))
@@ -297,7 +298,7 @@ A large number or nil slows down menu responsiveness."
   '(menu-item "Continue Tags Search" tags-loop-continue
 	      :help "Continue last tags search operation"))
 (define-key menu-bar-search-menu [tags-srch]
-  '(menu-item "Search tagged files" tags-search
+  '(menu-item "Search tagged files..." tags-search
 	      :help "Search for a regexp in all tagged files"))
 (define-key menu-bar-search-menu [separator-tag-search]
   '(menu-item "--"))
@@ -341,7 +342,7 @@ A large number or nil slows down menu responsiveness."
   '(menu-item "Continue Replace" tags-loop-continue
 	      :help "Continue last tags replace operation"))
 (define-key menu-bar-replace-menu [tags-repl]
-  '(menu-item "Replace in tagged files" tags-query-replace
+  '(menu-item "Replace in tagged files..." tags-query-replace
 	      :help "Interactively replace a regexp in all tagged files"))
 (define-key menu-bar-replace-menu [separator-replace-tags]
   '(menu-item "--"))
@@ -376,14 +377,14 @@ A large number or nil slows down menu responsiveness."
 (defvar menu-bar-goto-menu (make-sparse-keymap "Go To"))
 
 (define-key menu-bar-goto-menu [set-tags-name]
-  '(menu-item "Set Tags File Name" visit-tags-table
+  '(menu-item "Set Tags File Name..." visit-tags-table
 	      :help "Tell Tags commands which tag table file to use"))
 
 (define-key menu-bar-goto-menu [separator-tag-file]
   '(menu-item "--"))
 
 (define-key menu-bar-goto-menu [apropos-tags]
-  '(menu-item "Tags Apropos" tags-apropos
+  '(menu-item "Tags Apropos..." tags-apropos
 	      :help "Find function/variables whose names match regexp"))
 (define-key menu-bar-goto-menu [next-tag-otherw]
   '(menu-item "Next Tag in Other Window"
@@ -596,7 +597,7 @@ DOC is the text to use for the menu entry.
 HELP is the text to use for the tooltip.
 PROPS are additional properties."
   `'(menu-item ,doc ,fname
-     ,@(if props props)
+     ,@props
      :help ,help
      :button (:toggle . (and (default-boundp ',fname)
 			     (default-value ',fname)))))
@@ -638,14 +639,15 @@ by \"Save Options\" in Custom buffers.")
   (let ((need-save nil))
     ;; These are set with menu-bar-make-mm-toggle, which does not
     ;; put on a customized-value property.
-    (dolist (elt '(line-number-mode column-number-mode cua-mode show-paren-mode
-		   transient-mark-mode global-font-lock-mode
-		   blink-cursor-mode))
+    (dolist (elt '(line-number-mode column-number-mode size-indication-mode
+		   cua-mode show-paren-mode transient-mark-mode
+		   global-font-lock-mode blink-cursor-mode))
       (and (customize-mark-to-save elt)
 	   (setq need-save t)))
     ;; These are set with `customize-set-variable'.
     (dolist (elt '(scroll-bar-mode
-		   debug-on-quit debug-on-error menu-bar-mode tool-bar-mode
+		   debug-on-quit debug-on-error
+		   tooltip-mode menu-bar-mode tool-bar-mode
 		   save-place uniquify-buffer-name-style fringe-mode
 		   fringe-indicators case-fold-search
 		   display-time-mode auto-compression-mode
@@ -672,7 +674,7 @@ by \"Save Options\" in Custom buffers.")
   '("--"))
 
 (define-key menu-bar-options-menu [mouse-set-font]
-  '(menu-item "Set Font/Fontset" mouse-set-font
+  '(menu-item "Set Font/Fontset..." mouse-set-font
 	       :visible (display-multi-font-p)
 	       :help "Select a font from list of known fonts/fontsets"))
 
@@ -690,21 +692,18 @@ by \"Save Options\" in Custom buffers.")
 			   "Line Numbers"
 			   "Show the current line number in the mode line"))
 
+(define-key menu-bar-showhide-menu [size-indication-mode]
+  (menu-bar-make-mm-toggle size-indication-mode
+			   "Size Indication"
+			   "Show the size of the buffer in the mode line"))
+
 (define-key menu-bar-showhide-menu [linecolumn-separator]
   '("--"))
 
-(defun showhide-date-time ()
-  "Toggle whether to show date and time in the mode-line."
-  (interactive)
-  (if (display-time-mode)
-      (message "Display-time mode enabled.")
-    (message "Display-time mode disabled."))
-  (customize-mark-as-set 'display-time-mode))
-
 (define-key menu-bar-showhide-menu [showhide-date-time]
-  '(menu-item "Date, Time and Mail" showhide-date-time
-	      :help "Display date, time, mail status in mode line"
-	      :button (:toggle . display-time-mode)))
+  (menu-bar-make-mm-toggle display-time-mode
+			   "Date, Time and Mail"
+			   "Display date, time, mail status in mode line"))
 
 (define-key menu-bar-showhide-menu [datetime-separator]
   '("--"))
@@ -916,6 +915,12 @@ by \"Save Options\" in Custom buffers.")
   (list 'menu-item "Scroll-bar" menu-bar-showhide-scroll-bar-menu
 	:visible `(display-graphic-p)
 	:help "Select scroll-bar mode"))
+
+(define-key menu-bar-showhide-menu [showhide-tooltip-mode]
+  (list 'menu-item "Tooltips" 'tooltip-mode
+	:help "Toggle tooltips on/off"
+	:visible  `(and (display-graphic-p) (fboundp 'x-show-tip))
+	:button `(:toggle . tooltip-mode)))
 
 (define-key menu-bar-showhide-menu [menu-bar-mode]
   '(menu-item "Menu-bar" menu-bar-mode
@@ -1339,10 +1344,10 @@ key (or menu-item)"))
 (define-key menu-bar-manuals-menu [sep3]
   '("--"))
 (define-key menu-bar-manuals-menu [command]
-  '(menu-item "Find Command in Manual" Info-goto-emacs-command-node
+  '(menu-item "Find Command in Manual..." Info-goto-emacs-command-node
 	      :help "Display manual section that describes a command"))
 (define-key menu-bar-manuals-menu [key]
-  '(menu-item "Find Key in Manual" Info-goto-emacs-key-command-node
+  '(menu-item "Find Key in Manual..." Info-goto-emacs-key-command-node
 	      :help "Display manual section that describes a key"))
 
 (define-key menu-bar-help-menu [eliza]
@@ -1376,7 +1381,7 @@ key (or menu-item)"))
 (define-key menu-bar-help-menu [sep2]
   '("--"))
 (define-key menu-bar-help-menu [finder-by-keyword]
-  '(menu-item "Find Emacs Packages..." finder-by-keyword
+  '(menu-item "Find Emacs Packages" finder-by-keyword
 	      :help "Find packages and features by keyword"))
 (define-key menu-bar-help-menu [manuals]
   (list 'menu-item "More Manuals" menu-bar-manuals-menu

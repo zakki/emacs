@@ -1,8 +1,9 @@
 ;;; reftex.el --- minor mode for doing \label, \ref, \cite, \index in LaTeX
-;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (c) 1997, 1998, 1999, 2000, 2003, 2004, 2005
+;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.26
+;; Version: 4.28
 ;; Keywords: tex
 
 ;; This file is part of GNU Emacs.
@@ -300,7 +301,7 @@
 ;;; Define the formal stuff for a minor mode named RefTeX.
 ;;;
 
-(defconst reftex-version "RefTeX version 4.26"
+(defconst reftex-version "RefTeX version 4.28"
   "Version string for RefTeX.")
 
 (defvar reftex-mode nil
@@ -1416,7 +1417,7 @@ Valid actions are: readable, restore, read, kill, write."
            ((= key ?\C-i)
             (setq prefix (completing-read "Prefix: " xr-alist nil t))
             (- len (length (memq (assoc prefix xr-alist) xr-alist))))
-           (t (error "Illegal document selection [%c]" key)))))))))
+           (t (error "Invalid document selection [%c]" key)))))))))
 
 ;;; =========================================================================
 ;;;
@@ -1424,7 +1425,7 @@ Valid actions are: readable, restore, read, kill, write."
 
 (defun reftex-locate-file (file type master-dir &optional die)
   "Find FILE of type TYPE in MASTER-DIR or on the path associcted with TYPE.
-If the file does not have any of the legal extensions for TYPE,
+If the file does not have any of the valid extensions for TYPE,
 try first the default extension and only then the naked file name.
 When DIE is non-nil, throw an error if file not found."
   (let* ((rec-values (if reftex-search-unrecursed-path-first '(nil t) '(t)))
@@ -1500,7 +1501,7 @@ When DIE is non-nil, throw an error if file not found."
     (when (null (get pathvar 'status))
       ;; Get basic path
       (set pathvar
-           (reftex-uniq
+           (reftex-uniquify
             (reftex-parse-colon-path
              (mapconcat
               (lambda(x) 
@@ -1604,15 +1605,6 @@ When DIE is non-nil, throw an error if file not found."
               (push (file-name-as-directory file) path)))
         (push dir path1)))
     path1))
-
-(defun reftex-uniq (list)
-  (let (new)
-    (while list
-      (or (member (car list) new)
-          (push (car list) new))
-      (pop list))
-    (nreverse new)))
-
 
 ;;; =========================================================================
 ;;;
@@ -2144,7 +2136,7 @@ Works on both Emacs and XEmacs."
     (nreverse rtn)))
 
 (defun reftex-uniquify (list)
-  ;; Return a list of all elements in LIST, but each only once
+  ;; Return a list of all elements in LIST, but each only once, keeping order
   (let (new elm)
     (while list
       (setq elm (pop list))
@@ -2167,17 +2159,17 @@ Works on both Emacs and XEmacs."
   (reftex-convert-string string "[-~ \t\n\r,;]" nil t t
                          5 40 nil 1 " " (nth 5 reftex-derive-label-parameters)))
 
-(defun reftex-convert-string (string split-re illegal-re dot keep-fp
-                                     nwords maxchar illegal abbrev sep
+(defun reftex-convert-string (string split-re invalid-re dot keep-fp
+                                     nwords maxchar invalid abbrev sep
                                      ignore-words &optional downcase)
   "Convert a string (a sentence) to something shorter.
 SPLIT-RE     is the regular expression used to split the string into words.
-ILLEGAL-RE   matches characters which are illegal in the final string.
+INVALID-RE   matches characters which are invalid in the final string.
 DOT          t means add dots to abbreviated words.
 KEEP-FP      t means to keep a final punctuation when applicable.
 NWORDS       Number of words to use.
 MAXCHAR      Maximum number of characters in the final string.
-ILLEGAL      nil: Throw away any words containing stuff matched with ILLEGAL-RE.
+INVALID      nil: Throw away any words containing stuff matched with INVALID-RE.
              t:   Throw away only the matched part, not the whole word.
 ABBREV       nil: Never abbreviate words.
              t:   Always abbreviate words (see `reftex-abbrev-parameters').
@@ -2187,7 +2179,7 @@ SEP          String separating different words in the output string.
 IGNORE-WORDS List of words which should be removed from the string."
 
   (let* ((words0 (split-string string (or split-re "[ \t\n\r]")))
-         (reftex-label-illegal-re (or illegal-re "\000"))
+         (reftex-label-illegal-re (or invalid-re "\000"))
          (abbrev-re (concat
                      "\\`\\("
                      (make-string (nth 0 reftex-abbrev-parameters) ?.)
@@ -2203,7 +2195,7 @@ IGNORE-WORDS List of words which should be removed from the string."
       (cond
        ((member (downcase word) ignore-words))
        ((string-match reftex-label-illegal-re word)
-        (when illegal
+        (when invalid
           (while (string-match reftex-label-illegal-re word)
             (setq word (replace-match "" nil nil word)))
           (push word words)))
@@ -2341,31 +2333,40 @@ IGNORE-WORDS List of words which should be removed from the string."
             (if (find-face face) (throw 'exit face))
           (if (facep face) (throw 'exit face)))))))
 
-;; Highlighting uses overlays.  For XEmacs, we need the emulation.
-(if (featurep 'xemacs) (require 'overlay))
+;; Highlighting uses overlays.  For XEmacs, we use extends.
+(if (featurep 'xemacs)
+    (progn
+      (defalias 'reftex-make-overlay 'make-extent)
+      (defalias 'reftex-overlay-put 'set-extent-property)
+      (defalias 'reftex-move-overlay 'set-extent-endpoints)
+      (defalias 'reftex-delete-overlay 'detach-extent))
+  (defalias 'reftex-make-overlay 'make-overlay)
+  (defalias 'reftex-overlay-put 'overlay-put)
+  (defalias 'reftex-move-overlay 'move-overlay)
+  (defalias 'reftex-delete-overlay 'delete-overlay))
 
 ;; We keep a vector with several different overlays to do our highlighting.
 (defvar reftex-highlight-overlays [nil nil nil])
 
 ;; Initialize the overlays
-(aset reftex-highlight-overlays 0 (make-overlay 1 1))
-(overlay-put (aref reftex-highlight-overlays 0) 
+(aset reftex-highlight-overlays 0 (reftex-make-overlay 1 1))
+(reftex-overlay-put (aref reftex-highlight-overlays 0) 
              'face 'highlight)
-(aset reftex-highlight-overlays 1 (make-overlay 1 1))
-(overlay-put (aref reftex-highlight-overlays 1)
+(aset reftex-highlight-overlays 1 (reftex-make-overlay 1 1))
+(reftex-overlay-put (aref reftex-highlight-overlays 1)
              'face reftex-cursor-selected-face)
-(aset reftex-highlight-overlays 2 (make-overlay 1 1))
-(overlay-put (aref reftex-highlight-overlays 2)
+(aset reftex-highlight-overlays 2 (reftex-make-overlay 1 1))
+(reftex-overlay-put (aref reftex-highlight-overlays 2)
              'face reftex-cursor-selected-face)
 
 ;; Two functions for activating and deactivation highlight overlays
 (defun reftex-highlight (index begin end &optional buffer)
   "Highlight a region with overlay INDEX."
-  (move-overlay (aref reftex-highlight-overlays index)
+  (reftex-move-overlay (aref reftex-highlight-overlays index)
                 begin end (or buffer (current-buffer))))
 (defun reftex-unhighlight (index)
   "Detach overlay INDEX."
-  (delete-overlay (aref reftex-highlight-overlays index)))
+  (reftex-delete-overlay (aref reftex-highlight-overlays index)))
 
 (defun reftex-highlight-shall-die ()
   ;; Function used in pre-command-hook to remove highlights.
@@ -2422,6 +2423,9 @@ IGNORE-WORDS List of words which should be removed from the string."
 ;;; Menu
 
 ;; Define a menu for the menu bar if Emacs is running under X
+
+(defvar reftex-isearch-minor-mode nil)
+(make-variable-buffer-local 'reftex-isearch-minor-mode)
 
 (require 'easymenu)
 

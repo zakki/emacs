@@ -1,6 +1,6 @@
 ;;; calc-yank.el --- kill-ring functionality for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -231,7 +231,7 @@
 			pos j)))))
 	(if (string-match "\\` *-?[0-9][0-9]?[0-9]?[0-9]?[0-9]?[0-9]? *\\'"
 			  (car data))
-	    (setq vals (list 'vec (string-to-int (car data))))
+	    (setq vals (list 'vec (string-to-number (car data))))
 	  (if (and (null arg)
 		   (string-match "[[{][^][{}]*[]}]" (car data)))
 	      (setq pos (match-beginning 0)
@@ -447,7 +447,7 @@ To cancel the edit, simply kill the *Calc Edit* buffer."
     (setq truncate-lines nil)
     (setq major-mode 'calc-edit-mode)
     (setq mode-name "Calc Edit")
-    (run-hooks 'calc-edit-mode-hook)
+    (run-mode-hooks 'calc-edit-mode-hook)
     (make-local-variable 'calc-original-buffer)
     (setq calc-original-buffer oldbuf)
     (make-local-variable 'calc-return-buffer)
@@ -528,7 +528,7 @@ To cancel the edit, simply kill the *Calc Edit* buffer."
     (goto-char calc-edit-top)
     (if (buffer-modified-p)
 	(eval calc-edit-handler))
-    (if one-window
+    (if (and one-window (not (one-window-p t)))
 	(delete-window))
     (if (get-buffer-window return)
 	(select-window (get-buffer-window return))

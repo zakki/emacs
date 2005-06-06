@@ -1,6 +1,6 @@
 ;;; terminal.el --- terminal emulator for GNU Emacs
 
-;; Copyright (C) 1986,87,88,89,93,94 Free Software Foundation, Inc.
+;; Copyright (C) 1986, 1987, 1988, 1989, 1993, 1994 Free Software Foundation, Inc.
 
 ;; Author: Richard Mlynarik <mly@eddie.mit.edu>
 ;; Maintainer: FSF
@@ -489,7 +489,7 @@ lets you type a terminal emulator command."
 	     (progn
 	       (and terminal-more-processing (null (cdr te-pending-output))
 		    (te-set-more-count nil))
-	       (send-string te-process (make-string 1 last-input-char))
+	       (process-send-string te-process (make-string 1 last-input-char))
 	       (te-process-output t))
 	   (message "Function key `%s' ignored"
 		    (single-key-description last-input-char))))))
@@ -537,7 +537,7 @@ together with a command \\<terminal-edit-map>to return to terminal emulation: \\
   (setq mode-name "Terminal Edit")
   (setq mode-line-modified (default-value 'mode-line-modified))
   (setq mode-line-process nil)
-  (run-hooks 'terminal-edit-mode-hook))
+  (run-mode-hooks 'terminal-edit-mode-hook))
 
 (defun te-edit ()
   "Start editing the terminal emulator buffer with ordinary Emacs commands."

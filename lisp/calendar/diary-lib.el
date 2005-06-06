@@ -205,7 +205,7 @@ Valid TYPEs are: string, symbol, int, stringtnil, tnil."
   (let (ret)
     (setq ret (cond ((eq type 'string) attrvalue)
 		    ((eq type 'symbol) (read attrvalue))
-		    ((eq type 'int) (string-to-int attrvalue))
+		    ((eq type 'int) (string-to-number attrvalue))
 		    ((eq type 'stringtnil)
 		     (cond ((string= "t" attrvalue) t)
 			   ((string= "nil" attrvalue) nil)
@@ -908,13 +908,13 @@ diary entries."
                           (buffer-substring-no-properties
                            (match-beginning m-name-pos)
                            (match-end m-name-pos))))
-                     (mm (string-to-int
+                     (mm (string-to-number
                           (if m-pos
                               (buffer-substring-no-properties
                                (match-beginning m-pos)
                                (match-end m-pos))
                             "")))
-                     (dd (string-to-int
+                     (dd (string-to-number
                           (if d-pos
                               (buffer-substring-no-properties
                                (match-beginning d-pos)
@@ -931,7 +931,7 @@ diary entries."
                                (let* ((current-y
                                        (extract-calendar-year
                                         (calendar-current-date)))
-                                      (y (+ (string-to-int y-str)
+                                      (y (+ (string-to-number y-str)
                                             (* 100
                                                (/ current-y 100)))))
                                  (if (> (- y current-y) 50)
@@ -939,7 +939,7 @@ diary entries."
                                    (if (> (- current-y y) 50)
                                        (+ y 100)
                                      y)))
-                             (string-to-int y-str))))
+                             (string-to-number y-str))))
                      (save-excursion
                        (setq entry (buffer-substring-no-properties
                                     (point) (line-end-position))
@@ -1050,15 +1050,16 @@ changing the variable `diary-include-string'."
            (regexp-quote diary-include-string)
            " \"\\([^\"]*\\)\"")
           nil t)
-    (let ((diary-file (substitute-in-file-name
-                       (buffer-substring-no-properties
-                        (match-beginning 2) (match-end 2))))
-          (mark-diary-entries-hook 'mark-included-diary-files))
+    (let* ((diary-file (substitute-in-file-name
+                        (match-string-no-properties 2)))
+           (mark-diary-entries-hook 'mark-included-diary-files)
+           (dbuff (find-buffer-visiting diary-file)))
       (if (file-exists-p diary-file)
           (if (file-readable-p diary-file)
               (progn
                 (mark-diary-entries)
-                (kill-buffer (find-buffer-visiting diary-file)))
+                (unless dbuff
+                  (kill-buffer (find-buffer-visiting diary-file))))
             (beep)
             (message "Can't read included diary file %s" diary-file)
             (sleep-for 2))
@@ -1149,22 +1150,22 @@ be used instead of a colon (:) to separate the hour and minute parts."
     (cond ((string-match        ; Military time
 	    "\\`[ \t\n\\^M]*\\([0-9]?[0-9]\\)[:.]?\\([0-9][0-9]\\)\\(\\>\\|[^ap]\\)"
             s)
-	   (+ (* 100 (string-to-int
+	   (+ (* 100 (string-to-number
 		      (substring s (match-beginning 1) (match-end 1))))
-	      (string-to-int (substring s (match-beginning 2) (match-end 2)))))
+	      (string-to-number (substring s (match-beginning 2) (match-end 2)))))
 	  ((string-match        ; Hour only  XXam or XXpm
 	    "\\`[ \t\n\\^M]*\\([0-9]?[0-9]\\)\\([ap]\\)m\\>" s)
-	   (+ (* 100 (% (string-to-int
+	   (+ (* 100 (% (string-to-number
 			   (substring s (match-beginning 1) (match-end 1)))
 			  12))
 	      (if (equal ?a (downcase (aref s (match-beginning 2))))
 		  0 1200)))
 	  ((string-match        ; Hour and minute  XX:XXam or XX:XXpm
 	    "\\`[ \t\n\\^M]*\\([0-9]?[0-9]\\)[:.]\\([0-9][0-9]\\)\\([ap]\\)m\\>" s)
-	   (+ (* 100 (% (string-to-int
+	   (+ (* 100 (% (string-to-number
 			   (substring s (match-beginning 1) (match-end 1)))
 			  12))
-	      (string-to-int (substring s (match-beginning 2) (match-end 2)))
+	      (string-to-number (substring s (match-beginning 2) (match-end 2)))
 	      (if (equal ?a (downcase (aref s (match-beginning 3))))
 		  0 1200)))
 	  (t diary-unknown-time)))) ; Unrecognizable
@@ -1647,7 +1648,7 @@ marked on the calendar."
       (or (diary-remind sexp (car days) marking)
           (diary-remind sexp (cdr days) marking))))))
 
-(defun add-to-diary-list (date string specifier marker &optional globcolor)
+(defun add-to-diary-list (date string specifier &optional marker globcolor)
   "Add the entry (DATE STRING SPECIFIER MARKER GLOBCOLOR) to `diary-entries-list'.
 Do nothing if DATE or STRING is nil."
   (when (and date string)

@@ -250,7 +250,8 @@ Any terminating `>' or `/' is not matched.")
 
 (defface sgml-namespace-face
   '((t (:inherit font-lock-builtin-face)))
-  "`sgml-mode' face used to highlight the namespace part of identifiers.")
+  "`sgml-mode' face used to highlight the namespace part of identifiers."
+  :group 'sgml)
 (defvar sgml-namespace-face 'sgml-namespace-face)
 
 ;; internal
@@ -1804,7 +1805,7 @@ have <h1>Very Major Headlines</h1> through <h6>Very Minor Headlines</h6>
 
 <p>Paragraphs only need an opening tag.  Line breaks and multiple spaces are
 ignored unless the text is <pre>preformatted.</pre>  Text can be marked as
-<b>bold</b>, <i>italic</i> or <u>underlined</u> using the normal  M-g  or
+<b>bold</b>, <i>italic</i> or <u>underlined</u> using the normal M-o or
 Edit/Text Properties/Face commands.
 
 Pages can have <a name=\"SOMENAME\">named points</a> and can link other points
