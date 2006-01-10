@@ -1201,6 +1201,208 @@ x_set_glyph_string_clipping (s)
 }
 
 
+#if HAVE_XFT
+/* XXX kludge - use the same font everywhere */
+static char *
+xft_pattern_name (char *pattern)
+{
+  static char *xft_pattern;
+
+  if (!xft_pattern)
+    {
+      if (*pattern == '-') return pattern;
+      xft_pattern = malloc (strlen (pattern) + 1);
+      strcpy (xft_pattern, pattern);
+    }
+  return xft_pattern;
+}
+
+static x_font_type *
+xft_font_open_name (Display *dpy, int screen, char *name)
+{
+    x_font_type *font;
+
+    /* name = xft_pattern_name (name); */
+    if (*name == '-') {
+	font = XftFontOpenXlfd (dpy, screen, name);
+	if (font)
+	    return font;
+    }
+    return XftFontOpenName (dpy, screen, name);
+}
+
+static int
+xft_ndashes (char *pattern)
+{
+  int ndashes = 0;
+  while (*pattern)
+    if (*pattern++ == '-')
+      ++ndashes;
+  return ndashes;
+}
+
+static char *
+xft_pad_fields (char *pattern)
+{
+  int ndashes = xft_ndashes (pattern);
+  int add = 14 - ndashes;
+  char *new, *ret;
+
+  ret = new = malloc (strlen (pattern) + add * 2 + 1);
+  if (!new)
+    return NULL;
+  if (*pattern != '-') {
+    *new++ = '-';
+    add--;
+    ndashes++;
+  }
+  if (ndashes < 4) 
+    {
+      strcpy (new, pattern);
+      while (add--)
+	strcat (new, "-*");
+    }
+  else
+    {
+      char *third = pattern;
+      int n;
+
+      for (n = 0; n < 3; n++)
+	third = index (third, '-') + 1;
+
+      bcopy (pattern, new, third - pattern);
+      new[third - pattern] = '\0';
+      while (add--)
+	strcat (new, "*-");
+      strcat (new, third);
+    }
+  return new;
+}
+
+static char *
+xft_fillout_xlfd (char *pattern)
+{
+  char *fourteen = xft_pad_fields (pattern);
+  char *dash = fourteen;
+  int n;
+  static char numeric[14] = {
+    0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0
+  };
+
+
+  for (n = 0; n < 14; n++) {
+    dash = index (dash, '-') + 1;
+    if (numeric[n] && *dash == '*')
+      *dash = '0';
+  }
+  return fourteen;
+}
+
+static FcPattern *
+xft_name_parse (char *name)
+{
+    FcPattern	*pattern;
+    
+    if (*name == '-') {
+	char *full_xlfd = xft_fillout_xlfd (name);
+	pattern = XftXlfdParse (full_xlfd, FcFalse, FcFalse);
+	free (full_xlfd);
+	if (pattern)
+	    return pattern;
+    }
+    return FcNameParse (name);
+}
+
+static char *
+xft_xlfd_weight_name (int weight)
+{
+    if (weight < (FC_WEIGHT_LIGHT + FC_WEIGHT_MEDIUM) / 2)
+	return "light";
+    if (weight < (FC_WEIGHT_MEDIUM + FC_WEIGHT_DEMIBOLD) / 2)
+	return "regular";
+    if (weight < (FC_WEIGHT_DEMIBOLD + FC_WEIGHT_BOLD) / 2)
+	return "demibold";
+    if (weight < (FC_WEIGHT_BOLD + FC_WEIGHT_BLACK) / 2)
+	return "demibold";
+    return "black";
+}
+
+static char *
+xft_xlfd_slant_name (int slant)
+{
+    if (slant < (FC_SLANT_ROMAN + FC_SLANT_ITALIC) / 2)
+	return "r";
+    if (slant < (FC_SLANT_ITALIC + FC_SLANT_OBLIQUE) / 2)
+	return "i";
+    return "o";
+}
+
+static char *
+xft_xlfd_unparse (FcPattern *pattern)
+{
+    char    *foundry;
+    char    *family;
+    int	    weight;
+    char    *weight_name;
+    int	    slant;
+    char    *slant_name;
+    double  pixel;
+    int	    len;
+    char    *xlfd;
+
+    if (FcPatternGetString (pattern, FC_FOUNDRY, 0, (FcChar8 *) &foundry)
+        != FcResultMatch)
+	foundry = "*";
+    if (FcPatternGetString (pattern, FC_FAMILY, 0, (FcChar8 *) &family)
+        != FcResultMatch)
+	family = "*";
+    if (FcPatternGetInteger (pattern, FC_WEIGHT, 0, &weight) != FcResultMatch)
+	weight_name = "*";
+    else
+	weight_name = xft_xlfd_weight_name (weight);
+    if (FcPatternGetInteger (pattern, FC_SLANT, 0, &slant) != FcResultMatch)
+	slant_name = "*";
+    else
+	slant_name = xft_xlfd_slant_name (slant);
+    if (FcPatternGetDouble (pattern, FC_PIXEL_SIZE, 0, &pixel) != FcResultMatch)
+	pixel = 0.0;
+    if (pixel < 0.0)
+	pixel = 0;
+    if (pixel >= 10000)
+	pixel = 9999;
+    len = (strlen (foundry) + 
+	   strlen (family) + 
+	   strlen (weight_name) +
+	   strlen (slant_name) + 
+	   5 +			    /* pixel */
+	   9 +			    /* stars */
+	   14 +			    /* dashes */
+	   1);			    /* null */
+    xlfd = malloc (len);
+    sprintf(xlfd, "-%s-%s-%s-%s-*-*-%d-*-*-*-*-0-*-*",
+	    foundry, family, weight_name, slant_name,
+	    (int) (pixel + 0.5));
+    return xlfd;
+}
+
+static char *
+xft_match_font (Display *dpy, int screen, char *name)
+{
+    FcPattern *pattern;
+    FcResult result;
+    FcPattern *match;
+    char      *xlfd;
+
+    pattern = xft_name_parse (name);
+    match = XftFontMatch (dpy, screen, pattern, &result);
+    FcPatternDestroy (pattern);
+    xlfd = xft_xlfd_unparse (match);
+    FcPatternDestroy (match);
+    return xlfd;
+}
+
+#endif
+
 /* RIF:
    Compute left and right overhang of glyph string S.  If S is a glyph
    string for a composition, assume overhangs don't exist.  */
@@ -9432,9 +9634,11 @@ x_list_fonts (f, pattern, size, maxnames)
   if (NILP (patterns))
     patterns = Fcons (pattern, Qnil);
 
+#ifndef HAVE_XFT
   if (maxnames == 1 && !size)
     /* We can return any single font matching PATTERN.  */
     try_XLoadQueryFont = 1;
+#endif
 
   for (; CONSP (patterns); patterns = XCDR (patterns))
     {
@@ -9462,18 +9666,14 @@ x_list_fonts (f, pattern, size, maxnames)
       BLOCK_INPUT;
       count = x_catch_errors (dpy);
 
+#ifndef HAVE_XFT
       if (try_XLoadQueryFont)
 	{
 	  x_font_type *font;
 	  unsigned long value;
+	  int len;
 
-#ifdef HAVE_XFT
-          font = XftFontOpenName (dpy, DefaultScreen (dpy), SDATA (pattern));
-          if (! font)
-            font = XftFontOpenXlfd (dpy, DefaultScreen (dpy), SDATA (pattern));
-#else
 	  font = XLoadQueryFont (dpy, SDATA (pattern));
-#endif
 	  if (x_had_errors_p (dpy))
 	    {
 	      /* This error is perhaps due to insufficient memory on X
@@ -9482,33 +9682,6 @@ x_list_fonts (f, pattern, size, maxnames)
 	      x_clear_errors (dpy);
 	    }
 
-#ifdef HAVE_XFT
-          if (font)
-            {
-              XftPattern *xft_pattern = XftNameParse (SDATA (pattern));
-              XftResult result;
-              XftPattern *font_info =
-                xft_pattern != NULL
-                ? XftFontMatch (dpy, DefaultScreen (dpy), xft_pattern, &result)
-                : NULL;
-
-              if (font_info == NULL)
-                try_XLoadQueryFont = 0;
-              else
-                {
-                  name = SDATA (pattern);
-                  result = XftPatternGetBool (font_info, XFT_SCALABLE,
-                                              0, &font_scalable_p);
-                  font_width = font->max_advance_width;
-                }
-
-              if (font_info) XftPatternDestroy (font_info);
-              if (xft_pattern) XftPatternDestroy (xft_pattern);
-              XftFontClose(dpy, font);
-            }
-	  else
-	    try_XLoadQueryFont = 0;
-#else
 	  if (font
 	      && XGetFontProperty (font, XA_FONT, &value))
 	    {
@@ -9524,7 +9697,6 @@ x_list_fonts (f, pattern, size, maxnames)
 	    try_XLoadQueryFont = 0;
 	  if (font)
             XFreeFont (dpy, font);
-#endif
           if (name)
             {
 	      int len = strlen (name);
@@ -9535,14 +9707,25 @@ x_list_fonts (f, pattern, size, maxnames)
                  simple var.  */
               tmp = (char *) alloca (len + 1);  names[0] = tmp;
               bcopy (name, names[0], len + 1);
-#ifndef HAVE_XFT
               XFree (name);
-#endif
             }
 	}
+#endif
 
       if (!try_XLoadQueryFont)
 	{
+#if HAVE_XFT
+	  char *full = xft_match_font (dpy, DefaultScreen (dpy), SDATA(pattern));
+	  int len = strlen (full);
+	  char *tmp;
+	  num_fonts = 1;
+	  names = (char **) alloca (sizeof (char *));
+	  /* Some systems only allow alloca assigned to a
+	     simple var.  */
+	  tmp = (char *) alloca (len + 1);  names[0] = tmp;
+	  bcopy (full, names[0], len + 1);
+	  free (full);
+#else
 	  /* We try at least 10 fonts because XListFonts will return
 	     auto-scaled fonts at the head.  */
           if (maxnames < 0)
@@ -9574,6 +9757,7 @@ x_list_fonts (f, pattern, size, maxnames)
 	      names = NULL;
 	      x_clear_errors (dpy);
 	    }
+#endif
 	}
 
       x_uncatch_errors (dpy, count);
@@ -9635,12 +9819,14 @@ x_list_fonts (f, pattern, size, maxnames)
 		}
 	    }
 
+#ifndef HAVE_XFT
 	  if (!try_XLoadQueryFont)
 	    {
 	      BLOCK_INPUT;
 	      XFreeFontNames (names);
 	      UNBLOCK_INPUT;
 	    }
+#endif
 	}
 
       /* Now store the result in the cache.  */
@@ -9675,11 +9861,8 @@ x_list_fonts (f, pattern, size, maxnames)
 	      BLOCK_INPUT;
 	      count = x_catch_errors (dpy);
 #ifdef HAVE_XFT
-              thisinfo = XftFontOpenName (dpy, DefaultScreen (dpy),
-                                          SDATA (XCAR (tem)));
-              if (! thisinfo)
-                thisinfo = XftFontOpenXlfd (dpy, DefaultScreen (dpy),
-                                            SDATA (XCAR (tem)));
+              thisinfo = xft_font_open_name (dpy, DefaultScreen (dpy),
+					     SDATA (XCAR (tem)));
 #else
 	      thisinfo = XLoadQueryFont (dpy,
 					 SDATA (XCAR (tem)));
@@ -9901,7 +10084,7 @@ x_load_font (f, fontname, size)
     BLOCK_INPUT;
     count = x_catch_errors (FRAME_X_DISPLAY (f));
 #ifdef HAVE_XFT
-    font = XftFontOpenName (dpy, DefaultScreen (dpy), fontname);
+    font = xft_font_open_name (dpy, DefaultScreen (dpy), fontname);
 #else
     font = (XFontStruct *) XLoadQueryFont (FRAME_X_DISPLAY (f), fontname);
 #endif
