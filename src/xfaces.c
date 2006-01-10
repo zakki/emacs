@@ -7048,9 +7048,11 @@ realize_default_face (f)
   check_lface (lface);
   bcopy (XVECTOR (lface)->contents, attrs, sizeof attrs);
   face = realize_face (c, attrs, 0, NULL, DEFAULT_FACE_ID);
+#ifdef HAVE_WINDOW_SYSTEM
 #warning "Must get face parameters and font cache right"
   if (do_font)
     face->font = FRAME_FONT (f);
+#endif
   return 1;
 }
 
