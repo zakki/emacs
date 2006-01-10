@@ -45,7 +45,6 @@ typedef XFontStruct x_font_type;
 #else /* !HAVE_X_WINDOWS */
 
 /* X-related stuff used by non-X gui code. */
-typedef XFontStruct x_font_type;
 
 typedef struct {
   unsigned long pixel;
