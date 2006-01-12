@@ -1,6 +1,7 @@
 ;;; url-vars.el --- Variables for Uniform Resource Locator tool
 
-;; Copyright (c) 1996,1997,1998,1999,2001,2004 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2001, 2004,
+;;   2005, 2006 Free Software Foundation, Inc.
 
 ;; Keywords: comm, data, processes, hypermedia
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
 
@@ -29,28 +30,28 @@
   "Version number of URL package.")
 
 (defgroup url nil
-  "Uniform Resource Locator tool"
+  "Uniform Resource Locator tool."
   :version "22.1"
   :group 'hypermedia)
 
 (defgroup url-file nil
-  "URL storage"
+  "URL storage."
   :prefix "url-"
   :group 'url)
 
 (defgroup url-cache nil
-  "URL cache"
+  "URL cache."
   :prefix "url-"
   :prefix "url-cache-"
   :group 'url)
 
 (defgroup url-mime nil
-  "MIME options of URL"
+  "MIME options of URL."
   :prefix "url-"
   :group 'url)
 
 (defgroup url-hairy nil
-  "Hairy options of URL"
+  "Hairy options of URL."
   :prefix "url-"
   :group 'url)
 
@@ -111,9 +112,8 @@ using `dired' to view the directory."
   :type 'string
   :group 'url-file)
 
-;; Fixme: this should have a setter which calls url-setup-privacy-info.
 (defcustom url-privacy-level '(email)
-  "*How private you want your requests to be.
+  "How private you want your requests to be.
 HTTP has header fields for various information about the user, including
 operating system information, email addresses, the last page you visited, etc.
 This variable controls how much of this information is sent.
@@ -143,6 +143,8 @@ Samples:
 This variable controls several other variables and is _NOT_ automatically
 updated.  Call the function `url-setup-privacy-info' after modifying this
 variable."
+  :initialize 'custom-initialize-default
+  :set (lambda (sym val) (set-default sym val) (url-setup-privacy-info))
   :type '(radio (const :tag "None (you believe in the basic goodness of humanity)"
 		       :value none)
 		(const :tag "Low (do not reveal last location)"
@@ -173,9 +175,7 @@ variable."
 		       (string :tag "Encoding")))
   :group 'url-mime)
 
-(defcustom url-mail-command (if (fboundp 'compose-mail)
-				'compose-mail
-			      'url-mail)
+(defcustom url-mail-command 'compose-mail
   "*This function will be called whenever url needs to send mail.
 It should enter a mail-mode-like buffer in the current window.
 The commands `mail-to' and `mail-subject' should still work in this
@@ -279,7 +279,7 @@ get the first available language (as opposed to the default)."
 (defvar url-package-version nil
   "Version number of package using URL.")
 
-(defvar url-package-name nil "Version number of package using URL.")
+(defvar url-package-name nil "Name of package using URL.")
 
 (defvar url-system-type nil
   "What type of system we are on.")
@@ -388,7 +388,7 @@ Currently supported methods:
 (defconst url-working-buffer " *url-work")
 
 (defvar url-gateway-unplugged nil
-  "Non-nil means don't open new network connexions.
+  "Non-nil means don't open new network connections.
 This should be set, e.g. by mail user agents rendering HTML to avoid
 `bugs' which call home.")
 

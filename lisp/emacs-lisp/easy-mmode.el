@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -142,7 +142,10 @@ For example, you could write
   (let* ((mode-name (symbol-name mode))
 	 (pretty-name (easy-mmode-pretty-mode-name mode lighter))
 	 (globalp nil)
+	 (set nil)
+	 (initialize nil)
 	 (group nil)
+	 (type nil)
 	 (extra-args nil)
 	 (extra-keywords nil)
 	 (require t)
@@ -159,7 +162,10 @@ For example, you could write
 	(:lighter (setq lighter (pop body)))
 	(:global (setq globalp (pop body)))
 	(:extra-args (setq extra-args (pop body)))
+	(:set (setq set (list :set (pop body))))
+	(:initialize (setq initialize (list :initialize (pop body))))
 	(:group (setq group (nconc group (list :group (pop body)))))
+	(:type (setq type (list :type (pop body))))
 	(:require (setq require (pop body)))
 	(:keymap (setq keymap (pop body)))
 	(t (push keyw extra-keywords) (push (pop body) extra-keywords))))
@@ -167,11 +173,18 @@ For example, you could write
     (setq keymap-sym (if (and keymap (symbolp keymap)) keymap
 		       (intern (concat mode-name "-map"))))
 
+    (unless set (setq set '(:set 'custom-set-minor-mode)))
+
+    (unless initialize
+      (setq initialize '(:initialize 'custom-initialize-default)))
+
     (unless group
       ;; We might as well provide a best-guess default group.
       (setq group
 	    `(:group ',(intern (replace-regexp-in-string
 				"-mode\\'" "" mode-name)))))
+
+    (unless type (setq type '(:type 'boolean)))
 
     `(progn
        ;; Define the variable to enable or disable the mode.
@@ -181,26 +194,20 @@ For example, you could write
 Use the command `%s' to change this variable." pretty-name mode))
 	       (make-variable-buffer-local ',mode))
 
-	  (let ((curfile (or (and (boundp 'byte-compile-current-file)
-				  byte-compile-current-file)
-			     load-file-name)))
-	    `(defcustom ,mode ,init-value
-	       ,(format "Non-nil if %s is enabled.
-See the command `%s' for a description of this minor-mode.
+	  (let ((base-doc-string
+                 (concat "Non-nil if %s is enabled.
+See the command `%s' for a description of this minor-mode."
+                         (if body "
 Setting this variable directly does not take effect;
-use either \\[customize] or the function `%s'."
-			pretty-name mode mode)
-	       :set 'custom-set-minor-mode
-	       :initialize 'custom-initialize-default
+use either \\[customize] or the function `%s'."))))
+	    `(defcustom ,mode ,init-value
+	       ,(format base-doc-string pretty-name mode mode)
+	       ,@set
+	       ,@initialize
 	       ,@group
-	       :type 'boolean
-	       ,@(cond
-		  ((not (and curfile require)) nil)
-		  ((not (eq require t)) `(:require ,require))
-		  (t `(:require
-		       ',(intern (file-name-nondirectory
-				  (file-name-sans-extension curfile))))))
-	       ,@(nreverse extra-keywords))))
+	       ,@type
+	       ,@(unless (eq require t) `(:require ,require))
+               ,@(nreverse extra-keywords))))
 
        ;; The actual function.
        (defun ,mode (&optional arg ,@extra-args)
@@ -252,12 +259,7 @@ With zero or negative ARG turn mode off.
        (add-minor-mode ',mode ',lighter
 		       ,(if keymap keymap-sym
 			  `(if (boundp ',keymap-sym)
-			       (symbol-value ',keymap-sym))))
-
-       ;; If the mode is global, call the function according to the default.
-       ,(if globalp
-	    `(if (and load-file-name (not (equal ,init-value ,mode)))
-		 (eval-after-load load-file-name '(,mode (if ,mode 1 -1))))))))
+			       (symbol-value ',keymap-sym)))))))
 
 ;;;
 ;;; make global minor mode
@@ -270,8 +272,14 @@ With zero or negative ARG turn mode off.
   "Make GLOBAL-MODE out of the buffer-local minor MODE.
 TURN-ON is a function that will be called with no args in every buffer
   and that should try to turn MODE on if applicable for that buffer.
-KEYS is a list of CL-style keyword arguments:
-:group to specify the custom group.
+KEYS is a list of CL-style keyword arguments.  As the minor mode
+  defined by this function is always global, any :global keyword is
+  ignored.  Other keywords have the same meaning as in `define-minor-mode',
+  which see.  In particular, :group specifies the custom group.
+  The most useful keywords are those that are passed on to the
+  `defcustom'.  It normally makes no sense to pass the :lighter
+  or :keymap keywords to `define-global-minor-mode', since these
+  are usually passed to the buffer-local version of the minor mode.
 
 If MODE's set-up depends on the major mode in effect when it was
 enabled, then disabling and reenabling MODE should make MODE work
@@ -283,21 +291,23 @@ call another major mode in their body."
 	 (pretty-name (easy-mmode-pretty-mode-name mode))
 	 (pretty-global-name (easy-mmode-pretty-mode-name global-mode))
 	 (group nil)
-	 (extra-args nil)
+	 (extra-keywords nil)
 	 (MODE-buffers (intern (concat global-mode-name "-buffers")))
 	 (MODE-enable-in-buffers
 	  (intern (concat global-mode-name "-enable-in-buffers")))
 	 (MODE-check-buffers
 	  (intern (concat global-mode-name "-check-buffers")))
 	 (MODE-cmhh (intern (concat global-mode-name "-cmhh")))
-	 (MODE-major-mode (intern (concat (symbol-name mode) "-major-mode"))))
+	 (MODE-major-mode (intern (concat (symbol-name mode) "-major-mode")))
+	 keyw)
 
     ;; Check keys.
-    (while (keywordp (car keys))
-      (case (pop keys)
-	(:extra-args (setq extra-args (pop keys)))
+    (while (keywordp (setq keyw (car keys)))
+      (setq keys (cdr keys))
+      (case keyw
 	(:group (setq group (nconc group (list :group (pop keys)))))
-	(t (setq keys (cdr keys)))))
+	(:global (setq keys (cdr keys)))
+	(t (push keyw extra-keywords) (push (pop keys) extra-keywords))))
 
     (unless group
       ;; We might as well provide a best-guess default group.
@@ -315,7 +325,7 @@ With prefix ARG, turn %s on if and only if ARG is positive.
 %s is actually not turned on in every buffer but only in those
 in which `%s' turns it on."
 		  pretty-name pretty-global-name pretty-name turn-on)
-	 :global t :extra-args ,extra-args ,@group
+	 :global t ,@group ,@(nreverse extra-keywords)
 
 	 ;; Setup hook to handle future mode changes and new buffers.
 	 (if ,global-mode
@@ -505,6 +515,7 @@ found, do widen first and then call NARROWFUN with no args after moving."
                    (unless (pos-visible-in-window-p endpt nil t)
                      (recenter '(0))))))
              ,re-narrow-maybe)))
+       (put ',next-sym 'definition-name ',base)
        (defun ,prev-sym (&optional count)
 	 ,(format "Go to the previous COUNT'th %s" (or name base-name))
 	 (interactive)
@@ -514,7 +525,8 @@ found, do widen first and then call NARROWFUN with no args after moving."
              ,check-narrow-maybe
              (unless (re-search-backward ,re nil t count)
                (error "No previous %s" ,name))
-             ,re-narrow-maybe))))))
+             ,re-narrow-maybe)))
+       (put ',prev-sym 'definition-name ',base))))
 
 
 (provide 'easy-mmode)

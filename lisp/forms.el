@@ -1,6 +1,7 @@
 ;;; forms.el --- Forms mode: edit a file as a form to fill in
 
-;; Copyright (C) 1991, 1994, 1995, 1996, 1997, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 1991, 1994, 1995, 1996, 1997, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Johan Vromans <jvromans@squirrel.nl>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -518,7 +519,7 @@ Commands:                        Equivalent keys in read-only mode:
 	(if (or (eq enable-local-eval t)
 		(yes-or-no-p
 		 (concat "Evaluate lisp code in buffer "
-			 (buffer-name) " to display forms ")))
+			 (buffer-name) " to display forms? ")))
 	    (eval-buffer)
 	  (error "`enable-local-eval' inhibits buffer evaluation"))
 
@@ -550,7 +551,7 @@ Commands:                        Equivalent keys in read-only mode:
 		     (eq (length forms-multi-line) 1))
 		(if (string= forms-multi-line forms-field-sep)
 		    (error (concat "Forms control file error: "
-				   "`forms-multi-line' is equal to 'forms-field-sep'")))
+				   "`forms-multi-line' is equal to `forms-field-sep'")))
 	      (error (concat "Forms control file error: "
 			     "`forms-multi-line' must be nil or a one-character string"))))
 	(or (fboundp 'set-text-properties)
@@ -1207,7 +1208,7 @@ Commands:                        Equivalent keys in read-only mode:
 
       ;; Need a file to do this.
       (if (not (file-exists-p forms-file))
-	  (error "Need existing file or explicit 'forms-number-of-records'")
+	  (error "Need existing file or explicit `forms-number-of-fields'")
 
 	;; Visit the file and extract the first record.
 	(setq forms--file-buffer (find-file-noselect forms-file))
@@ -1983,7 +1984,7 @@ after writing out the data."
       (goto-char (aref forms--markers (1- (length forms--markers)))))))
 
 (defun forms-print ()
-  "Send the records to the printer with 'print-buffer', one record per page."
+  "Send the records to the printer with `print-buffer', one record per page."
   (interactive)
   (let ((inhibit-read-only t)
 	(save-record forms--current-record)

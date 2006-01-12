@@ -1,6 +1,7 @@
 ;;; mm-view.el --- functions for viewing MIME objects
-;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; This file is part of GNU Emacs.
@@ -17,8 +18,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -38,6 +39,14 @@
   (autoload 'html2text "html2text")
   (unless (fboundp 'diff-mode)
     (autoload 'diff-mode "diff-mode" "" t nil)))
+
+(defvar gnus-article-mime-handles)
+(defvar gnus-newsgroup-charset)
+(defvar smime-keys)
+(defvar w3m-cid-retrieve-function-alist)
+(defvar w3m-current-buffer)
+(defvar w3m-display-inline-images)
+(defvar w3m-minor-mode-map)
 
 (defvar mm-text-html-renderer-alist
   '((w3  . mm-inline-text-html-render-with-w3)
@@ -241,19 +250,19 @@
 	   (point-min) (point-max)
 	   (list 'keymap w3m-minor-mode-map
 		 ;; Put the mark meaning this part was rendered by emacs-w3m.
-		 'mm-inline-text-html-with-w3m t))))
-      (mm-handle-set-undisplayer
-       handle
-       `(lambda ()
-	  (let (buffer-read-only)
-	    (if (functionp 'remove-specifier)
-		(mapcar (lambda (prop)
-			  (remove-specifier
-			   (face-property 'default prop)
-			   (current-buffer)))
-			'(background background-pixmap foreground)))
-	    (delete-region ,(point-min-marker)
-			   ,(point-max-marker))))))))
+		 'mm-inline-text-html-with-w3m t)))
+	(mm-handle-set-undisplayer
+	 handle
+	 `(lambda ()
+	    (let (buffer-read-only)
+	      (if (functionp 'remove-specifier)
+		  (mapcar (lambda (prop)
+			    (remove-specifier
+			     (face-property 'default prop)
+			     (current-buffer)))
+			  '(background background-pixmap foreground)))
+	      (delete-region ,(point-min-marker)
+			     ,(point-max-marker)))))))))
 
 (defun mm-links-remove-leading-blank ()
   ;; Delete the annoying three spaces preceding each line of links
@@ -358,9 +367,9 @@
 	(goto-char (point-max))))
     (save-restriction
       (narrow-to-region b (point))
-      (set-text-properties (point-min) (point-max) nil)
       (when (or (equal type "enriched")
 		(equal type "richtext"))
+	(set-text-properties (point-min) (point-max) nil)
 	(ignore-errors
 	  (enriched-decode (point-min) (point-max))))
       (mm-handle-set-undisplayer
@@ -467,14 +476,16 @@
 	    (buffer-disable-undo)
 	    (mm-insert-part handle)
 	    (require 'font-lock)
-	    ;; Inhibit font-lock this time (*-mode-hook might run
-	    ;; `turn-on-font-lock') so that jit-lock may not turn off
-	    ;; font-lock immediately after this.
-	    (let ((font-lock-mode t))
-	      (funcall mode))
-	    (let ((font-lock-verbose nil))
-	      ;; I find font-lock a bit too verbose.
-	      (font-lock-fontify-buffer))
+	    (let ((font-lock-maximum-size nil)
+		  ;; Disable support modes, e.g., jit-lock, lazy-lock, etc.
+		  (font-lock-mode-hook nil)
+		  (font-lock-support-mode nil)
+		  ;; I find font-lock a bit too verbose.
+		  (font-lock-verbose nil))
+	      (funcall mode)
+	      ;; The mode function might have already turned on font-lock.
+	      (unless (symbol-value 'font-lock-mode)
+		(font-lock-fontify-buffer)))
 	    ;; By default, XEmacs font-lock uses non-duplicable text
 	    ;; properties.  This code forces all the text properties
 	    ;; to be copied along with the text.
@@ -565,9 +576,10 @@
        (cadar smime-keys)
      (smime-get-key-by-email
       (gnus-completing-read-maybe-default
-       (concat "Decipher using which key? "
-	       (if smime-keys (concat "(default " (caar smime-keys) ") ")
-		 ""))
+       (concat "Decipher using key"
+	       (if smime-keys
+		   (concat " (default " (caar smime-keys) "): ")
+		 ": "))
        smime-keys nil nil nil nil (car-safe (car-safe smime-keys))))))
   (goto-char (point-min))
   (while (search-forward "\r\n" nil t)

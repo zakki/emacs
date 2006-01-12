@@ -1,7 +1,7 @@
 ;;; tex-mode.el --- TeX, LaTeX, and SliTeX mode commands -*- coding: utf-8 -*-
 
 ;; Copyright (C) 1985, 1986, 1989, 1992, 1994, 1995, 1996, 1997, 1998, 1999,
-;;   2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+;;   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: tex
@@ -23,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -36,21 +36,24 @@
   (require 'cl)
   (require 'skeleton))
 
+(defvar font-lock-comment-face)
+(defvar font-lock-doc-face)
+
 (require 'shell)
 (require 'compile)
 
 (defgroup tex-file nil
-  "TeX files and directories"
+  "TeX files and directories."
   :prefix "tex-"
   :group 'tex)
 
 (defgroup tex-run nil
-  "Running external commands from TeX mode"
+  "Running external commands from TeX mode."
   :prefix "tex-"
   :group 'tex)
 
 (defgroup tex-view nil
-  "Viewing and printing TeX files"
+  "Viewing and printing TeX files."
   :prefix "tex-"
   :group 'tex)
 
@@ -469,7 +472,7 @@ An alternative value is \" . \", if you use a font with a narrow period."
 	   (arg "{\\(\\(?:[^{}\\]+\\|\\\\.\\|{[^}]*}\\)+\\)"))
       (list
        ;; font-lock-syntactic-keywords causes the \ of \end{verbatim} to be
-       ;; highlighted as tex-verbatim-face.  Let's undo that.
+       ;; highlighted as tex-verbatim face.  Let's undo that.
        ;; This is ugly and brittle :-(  --Stef
        '("^\\(\\\\\\)end" (1 (get-text-property (match-end 1) 'face) t))
        ;; display $$ math $$
@@ -506,7 +509,7 @@ An alternative value is \" . \", if you use a font with a narrow period."
 
 (defun tex-font-lock-append-prop (prop)
   (unless (memq (get-text-property (match-end 1) 'face)
-		'(font-lock-comment-face tex-verbatim-face))
+		'(font-lock-comment-face tex-verbatim))
     prop))
 
 (defconst tex-font-lock-keywords-2
@@ -573,14 +576,14 @@ An alternative value is \" . \", if you use a font with a narrow period."
 	      2 '(tex-font-lock-append-prop 'italic) 'append)
 	;; This is separate from the previous one because of cases like
 	;; {\em foo {\bf bar} bla} where both match.
-	(list (concat "\\\\\\(bf\\(series\\)?\\)\\>" args)
-	      2 '(tex-font-lock-append-prop 'bold) 'append)))))
+ 	(list (concat "\\\\\\(bf\\(series\\)?\\)\\>" args)
+	      3 '(tex-font-lock-append-prop 'bold) 'append)))))
    "Gaudy expressions to highlight in TeX modes.")
 
 (defun tex-font-lock-suscript (pos)
   (unless (or (memq (get-text-property pos 'face)
 		    '(font-lock-constant-face font-lock-builtin-face
-		      font-lock-comment-face tex-verbatim-face))
+		      font-lock-comment-face tex-verbatim))
 	      ;; Check for backslash quoting
 	      (let ((odd nil)
 		    (pos pos))
@@ -628,7 +631,10 @@ An alternative value is \" . \", if you use a font with a narrow period."
       (,(concat "^\\(\\\\\\)end *{" verbs "}\\(.?\\)") (1 "|") (3 "<"))
       ;; ("^\\(\\\\\\)begin *{comment}" 1 "< b")
       ;; ("^\\\\end *{comment}.*\\(\n\\)" 1 "> b")
-      ("\\\\verb\\**\\([^a-z@*]\\)" 1 "\""))))
+      ("\\\\verb\\**\\([^a-z@*]\\)"
+       ;; Do it last, because it uses syntax-ppss which needs the
+       ;; syntax-table properties of previous entries.
+       1 (tex-font-lock-verb (match-end 1))))))
 
 (defun tex-font-lock-unfontify-region (beg end)
   (font-lock-default-unfontify-region beg end)
@@ -650,17 +656,47 @@ An alternative value is \" . \", if you use a font with a narrow period."
   "Face used for subscripts."
   :group 'tex)
 
-(defface tex-math-face
+(defface tex-math
   '((t :inherit font-lock-string-face))
   "Face used to highlight TeX math expressions."
   :group 'tex)
-(defvar tex-math-face 'tex-math-face)
-(defface tex-verbatim-face
+;; backward-compatibility alias
+(put 'tex-math-face 'face-alias 'tex-math)
+(defvar tex-math-face 'tex-math)
+
+(defface tex-verbatim
   ;; '((t :inherit font-lock-string-face))
   '((t :family "courier"))
   "Face used to highlight TeX verbatim environments."
   :group 'tex)
-(defvar tex-verbatim-face 'tex-verbatim-face)
+;; backward-compatibility alias
+(put 'tex-verbatim-face 'face-alias 'tex-verbatim)
+(defvar tex-verbatim-face 'tex-verbatim)
+
+(defun tex-font-lock-verb (end)
+  "Place syntax-table properties on the \verb construct.
+END is the position of the first delimiter after \verb."
+  (unless (nth 8 (syntax-ppss end))
+    ;; Do nothing if the \verb construct is itself inside a comment or
+    ;; verbatim env.
+    (save-excursion
+      ;; Let's find the end and mark it.
+      ;; We used to do it inside tex-font-lock-syntactic-face-function, but
+      ;; this leads to funny effects when jumping to the end of the buffer,
+      ;; because font-lock applies font-lock-syntactic-keywords to the whole
+      ;; preceding text but font-lock-syntactic-face-function only to the
+      ;; actually displayed text.
+      (goto-char end)
+      (let ((char (char-before)))
+        (skip-chars-forward (string ?^ char)) ;; Use `end' ?
+        (when (eq (char-syntax (preceding-char)) ?/)
+          (put-text-property (1- (point)) (point) 'syntax-table '(1)))
+        (unless (eobp)
+          (put-text-property (point) (1+ (point)) 'syntax-table '(7))
+          ;; Cause the rest of the buffer to be re-fontified.
+          ;; (remove-text-properties (1+ (point)) (point-max) '(fontified))
+          )))
+    "\""))
 
 ;; Use string syntax but math face for $...$.
 (defun tex-font-lock-syntactic-face-function (state)
@@ -668,16 +704,7 @@ An alternative value is \" . \", if you use a font with a narrow period."
     (cond
      ((not char) font-lock-comment-face)
      ((eq char ?$) tex-math-face)
-     (t
-      (when (char-valid-p char)
-	;; This is a \verb?...? construct.  Let's find the end and mark it.
-	(save-excursion
-	  (skip-chars-forward (string ?^ char)) ;; Use `end' ?
-	  (when (eq (char-syntax (preceding-char)) ?/)
-	    (put-text-property (1- (point)) (point) 'syntax-table '(1)))
-	  (unless (eobp)
-	    (put-text-property (point) (1+ (point)) 'syntax-table '(7)))))
-      tex-verbatim-face))))
+     (t tex-verbatim-face))))
 
 
 (defun tex-define-common-keys (keymap)
@@ -795,7 +822,7 @@ Inherits `shell-mode-map' with a few additions.")
 		      (regexp-opt '("documentstyle" "documentclass"
 				    "begin" "subsection" "section"
 				    "part" "chapter" "newcommand"
-				    "renewcommand") 'words)
+				    "renewcommand" "RequirePackage") 'words)
 		      "\\|NeedsTeXFormat{LaTeX")))
 		  (if (and (looking-at
 			    "document\\(style\\|class\\)\\(\\[.*\\]\\)?{slides}")
@@ -1101,7 +1128,7 @@ Inserts the value of `tex-open-quote' (normally ``) or `tex-close-quote'
 inserts \" characters."
   (interactive "*P")
   (if (or arg (memq (char-syntax (preceding-char)) '(?/ ?\\))
-	  (eq (get-text-property (point) 'face) 'tex-verbatim-face)
+	  (eq (get-text-property (point) 'face) 'tex-verbatim)
 	  (save-excursion
 	    (backward-char (length tex-open-quote))
 	    (when (or (looking-at (regexp-quote tex-open-quote))
@@ -1109,7 +1136,7 @@ inserts \" characters."
 	      (delete-char (length tex-open-quote))
 	      t)))
       (self-insert-command (prefix-numeric-value arg))
-    (insert (if (memq (char-syntax (preceding-char)) '(?\( ?> ?\ ))
+    (insert (if (memq (char-syntax (preceding-char)) '(?\( ?> ?\s))
 		tex-open-quote tex-close-quote))))
 
 (defun tex-validate-buffer ()
@@ -1572,12 +1599,14 @@ Return the process in which TeX is running."
            (star (string-match "\\*" cmd))
 	   (string
 	    (concat
-	     (if file
-		 (if star (concat (substring cmd 0 star)
-				  (shell-quote-argument file)
-				  (substring cmd (1+ star)))
-		   (concat cmd " " (shell-quote-argument file)))
-	       cmd)
+	     (if (null file)
+		 cmd
+               (if (file-name-absolute-p file)
+                   (setq file (convert-standard-filename file)))
+	       (if star (concat (substring cmd 0 star)
+                                (shell-quote-argument file)
+                                (substring cmd (1+ star)))
+                 (concat cmd " " (shell-quote-argument file))))
 	     (if background "&" ""))))
       ;; Switch to buffer before checking for subproc output in it.
       (set-buffer buf)
@@ -1639,9 +1668,12 @@ If NOT-ALL is non-nil, save the `.dvi' file."
 	     " " (if (< 0 (length tex-start-commands))
 		     (shell-quote-argument tex-start-commands)) " %f")
      t "%r.dvi")
-    ("yap %r &" "%r.dvi")
     ("xdvi %r &" "%r.dvi")
+    ("xpdf %r.pdf &" "%r.pdf")
+    ("gv %r.ps &" "%r.ps")
+    ("yap %r &" "%r.dvi")
     ("advi %r &" "%r.dvi")
+    ("gv %r.pdf &" "%r.pdf")
     ("bibtex %r" "%r.aux" "%r.bbl")
     ("makeindex %r" "%r.idx" "%r.ind")
     ("texindex %r.??")
@@ -1649,9 +1681,6 @@ If NOT-ALL is non-nil, save the `.dvi' file."
     ("dvipdf %r" "%r.dvi" "%r.pdf")
     ("dvips -o %r.ps %r" "%r.dvi" "%r.ps")
     ("ps2pdf %r.ps" "%r.ps" "%r.pdf")
-    ("gv %r.ps &" "%r.ps")
-    ("gv %r.pdf &" "%r.pdf")
-    ("xpdf %r.pdf &" "%r.pdf")
     ("lpr %r.ps" "%r.ps"))
   "List of commands for `tex-compile'.
 Each element should be of the form (FORMAT IN OUT) where
@@ -1755,7 +1784,11 @@ FILE is typically the output DVI or PDF file."
 	 (save-excursion
 	   (goto-char (point-max))
 	   (and (re-search-backward
-		 "(see the transcript file for additional information)" nil t)
+                 (concat
+                  "(see the transcript file for additional information)"
+                  "\\|^Output written on .*"
+                  (regexp-quote (file-name-nondirectory file))
+                  " (.*)\\.") nil t)
 		(> (save-excursion
 		     (or (re-search-backward "\\[[0-9]+\\]" nil t)
 			 (point-min)))
@@ -1830,8 +1863,7 @@ FILE is typically the output DVI or PDF file."
 	    (push cmd cmds)
 	  (push (nth 1 cmd) unchanged-in))))
     ;; If no command seems to be applicable, arbitrarily pick the first one.
-    (unless cmds
-      (setq cmds (list (car tex-compile-commands))))
+    (setq cmds (if cmds (nreverse cmds) (list (car tex-compile-commands))))
     ;; Remove those commands whose input was considered stable for
     ;; some other command (typically if (t . "%.pdf") is inactive
     ;; then we're using pdflatex and the fact that the dvi file
@@ -1841,7 +1873,7 @@ FILE is typically the output DVI or PDF file."
 	(unless (member (nth 1 cmd) unchanged-in)
 	  (push cmd tmp)))
       ;; Only remove if there's something left.
-      (if tmp (setq cmds tmp)))
+      (if tmp (setq cmds (nreverse tmp))))
     ;; Remove commands whose input is not uptodate either.
     (let ((outs (delq nil (mapcar (lambda (x) (nth 2 x)) cmds)))
 	  (tmp nil))
@@ -1849,7 +1881,7 @@ FILE is typically the output DVI or PDF file."
 	(unless (member (nth 1 cmd) outs)
 	  (push cmd tmp)))
       ;; Only remove if there's something left.
-      (if tmp (setq cmds tmp)))
+      (if tmp (setq cmds (nreverse tmp))))
     ;; Select which file we're going to operate on (the latest).
     (let ((latest (nth 1 (car cmds))))
       (dolist (cmd (prog1 (cdr cmds) (setq cmds (list (car cmds)))))
@@ -2328,7 +2360,7 @@ Runs the shell command defined by `tex-show-queue-command'."
 
 (defun latex-indent (&optional arg)
   (if (and (eq (get-text-property (line-beginning-position) 'face)
-	       tex-verbatim-face))
+	       'tex-verbatim))
       'noindent
     (with-syntax-table tex-latex-indent-syntax-table
       ;; TODO: Rather than ignore $, we should try to be more clever about it.
@@ -2417,7 +2449,7 @@ There might be text before point."
 	 (+ indent (current-column) tex-indent-item))
 	(t
 	 (let ((col (current-column)))
-	   (if (or (not (eq (char-syntax (or (char-after pos) ?\ )) ?\())
+	   (if (or (not (eq (char-syntax (or (char-after pos) ?\s)) ?\())
 		   ;; Can't be an arg if there's an empty line inbetween.
 		   (save-excursion (re-search-forward "^[ \t]*$" pos t)))
 	       ;; If the first char was not an open-paren, there's

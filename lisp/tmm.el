@@ -1,7 +1,7 @@
 ;;; tmm.el --- text mode access to menu-bar
 
-;; Copyright (C) 1994, 1995, 1996, 2000, 2001, 2002
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 1996, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Ilya Zakharevich <ilya@math.mps.ohio-state.edu>
 ;; Maintainer: FSF
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -133,9 +133,8 @@ specify nil for this variable."
   :type '(choice integer (const nil))
   :group 'tmm)
 
-(require 'font-lock)
-(defface tmm-inactive-face
-  '((t :inherit font-lock-comment-face))
+(defface tmm-inactive
+  '((t :inherit shadow))
   "Face used for inactive menu items."
   :group 'tmm)
 
@@ -350,7 +349,7 @@ Stores a list of all the shortcuts in the free variable `tmm-short-cuts'."
         (setq next (next-single-char-property-change (point) 'mouse-face))
         (when (looking-at inactive-string)
           (remove-text-properties (point) next '(mouse-face))
-          (add-text-properties (point) next '(face tmm-inactive-face)))
+          (add-text-properties (point) next '(face tmm-inactive)))
         (goto-char next)))
     (set-buffer-modified-p nil)))
 

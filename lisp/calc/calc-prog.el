@@ -1,6 +1,7 @@
 ;;; calc-prog.el --- user programmability functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -196,7 +197,7 @@
 	 (progn
 	   (setq cmd-base-default (concat "User-" keyname))
            (setq cmd (completing-read 
-                      (concat "Define M-x command name (default: calc-"
+                      (concat "Define M-x command name (default calc-"
                               cmd-base-default
                               "): ")
                       obarray 'commandp nil
@@ -232,7 +233,7 @@
 	   (setq func 
                  (concat "calcFunc-"
                          (completing-read 
-                          (concat "Define algebraic function name (default: "
+                          (concat "Define algebraic function name (default "
                                   cmd-base-default "): ")
                           (mapcar (lambda (x) (substring x 9))
                                   (all-completions "calcFunc-"
@@ -666,7 +667,7 @@
   (or last-kbd-macro
       (error "No keyboard macro defined"))
   (setq calc-invocation-macro last-kbd-macro)
-  (message "Use `M-# Z' to invoke this macro"))
+  (message "Use `C-x * Z' to invoke this macro"))
 
 (defun calc-user-define-edit ()
   (interactive)  ; but no calc-wrapper!

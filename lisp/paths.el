@@ -1,6 +1,7 @@
 ;;; paths.el --- define pathnames for use by various Emacs commands -*- no-byte-compile: t -*-
 
-;; Copyright (C) 1986, 1988, 1994, 1999, 2000 Free Software Foundation, Inc.
+;; Copyright (C) 1986, 1988, 1994, 1999, 2000, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: internal
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -37,13 +38,13 @@
 ;; DOC file rather than in memory.
 
 (defun prune-directory-list (dirs &optional keep reject)
-  "Returns a copy of DIRS with all non-existant directories removed.
+  "Returns a copy of DIRS with all non-existent directories removed.
 The optional argument KEEP is a list of directories to retain even if
 they don't exist, and REJECT is a list of directories to remove from
 DIRS, even if they exist; REJECT takes precedence over KEEP.
 
 Note that membership in REJECT and KEEP is checked using simple string
-comparision."
+comparison."
   (apply #'nconc
 	 (mapcar (lambda (dir)
 		   (and (not (member dir reject))

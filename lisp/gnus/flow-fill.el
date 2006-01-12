@@ -1,6 +1,7 @@
 ;;; flow-fill.el --- interpret RFC2646 "flowed" text
 
-;; Copyright (C) 2000, 2001, 2002, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Simon Josefsson <jas@pdc.kth.se>
 ;; Keywords: mail
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -160,38 +161,43 @@ RFC 2646 suggests 66 characters for readability."
   (defvar show-trailing-whitespace))
 
 (defvar fill-flowed-encode-tests
-  '(
+  `(
     ;; The syntax of each list element is:
     ;; (INPUT . EXPECTED-OUTPUT)
-    ("> Thou villainous ill-breeding spongy dizzy-eyed
-> reeky elf-skinned pigeon-egg!
->> Thou artless swag-bellied milk-livered
->> dismal-dreaming idle-headed scut!
->>> Thou errant folly-fallen spleeny reeling-ripe
->>> unmuzzled ratsbane!
->>>> Henceforth, the coding style is to be strictly
->>>> enforced, including the use of only upper case.
->>>>> I've noticed a lack of adherence to the coding
->>>>> styles, of late.
->>>>>> Any complaints?
-" . "> Thou villainous ill-breeding spongy dizzy-eyed reeky elf-skinned
-> pigeon-egg!
->> Thou artless swag-bellied milk-livered dismal-dreaming idle-headed
->> scut!
->>> Thou errant folly-fallen spleeny reeling-ripe unmuzzled ratsbane!
->>>> Henceforth, the coding style is to be strictly enforced,
->>>> including the use of only upper case.
->>>>> I've noticed a lack of adherence to the coding styles, of late.
->>>>>> Any complaints?
-")
-;    ("
-;> foo
-;>
-;>
-;> bar
-;" . "
-;> foo bar
-;")
+    (,(concat
+       "> Thou villainous ill-breeding spongy dizzy-eyed \n"
+       "> reeky elf-skinned pigeon-egg! \n"
+       ">> Thou artless swag-bellied milk-livered \n"
+       ">> dismal-dreaming idle-headed scut!\n"
+       ">>> Thou errant folly-fallen spleeny reeling-ripe \n"
+       ">>> unmuzzled ratsbane!\n"
+       ">>>> Henceforth, the coding style is to be strictly \n"
+       ">>>> enforced, including the use of only upper case.\n"
+       ">>>>> I've noticed a lack of adherence to the coding \n"
+       ">>>>> styles, of late.\n"
+       ">>>>>> Any complaints?")
+     .
+     ,(concat
+       "> Thou villainous ill-breeding spongy dizzy-eyed reeky elf-skinned\n"
+       "> pigeon-egg! \n"
+       ">> Thou artless swag-bellied milk-livered dismal-dreaming idle-headed\n"
+       ">> scut!\n"
+       ">>> Thou errant folly-fallen spleeny reeling-ripe unmuzzled ratsbane!\n"
+       ">>>> Henceforth, the coding style is to be strictly enforced,\n"
+       ">>>> including the use of only upper case.\n"
+       ">>>>> I've noticed a lack of adherence to the coding styles, of late.\n"
+       ">>>>>> Any complaints?\n"
+       ))
+    ;; (,(concat
+    ;;    "\n"
+    ;;    "> foo\n"
+    ;;    "> \n"
+    ;;    "> \n"
+    ;;    "> bar\n")
+    ;;  .
+    ;;  ,(concat
+    ;;    "\n"
+    ;;    "> foo bar\n"))
     ))
 
 (defun fill-flowed-test ()

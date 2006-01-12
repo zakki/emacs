@@ -1,12 +1,12 @@
 ;;; longlines.el --- automatically wrap long lines
 
-;; Copyright (C) 2000, 2001, 2004, 2005 by Free Software Foundation, Inc.
+;; Copyright (C) 2000, 2001, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Authors:    Kai Grossjohann <Kai.Grossjohann@CS.Uni-Dortmund.DE>
 ;;             Alex Schroeder <alex@gnu.org>
 ;;             Chong Yidong <cyd@stupidchicken.com>
 ;; Maintainer: Chong Yidong <cyd@stupidchicken.com>
-;; Keywords: convenience
+;; Keywords: convenience, wp
 
 ;; This file is part of GNU Emacs.
 
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -60,7 +60,8 @@ with differing widths."
   :type 'boolean)
 
 (defcustom longlines-show-hard-newlines nil
-  "*Non-nil means each hard newline is marked with a symbol.
+  "*Non-nil means each hard newline is marked on the screen.
+\(The variable `longlines-show-effect' controls what they look like.)
 You can also enable the display temporarily, using the command
 `longlines-show-hard-newlines'"
   :group 'longlines
@@ -93,12 +94,12 @@ In Long Lines mode, long lines are wrapped if they extend beyond
 `fill-column'.  The soft newlines used for line wrapping will not
 show up when the text is yanked or saved to disk.
 
-If `longlines-auto-wrap' is non-nil, lines are automatically
+If the variable `longlines-auto-wrap' is non-nil, lines are automatically
 wrapped whenever the buffer is changed.  You can always call
 `fill-paragraph' to fill individual paragraphs.
 
-If `longlines-show-hard-newlines' is non-nil, hard newlines will
-be marked by a symbol."
+If the variable `longlines-show-hard-newlines' is non-nil, hard newlines
+are indicated with a symbol."
   :group 'longlines :lighter " ll"
   (if longlines-mode
       ;; Turn on longlines mode
@@ -107,7 +108,10 @@ be marked by a symbol."
         (set (make-local-variable 'require-final-newline) nil)
         (add-to-list 'buffer-file-format 'longlines)
         (add-hook 'change-major-mode-hook 'longlines-mode-off nil t)
+	(add-hook 'before-revert-hook 'longlines-before-revert-hook nil t)
         (make-local-variable 'buffer-substring-filters)
+	(set (make-local-variable 'isearch-search-fun-function)
+	     'longlines-search-function)
         (add-to-list 'buffer-substring-filters 'longlines-encode-string)
         (when longlines-wrap-follows-window-size
           (set (make-local-variable 'fill-column)
@@ -115,16 +119,36 @@ be marked by a symbol."
           (add-hook 'window-configuration-change-hook
                     'longlines-window-change-function nil t))
         (let ((buffer-undo-list t)
+              (inhibit-read-only t)
+	      (after-change-functions nil)
               (mod (buffer-modified-p)))
           ;; Turning off undo is OK since (spaces + newlines) is
           ;; conserved, except for a corner case in
           ;; longlines-wrap-lines that we'll never encounter from here
-          (longlines-decode-region (point-min) (point-max))
-          (longlines-wrap-region (point-min) (point-max))
+	  (save-restriction
+	    (widen)
+	    (longlines-decode-buffer)
+	    (longlines-wrap-region (point-min) (point-max)))
           (set-buffer-modified-p mod))
         (when (and longlines-show-hard-newlines
                    (not longlines-showing))
           (longlines-show-hard-newlines))
+
+	;; Hacks to make longlines play nice with various modes.
+	(cond ((eq major-mode 'mail-mode)
+	       (add-hook 'mail-setup-hook 'longlines-decode-buffer nil t)
+	       (or mail-citation-hook
+		   (add-hook 'mail-citation-hook 'mail-indent-citation nil t))
+	       (add-hook 'mail-citation-hook 'longlines-decode-region nil t))
+	      ((eq major-mode 'message-mode)
+	       (add-hook 'message-setup-hook 'longlines-decode-buffer nil t)
+	       (make-local-variable 'message-indent-citation-function)
+	       (if (not (listp message-indent-citation-function))
+		   (setq message-indent-citation-function
+			 (list message-indent-citation-function)))
+	       (add-to-list 'message-indent-citation-function
+			    'longlines-decode-region t)))
+
         (when longlines-auto-wrap
           (auto-fill-mode 0)
           (add-hook 'after-change-functions
@@ -135,15 +159,24 @@ be marked by a symbol."
     (setq buffer-file-format (delete 'longlines buffer-file-format))
     (if longlines-showing
         (longlines-unshow-hard-newlines))
-    (let ((buffer-undo-list t))
-      (longlines-encode-region (point-min) (point-max)))
+    (let ((buffer-undo-list t)
+	  (after-change-functions nil)
+          (inhibit-read-only t))
+      (save-restriction
+	(widen)
+	(longlines-encode-region (point-min) (point-max))))
     (remove-hook 'change-major-mode-hook 'longlines-mode-off t)
-    (remove-hook 'before-kill-functions 'longlines-encode-region t)
     (remove-hook 'after-change-functions 'longlines-after-change-function t)
     (remove-hook 'post-command-hook 'longlines-post-command-function t)
+    (remove-hook 'before-revert-hook 'longlines-before-revert-hook t)
     (remove-hook 'window-configuration-change-hook
                  'longlines-window-change-function t)
-    (kill-local-variable 'fill-column)))
+    (when longlines-wrap-follows-window-size
+      (kill-local-variable 'fill-column))
+    (kill-local-variable 'isearch-search-fun-function)
+    (kill-local-variable 'require-final-newline)
+    (kill-local-variable 'buffer-substring-filters)
+    (kill-local-variable 'use-hard-newlines)))
 
 (defun longlines-mode-off ()
   "Turn off longlines mode.
@@ -152,11 +185,6 @@ major mode changes."
   (longlines-mode 0))
 
 ;; Showing the effect of hard newlines in the buffer
-
-(defface longlines-visible-face
-  '((t (:background "red")))
-  "Face used to make hard newlines visible in `longlines-mode'."
-  :group 'longlines)
 
 (defun longlines-show-hard-newlines (&optional arg)
   "Make hard newlines visible by adding a face.
@@ -174,20 +202,20 @@ With optional argument ARG, make the hard newlines invisible again."
   "Make hard newlines between BEG and END visible."
   (let* ((pmin (min beg end))
          (pmax (max beg end))
-         (pos (text-property-any pmin pmax 'hard t)))
+         (pos (text-property-not-all pmin pmax 'hard nil)))
     (while pos
       (put-text-property pos (1+ pos) 'display
                          (copy-sequence longlines-show-effect))
-      (setq pos (text-property-any (1+ pos) pmax 'hard t)))))
+      (setq pos (text-property-not-all (1+ pos) pmax 'hard nil)))))
 
 (defun longlines-unshow-hard-newlines ()
   "Make hard newlines invisible again."
   (interactive)
   (setq longlines-showing nil)
-  (let ((pos (text-property-any (point-min) (point-max) 'hard t)))
+  (let ((pos (text-property-not-all (point-min) (point-max) 'hard nil)))
     (while pos
       (remove-text-properties pos (1+ pos) '(display))
-      (setq pos (text-property-any (1+ pos) (point-max) 'hard t)))))
+      (setq pos (text-property-not-all (1+ pos) (point-max) 'hard nil)))))
 
 ;; Wrapping the paragraphs.
 
@@ -211,23 +239,28 @@ end of the buffer."
 If wrapping is performed, point remains on the line.  If the line does
 not need to be wrapped, move point to the next line and return t."
   (if (longlines-set-breakpoint)
-      (progn (backward-char 1)
-             (delete-char 1)
-             (insert-char ?\n 1)
+      (progn (insert-before-markers ?\n)
+	     (backward-char 1)
+             (delete-char -1)
+	     (forward-char 1)
              nil)
     (if (longlines-merge-lines-p)
         (progn (end-of-line)
-               (delete-char 1)
      ;; After certain commands (e.g. kill-line), there may be two
      ;; successive soft newlines in the buffer.  In this case, we
      ;; replace these two newlines by a single space.  Unfortunately,
      ;; this breaks the conservation of (spaces + newlines), so we
      ;; have to fiddle with longlines-wrap-point.
-               (if (or (bolp) (eolp))
-                   (if (> longlines-wrap-point (point))
-                       (setq longlines-wrap-point
-                             (1- longlines-wrap-point)))
-                 (insert-char ?  1))
+	       (if (or (prog1 (bolp) (forward-char 1)) (eolp))
+		   (progn
+		     (delete-char -1)
+		     (if (> longlines-wrap-point (point))
+			 (setq longlines-wrap-point
+			       (1- longlines-wrap-point))))
+		 (insert-before-markers-and-inherit ?\ )
+		 (backward-char 1)
+		 (delete-char -1)
+		 (forward-char 1))
                nil)
       (forward-line 1)
       t)))
@@ -287,22 +320,31 @@ Otherwise, return nil.  Text cannot be moved across hard newlines."
                    (1+ (current-column)))
                  space))))))
 
-(defun longlines-decode-region (beg end)
-  "Turn all newlines between BEG and END into hard newlines."
+(defun longlines-decode-region (&optional beg end)
+  "Turn all newlines between BEG and END into hard newlines.
+If BEG and END are nil, the point and mark are used."
+  (if (null beg) (setq beg (point)))
+  (if (null end) (setq end (mark t)))
   (save-excursion
-    (goto-char (min beg end))
-    (while (search-forward "\n" (max beg end) t)
-      (set-hard-newline-properties
-       (match-beginning 0) (match-end 0)))))
+    (let ((reg-max (max beg end)))
+      (goto-char (min beg end))
+      (while (search-forward "\n" reg-max t)
+	(set-hard-newline-properties
+	 (match-beginning 0) (match-end 0))))))
+
+(defun longlines-decode-buffer ()
+  "Turn all newlines in the buffer into hard newlines."
+  (longlines-decode-region (point-min) (point-max)))
 
 (defun longlines-encode-region (beg end &optional buffer)
   "Replace each soft newline between BEG and END with exactly one space.
 Hard newlines are left intact.  The optional argument BUFFER exists for
 compatibility with `format-alist', and is ignored."
   (save-excursion
-    (let ((mod (buffer-modified-p)))
+    (let ((reg-max (max beg end))
+	  (mod (buffer-modified-p)))
       (goto-char (min beg end))
-      (while (search-forward "\n" (max (max beg end)) t)
+      (while (search-forward "\n" reg-max t)
         (unless (get-text-property (match-beginning 0) 'hard)
           (replace-match " ")))
       (set-buffer-modified-p mod)
@@ -379,12 +421,41 @@ This is called by `window-size-change-functions'."
       (longlines-wrap-region (point-min) (point-max))
       (set-buffer-modified-p mod))))
 
+;; Isearch
+
+(defun longlines-search-function ()
+  (cond
+   (isearch-word
+    (if isearch-forward 'word-search-forward 'word-search-backward))
+   (isearch-regexp
+    (if isearch-forward 're-search-forward 're-search-backward))
+   (t
+    (if isearch-forward
+	'longlines-search-forward
+      'longlines-search-backward))))
+
+(defun longlines-search-forward (string &optional bound noerror count)
+  (let ((search-spaces-regexp "[ \n]+"))
+    (re-search-forward (regexp-quote string) bound noerror count)))
+
+(defun longlines-search-backward (string &optional bound noerror count)
+  (let ((search-spaces-regexp "[ \n]+"))
+    (re-search-backward (regexp-quote string) bound noerror count)))
+
 ;; Loading and saving
+
+(defun longlines-before-revert-hook ()
+  (add-hook 'after-revert-hook 'longlines-after-revert-hook nil t)
+  (longlines-mode 0))
+
+(defun longlines-after-revert-hook ()
+  (remove-hook 'after-revert-hook 'longlines-after-revert-hook t)
+  (longlines-mode 1))
 
 (add-to-list
  'format-alist
- (list 'longlines "Automatically wrap long lines." nil
-       'longlines-decode-region 'longlines-encode-region t nil))
+ (list 'longlines "Automatically wrap long lines." nil nil
+       'longlines-encode-region t nil))
 
 (provide 'longlines)
 

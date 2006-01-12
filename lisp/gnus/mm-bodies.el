@@ -1,7 +1,7 @@
 ;;; mm-bodies.el --- Functions for decoding MIME things
 
-;; Copyright (C) 1998, 1999, 2000, 2001, 2003, 2004
-;;        Free Software Foundation, Inc.
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;;	MORIOKA Tomohiko <morioka@jaist.ac.jp>
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -95,7 +95,8 @@ If no encoding was done, nil is returned."
     (save-excursion
       (if charset
 	  (progn
-	    (mm-encode-coding-region (point-min) (point-max) charset)
+	    (mm-encode-coding-region (point-min) (point-max)
+				     (mm-charset-to-coding-system charset))
 	    charset)
 	(goto-char (point-min))
 	(let ((charsets (mm-find-mime-charset-region (point-min) (point-max)
@@ -226,8 +227,9 @@ If TYPE is `text/plain' CRLF->LF translation may occur."
 	 (message "Error while decoding: %s" error)
 	 nil))
     (when (and
+	   type
 	   (memq encoding '(base64 x-uuencode x-uue x-binhex x-yenc))
-	   (equal type "text/plain"))
+	   (string-match "\\`text/" type))
       (goto-char (point-min))
       (while (search-forward "\r\n" nil t)
 	(replace-match "\n" t t)))))

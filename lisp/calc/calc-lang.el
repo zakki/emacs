@@ -1,6 +1,7 @@
 ;;; calc-lang.el --- calc language functions
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -353,10 +354,10 @@
      ( "\\times"  *		   191 190 )
      ( "*"        *		   191 190 )
      ( "2x"	  *		   191 190 )
+     ( "/"	  /		   185 186 )
      ( "+"	  +		   180 181 )
      ( "-"	  -		   180 181 )
      ( "\\over"	  /		   170 171 )
-     ( "/"	  /		   170 171 )
      ( "\\choose" calcFunc-choose  170 171 )
      ( "\\mod"	  %		   170 171 )
      ( "<"	  calcFunc-lt	   160 161 )

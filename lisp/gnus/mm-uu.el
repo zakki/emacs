@@ -1,5 +1,7 @@
 ;;; mm-uu.el --- Return uu stuff as mm handles
-;; Copyright (c) 1998, 1999, 2000, 2001, 2002, 2003 Free Software Foundation, Inc.
+
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Shenghuo Zhu <zsh@cs.rochester.edu>
 ;; Keywords: postscript uudecode binhex shar forward gnatsweb pgp
@@ -18,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -75,11 +77,15 @@ decoder, such as hexbin."
   "The default disposition of uu parts.
 This can be either \"inline\" or \"attachment\".")
 
-(defvar mm-uu-emacs-sources-regexp "gnu\\.emacs\\.sources"
-  "The regexp of Emacs sources groups.")
+(defcustom mm-uu-emacs-sources-regexp "\\.emacs\\.sources"
+  "The regexp of Emacs sources groups."
+  :version "22.1"
+  :type 'regexp
+  :group 'gnus-article-mime)
 
-(defcustom mm-uu-diff-groups-regexp "gnus\\.commits"
-  "*Regexp matching diff groups."
+(defcustom mm-uu-diff-groups-regexp
+  "\\(gmane\\|gnu\\)\\..*\\(diff\\|commit\\|cvs\\|bug\\|devel\\)"
+  "Regexp matching diff groups."
   :version "22.1"
   :type 'regexp
   :group 'gnus-article-mime)
@@ -111,8 +117,8 @@ This can be either \"inline\" or \"attachment\".")
      "^exit 0$"
      mm-uu-shar-extract)
     (forward
-;;; Thanks to Edward J. Sabol <sabol@alderaan.gsfc.nasa.gov> and
-;;; Peter von der Ah\'e <pahe@daimi.au.dk>
+     ;; Thanks to Edward J. Sabol <sabol@alderaan.gsfc.nasa.gov> and
+     ;; Peter von der Ah\'e <pahe@daimi.au.dk>
      "^-+ \\(Start of \\)?Forwarded message"
      "^-+ End \\(of \\)?forwarded message"
      mm-uu-forward-extract
@@ -151,7 +157,12 @@ This can be either \"inline\" or \"attachment\".")
      nil
      mm-uu-diff-extract
      nil
-     mm-uu-diff-test)))
+     mm-uu-diff-test))
+  "A list of specifications for non-MIME attachments.
+Each element consist of the following entries: label,
+start-regexp, end-regexp, extract-function, test-function.
+
+After modifying this list you must run \\[mm-uu-configure].")
 
 (defcustom mm-uu-configure-list '((shar . disabled))
   "A list of mm-uu configuration.
@@ -186,13 +197,12 @@ To disable dissecting shar codes, for instance, add
 (defun mm-uu-copy-to-buffer (&optional from to)
   "Copy the contents of the current buffer to a fresh buffer.
 Return that buffer."
-  (save-excursion
-    (let ((obuf (current-buffer))
-	  (coding-system
-	   ;; Might not exist in non-MULE XEmacs
-	   (when (boundp 'buffer-file-coding-system)
-	     buffer-file-coding-system)))
-      (set-buffer (generate-new-buffer " *mm-uu*"))
+  (let ((obuf (current-buffer))
+        (coding-system
+         ;; Might not exist in non-MULE XEmacs
+         (when (boundp 'buffer-file-coding-system)
+           buffer-file-coding-system)))
+    (with-current-buffer (generate-new-buffer " *mm-uu*")
       (setq buffer-file-coding-system coding-system)
       (insert-buffer-substring obuf from to)
       (current-buffer))))
@@ -201,6 +211,8 @@ Return that buffer."
   (member (cons key val) mm-uu-configure-list))
 
 (defun mm-uu-configure (&optional symbol value)
+  "Configure detection of non-MIME attachments."
+  (interactive)
   (if symbol (set-default symbol value))
   (setq mm-uu-beginning-regexp nil)
   (mapcar (lambda (entry)
@@ -496,5 +508,5 @@ Return that buffer."
 
 (provide 'mm-uu)
 
-;;; arch-tag: 7db076bf-53db-4320-aa19-ca76a1d2ab2c
+;; arch-tag: 7db076bf-53db-4320-aa19-ca76a1d2ab2c
 ;;; mm-uu.el ends here

@@ -1,12 +1,12 @@
 ;;; table.el --- create and edit WYSIWYG text based embedded tables
 
-;; Copyright (C) 2000, 2001, 2002, 2003, 2004, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Keywords: wp, convenience
 ;; Author: Takaaki Ota <Takaaki.Ota@am.sony.com>
 ;; Created: Sat Jul 08 2000 13:28:45 (PST)
-;; Revised: Fri Mar 18 2005 13:50:13 (PST)
+;; Revised: Sat Aug 06 2005 19:42:54 (CEST)
 
 ;; This file is part of GNU Emacs.
 
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -650,7 +650,7 @@ See `table-insert' for examples about how to use."
   :version "22.1")
 
 (defgroup table-hooks nil
-  "Hooks for table manipulation utilities"
+  "Hooks for table manipulation utilities."
   :group 'table)
 
 (defcustom table-time-before-update 0.2
@@ -682,7 +682,7 @@ height."
   :tag "Table Command Prefix"
   :group 'table)
 
-(defface table-cell-face
+(defface table-cell
   '((((min-colors 88) (class color))
      (:foreground "gray90" :background "blue1"))
     (((class color))
@@ -841,9 +841,8 @@ simply by any key input."
   :type 'hook
   :group 'table-hooks)
 
-(defcustom table-yank-handler '(nil nil t nil)
-  "*yank-handler for table."
-  :group 'table)
+(defvar table-yank-handler '(nil nil t nil)
+  "Yank handler for tables.")
 
 (setplist 'table-disable-incompatibility-warning nil)
 
@@ -1676,7 +1675,7 @@ Inside a table cell has a special keymap.
       (setq i 0)
       (while (< i columns)
 	(let ((beg (point)))
-	  (insert (make-string (car cw) ?\ ))
+	  (insert (make-string (car cw) ?\s))
 	  (insert table-cell-vertical-char)
 	  (table--put-cell-line-property beg (1- (point))))
 	(if (cdr cw) (setq cw (cdr cw)))
@@ -2245,7 +2244,7 @@ table structure."
 	     (end (table--goto-coordinate (cons (cadr this) bottom-border-y)))
 	     (rect (extract-rectangle beg end))
 	     (height (+ (- (cddr this) (cdar this)) 1))
-	     (blank-line (make-string (- (cadr this) (caar this)) ?\ )))
+	     (blank-line (make-string (- (cadr this) (caar this)) ?\s)))
 	;; delete lines from the bottom of the cell
 	(setcdr (nthcdr (- height bottom-budget 1) rect) (nthcdr height rect))
 	;; delete lines from the top of the cell
@@ -3361,7 +3360,7 @@ Currently this method is for LaTeX only."
 		       ;; insert a column separator and column/multicolumn contents
 		       (with-current-buffer dest-buffer
 			 (unless first-p
-			   (insert (if (eq (char-before) ?\ ) "" " ") "& "))
+			   (insert (if (eq (char-before) ?\s) "" " ") "& "))
 			 (if (> span 1)
 			     (insert (format "\\multicolumn{%d}{%sl|}{%s}" span (if first-p "|" "") line))
 			   (insert line)))
@@ -3377,7 +3376,7 @@ Currently this method is for LaTeX only."
 	      (setq i (1+ i)))
 	    (funcall insert-column start x1))
 	  (with-current-buffer dest-buffer
-	    (insert (if (eq (char-before) ?\ ) "" " ") "\\\\\n"))))
+	    (insert (if (eq (char-before) ?\s) "" " ") "\\\\\n"))))
       (setq y (1+ y)))
     (with-current-buffer dest-buffer
       (insert "\\hline\n"))
@@ -3532,7 +3531,7 @@ consists from cells of same height."
     ;; insert the remaining area while appending blank lines below it
     (table--insert-rectangle
      (append rect (make-list (+ 2 (- (cdr rb-coord) (cdr lu-coord)))
-			     (make-string (+ 2 (- (car rb-coord) (car lu-coord))) ?\ ))))
+			     (make-string (+ 2 (- (car rb-coord) (car lu-coord))) ?\s))))
     ;; remove the appended blank lines below the table if they are unnecessary
     (table--goto-coordinate (cons 0 (- (cdr bt-coord) (- (cdr rb-coord) (cdr lu-coord)))))
     (table--remove-blank-lines (+ 2 (- (cdr rb-coord) (cdr lu-coord))))
@@ -4012,7 +4011,7 @@ converts a table into plain text without frames.  It is a companion to
 		      (unless (eolp)
 			(delete-char 1)))
 		  (delete-char -1)
-		  (insert ?\ )
+		  (insert ?\s)
 		  (forward-char -1)))
 	      (setq n (1+ n)))
 	    (setq table-inhibit-auto-fill-paragraph t))
@@ -4444,16 +4443,16 @@ Replace frame characters with spaces."
 		     (move-to-column col)
 		     (table--spacify-frame))))
 	    (delete-char 1)
-	    (insert-before-markers ?\ ))
+	    (insert-before-markers ?\s))
 	   ((table--cell-horizontal-char-p (char-after))
 	    (while (progn
 		     (delete-char 1)
-		     (insert-before-markers ?\ )
+		     (insert-before-markers ?\s)
 		     (table--cell-horizontal-char-p (char-after)))))
 	   ((eq (char-after) table-cell-vertical-char)
 	    (while (let ((col (current-column)))
 		     (delete-char 1)
-		     (insert-before-markers ?\ )
+		     (insert-before-markers ?\s)
 		     (and (zerop (forward-line 1))
 			  (zerop (current-column))
 			  (move-to-column col)
@@ -4609,7 +4608,7 @@ list.  This list can be any vertical list within the table."
 		(table--untabify-line)
 		(delete-char columns-to-extend))
 	    (table--untabify-line (point))
-	    (insert (make-string columns-to-extend ?\ )))
+	    (insert (make-string columns-to-extend ?\s)))
 	  (setcdr coord (1- (cdr coord)))))
       (table--goto-coordinate (caar (last top-to-bottom-coord-list)))
       (let ((coord (table--get-coordinate (cdr (table--horizontal-cell-list nil 'first-only 'bottom)))))
@@ -4623,7 +4622,7 @@ list.  This list can be any vertical list within the table."
 		(table--untabify-line)
 		(delete-char columns-to-extend))
 	    (table--untabify-line (point))
-	    (insert (make-string columns-to-extend ?\ )))
+	    (insert (make-string columns-to-extend ?\s)))
 	  (setcdr coord (1+ (cdr coord)))))
       (while (<= (cdr beg-coord) (cdr end-coord))
 	(table--untabify-line (table--goto-coordinate beg-coord 'no-extension))
@@ -4852,7 +4851,7 @@ in the list."
 	      (insert char)
 	      (unless (eolp)
 		(delete-char 1))))
-	(if (not (eq char ?\ ))
+	(if (not (eq char ?\s))
 	    (if char (insert char))
 	  (if (not (looking-at "\\s *$"))
 	      (if (and table-fixed-width-mode
@@ -5264,7 +5263,7 @@ and the right cell border character."
 
 (defun table--put-cell-face-property (beg end &optional object)
   "Put cell face property."
-  (put-text-property beg end 'face 'table-cell-face object))
+  (put-text-property beg end 'face 'table-cell object))
 
 (defun table--put-cell-keymap-property (beg end &optional object)
   "Put cell keymap property."
@@ -5303,8 +5302,8 @@ instead of the current buffer and returns the OBJECT."
 (defun table--update-cell-face ()
   "Update cell face according to the current mode."
   (if (featurep 'xemacs)
-      (set-face-property 'table-cell-face 'underline table-fixed-width-mode)
-    (set-face-inverse-video-p 'table-cell-face table-fixed-width-mode)))
+      (set-face-property 'table-cell 'underline table-fixed-width-mode)
+    (set-face-inverse-video-p 'table-cell table-fixed-width-mode)))
 
 (table--update-cell-face)
 
@@ -5396,7 +5395,7 @@ works better than the previous versions however not fully compatible.
 
 (defun table--cell-blank-str (&optional n)
   "Return blank table cell string of length N."
-  (let ((str (make-string (or n 1) ?\ )))
+  (let ((str (make-string (or n 1) ?\s)))
     (table--put-cell-content-property 0 (length str) str)
     str))
 
@@ -5479,7 +5478,7 @@ chopped location is indicated with table-word-continuation-char."
 	     (and (zerop (forward-line 1))
 		  (< (point) end)))
 	    (t (forward-char -1)
-	       (insert-before-markers (if (equal (char-before) ?\ ) ?\  table-word-continuation-char)
+	       (insert-before-markers (if (equal (char-before) ?\s) ?\s table-word-continuation-char)
 				      "\n")
 	       t)))))
 

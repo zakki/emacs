@@ -1,6 +1,7 @@
 ;;; make-mode.el --- makefile editing commands for Emacs
 
-;; Copyright (C) 1992,94,99,2000,2001, 2002, 2003  Free Software Foundation, Inc.
+;; Copyright (C) 1992, 1994, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Thomas Neumann <tom@smart.bo.open.de>
 ;;	Eric S. Raymond <esr@snark.thyrsus.com>
@@ -22,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -96,39 +97,37 @@
 
 (defgroup makefile nil
   "Makefile editing commands for Emacs."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'tools
   :prefix "makefile-")
 
-(defface makefile-space-face
+(defface makefile-space
   '((((class color)) (:background  "hotpink"))
     (t (:reverse-video t)))
   "Face to use for highlighting leading spaces in Font-Lock mode."
-  :group 'faces
   :group 'makefile)
+(put 'makefile-space-face 'face-alias 'makefile-space)
 
-(defface makefile-targets-face
+(defface makefile-targets
   ;; This needs to go along both with foreground and background colors (i.e. shell)
-  '((t (:underline t)))
+  '((t (:inherit font-lock-function-name-face)))
   "Face to use for additionally highlighting rule targets in Font-Lock mode."
-  :group 'faces
   :group 'makefile
   :version "22.1")
 
-(defface makefile-shell-face
-  '((((class color) (background light)) (:background  "seashell1"))
-    (((class color) (background dark)) (:background  "seashell4"))
-    (t (:reverse-video t)))
+(defface makefile-shell
+  ()
+  ;;'((((class color) (min-colors 88) (background light)) (:background  "seashell1"))
+  ;;  (((class color) (min-colors 88) (background dark)) (:background  "seashell4")))
   "Face to use for additionally highlighting Shell commands in Font-Lock mode."
-  :group 'faces
   :group 'makefile
   :version "22.1")
 
-(defface makefile-makepp-perl-face
+(defface makefile-makepp-perl
   '((((class color) (background light)) (:background  "LightBlue1")) ; Camel Book
     (((class color) (background dark)) (:background  "DarkBlue"))
     (t (:reverse-video t)))
   "Face to use for additionally highlighting Perl code in Font-Lock mode."
-  :group 'faces
   :group 'makefile
   :version "22.1")
 
@@ -262,7 +261,7 @@ not be enclosed in { } or ( )."
 ;; index in makefile-imenu-generic-expression.
 (defvar makefile-dependency-regex
   ;; Allow for two nested levels $(v1:$(v2:$(v3:a=b)=c)=d)
-  "^ *\\(\\(?: *\\$\\(?:[({]\\(?:\\$\\(?:[({]\\(?:\\$\\(?:[^({]\\|.[^\n$#})]+?[})]\\)\\|[^\n$#)}]\\)+?[})]\\|[^({]\\)\\|[^\n$#)}]\\)+?[})]\\|[^({]\\)\\| *[^ \n$#:=]+\\)+?\\)[ \t]*\\(:\\)\\(?:[ \t]*$\\|[^=\n]\\(?:[^#\n]*?;[ \t]*\\(.+\\)\\)?\\)"
+  "^\\(\\(?:\\$\\(?:[({]\\(?:\\$\\(?:[({]\\(?:\\$\\(?:[^({]\\|.[^\n$#})]+?[})]\\)\\|[^\n$#)}]\\)+?[})]\\|[^({]\\)\\|[^\n$#)}]\\)+?[})]\\|[^({]\\)\\|[^\n$#:=]\\)+?\\)\\(:\\)\\(?:[ \t]*$\\|[^=\n]\\(?:[^#\n]*?;[ \t]*\\(.+\\)\\)?\\)"
   "Regex used to find dependency lines in a makefile.")
 
 (defconst makefile-bsdmake-dependency-regex
@@ -291,7 +290,7 @@ not be enclosed in { } or ( )."
 ;; that if you change this regexp you might have to fix the imenu index in
 ;; makefile-imenu-generic-expression.
 (defconst makefile-macroassign-regex
-  "^ *\\([^ \n\t][^:#= \t\n]*\\)[ \t]*\\(?:!=[ \t]*\\(\\(?:.+\\\\\n\\)*.+\\)\\|[*:+]?[:?]?=[ \t]*\\(\\(?:.*\\\\\n\\)*.*\\)\\)"
+  "^ *\\([^ \n\t][^:#= \t\n]*\\)[ \t]*\\(?:!=\\|[*:+]?[:?]?=\\)"
   "Regex used to find macro assignment lines in a makefile.")
 
 (defconst makefile-var-use-regex
@@ -303,8 +302,8 @@ not be enclosed in { } or ( )."
   "Regex for filenames that will NOT be included in the target list.")
 
 (if (fboundp 'facemenu-unlisted-faces)
-    (add-to-list 'facemenu-unlisted-faces 'makefile-space-face))
-(defvar makefile-space-face 'makefile-space-face
+    (add-to-list 'facemenu-unlisted-faces 'makefile-space))
+(defvar makefile-space 'makefile-space
   "Face to use for highlighting leading spaces in Font-Lock mode.")
 
 ;; These lists were inspired by the old solution.  But they are silly, because
@@ -349,14 +348,14 @@ not be enclosed in { } or ( )."
     (,makefile-macroassign-regex
      (1 font-lock-variable-name-face)
      ;; This is for after !=
-     (2 'makefile-shell-face prepend t)
+     (2 'makefile-shell prepend t)
      ;; This is for after normal assignment
      (3 'font-lock-string-face prepend t))
 
     ;; Rule actions.
     (makefile-match-action
      (1 font-lock-type-face)
-     (2 'makefile-shell-face prepend)
+     (2 'makefile-shell prepend)
      ;; Only makepp has builtin commands.
      (3 font-lock-builtin-face prepend t))
 
@@ -368,7 +367,7 @@ not be enclosed in { } or ( )."
     ("[^$]\\$\\([@%<?^+*_]\\|[a-zA-Z0-9]\\>\\)"
      1 font-lock-constant-face prepend)
     ("[^$]\\(\\$[@%*]\\)"
-     1 'makefile-targets-face prepend)
+     1 'makefile-targets append)
 
     ;; Fontify conditionals and includes.
     (,(concat "^\\(?: [ \t]*\\)?"
@@ -383,22 +382,22 @@ not be enclosed in { } or ( )."
     ,@(if space
 	  '(;; Highlight lines that contain just whitespace.
 	    ;; They can cause trouble, especially if they start with a tab.
-	    ("^[ \t]+$" . makefile-space-face)
+	    ("^[ \t]+$" . makefile-space)
 
 	    ;; Highlight shell comments that Make treats as commands,
 	    ;; since these can fool people.
-	    ("^\t+#" 0 makefile-space-face t)
+	    ("^\t+#" 0 makefile-space t)
 
 	    ;; Highlight spaces that precede tabs.
 	    ;; They can make a tab fail to be effective.
-	    ("^\\( +\\)\t" 1 makefile-space-face)))
+	    ("^\\( +\\)\t" 1 makefile-space)))
 
     ,@font-lock-keywords
 
     ;; Do dependencies.
     (makefile-match-dependency
-     (1 'makefile-targets-face prepend)
-     (3 'makefile-shell-face prepend t))))
+     (1 'makefile-targets prepend)
+     (3 'makefile-shell prepend t))))
 
 (defconst makefile-font-lock-keywords
   (makefile-make-font-lock-keywords
@@ -420,7 +419,7 @@ not be enclosed in { } or ( )."
    "^\\(?: [ \t]*\\)?if\\(n\\)\\(?:def\\|eq\\)\\>"
 
    '("[^$]\\(\\$[({][@%*][DF][})]\\)"
-     1 'makefile-targets-face prepend)
+     1 'makefile-targets append)
 
    ;; $(function ...) ${function ...}
    '("[^$]\\$[({]\\([-a-zA-Z0-9_.]+\\s \\)"
@@ -429,7 +428,7 @@ not be enclosed in { } or ( )."
    ;; $(shell ...) ${shell ...}
    '("[^$]\\$\\([({]\\)shell[ \t]+"
      makefile-match-function-end nil nil
-     (1 'makefile-shell-face prepend t))))
+     (1 'makefile-shell prepend t))))
 
 (defconst makefile-makepp-font-lock-keywords
   (makefile-make-font-lock-keywords
@@ -439,7 +438,7 @@ not be enclosed in { } or ( )."
    "^\\(?: [ \t]*\\)?\\(?:and[ \t]+\\|else[ \t]+\\|or[ \t]+\\)?if\\(n\\)\\(?:def\\|eq\\|sys\\)\\>"
 
    '("[^$]\\(\\$[({]\\(?:output\\|stem\\|target\\)s?\\_>.*?[})]\\)"
-     1 'makefile-targets-face prepend)
+     1 'makefile-targets append)
 
    ;; Colon modifier keywords.
    '("\\(:\\s *\\)\\(build_c\\(?:ache\\|heck\\)\\|env\\(?:ironment\\)?\\|foreach\\|signature\\|scanner\\|quickscan\\|smartscan\\)\\>\\([^:\n]*\\)"
@@ -454,32 +453,32 @@ not be enclosed in { } or ( )."
    ;; $(shell ...) $((shell ...)) ${shell ...} ${{shell ...}}
    '("[^$]\\$\\(((?\\|{{?\\)shell\\(?:[-_]\\(?:global[-_]\\)?once\\)?[ \t]+"
      makefile-match-function-end nil nil
-     (1 'makefile-shell-face prepend t))
+     (1 'makefile-shell prepend t))
 
    ;; $(perl ...) $((perl ...)) ${perl ...} ${{perl ...}}
    '("[^$]\\$\\(((?\\|{{?\\)makeperl[ \t]+"
      makefile-match-function-end nil nil
-     (1 'makefile-makepp-perl-face prepend t))
+     (1 'makefile-makepp-perl prepend t))
    '("[^$]\\$\\(((?\\|{{?\\)perl[ \t]+"
      makefile-match-function-end nil nil
-     (1 'makefile-makepp-perl-face t t))
+     (1 'makefile-makepp-perl t t))
 
    ;; Can we unify these with (if (match-end 1) 'prepend t)?
-   '("ifmakeperl\\s +\\(.*\\)" 1 'makefile-makepp-perl-face prepend)
-   '("ifperl\\s +\\(.*\\)" 1 'makefile-makepp-perl-face t)
+   '("ifmakeperl\\s +\\(.*\\)" 1 'makefile-makepp-perl prepend)
+   '("ifperl\\s +\\(.*\\)" 1 'makefile-makepp-perl t)
 
    ;; Perl block single- or multiline, as statement or rule action.
    ;; Don't know why the initial newline in 2nd variant of group 2 doesn't get skipped.
    '("\\<make\\(?:perl\\|sub\\s +\\S +\\)\\s *\n?\\s *{\\(?:{\\s *\n?\\(\\(?:.*\n\\)+?\\)\\s *}\\|\\s *\\(\\(?:.*?\\|\n?\\(?:.*\n\\)+?\\)\\)\\)}"
-     (1 'makefile-makepp-perl-face prepend t)
-     (2 'makefile-makepp-perl-face prepend t))
+     (1 'makefile-makepp-perl prepend t)
+     (2 'makefile-makepp-perl prepend t))
    '("\\<\\(?:perl\\|sub\\s +\\S +\\)\\s *\n?\\s *{\\(?:{\\s *\n?\\(\\(?:.*\n\\)+?\\)\\s *}\\|\\s *\\(\\(?:.*?\\|\n?\\(?:.*\n\\)+?\\)\\)\\)}"
-     (1 'makefile-makepp-perl-face t t)
-     (2 'makefile-makepp-perl-face t t))
+     (1 'makefile-makepp-perl t t)
+     (2 'makefile-makepp-perl t t))
 
    ;; Statement style perl block.
    '("perl[-_]begin\\s *\\(?:\\s #.*\\)?\n\\(\\(?:.*\n\\)+?\\)\\s *perl[-_]end\\>"
-     1 'makefile-makepp-perl-face t)))
+     1 'makefile-makepp-perl t)))
 
 (defconst makefile-bsdmake-font-lock-keywords
   (makefile-make-font-lock-keywords
@@ -912,6 +911,8 @@ Makefile mode can be configured by modifying the following variables:
 	      (backward-char))
 	    (get-text-property (point) 'face)
 	    (beginning-of-line)
+	    (if (> (point) (+ (point-min) 2))
+		(eq (char-before (1- (point))) ?\\))
 	    (if (looking-at makefile-dependency-regex)
 		(throw 'found t))))
       (goto-char pt)
@@ -1172,7 +1173,7 @@ The context determines which are considered."
 	(message "Making completion list...")
 	(let ((list (all-completions try table)))
 	  (with-output-to-temp-buffer "*Completions*"
-	    (display-completion-list list)))
+	    (display-completion-list list try)))
 	(message "Making completion list...done"))))))
 
 
@@ -1701,9 +1702,24 @@ matched in a rule action."
 	(forward-char)
 	(or (eq (char-after) ?=)
 	    (get-text-property (1- (point)) 'face)
+	    (if (> (line-beginning-position) (+ (point-min) 2))
+		(eq (char-before (line-end-position 0)) ?\\))
 	    (when (save-excursion
 		    (beginning-of-line)
 		    (looking-at makefile-dependency-regex))
+	      (save-excursion
+		(let ((deps-end (match-end 1))
+		      (match-data (match-data)))
+		  (goto-char deps-end)
+		  (skip-chars-backward " \t")
+		  (setq deps-end (point))
+		  (beginning-of-line)
+		  (skip-chars-forward " \t")
+		  ;; Alter the bounds recorded for subexp 1,
+		  ;; which is what is supposed to match the targets.
+		  (setcar (nthcdr 2 match-data) (point))
+		  (setcar (nthcdr 3 match-data) deps-end)
+		  (store-match-data match-data)))
 	      (end-of-line)
 	      (throw 'found (point)))))
       (goto-char pt))
@@ -1814,6 +1830,10 @@ If it isn't in one, return nil."
 		      ;; Don't keep looking across a blank line or comment.
 		      (looking-at "$\\|#")
 		      (not (zerop (forward-line -1))))))
+      ;; Remove leading and trailing whitespace.
+      (when found
+	(setq found (replace-regexp-in-string "[ \t]+\\'" "" found))
+	(setq found (replace-regexp-in-string "\\`[ \t]+" "" found)))
       found)))
 
 (provide 'make-mode)

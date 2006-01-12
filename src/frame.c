@@ -1,6 +1,6 @@
 /* Generic frame functions.
-   Copyright (C) 1993, 1994, 1995, 1997, 1999, 2000, 2001, 2003, 2004, 2005
-   Free Software Foundation.
+   Copyright (C) 1993, 1994, 1995, 1997, 1999, 2000, 2001, 2002, 2003,
+                 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 
@@ -399,7 +399,7 @@ make_frame_without_minibuffer (mini_window, kb, display)
 #ifdef MULTI_KBOARD
   if (!NILP (mini_window)
       && XFRAME (XWINDOW (mini_window)->frame)->kboard != kb)
-    error ("frame and minibuffer must be on the same display");
+    error ("Frame and minibuffer must be on the same display");
 #endif
 
   /* Make a frame containing just a root window.  */
@@ -729,7 +729,7 @@ do_switch_frame (frame, track, for_deletion)
   return frame;
 }
 
-DEFUN ("select-frame", Fselect_frame, Sselect_frame, 1, 2, "e",
+DEFUN ("select-frame", Fselect_frame, Sselect_frame, 1, 1, "e",
        doc: /* Select the frame FRAME.
 Subsequent editing commands apply to its selected window.
 The selection of FRAME lasts until the next time the user does
@@ -740,14 +740,14 @@ the command loop, because it still may have the window system's input
 focus.  On a text-only terminal, the next redisplay will display FRAME.
 
 This function returns FRAME, or nil if FRAME has been deleted.  */)
-  (frame, no_enter)
-    Lisp_Object frame, no_enter;
+  (frame)
+    Lisp_Object frame;
 {
   return do_switch_frame (frame, 1, 0);
 }
 
 
-DEFUN ("handle-switch-frame", Fhandle_switch_frame, Shandle_switch_frame, 1, 2, "e",
+DEFUN ("handle-switch-frame", Fhandle_switch_frame, Shandle_switch_frame, 1, 1, "e",
        doc: /* Handle a switch-frame event EVENT.
 Switch-frame events are usually bound to this function.
 A switch-frame event tells Emacs that the window manager has requested
@@ -756,8 +756,8 @@ This function selects the selected window of the frame of EVENT.
 
 If EVENT is frame object, handle it as if it were a switch-frame event
 to that frame.  */)
-     (event, no_enter)
-     Lisp_Object event, no_enter;
+     (event)
+     Lisp_Object event;
 {
   /* Preserve prefix arg that the command loop just cleared.  */
   current_kboard->Vprefix_arg = Vcurrent_prefix_arg;
@@ -901,7 +901,7 @@ DEFUN ("frame-list", Fframe_list, Sframe_list,
    If MINIBUF is 0, include all visible and iconified frames.
    Otherwise, include all frames.  */
 
-Lisp_Object
+static Lisp_Object
 next_frame (frame, minibuf)
      Lisp_Object frame;
      Lisp_Object minibuf;
@@ -978,7 +978,7 @@ next_frame (frame, minibuf)
    If MINIBUF is 0, include all visible and iconified frames.
    Otherwise, include all frames.  */
 
-Lisp_Object
+static Lisp_Object
 prev_frame (frame, minibuf)
      Lisp_Object frame;
      Lisp_Object minibuf;
@@ -1530,7 +1530,7 @@ before calling this function on it, like this.
 #if defined (MSDOS) && defined (HAVE_MOUSE)
   if (FRAME_MSDOS_P (XFRAME (frame)))
     {
-      Fselect_frame (frame, Qnil);
+      Fselect_frame (frame);
       mouse_moveto (XINT (x), XINT (y));
     }
 #endif
@@ -1562,7 +1562,7 @@ before calling this function on it, like this.
 #if defined (MSDOS) && defined (HAVE_MOUSE)
   if (FRAME_MSDOS_P (XFRAME (frame)))
     {
-      Fselect_frame (frame, Qnil);
+      Fselect_frame (frame);
       mouse_moveto (XINT (x), XINT (y));
     }
 #endif
@@ -1684,7 +1684,7 @@ If omitted, FRAME defaults to the currently selected frame.  */)
 #if 0 /* This isn't logically necessary, and it can do GC.  */
   /* Don't let the frame remain selected.  */
   if (EQ (frame, selected_frame))
-    Fhandle_switch_frame (next_frame (frame, Qt), Qnil);
+    Fhandle_switch_frame (next_frame (frame, Qt));
 #endif
 
   /* Don't allow minibuf_window to remain on a deleted frame.  */
@@ -1813,7 +1813,7 @@ Focus redirection is useful for temporarily redirecting keystrokes to
 a surrogate minibuffer frame when a frame doesn't have its own
 minibuffer window.
 
-A frame's focus redirection can be changed by select-frame.  If frame
+A frame's focus redirection can be changed by `select-frame'.  If frame
 FOO is selected, and then a different frame BAR is selected, any
 frames redirecting their focus to FOO are shifted to redirect their
 focus to BAR.  This allows focus redirection to work properly when the
@@ -1821,7 +1821,7 @@ user switches from one frame to another using `select-window'.
 
 This means that a frame whose focus is redirected to itself is treated
 differently from a frame whose focus is redirected to nil; the former
-is affected by select-frame, while the latter is not.
+is affected by `select-frame', while the latter is not.
 
 The redirection lasts until `redirect-frame-focus' is called to change it.  */)
      (frame, focus_frame)
@@ -1952,7 +1952,7 @@ frame_name_fnn_p (str, len)
 /* Set the name of the terminal frame.  Also used by MSDOS frames.
    Modeled after x_set_name which is used for WINDOW frames.  */
 
-void
+static void
 set_term_frame_name (f, name)
      struct frame *f;
      Lisp_Object name;
@@ -2313,6 +2313,12 @@ enabled such bindings for that variable with `make-variable-frame-local'.  */)
 	  prop = parms[i];
 	  val = values[i];
 	  store_frame_param (f, prop, val);
+
+	  /* Changing the background color might change the background
+	     mode, so that we have to load new defface specs.
+	     Call frame-set-background-mode to do that.  */
+	  if (EQ (prop, Qbackground_color))
+	    call1 (Qframe_set_background_mode, frame);
 	}
     }
 
@@ -2347,8 +2353,7 @@ DEFUN ("frame-char-width", Fframe_char_width, Sframe_char_width,
        0, 1, 0,
        doc: /* Width in pixels of characters in the font in frame FRAME.
 If FRAME is omitted, the selected frame is used.
-The width is the same for all characters, because
-currently Emacs supports only fixed-width fonts.
+On a graphical screen, the width is the standard width of the default font.
 For a terminal screen, the value is always 1.  */)
      (frame)
      Lisp_Object frame;
@@ -3368,7 +3373,7 @@ extern char *x_get_string_resource P_ ((XrmDatabase, char *, char *));
 extern Display_Info *check_x_display_info P_ ((Lisp_Object));
 
 
-/* Get specified attribute from resource database RDB.  
+/* Get specified attribute from resource database RDB.
    See Fx_get_resource below for other parameters.  */
 
 static Lisp_Object
@@ -3505,7 +3510,7 @@ x_get_resource_string (attribute, class)
 
 Lisp_Object
 x_get_arg (dpyinfo, alist, param, attribute, class, type)
-     Display_Info *dpyinfo; 
+     Display_Info *dpyinfo;
      Lisp_Object alist, param;
      char *attribute;
      char *class;

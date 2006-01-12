@@ -1,6 +1,7 @@
 ;;; abbrev.el --- abbrev mode commands for Emacs
 
-;; Copyright (C) 1985, 1986, 1987, 1992 Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1987, 1992, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: abbrev convenience
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -134,9 +135,11 @@ Otherwise display all abbrevs."
   "Major mode for editing the list of abbrev definitions.
 \\{edit-abbrevs-map}"
   (interactive)
+  (kill-all-local-variables)
   (setq major-mode 'edit-abbrevs-mode)
   (setq mode-name "Edit-Abbrevs")
-  (use-local-map edit-abbrevs-map))
+  (use-local-map edit-abbrevs-map)
+  (run-mode-hooks 'edit-abbrevs-mode-hook))
 
 (defun edit-abbrevs ()
   "Alter abbrev definitions by editing a list of them.
@@ -279,7 +282,7 @@ Don't use this function in a Lisp program; use `define-abbrev' instead."
 			      name (abbrev-expansion name table))))
 	(define-abbrev table (downcase name) exp))))
 
-(defun inverse-add-mode-abbrev (arg)
+(defun inverse-add-mode-abbrev (n)
   "Define last word before point as a mode-specific abbrev.
 With prefix argument N, defines the Nth word before point.
 This command uses the minibuffer to read the expansion.
@@ -290,15 +293,15 @@ Expands the abbreviation after defining it."
        global-abbrev-table
      (or local-abbrev-table
 	 (error "No per-mode abbrev table")))
-   "Mode" arg))
+   "Mode" n))
 
-(defun inverse-add-global-abbrev (arg)
+(defun inverse-add-global-abbrev (n)
   "Define last word before point as a global (mode-independent) abbrev.
 With prefix argument N, defines the Nth word before point.
 This command uses the minibuffer to read the expansion.
 Expands the abbreviation after defining it."
   (interactive "p")
-  (inverse-add-abbrev global-abbrev-table "Global" arg))
+  (inverse-add-abbrev global-abbrev-table "Global" n))
 
 (defun inverse-add-abbrev (table type arg)
   (let (name exp start end)
@@ -336,9 +339,8 @@ ARG is non-nil.  Interactively, ARG is the prefix argument."
 
 (defun expand-region-abbrevs (start end &optional noquery)
   "For abbrev occurrence in the region, offer to expand it.
-The user is asked to type y or n for each occurrence.
-A prefix argument means don't query; expand all abbrevs.
-If called from a Lisp program, arguments are START END &optional NOQUERY."
+The user is asked to type `y' or `n' for each occurrence.
+A prefix argument means don't query; expand all abbrevs."
   (interactive "r\nP")
   (save-excursion
     (goto-char start)

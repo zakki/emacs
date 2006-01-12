@@ -1,7 +1,7 @@
 ;;; frame.el --- multi-frame management independent of window systems
 
-;; Copyright (C) 1993, 1994, 1996, 1997, 2000, 2001, 2003, 2004, 2005
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1996, 1997, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: internal
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -592,8 +592,7 @@ The functions are run with one arg, the newly created frame.")
   "Functions to run after a frame's font has been changed.")
 
 ;; Alias, kept temporarily.
-(defalias 'new-frame 'make-frame)
-(make-obsolete 'new-frame 'make-frame "22.1")
+(define-obsolete-function-alias 'new-frame 'make-frame "22.1")
 
 (defun make-frame (&optional parameters)
   "Return a newly created frame displaying the current buffer.
@@ -851,7 +850,7 @@ When called interactively, prompt for the name of the font to use.
 To get the frame's current default font, use `frame-parameters'.
 
 The default behavior is to keep the numbers of lines and columns in
-the frame, thus may change its pixel size. If optional KEEP-SIZE is
+the frame, thus may change its pixel size.  If optional KEEP-SIZE is
 non-nil (interactively, prefix argument) the current frame size (in
 pixels) is kept by adjusting the numbers of the lines and columns."
   (interactive
@@ -878,13 +877,16 @@ pixels) is kept by adjusting the numbers of the lines and columns."
   (run-hooks 'after-setting-font-hook 'after-setting-font-hooks))
 
 (defun set-frame-parameter (frame parameter value)
+  "Set frame parameter PARAMETER to VALUE on FRAME.
+If FRAME is nil, it defaults to the selected frame.
+See `modify-frame-parameters.'"
   (modify-frame-parameters frame (list (cons parameter value))))
 
 (defun set-background-color (color-name)
   "Set the background color of the selected frame to COLOR-NAME.
 When called interactively, prompt for the name of the color to use.
 To get the frame's current background color, use `frame-parameters'."
-  (interactive (list (facemenu-read-color)))
+  (interactive (list (facemenu-read-color "Background color: ")))
   (modify-frame-parameters (selected-frame)
 			   (list (cons 'background-color color-name)))
   (or window-system
@@ -894,7 +896,7 @@ To get the frame's current background color, use `frame-parameters'."
   "Set the foreground color of the selected frame to COLOR-NAME.
 When called interactively, prompt for the name of the color to use.
 To get the frame's current foreground color, use `frame-parameters'."
-  (interactive (list (facemenu-read-color)))
+  (interactive (list (facemenu-read-color "Foreground color: ")))
   (modify-frame-parameters (selected-frame)
 			   (list (cons 'foreground-color color-name)))
   (or window-system
@@ -904,7 +906,7 @@ To get the frame's current foreground color, use `frame-parameters'."
   "Set the text cursor color of the selected frame to COLOR-NAME.
 When called interactively, prompt for the name of the color to use.
 To get the frame's current cursor color, use `frame-parameters'."
-  (interactive (list (facemenu-read-color)))
+  (interactive (list (facemenu-read-color "Cursor color: ")))
   (modify-frame-parameters (selected-frame)
 			   (list (cons 'cursor-color color-name))))
 
@@ -912,7 +914,7 @@ To get the frame's current cursor color, use `frame-parameters'."
   "Set the color of the mouse pointer of the selected frame to COLOR-NAME.
 When called interactively, prompt for the name of the color to use.
 To get the frame's current mouse color, use `frame-parameters'."
-  (interactive (list (facemenu-read-color)))
+  (interactive (list (facemenu-read-color "Mouse color: ")))
   (modify-frame-parameters (selected-frame)
 			   (list (cons 'mouse-color
 				       (or color-name
@@ -923,7 +925,7 @@ To get the frame's current mouse color, use `frame-parameters'."
   "Set the color of the border of the selected frame to COLOR-NAME.
 When called interactively, prompt for the name of the color to use.
 To get the frame's current border color, use `frame-parameters'."
-  (interactive (list (facemenu-read-color)))
+  (interactive (list (facemenu-read-color "Border color: ")))
   (modify-frame-parameters (selected-frame)
 			   (list (cons 'border-color color-name))))
 
@@ -969,9 +971,9 @@ one frame, otherwise the name is displayed on the frame's caption bar."
 
 (defun frame-current-scroll-bars (&optional frame)
   "Return the current scroll-bar settings in frame FRAME.
-Value is a cons (VERTICAL . HORISONTAL) where VERTICAL specifies the
+Value is a cons (VERTICAL . HORIZ0NTAL) where VERTICAL specifies the
 current location of the vertical scroll-bars (left, right, or nil),
-and HORISONTAL specifies the current location of the horisontal scroll
+and HORIZONTAL specifies the current location of the horizontal scroll
 bars (top, bottom, or nil)."
   (let ((vert (frame-parameter frame 'vertical-scroll-bars))
 	(hor nil))
@@ -1054,9 +1056,9 @@ frame's display)."
   "Return the number of screens associated with DISPLAY."
   (let ((frame-type (framep-on-display display)))
     (cond
-     ((memq frame-type '(x w32))
+     ((memq frame-type '(x w32 mac))
       (x-display-screens display))
-     (t	;; FIXME: is this correct for the Mac?
+     (t
       1))))
 
 (defun display-pixel-height (&optional display)
@@ -1149,23 +1151,21 @@ The value is one of the symbols `static-gray', `gray-scale',
 
 
 ;;;; Aliases for backward compatibility with Emacs 18.
-(defalias 'screen-height 'frame-height)
-(defalias 'screen-width 'frame-width)
+(define-obsolete-function-alias 'screen-height 'frame-height) ;before 19.15
+(define-obsolete-function-alias 'screen-width 'frame-width) ;before 19.15
 
 (defun set-screen-width (cols &optional pretend)
-  "Obsolete function to change the size of the screen to COLS columns.
+  "Change the size of the screen to COLS columns.
 Optional second arg non-nil means that redisplay should use COLS columns
 but that the idea of the actual width of the frame should not be changed.
-This function is provided only for compatibility with Emacs 18; new code
-should use `set-frame-width instead'."
+This function is provided only for compatibility with Emacs 18."
   (set-frame-width (selected-frame) cols pretend))
 
 (defun set-screen-height (lines &optional pretend)
-  "Obsolete function to change the height of the screen to LINES lines.
+  "Change the height of the screen to LINES lines.
 Optional second arg non-nil means that redisplay should use LINES lines
 but that the idea of the actual height of the screen should not be changed.
-This function is provided only for compatibility with Emacs 18; new code
-should use `set-frame-height' instead."
+This function is provided only for compatibility with Emacs 18."
   (set-frame-height (selected-frame) lines pretend))
 
 (defun delete-other-frames (&optional frame)
@@ -1188,14 +1188,12 @@ left untouched.  FRAME nil or omitted means use the selected frame."
       (when (eq (frame-parameter frame 'minibuffer) 'only)
 	(delete-frame frame)))))
 
-(make-obsolete 'screen-height 'frame-height) ;before 19.15
-(make-obsolete 'screen-width  'frame-width) ;before 19.15
 (make-obsolete 'set-screen-width 'set-frame-width) ;before 19.15
 (make-obsolete 'set-screen-height 'set-frame-height) ;before 19.15
 
 ;; miscellaneous obsolescence declarations
-(defvaralias 'delete-frame-hook 'delete-frame-functions)
-(make-obsolete-variable 'delete-frame-hook 'delete-frame-functions "22.1")
+(define-obsolete-variable-alias 'delete-frame-hook
+    'delete-frame-functions "22.1")
 
 
 ;; Highlighting trailing whitespace.
@@ -1205,7 +1203,6 @@ left untouched.  FRAME nil or omitted means use the selected frame."
 (defcustom show-trailing-whitespace nil
   "*Non-nil means highlight trailing whitespace.
 This is done in the face `trailing-whitespace'."
-  :tag "Highlight trailing whitespace."
   :type 'boolean
   :group 'whitespace-faces)
 
@@ -1237,13 +1234,11 @@ point visible."
 
 (defcustom blink-cursor-delay 0.5
   "*Seconds of idle time after which cursor starts to blink."
-  :tag "Delay in seconds."
   :type 'number
   :group 'cursor)
 
 (defcustom blink-cursor-interval 0.5
   "*Length of cursor blink interval in seconds."
-  :tag "Blink interval in seconds."
   :type 'number
   :group 'cursor)
 
@@ -1256,10 +1251,6 @@ The function `blink-cursor-start' is called when the timer fires.")
 This timer calls `blink-cursor-timer-function' every
 `blink-cursor-interval' seconds.")
 
-;; We do not know the standard _evaluated_ value yet, because the standard
-;; expression uses values that are not yet set.  The correct evaluated
-;; standard value will be installed in startup.el using exactly the same
-;; expression as in the defcustom.
 (define-minor-mode blink-cursor-mode
   "Toggle blinking cursor mode.
 With a numeric argument, turn blinking cursor mode on iff ARG is positive.
@@ -1270,9 +1261,10 @@ Note that this command is effective only when Emacs
 displays through a window system, because then Emacs does its own
 cursor display.  On a text-only terminal, this is not implemented."
   :init-value (not (or noninteractive
-		       (if (boundp 'no-blinking-cursor) no-blinking-cursor)
+		       no-blinking-cursor
 		       (eq system-type 'ms-dos)
-		       (not (memq window-system '(x w32)))))
+		       (not (memq window-system '(x w32 mac)))))
+  :initialize 'custom-initialize-safe-default
   :group 'cursor
   :global t
   (if blink-cursor-idle-timer (cancel-timer blink-cursor-idle-timer))
@@ -1289,8 +1281,7 @@ cursor display.  On a text-only terminal, this is not implemented."
 				   'blink-cursor-start)))
     (internal-show-cursor nil t)))
 
-(defvaralias 'blink-cursor 'blink-cursor-mode)
-(make-obsolete-variable 'blink-cursor 'blink-cursor-mode "22.1")
+(define-obsolete-variable-alias 'blink-cursor 'blink-cursor-mode "22.1")
 
 (defun blink-cursor-start ()
   "Timer function called from the timer `blink-cursor-idle-timer'.
@@ -1323,23 +1314,23 @@ itself as a pre-command hook."
 ;; Hourglass pointer
 
 (defcustom display-hourglass t
-  "*Non-nil means show an hourglass pointer when running under a window system."
-  :tag "Hourglass pointer"
+  "*Non-nil means show an hourglass pointer, when Emacs is busy.
+This feature only works when on a window system that can change
+cursor shapes."
   :type 'boolean
   :group 'cursor)
 
 (defcustom hourglass-delay 1
-  "*Seconds to wait before displaying an hourglass pointer."
-  :tag "Hourglass delay"
+  "*Seconds to wait before displaying an hourglass pointer when Emacs is busy."
   :type 'number
   :group 'cursor)
 
 
 (defcustom cursor-in-non-selected-windows t
-  "*Non-nil means show a hollow box cursor in non-selected-windows.
+  "*Non-nil means show a hollow box cursor in non-selected windows.
 If nil, don't show a cursor except in the selected window.
 Use Custom to set this variable to get the display updated."
-  :tag "Cursor in non-selected windows"
+  :tag "Cursor In Non-selected Windows"
   :type 'boolean
   :group 'cursor
   :set #'(lambda (symbol value)

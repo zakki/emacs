@@ -1,6 +1,7 @@
 ;;; disp-table.el --- functions for dealing with char tables
 
-;; Copyright (C) 1987, 94, 95, 1999, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 1987, 1994, 1995, 1999, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Erik Naggum <erik@naggum.no>
 ;; Based on a previous version by Howard Gayle
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -144,7 +145,7 @@ Valid symbols are `truncation', `wrap', `escape', `control',
   "Display character C as character SC in the g1 character set.
 This function assumes that your terminal uses the SO/SI characters;
 it is meaningless for an X frame."
-  (if (memq window-system '(x w32))
+  (if (memq window-system '(x w32 mac))
       (error "Cannot use string glyphs in a windowing system"))
   (or standard-display-table
       (setq standard-display-table (make-display-table)))
@@ -156,7 +157,7 @@ it is meaningless for an X frame."
   "Display character C as character GC in graphics character set.
 This function assumes VT100-compatible escapes; it is meaningless for an
 X frame."
-  (if (memq window-system '(x w32))
+  (if (memq window-system '(x w32 mac))
       (error "Cannot use string glyphs in a windowing system"))
   (or standard-display-table
       (setq standard-display-table (make-display-table)))
@@ -216,17 +217,19 @@ for users who call this function in `.emacs'."
 	       (equal (aref standard-display-table 161) [161])))
       (progn
 	(standard-display-default 160 255)
-	(unless (or (memq window-system '(x w32)))
+	(unless (or (memq window-system '(x w32 mac)))
 	  (and (terminal-coding-system)
 	       (set-terminal-coding-system nil))))
-    ;; Turn off multibyte chars for more compatibility.
-    (setq-default enable-multibyte-characters nil)
+
+    (display-warning 'i18n
+		     "`standard-display-european' is semi-obsolete; see its doc string for details"
+		     :warning)
 
     ;; Switch to Latin-1 language environment
     ;; unless some other has been specified.
     (if (equal current-language-environment "English")
 	(set-language-environment "latin-1"))
-    (unless (or noninteractive (memq window-system '(x w32)))
+    (unless (or noninteractive (memq window-system '(x w32 mac)))
       ;; Send those codes literally to a character-based terminal.
       ;; If we are using single-byte characters,
       ;; it doesn't matter which coding system we use.

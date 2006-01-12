@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -2175,7 +2175,12 @@ copier, a `NAME-p' predicate, and setf-able `NAME-SLOT' accessors.
 				       (symbol-name (car args)) ""))))
 	      ((eq opt :constructor)
 	       (if (cdr args)
-		   (push args constrs)
+                   (progn
+                     ;; If this defines a constructor of the same name as
+                     ;; the default one, don't define the default.
+                     (if (eq (car args) constructor)
+                         (setq constructor nil))
+                     (push args constrs))
 		 (if args (setq constructor (car args)))))
 	      ((eq opt :copier)
 	       (if args (setq copier (car args))))
@@ -2384,6 +2389,7 @@ The type name can then be used in `typecase', `check-type', etc."
 	     (cl-make-type-test val (funcall (get type 'cl-deftype-handler))))
 	    ((memq type '(nil t)) type)
 	    ((eq type 'null) `(null ,val))
+	    ((eq type 'atom) `(atom ,val))
 	    ((eq type 'float) `(floatp-safe ,val))
 	    ((eq type 'real) `(numberp ,val))
 	    ((eq type 'fixnum) `(integerp ,val))
@@ -2398,7 +2404,7 @@ The type name can then be used in `typecase', `check-type', etc."
 	   (cl-make-type-test val (apply (get (car type) 'cl-deftype-handler)
 					 (cdr type))))
 	  ((memq (car type) '(integer float real number))
-	   (delq t (and (cl-make-type-test val (car type))
+	   (delq t (list 'and (cl-make-type-test val (car type))
 			 (if (memq (cadr type) '(* nil)) t
 			   (if (consp (cadr type)) (list '> val (caadr type))
 			     (list '>= val (cadr type))))

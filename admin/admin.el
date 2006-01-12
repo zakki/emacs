@@ -16,8 +16,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -84,7 +84,39 @@ Root must be the root of an Emacs source tree."
 				(submatch (1+ (in "0-9."))))))
   (set-version-in-file root "man/emacs.texi" version
 		       (rx (and "EMACSVER" (1+ space)
-				(submatch (1+ (in "0-9.")))))))
+				(submatch (1+ (in "0-9."))))))
+  (set-version-in-file root "lispref/elisp.texi" version
+		       (rx (and "EMACSVER" (1+ space)
+				(submatch (1+ (in "0-9."))))))
+  ;; nt/emacs.rc also contains the version number, but in an awkward
+  ;; format. It must contain four components, separated by commas, and
+  ;; in two places those commas are followed by space, in two other
+  ;; places they are not.
+  (let* ((version-components (append (split-string version "\\.")
+				    '("0" "0")))
+	 (comma-version
+	  (concat (car version-components) ","
+		  (cadr version-components) ","
+		  (cadr (cdr version-components)) "," 
+		  (cadr (cdr (cdr version-components)))))
+	 (comma-space-version
+	  (concat (car version-components) ", "
+		  (cadr version-components) ", "
+		  (cadr (cdr version-components)) ", " 
+		  (cadr (cdr (cdr version-components))))))
+    (set-version-in-file root "nt/emacs.rc" comma-version
+			 (rx (and "FILEVERSION" (1+ space)
+				  (submatch (1+ (in "0-9,"))))))
+    (set-version-in-file root "nt/emacs.rc" comma-version
+			 (rx (and "PRODUCTVERSION" (1+ space)
+				  (submatch (1+ (in "0-9,"))))))
+    (set-version-in-file root "nt/emacs.rc" comma-space-version
+			 (rx (and "\"FileVersion\"" (0+ space) ?, (0+ space)
+				  ?\" (submatch (1+ (in "0-9, "))) "\\0\"")))
+    (set-version-in-file root "nt/emacs.rc" comma-space-version
+			 (rx (and "\"ProductVersion\"" (0+ space) ?,
+				  (0+ space) ?\" (submatch (1+ (in "0-9, ")))
+				  "\\0\"")))))
 
 ;;; arch-tag: 4ea83636-2293-408b-884e-ad64f22a3bf5
 ;; admin.el ends here.

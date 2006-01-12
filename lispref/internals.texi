@@ -1,7 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1998, 1999
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1998, 1999, 2002, 2003, 2004,
+@c   2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/internals
 @node GNU Emacs Internals, Standard Errors, Tips, Top
@@ -116,6 +116,18 @@ documentation strings take up space in Emacs all the time.)
 expect in an ordinary unmodified Emacs.  If you feel you must override
 normal features for your site, do it with @file{default.el}, so that
 users can override your changes if they wish.  @xref{Startup Summary}.
+
+  In a package that can be preloaded, it is sometimes useful to
+specify a computation to be done when Emacs subsequently starts up.
+For this, use @code{eval-at-startup}:
+
+@defmac eval-at-startup body@dots{}
+This evaluates the @var{body} forms, either immediately if running in
+an Emacs that has already started up, or later when Emacs does start
+up.  Since the value of the @var{body} forms is not necessarily
+available when the @code{eval-at-startup} form is run, that form
+always returns @code{nil}.
+@end defmac
 
 @defun dump-emacs to-file from-file
 @cindex unexec
@@ -368,6 +380,17 @@ until the subsequent garbage collection, at which time
 @code{garbage-collect} will set the threshold back to 10,000.
 @end defopt
 
+@defopt gc-cons-percentage
+The value of this variable specifies the amount of consing before a
+garbage collection occurs, as a fraction of the current heap size.
+This criterion and @code{gc-cons-threshold} apply in parallel, and
+garbage collection occurs only when both criteria are satisfied.
+
+As the heap size increases, the time to perform a garbage collection
+increases.  Thus, it can be desirable to do them less frequently in
+proportion.
+@end defopt
+
   The value returned by @code{garbage-collect} describes the amount of
 memory used by Lisp data, broken down by data type.  By contrast, the
 function @code{memory-limit} provides information on the total amount of
@@ -382,6 +405,11 @@ Lisp integer.
 You can use this to get a general idea of how your actions affect the
 memory usage.
 @end defun
+
+@defvar memory-full
+This variable is @code{t} if Emacs is close to out of memory for Lisp
+objects, and @code{nil} otherwise.
+@end defvar
 
 @defun memory-use-counts
 This returns a list of numbers that count the number of objects

@@ -1,6 +1,7 @@
 ;;; sql.el --- specialized comint.el for SQL interpreters
 
-;; Copyright (C) 1998,99,2000,01,02,03,04  Free Software Foundation, Inc.
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Alex Schroeder <alex@gnu.org>
 ;; Maintainer: Michael Mauger <mmaug@yahoo.com>
@@ -23,8 +24,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -218,10 +219,14 @@
 (eval-when-compile ;; needed in Emacs 19, 20
   (setq max-specpdl-size 2000))
 
+(defvar font-lock-keyword-face)
+(defvar font-lock-set-defaults)
+(defvar font-lock-string-face)
+
 ;;; Allow customization
 
 (defgroup SQL nil
-  "Running a SQL interpreter from within Emacs buffers"
+  "Running a SQL interpreter from within Emacs buffers."
   :version "20.4"
   :group 'processes)
 
@@ -735,10 +740,11 @@ Used by `sql-rename-buffer'.")
 
 (defvar sql-interactive-mode-map
   (let ((map (make-sparse-keymap)))
-    (if (functionp 'set-keymap-parent)
+    (if (fboundp 'set-keymap-parent)
 	(set-keymap-parent map comint-mode-map); Emacs
-      (set-keymap-parents map (list comint-mode-map))); XEmacs
-    (if (functionp 'set-keymap-name)
+      (if (fboundp 'set-keymap-parents)
+	  (set-keymap-parents map (list comint-mode-map)))); XEmacs
+    (if (fboundp 'set-keymap-name)
 	(set-keymap-name map 'sql-interactive-mode-map)); XEmacs
     (define-key map (kbd "C-j") 'sql-accumulate-and-indent)
     (define-key map (kbd "C-c C-w") 'sql-copy-column)
@@ -1900,16 +1906,8 @@ appended to the SQLi buffer without disturbing your SQL buffer."
   (describe-function 'sql-help))
 
 (defun sql-read-passwd (prompt &optional default)
-  "Read a password using PROMPT.
-Optional DEFAULT is password to start with.  This function calls
-`read-passwd' if it is available.  If not, function
-`ange-ftp-read-passwd' is called.  This should always be available,
-even in old versions of Emacs."
-  (if (fboundp 'read-passwd)
-      (read-passwd prompt nil default)
-    (unless (fboundp 'ange-ftp-read-passwd)
-      (autoload 'ange-ftp-read-passwd "ange-ftp"))
-    (ange-ftp-read-passwd prompt default)))
+  "Read a password using PROMPT.  Optional DEFAULT is password to start with."
+  (read-passwd prompt nil default))
 
 (defun sql-get-login (&rest what)
   "Get username, password and database from the user.
@@ -2077,7 +2075,7 @@ Inserts SELECT or commas if appropriate."
 	  (insert ", "))
 	 ;; else insert a space
 	 (t
-	  (if (eq (preceding-char) ? )
+	  (if (eq (preceding-char) ?\s)
 	      nil
 	    (insert " ")))))
       ;; in any case, insert the column
@@ -2305,7 +2303,7 @@ hooks on `comint-input-filter-functions' are run.  After each SQL
 interpreter output, the hooks on `comint-output-filter-functions' are
 run.
 
-Variable `sql-input-ring-file-name' controls the initialisation of the
+Variable `sql-input-ring-file-name' controls the initialization of the
 input ring history.
 
 Variables `comint-output-filter-functions', a hook, and
@@ -2328,7 +2326,7 @@ you entered, right above the output it created.
 
 \(setq comint-output-filter-functions
        \(function (lambda (STR) (comint-show-output))))"
-  (comint-mode)
+  (delay-mode-hooks (comint-mode))
   ;; Get the `sql-product' for this interactive session.
   (set (make-local-variable 'sql-product)
        (or sql-interactive-product

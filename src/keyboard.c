@@ -1,6 +1,7 @@
 /* Keyboard and mouse input; editor command loop.
-   Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994, 1995, 1996, 1997,
-     1999, 2000, 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994, 1995,
+                 1996, 1997, 1999, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 #include <signal.h>
@@ -380,11 +381,14 @@ Lisp_Object real_this_command;
    command is stored in this-original-command.  It is nil otherwise.  */
 Lisp_Object Vthis_original_command;
 
-/* The value of point when the last command was executed.  */
+/* The value of point when the last command was started.  */
 int last_point_position;
 
 /* The buffer that was current when the last command was started.  */
 Lisp_Object last_point_position_buffer;
+
+/* The window that was selected when the last command was started.  */
+Lisp_Object last_point_position_window;
 
 /* The frame in which the last input event occurred, or Qmacro if the
    last event came from a macro.  We use this to determine when to
@@ -473,10 +477,6 @@ int input_pending;
 
 int meta_key;
 
-/* Non-zero means force key bindings update in parse_menu_item.  */
-
-int update_menu_bindings;
-
 extern char *pending_malloc_warning;
 
 /* Circular buffer for pre-read keyboard input.  */
@@ -530,6 +530,9 @@ Lisp_Object Qlanguage_change;
 #endif
 Lisp_Object Qdrag_n_drop;
 Lisp_Object Qsave_session;
+#ifdef MAC_OS
+Lisp_Object Qmac_apple_event;
+#endif
 
 /* Lisp_Object Qmouse_movement; - also an event header */
 
@@ -1444,8 +1447,6 @@ command_loop_1 ()
 	safe_run_hooks (Qdeferred_action_function);
     }
 
-  Vmemory_full = Qnil;
-
   /* Do this after running Vpost_command_hook, for consistency.  */
   current_kboard->Vlast_command = Vthis_command;
   current_kboard->Vreal_last_command = real_this_command;
@@ -1509,7 +1510,7 @@ command_loop_1 ()
 	 Is this a good idea?  */
       if (FRAMEP (internal_last_event_frame)
 	  && !EQ (internal_last_event_frame, selected_frame))
-	Fselect_frame (internal_last_event_frame, Qnil);
+	Fselect_frame (internal_last_event_frame);
 #endif
       /* If it has changed current-menubar from previous value,
 	 really recompute the menubar from the value.  */
@@ -1522,6 +1523,7 @@ command_loop_1 ()
 
       Vthis_command = Qnil;
       real_this_command = Qnil;
+      Vthis_original_command = Qnil;
 
       /* Read next key sequence; i gets its length.  */
       i = read_key_sequence (keybuf, sizeof keybuf / sizeof keybuf[0],
@@ -1582,6 +1584,7 @@ command_loop_1 ()
       prev_buffer = current_buffer;
       prev_modiff = MODIFF;
       last_point_position = PT;
+      last_point_position_window = selected_window;
       XSETBUFFER (last_point_position_buffer, prev_buffer);
 
       /* By default, we adjust point to a boundary of a region that
@@ -2615,6 +2618,9 @@ read_char (commandflag, nmaps, maps, prev_event, used_mouse_menu)
 
   if (_setjmp (local_getcjmp))
     {
+      /* We must have saved the outer value of getcjmp here,
+	 so restore it now.  */
+      restore_getcjmp (save_jump);
       XSETINT (c, quit_char);
       internal_last_event_frame = selected_frame;
       Vlast_event_frame = internal_last_event_frame;
@@ -3997,7 +4003,7 @@ kbd_buffer_get_event (kbp, used_mouse_menu)
 	  kbd_fetch_ptr = event + 1;
 	}
 #endif
-#if defined (HAVE_X11) || defined (HAVE_NTGUI)
+#if defined (HAVE_X11) || defined (HAVE_NTGUI) || defined (MAC_OS)
       else if (event->kind == ICONIFY_EVENT)
 	{
 	  /* Make an event (iconify-frame (FRAME)).  */
@@ -5053,7 +5059,11 @@ make_lispy_position (f, x, y, time)
       XSETINT (*x, wx);
       XSETINT (*y, wy);
 
-      if (part == ON_MODE_LINE || part == ON_HEADER_LINE)
+      if (part == ON_TEXT)
+	{
+	  wx += WINDOW_LEFT_MARGIN_WIDTH (w);
+	}
+      else if (part == ON_MODE_LINE || part == ON_HEADER_LINE)
 	{
 	  /* Mode line or header line.  Look for a string under
 	     the mouse that may have a `local-map' property.  */
@@ -5089,20 +5099,37 @@ make_lispy_position (f, x, y, time)
 					 &object, &dx, &dy, &width, &height);
 	  if (STRINGP (string))
 	    string_info = Fcons (string, make_number (charpos));
+	  if (part == ON_LEFT_MARGIN)
+	    wx = 0;
+	  else
+	    wx = window_box_right_offset (w, TEXT_AREA) - 1;
 	}
-      else if (part == ON_LEFT_FRINGE || part == ON_RIGHT_FRINGE)
+      else if (part == ON_LEFT_FRINGE)
 	{
-	  posn = (part == ON_LEFT_FRINGE) ? Qleft_fringe : Qright_fringe;
+	  posn = Qleft_fringe;
 	  rx = 0;
 	  dx = wx;
-	  if (part == ON_RIGHT_FRINGE)
-	    dx -= (window_box_width (w, LEFT_MARGIN_AREA)
-		   + window_box_width (w, TEXT_AREA)
-		   + (WINDOW_HAS_FRINGES_OUTSIDE_MARGINS (w)
-		      ? window_box_width (w, RIGHT_MARGIN_AREA)
-		      : 0));
-	  else if (!WINDOW_HAS_FRINGES_OUTSIDE_MARGINS (w))
-	    dx -= window_box_width (w, LEFT_MARGIN_AREA);
+	  wx = (WINDOW_HAS_FRINGES_OUTSIDE_MARGINS (w)
+		? 0
+		: window_box_width (w, LEFT_MARGIN_AREA));
+	  dx -= wx;
+	}
+      else if (part == ON_RIGHT_FRINGE)
+	{
+	  posn = Qright_fringe;
+	  rx = 0;
+	  dx = wx;
+	  wx = (window_box_width (w, LEFT_MARGIN_AREA)
+		+ window_box_width (w, TEXT_AREA)
+		+ (WINDOW_HAS_FRINGES_OUTSIDE_MARGINS (w)
+		   ? window_box_width (w, RIGHT_MARGIN_AREA)
+		   : 0));
+	  dx -= wx;
+	}
+      else
+	{
+	  /* Note: We have no special posn for part == ON_SCROLL_BAR.  */
+	  wx = max (WINDOW_LEFT_MARGIN_WIDTH (w), wx);
 	}
 
       if (textpos < 0)
@@ -5111,7 +5138,6 @@ make_lispy_position (f, x, y, time)
 	  struct display_pos p;
 	  int dx2, dy2;
 	  int width2, height2;
-	  wx = max (WINDOW_LEFT_MARGIN_WIDTH (w), wx);
 	  string2 = buffer_posn_from_coords (w, &wx, &wy, &p,
 					     &object2, &dx2, &dy2,
 					     &width2, &height2);
@@ -5506,13 +5532,23 @@ make_lispy_event (event)
 		if (CONSP (down)
 		    && INTEGERP (XCAR (down)) && INTEGERP (XCDR (down)))
 		  {
-		    xdiff = XFASTINT (event->x) - XFASTINT (XCAR (down));
-		    ydiff = XFASTINT (event->y) - XFASTINT (XCDR (down));
+		    xdiff = XINT (event->x) - XINT (XCAR (down));
+		    ydiff = XINT (event->y) - XINT (XCDR (down));
 		  }
 
 		if (xdiff < double_click_fuzz && xdiff > - double_click_fuzz
-		    && ydiff < double_click_fuzz
-		    && ydiff > - double_click_fuzz)
+		    && ydiff < double_click_fuzz && ydiff > - double_click_fuzz
+		  /* Maybe the mouse has moved a lot, caused scrolling, and
+		     eventually ended up at the same screen position (but
+		     not buffer position) in which case it is a drag, not
+		     a click.  */
+		    /* FIXME: OTOH if the buffer position has changed
+		       because of a timer or process filter rather than
+		       because of mouse movement, it should be considered as
+		       a click.  But mouse-drag-region completely ignores
+		       this case and it hasn't caused any real problem, so
+		       it's probably OK to ignore it as well.  */
+		    && EQ (Fcar (Fcdr (start_pos)), Fcar (Fcdr (position))))
 		  /* Mouse hasn't moved (much).  */
 		  event->modifiers |= click_modifier;
 		else
@@ -5773,14 +5809,8 @@ make_lispy_event (event)
 	Lisp_Object head, position;
 	Lisp_Object files;
 
-	/* The frame_or_window field should be a cons of the frame in
-	   which the event occurred and a list of the filenames
-	   dropped.  */
-	if (! CONSP (event->frame_or_window))
-	  abort ();
-
-	f = XFRAME (XCAR (event->frame_or_window));
-	files = XCDR (event->frame_or_window);
+	f = XFRAME (event->frame_or_window);
+	files = event->arg;
 
 	/* Ignore mouse events that were made on frames that
 	   have been deleted.  */
@@ -5834,6 +5864,20 @@ make_lispy_event (event)
 
     case SAVE_SESSION_EVENT:
       return Qsave_session;
+
+#ifdef MAC_OS
+    case MAC_APPLE_EVENT:
+      {
+	Lisp_Object spec[2];
+
+	spec[0] = event->x;
+	spec[1] = event->y;
+	return Fcons (Qmac_apple_event,
+		      Fcons (Fvector (2, spec),
+			     Fcons (mac_make_lispy_event_code (event->code),
+				    Qnil)));
+      }
+#endif
 
       /* The 'kind' field of the event is something we don't recognize.  */
     default:
@@ -6913,8 +6957,6 @@ menu_bar_items (old)
 
   int i;
 
-  struct gcpro gcpro1;
-
   /* In order to build the menus, we need to call the keymap
      accessors.  They all call QUIT.  But this function is called
      during redisplay, during which a quit is fatal.  So inhibit
@@ -6929,8 +6971,6 @@ menu_bar_items (old)
   else
     menu_bar_items_vector = Fmake_vector (make_number (24), Qnil);
   menu_bar_items_index = 0;
-
-  GCPRO1 (menu_bar_items_vector);
 
   /* Build our list of keymaps.
      If we recognize a function key and replace its escape sequence in
@@ -7035,7 +7075,6 @@ menu_bar_items (old)
   menu_bar_items_index = i;
 
   Vinhibit_quit = oquit;
-  UNGCPRO;
   return menu_bar_items_vector;
 }
 
@@ -7403,9 +7442,7 @@ parse_menu_item (item, notreal, inmenubar)
       else
 	def = AREF (item_properties, ITEM_PROPERTY_DEF);
 
-      if (!update_menu_bindings)
-	chkcache = 0;
-      else if (NILP (XCAR (cachelist))) /* Have no saved key.  */
+      if (NILP (XCAR (cachelist))) /* Have no saved key.  */
 	{
 	  if (newcache		/* Always check first time.  */
 	      /* Should we check everything when precomputing key
@@ -10572,11 +10609,11 @@ The `posn-' functions access elements of such lists.  */)
       CHECK_LIVE_WINDOW (frame_or_window);
 
       w = XWINDOW (frame_or_window);
-      XSETINT (x, (WINDOW_TO_FRAME_PIXEL_X (w, XINT (x))
+      XSETINT (x, (XINT (x)
+		   + WINDOW_LEFT_EDGE_X (w)
 		   + (NILP (whole)
 		      ? window_box_left_offset (w, TEXT_AREA)
-		      : - (WINDOW_LEFT_SCROLL_BAR_COLS (w)
-			   * WINDOW_FRAME_COLUMN_WIDTH (w)))));
+		      : 0)));
       XSETINT (y, WINDOW_TO_FRAME_PIXEL_Y (w, XINT (y)));
       frame_or_window = w->frame;
     }
@@ -10602,9 +10639,21 @@ The `posn-' functions access elements of such lists.  */)
 {
   Lisp_Object tem;
 
+  if (NILP (window))
+    window = selected_window;
+
   tem = Fpos_visible_in_window_p (pos, window, Qt);
   if (!NILP (tem))
-    tem = Fposn_at_x_y (XCAR (tem), XCAR (XCDR (tem)), window, Qnil);
+    {
+      Lisp_Object x = XCAR (tem);
+      Lisp_Object y = XCAR (XCDR (tem));
+
+      /* Point invisible due to hscrolling?  */
+      if (XINT (x) < 0)
+	return Qnil;
+      tem = Fposn_at_x_y (x, y, window, Qnil);
+    }
+
   return tem;
 }
 
@@ -10749,11 +10798,6 @@ init_keyboard ()
   poll_suppress_count = 1;
   start_polling ();
 #endif
-
-#ifdef MAC_OSX
-  /* At least provide an escape route since C-g doesn't work.  */
-  signal (SIGINT, interrupt_signal);
-#endif
 }
 
 /* This type's only use is in syms_of_keyboard, to initialize the
@@ -10850,6 +10894,11 @@ syms_of_keyboard ()
   Qsave_session = intern ("save-session");
   staticpro (&Qsave_session);
 
+#ifdef MAC_OS
+  Qmac_apple_event = intern ("mac-apple-event");
+  staticpro (&Qmac_apple_event);
+#endif
+
   Qusr1_signal = intern ("usr1-signal");
   staticpro (&Qusr1_signal);
   Qusr2_signal = intern ("usr2-signal");
@@ -10940,6 +10989,7 @@ syms_of_keyboard ()
   Fset (Qinput_method_use_echo_area, Qnil);
 
   last_point_position_buffer = Qnil;
+  last_point_position_window = Qnil;
 
   {
     struct event_head *p;
@@ -11006,6 +11056,9 @@ syms_of_keyboard ()
 
   menu_bar_one_keymap_changed_items = Qnil;
   staticpro (&menu_bar_one_keymap_changed_items);
+
+  menu_bar_items_vector = Qnil;
+  staticpro (&menu_bar_items_vector);
 
   defsubr (&Sevent_convert_list);
   defsubr (&Sread_key_sequence);
@@ -11280,6 +11333,7 @@ might happen repeatedly and make Emacs nonfunctional.  */);
 	       doc: /* Normal hook run when clearing the echo area.  */);
 #endif
   Qecho_area_clear_hook = intern ("echo-area-clear-hook");
+  staticpro (&Qecho_area_clear_hook);
   SET_SYMBOL_VALUE (Qecho_area_clear_hook, Qnil);
 
   DEFVAR_LISP ("lucid-menu-bar-dirty-flag", &Vlucid_menu_bar_dirty_flag,
@@ -11404,12 +11458,6 @@ The default value is nil, in which case, point adjustment are
 suppressed only after special commands that set
 `disable-point-adjustment' (which see) to non-nil.  */);
   Vglobal_disable_point_adjustment = Qnil;
-
-  DEFVAR_BOOL ("update-menu-bindings", &update_menu_bindings,
-	       doc: /* Non-nil means updating menu bindings is allowed.
-A value of nil means menu bindings should not be updated.
-Used during Emacs' startup.  */);
-  update_menu_bindings = 1;
 
   DEFVAR_LISP ("minibuffer-message-timeout", &Vminibuffer_message_timeout,
 	       doc: /* *How long to display an echo-area message when the minibuffer is active.

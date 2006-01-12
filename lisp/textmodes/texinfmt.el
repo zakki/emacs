@@ -1,8 +1,8 @@
 ;;; texinfmt.el --- format Texinfo files into Info files
 
 ;; Copyright (C) 1985, 1986, 1988, 1990, 1991, 1992, 1993,
-;;               1994, 1995, 1996, 1997, 1998, 2000, 2001, 2005
-;;    Free Software Foundation, Inc.
+;;   1994, 1995, 1996, 1997, 1998, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: Robert J. Chassell <bug-texinfo@gnu.org>
 ;; Keywords: maint, tex, docs
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -212,6 +212,8 @@ converted to Info is stored in a temporary buffer."
 
 ;;; Find a buffer to use.
     (switch-to-buffer (get-buffer-create texinfo-region-buffer-name))
+    (setq buffer-read-only t)
+    (let ((inhibit-read-only t))
     (erase-buffer)
     ;; Insert the header into the buffer.
     (insert header-text)
@@ -313,7 +315,7 @@ converted to Info is stored in a temporary buffer."
     (goto-char (point-min))
     (Info-tagify input-buffer)
     (goto-char (point-min))
-    (message "Done.")))
+    (message "Done."))))
 
 ;;;###autoload
 (defun texi2info (&optional nosplit)

@@ -1,6 +1,7 @@
 ;;; ibuf-macs.el --- macros for ibuffer
 
-;; Copyright (C) 2000, 2001, 2002, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Colin Walters <walters@verbum.org>
 ;; Maintainer: John Paul Wallington <jpw@gnu.org>
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program ; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -280,7 +281,7 @@ bound to the current value of the filter.
 	 ,(concat (or documentation "This filter is not documented."))
 	 (interactive (list ,reader))
 	 (ibuffer-push-filter (cons ',name qualifier))
-	 (message
+	 (message "%s"
 	  (format ,(concat (format "Filter by %s added: " description)
 			   " %s")
 		  qualifier))

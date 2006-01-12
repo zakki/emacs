@@ -1,7 +1,7 @@
 ;;; pcvs.el --- a front-end to CVS
 
 ;; Copyright (C) 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-;;   2000, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+;;   2000, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: (The PCL-CVS Trust) pcl-cvs@cyclic.com
 ;;	(Per Cederqvist) ceder@lysator.liu.se
@@ -29,8 +29,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -647,34 +647,38 @@ This is responsible for parsing the output from the cvs update when
 it is finished."
   (when (memq (process-status proc) '(signal exit))
     (let ((cvs-postproc (process-get proc 'cvs-postprocess))
-	  (cvs-buf (process-get proc 'cvs-buffer)))
+	  (cvs-buf (process-get proc 'cvs-buffer))
+          (procbuf (process-buffer proc)))
+      (unless (buffer-live-p cvs-buf) (setq cvs-buf nil))
+      (unless (buffer-live-p procbuf) (setq procbuf nil))
       ;; Since the buffer and mode line will show that the
       ;; process is dead, we can delete it now.  Otherwise it
       ;; will stay around until M-x list-processes.
       (process-put proc 'postprocess nil)
       (delete-process proc)
       ;; Don't do anything if the main buffer doesn't exist any more.
-      (when (buffer-live-p cvs-buf)
+      (when cvs-buf
 	(with-current-buffer cvs-buf
 	  (cvs-update-header (process-get proc 'cvs-header) nil)
 	  (setq cvs-mode-line-process (symbol-name (process-status proc)))
 	  (force-mode-line-update)
 	  (when cvs-postproc
-	    (if (null (buffer-live-p (process-buffer proc)))
+	    (if (null procbuf)
 		;;(set-process-buffer proc nil)
 		(error "cvs' process buffer was killed")
-	      (with-current-buffer (process-buffer proc)
-		;; do the postprocessing like parsing and such
-		(save-excursion (eval cvs-postproc))
-		;; check whether something is left
-		(unless (get-buffer-process (current-buffer))
-		  ;; IIRC, we enable undo again once the process is finished
-		  ;; for cases where the output was inserted in *vc-diff* or
-		  ;; in a file-like buffer.  --Stef
-		  (buffer-enable-undo)
-		  (with-current-buffer cvs-buffer
-		    (message "CVS process has completed in %s"
-			     (buffer-name))))))))))))
+	      (with-current-buffer procbuf
+		;; Do the postprocessing like parsing and such.
+		(save-excursion (eval cvs-postproc)))))))
+      ;; Check whether something is left.
+      (when (and procbuf (not (get-buffer-process procbuf)))
+        (with-current-buffer procbuf
+          ;; IIRC, we enable undo again once the process is finished
+          ;; for cases where the output was inserted in *vc-diff* or
+          ;; in a file-like buffer.  --Stef
+          (buffer-enable-undo)
+          (with-current-buffer (or cvs-buf (current-buffer))
+            (message "CVS process has completed in %s"
+                     (buffer-name))))))))
 
 (defun cvs-parse-process (dcd &optional subdir old-fis)
   "Parse the output of a cvs process.
@@ -771,6 +775,7 @@ clear what alternative to use.
 For interactive use, use `" (symbol-name fun) "' instead.")
 	     ,interact
 	     ,@body)
+	   (put ',fun-1 'definition-name ',fun)
 	   (defun ,fun ()
 	     ,(concat line1 "\nWrapper function that switches to a *cvs* buffer
 before calling the real function `" (symbol-name fun-1) "'.\n")
@@ -944,9 +949,9 @@ With a prefix argument, prompt for cvs FLAGS to use."
 (defun-cvs-mode (cvs-mode-checkout . NOARGS) (dir)
   "Run cvs checkout against the current branch.
 The files are stored to DIR."
-  (interactive 
+  (interactive
    (let* ((branch (cvs-prefix-get 'cvs-branch-prefix))
-	  (prompt (format "CVS Checkout Directory for `%s%s': " 
+	  (prompt (format "CVS Checkout Directory for `%s%s': "
 			 (cvs-get-module)
 			 (if branch (format " (branch: %s)" branch)
 			   ""))))
@@ -1123,7 +1128,7 @@ Full documentation is in the Texinfo file."
 				      ("->" cvs-secondary-branch-prefix))))
 	  " " cvs-mode-line-process))
   (if buffer-file-name
-      (error "Use M-x cvs-quickdir to get a *cvs* buffer."))
+      (error "Use M-x cvs-quickdir to get a *cvs* buffer"))
   (buffer-disable-undo)
   ;;(set (make-local-variable 'goal-column) cvs-cursor-column)
   (set (make-local-variable 'revert-buffer-function) 'cvs-mode-revert-buffer)
@@ -1171,7 +1176,7 @@ Full documentation is in the Texinfo file."
   (interactive)
   (if (eq last-command 'cvs-help)
       (describe-function 'cvs-mode)   ; would need minor-mode for log-edit-mode
-    (message
+    (message "%s"
      (substitute-command-keys
       "`\\[cvs-help]':help `\\[cvs-mode-add]':add `\\[cvs-mode-commit]':commit \
 `\\[cvs-mode-diff-map]':diff* `\\[cvs-mode-log]':log \
@@ -1478,11 +1483,16 @@ The POSTPROC specified there (typically `log-edit') is then called,
 	 (point))))))
 
 (defvar cvs-edit-log-revision)
-(defun cvs-mode-edit-log (rev &optional text)
+(defvar cvs-edit-log-files) (put 'cvs-edit-log-files 'permanent-local t)
+(defun cvs-mode-edit-log (file rev &optional text)
   "Edit the log message at point.
 This is best called from a `log-view-mode' buffer."
   (interactive
    (list
+    (or (cvs-mode! (lambda ()
+                     (car (cvs-mode-files nil nil
+                                          :read-only t :file t :noquery t))))
+        (read-string "File name: "))
     (or (cvs-mode! (lambda () (cvs-prefix-get 'cvs-branch-prefix)))
 	(read-string "Revision to edit: "))
     (cvs-edit-log-text-at-point)))
@@ -1494,26 +1504,38 @@ This is best called from a `log-view-mode' buffer."
   (let ((buf (cvs-temp-buffer "message" 'normal 'nosetup))
 	(setupfun (or (nth 2 (cdr (assoc "message" cvs-buffer-name-alist)))
 		      'log-edit)))
+    (with-current-buffer buf
+      ;; Set the filename before, so log-edit can correctly setup its
+      ;; log-edit-initial-files variable.
+      (set (make-local-variable 'cvs-edit-log-files) (list file)))
     (funcall setupfun 'cvs-do-edit-log nil 'cvs-edit-log-filelist buf)
     (when text (erase-buffer) (insert text))
     (set (make-local-variable 'cvs-edit-log-revision) rev)
-    (set (make-local-variable 'cvs-minor-wrap-function) 'cvs-edit-log-minor-wrap)
+    (set (make-local-variable 'cvs-minor-wrap-function)
+         'cvs-edit-log-minor-wrap)
     ;; (run-hooks 'cvs-mode-commit-hook)
     ))
 
 (defun cvs-edit-log-minor-wrap (buf f)
-  (let ((cvs-ignore-marks-modif (cvs-mode-mark-get-modif "commit")))
+  (let ((cvs-branch-prefix (with-current-buffer buf cvs-edit-log-revision))
+        (cvs-minor-current-files
+         (with-current-buffer buf cvs-edit-log-files))
+        ;; FIXME:  I need to force because the fileinfos are UNKNOWN
+        (cvs-force-command "/F"))
     (funcall f)))
 
 (defun cvs-edit-log-filelist ()
-  (cvs-mode-files nil nil :read-only t :file t :noquery t))
+  (if cvs-minor-wrap-function
+      (cvs-mode-files nil nil :read-only t :file t :noquery t)
+    cvs-edit-log-files))
 
 (defun cvs-do-edit-log (rev)
   "Do the actual commit, using the current buffer as the log message."
   (interactive (list cvs-edit-log-revision))
   (let ((msg (buffer-substring-no-properties (point-min) (point-max))))
-    (cvs-mode!)
-    (cvs-mode-do "admin" (list (concat "-m" rev ":" msg)) nil)))
+    (cvs-mode!
+     (lambda ()
+       (cvs-mode-do "admin" (list (concat "-m" rev ":" msg)) nil)))))
 
 
 ;;;;
@@ -1980,7 +2002,7 @@ With a prefix, opens the buffer in an OTHER window."
   (when (and (/= (point) (progn (posn-set-point (event-end e)) (point)))
 	     (not (memq (get-text-property (1- (line-end-position))
                                            'font-lock-face)
-                        '(cvs-header-face cvs-filename-face))))
+                        '(cvs-header cvs-filename))))
     (error "Not a file name"))
   (cvs-mode!
    (lambda (&optional rev)

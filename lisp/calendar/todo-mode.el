@@ -1,6 +1,7 @@
 ;;; todo-mode.el --- major mode for editing TODO list files
 
-;; Copyright (C) 1997, 1999, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1999, 2001, 2002, 2003, 2004, 2005
+;;   Free Software Foundation, Inc.
 
 ;; Author: Oliver Seidel <os10000@seidel-space.de>
 ;;   [Not clear the above works, July 2000]
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;; ---------------------------------------------------------------------------
 
@@ -311,7 +312,7 @@ which it will stop.  If you set the threshhold to zero, the upper and
 lower bound will coincide at the end of the loop and you will insert
 your item just before that point.  If you set the threshhold to,
 e.g. 8, it will stop as soon as the window size drops below that
-amount and will insert the item in the approximate centre of that
+amount and will insert the item in the approximate center of that
 window."
   :type 'integer
   :group 'todo)

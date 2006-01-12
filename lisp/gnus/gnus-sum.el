@@ -1,6 +1,7 @@
 ;;; gnus-sum.el --- summary mode commands for Gnus
-;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: news
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -256,8 +257,7 @@ simplification is selected."
   "*If non-nil, hide all threads initially.
 This can be a predicate specifier which says which threads to hide.
 If threads are hidden, you have to run the command
-`gnus-summary-show-thread' by hand or use `gnus-select-article-hook'
-to expose hidden threads."
+`gnus-summary-show-thread' by hand or select an article."
   :group 'gnus-thread
   :type '(radio (sexp :format "Non-nil\n"
 		      :match (lambda (widget value)
@@ -320,7 +320,7 @@ This variable can either be the symbols `first' (place point on the
 first subject), `unread' (place point on the subject line of the first
 unread article), `best' (place point on the subject line of the
 higest-scored article), `unseen' (place point on the subject line of
-the first unseen article), 'unseen-or-unread' (place point on the subject
+the first unseen article), `unseen-or-unread' (place point on the subject
 line of the first unseen article or, if all article have been seen, on the
 subject line of the first unread article), or a function to be called to
 place point on some subject line."
@@ -917,7 +917,7 @@ automatically when it is selected."
   :group 'gnus-summary
   :type 'boolean)
 
-(defcustom gnus-summary-selected-face 'gnus-summary-selected-face
+(defcustom gnus-summary-selected-face 'gnus-summary-selected
   "Face used for highlighting the current article in the summary buffer."
   :group 'gnus-summary-visual
   :type 'face)
@@ -926,42 +926,42 @@ automatically when it is selected."
 
 (defcustom gnus-summary-highlight
   '(((eq mark gnus-canceled-mark)
-     . gnus-summary-cancelled-face)
+     . gnus-summary-cancelled)
     ((and uncached (> score default-high))
-     . gnus-summary-high-undownloaded-face)
+     . gnus-summary-high-undownloaded)
     ((and uncached (< score default-low))
-     . gnus-summary-low-undownloaded-face)
+     . gnus-summary-low-undownloaded)
     (uncached
-     . gnus-summary-normal-undownloaded-face)
+     . gnus-summary-normal-undownloaded)
     ((and (> score default-high)
 	  (or (eq mark gnus-dormant-mark)
 	      (eq mark gnus-ticked-mark)))
-     . gnus-summary-high-ticked-face)
+     . gnus-summary-high-ticked)
     ((and (< score default-low)
 	  (or (eq mark gnus-dormant-mark)
 	      (eq mark gnus-ticked-mark)))
-     . gnus-summary-low-ticked-face)
+     . gnus-summary-low-ticked)
     ((or (eq mark gnus-dormant-mark)
 	 (eq mark gnus-ticked-mark))
-     . gnus-summary-normal-ticked-face)
+     . gnus-summary-normal-ticked)
     ((and (> score default-high) (eq mark gnus-ancient-mark))
-     . gnus-summary-high-ancient-face)
+     . gnus-summary-high-ancient)
     ((and (< score default-low) (eq mark gnus-ancient-mark))
-     . gnus-summary-low-ancient-face)
+     . gnus-summary-low-ancient)
     ((eq mark gnus-ancient-mark)
-     . gnus-summary-normal-ancient-face)
+     . gnus-summary-normal-ancient)
     ((and (> score default-high) (eq mark gnus-unread-mark))
-     . gnus-summary-high-unread-face)
+     . gnus-summary-high-unread)
     ((and (< score default-low) (eq mark gnus-unread-mark))
-     . gnus-summary-low-unread-face)
+     . gnus-summary-low-unread)
     ((eq mark gnus-unread-mark)
-     . gnus-summary-normal-unread-face)
+     . gnus-summary-normal-unread)
     ((> score default-high)
-     . gnus-summary-high-read-face)
+     . gnus-summary-high-read)
     ((< score default-low)
-     . gnus-summary-low-read-face)
+     . gnus-summary-low-read)
     (t
-     . gnus-summary-normal-read-face))
+     . gnus-summary-normal-read))
   "*Controls the highlighting of summary buffer lines.
 
 A list of (FORM . FACE) pairs.  When deciding how a a particular
@@ -1000,7 +1000,9 @@ which it may alter in any way."
   :type '(repeat symbol))
 
 (defcustom gnus-ignored-from-addresses
-  (and user-mail-address (regexp-quote user-mail-address))
+  (and user-mail-address  
+       (not (string= user-mail-address ""))
+       (regexp-quote user-mail-address))
   "*Regexp of From headers that may be suppressed in favor of To headers."
   :version "21.1"
   :group 'gnus-summary
@@ -6112,7 +6114,7 @@ current article will be taken into consideration."
       (let ((max (max (point) (mark)))
 	    articles article)
 	(save-excursion
-	  (goto-char (min (min (point) (mark))))
+	  (goto-char (min (point) (mark)))
 	  (while
 	      (and
 	       (push (setq article (gnus-summary-article-number)) articles)
@@ -7696,8 +7698,8 @@ articles that are younger than AGE days."
 	   (gnus-completing-read-with-default
 	    (symbol-name (car gnus-extra-headers))
 	    (if current-prefix-arg
-		"Exclude extra header:"
-	      "Limit extra header:")
+		"Exclude extra header"
+	      "Limit extra header")
 	    (mapcar (lambda (x)
 		      (cons (symbol-name x) x))
 		    gnus-extra-headers)
@@ -9218,7 +9220,7 @@ latter case, they will be copied into the relevant groups."
 					gnus-newsgroup-name)))))
 		(method
 		 (gnus-completing-read-with-default
-		  methname "What backend do you want to use when respooling?"
+		  methname "Backend to use when respooling"
 		  methods nil t nil 'gnus-mail-method-history))
 		ms)
 	   (cond
@@ -9561,7 +9563,8 @@ groups."
 	    (save-excursion
 	      (save-restriction
 		(message-narrow-to-head)
-		(let ((head (buffer-string))
+		(let ((head (buffer-substring-no-properties
+			     (point-min) (point-max)))
 		      header)
 		  (with-temp-buffer
 		    (insert (format "211 %d Article retrieved.\n"
@@ -11043,7 +11046,7 @@ save those articles instead."
   (let* ((split-name (gnus-get-split-value gnus-move-split-methods))
 	 (minibuffer-confirm-incomplete nil) ; XEmacs
 	 (prom
-	  (format "%s %s to:"
+	  (format "%s %s to"
 		  prompt
 		  (if (> (length articles) 1)
 		      (format "these %d articles" (length articles))

@@ -22,14 +22,17 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;; Author: TAKAHASHI Naoto <ntakahas@m17n.org>
 
 ;;; Commentary:
 
 ;;; Code:
+
+(defvar rmail-current-message)
+(defvar rmail-message-vector)
 
 ;; Information for exiting Ethiopic environment.
 (defvar exit-ethiopic-environment-data nil)
@@ -141,7 +144,7 @@ variable.")
 
 (defvar ethio-use-three-dot-question nil
   "*Non-nil means associate ASCII question mark with Ethiopic old style question mark (three vertically stacked dots).
-If nil, associate ASCII question mark with Ethiopic stylised question
+If nil, associate ASCII question mark with Ethiopic stylized question
 mark.  All SERA <--> FIDEL converters refer this variable.")
 
 (defvar ethio-quote-vowel-always nil
@@ -432,7 +435,7 @@ The variable `ethio-primary-language' specifies the primary language
 and `ethio-secondary-language' specifies the secondary.
 
 If the 3rd parameter SECONDARY is given and non-nil, assume the region
-begins begins with the secondary language; otherwise with the primary
+begins with the secondary language; otherwise with the primary
 language.
 
 If the 4th parameter FORCE is given and non-nil, perform conversion
@@ -726,7 +729,7 @@ changing anything."
 
 (defun ethio-tilde-escape nil
   "Handle a SERA tilde escape in Ethiopic section and delete it.
-Delete the escape even it is not recognised."
+Delete the escape even it is not recognized."
 
   (let ((p (point)) command)
     (skip-chars-forward "^ \t\n\\\\")
@@ -821,7 +824,7 @@ Delete the escape even it is not recognised."
 
 ;;;###autoload
 (defun ethio-sera-to-fidel-mail-or-marker (&optional arg)
-  "Execute ethio-sera-to-fidel-mail or ethio-sera-to-fidel-marker depending on the current major mode.
+  "Execute `ethio-sera-to-fidel-mail' or `ethio-sera-to-fidel-marker' depending on the current major mode.
 If in rmail-mode or in mail-mode, execute the former; otherwise latter."
 
   (interactive "P")
@@ -1211,7 +1214,7 @@ See also the descriptions of the variables
 
 ;;;###autoload
 (defun ethio-fidel-to-sera-mail-or-marker (&optional arg)
-  "Execute ethio-fidel-to-sera-mail or ethio-fidel-to-sera-marker depending on the current major mode.
+  "Execute `ethio-fidel-to-sera-mail' or `ethio-fidel-to-sera-marker' depending on the current major mode.
 If in rmail-mode or in mail-mode, execute the former; otherwise latter."
 
   (interactive "P")

@@ -1,7 +1,7 @@
 ;;; lisp-mode.el --- Lisp mode, and its idiosyncratic commands
 
-;; Copyright (C) 1985, 1986, 1999, 2000, 2001, 2003, 2004, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: lisp, languages
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -29,6 +29,11 @@
 ;; This mode is documented in the Emacs manual.
 
 ;;; Code:
+
+(defvar font-lock-comment-face)
+(defvar font-lock-doc-face)
+(defvar font-lock-keywords-case-fold-search)
+(defvar font-lock-string-face)
 
 (defvar lisp-mode-abbrev-table nil)
 
@@ -50,12 +55,13 @@
       (while (< i 128)
 	(modify-syntax-entry i "_   " table)
 	(setq i (1+ i)))
-      (modify-syntax-entry ?  "    " table)
+      (modify-syntax-entry ?\s "    " table)
       (modify-syntax-entry ?\t "    " table)
       (modify-syntax-entry ?\f "    " table)
       (modify-syntax-entry ?\n ">   " table)
-      ;; Give CR the same syntax as newline, for selective-display.
-      (modify-syntax-entry ?\^m ">   " table)
+      ;; This is probably obsolete since nowadays such features use overlays.
+      ;; ;; Give CR the same syntax as newline, for selective-display.
+      ;; (modify-syntax-entry ?\^m ">   " table)
       (modify-syntax-entry ?\; "<   " table)
       (modify-syntax-entry ?` "'   " table)
       (modify-syntax-entry ?' "'   " table)
@@ -76,8 +82,8 @@
   (let ((table (copy-syntax-table emacs-lisp-mode-syntax-table)))
     (modify-syntax-entry ?\[ "_   " table)
     (modify-syntax-entry ?\] "_   " table)
-    (modify-syntax-entry ?# "' 14bn" table)
-    (modify-syntax-entry ?| "\" 23b" table)
+    (modify-syntax-entry ?# "' 14b" table)
+    (modify-syntax-entry ?| "\" 23bn" table)
     table))
 
 (define-abbrev-table 'lisp-mode-abbrev-table ())
@@ -90,13 +96,13 @@
 			     (regexp-opt
 			      '("defun" "defun*" "defsubst" "defmacro"
 				"defadvice" "define-skeleton"
-				"define-minor-mode" "define-derived-mode"
-				"define-generic-mode"
+				"define-minor-mode" "define-global-minor-mode"
+				"define-derived-mode" "define-generic-mode"
 				"define-compiler-macro" "define-modify-macro"
 				"defsetf" "define-setf-expander"
 				"define-method-combination"
 				"defgeneric" "defmethod") t))
-			   "\\s-+\\(\\sw\\(\\sw\\|\\s_\\)+\\)"))
+			   "\\s-+\\(\\(\\sw\\|\\s_\\)+\\)"))
 	 2)
    (list (purecopy "Variables")
 	 (purecopy (concat "^\\s-*("
@@ -104,7 +110,7 @@
 			     (regexp-opt
 			      '("defvar" "defconst" "defconstant" "defcustom"
 				"defparameter" "define-symbol-macro") t))
-			   "\\s-+\\(\\sw\\(\\sw\\|\\s_\\)+\\)"))
+			   "\\s-+\\(\\(\\sw\\|\\s_\\)+\\)"))
 	 2)
    (list (purecopy "Types")
 	 (purecopy (concat "^\\s-*("
@@ -113,7 +119,7 @@
 			      '("defgroup" "deftheme" "deftype" "defstruct"
 				"defclass" "define-condition" "define-widget"
 				"defface" "defpackage") t))
-			   "\\s-+'?\\(\\sw\\(\\sw\\|\\s_\\)+\\)"))
+			   "\\s-+'?\\(\\(\\sw\\|\\s_\\)+\\)"))
 	 2))
 
   "Imenu generic expression for Lisp mode.  See `imenu-generic-expression'.")
@@ -129,36 +135,60 @@
 (put 'defmacro 'doc-string-elt 3)
 (put 'defmacro* 'doc-string-elt 3)
 (put 'defsubst 'doc-string-elt 3)
+(put 'defstruct 'doc-string-elt 2)
 (put 'define-skeleton 'doc-string-elt 2)
 (put 'define-derived-mode 'doc-string-elt 4)
 (put 'define-compilation-mode 'doc-string-elt 3)
 (put 'easy-mmode-define-minor-mode 'doc-string-elt 2)
 (put 'define-minor-mode 'doc-string-elt 2)
+(put 'easy-mmode-define-global-mode 'doc-string-elt 2)
+(put 'define-global-minor-mode 'doc-string-elt 2)
 (put 'define-generic-mode 'doc-string-elt 7)
-;; define-global-mode has no explicit docstring.
-(put 'easy-mmode-define-global-mode 'doc-string-elt 0)
 (put 'define-ibuffer-filter 'doc-string-elt 2)
 (put 'define-ibuffer-op 'doc-string-elt 3)
 (put 'define-ibuffer-sorter 'doc-string-elt 2)
+(put 'lambda 'doc-string-elt 2)
+(put 'defalias 'doc-string-elt 3)
+(put 'defvaralias 'doc-string-elt 3)
+(put 'define-category 'doc-string-elt 2)
+
+(defvar lisp-doc-string-elt-property 'doc-string-elt
+  "The symbol property that holds the docstring position info.")
 
 (defun lisp-font-lock-syntactic-face-function (state)
   (if (nth 3 state)
-      (if (and (eq (nth 0 state) 1)
-	       ;; This might be a docstring.
-	       (save-excursion
-		 (let ((n 0))
-		   (goto-char (nth 8 state))
-		   (condition-case nil
-		       (while (and (not (bobp))
-				   (progn (backward-sexp 1) (setq n (1+ n)))))
-		     (scan-error nil))
-		   (when (> n 0)
-		     (let ((sym (intern-soft
-				 (buffer-substring
-				  (point) (progn (forward-sexp 1) (point))))))
-		       (eq n (or (get sym 'doc-string-elt) 3)))))))
-	  font-lock-doc-face
-	font-lock-string-face)
+      ;; This might be a (doc)string or a |...| symbol.
+      (let ((startpos (nth 8 state)))
+        (if (eq (char-after startpos) ?|)
+            ;; This is not a string, but a |...| symbol.
+            nil
+          (let* ((listbeg (nth 1 state))
+                 (firstsym (and listbeg
+                                (save-excursion
+                                  (goto-char listbeg)
+                                  (and (looking-at "([ \t\n]*\\(\\(\\sw\\|\\s_\\)+\\)")
+                                       (match-string 1)))))
+                 (docelt (and firstsym (get (intern-soft firstsym)
+                                            lisp-doc-string-elt-property))))
+            (if (and docelt
+                     ;; It's a string in a form that can have a docstring.
+                     ;; Check whether it's in docstring position.
+                     (save-excursion
+                       (when (functionp docelt)
+                         (goto-char (match-end 1))
+                         (setq docelt (funcall docelt)))
+                       (goto-char listbeg)
+                       (forward-char 1)
+                       (condition-case nil
+                           (while (and (> docelt 0) (< (point) startpos)
+                                       (progn (forward-sexp 1) t))
+                             (setq docelt (1- docelt)))
+                         (error nil))
+                       (and (zerop docelt) (<= (point) startpos)
+                            (progn (forward-comment (point-max)) t)
+                            (= (point) (nth 8 state)))))
+                font-lock-doc-face
+              font-lock-string-face))))
     font-lock-comment-face))
 
 ;; The LISP-SYNTAX argument is used by code in inf-lisp.el and is
@@ -171,6 +201,10 @@
   (setq paragraph-ignore-fill-prefix t)
   (make-local-variable 'fill-paragraph-function)
   (setq fill-paragraph-function 'lisp-fill-paragraph)
+  ;; Adaptive fill mode gets the fill wrong for a one-line paragraph made of
+  ;; a single docstring.  Let's fix it here.
+  (set (make-local-variable 'adaptive-fill-function)
+       (lambda () (if (looking-at "\\s-+\"[^\n\"]+\"\\s-*$") "")))
   ;; Adaptive fill mode gets in the way of auto-fill,
   ;; and should make no difference for explicit fill
   ;; because lisp-fill-paragraph should do the job.
@@ -194,7 +228,7 @@
   (setq comment-start-skip "\\(\\(^\\|[^\\\\\n]\\)\\(\\\\\\\\\\)*\\);+ *")
   (make-local-variable 'font-lock-comment-start-skip)
   ;; Font lock mode uses this only when it KNOWS a comment is starting.
-  (setq font-lock-comment-start-skip ";+ *") 
+  (setq font-lock-comment-start-skip ";+ *")
   (make-local-variable 'comment-add)
   (setq comment-add 1)			;default to `;;' in comment-region
   (make-local-variable 'comment-column)
@@ -616,10 +650,23 @@ Reinitialize the face according to the `defface' specification."
 	;; `defface' is macroexpanded to `custom-declare-face'.
 	((eq (car form) 'custom-declare-face)
 	 ;; Reset the face.
-	 (put (eval (nth 1 form)) 'face-defface-spec nil)
 	 (setq face-new-frame-defaults
 	       (assq-delete-all (eval (nth 1 form)) face-new-frame-defaults))
-	 form)
+	 (put (eval (nth 1 form)) 'face-defface-spec nil)
+	 ;; Setting `customized-face' to the new spec after calling
+	 ;; the form, but preserving the old saved spec in `saved-face',
+	 ;; imitates the situation when the new face spec is set
+	 ;; temporarily for the current session in the customize
+	 ;; buffer, thus allowing `face-user-default-spec' to use the
+	 ;; new customized spec instead of the saved spec.
+	 ;; Resetting `saved-face' temporarily to nil is needed to let
+	 ;; `defface' change the spec, regardless of a saved spec.
+	 (prog1 `(prog1 ,form
+		   (put ,(nth 1 form) 'saved-face
+			',(get (eval (nth 1 form)) 'saved-face))
+		   (put ,(nth 1 form) 'customized-face
+			,(nth 2 form)))
+	   (put (eval (nth 1 form)) 'saved-face nil)))
 	((eq (car form) 'progn)
 	 (cons 'progn (mapcar 'eval-defun-1 (cdr form))))
 	(t form)))
@@ -699,17 +746,9 @@ which see."
 	     (unless (eq old-value new-value)
 	       (setq debug-on-error new-value))
 	     value)))))
-
 
-(defun lisp-comment-indent ()
-  (if (looking-at "\\s<\\s<\\s<")
-      (current-column)
-    (if (looking-at "\\s<\\s<")
-	(let ((tem (or (calculate-lisp-indent) (current-column))))
-	  (if (listp tem) (car tem) tem))
-      (skip-chars-backward " \t")
-      (max (if (bolp) 0 (1+ (current-column)))
-	   comment-column))))
+;; May still be used by some external Lisp-mode variant.
+(define-obsolete-function-alias 'lisp-comment-indent 'comment-indent-default)
 
 ;; This function just forces a more costly detection of comments (using
 ;; parse-partial-sexp from beginning-of-defun).  I.e. It avoids the problem of

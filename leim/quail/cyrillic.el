@@ -1,8 +1,10 @@
 ;;; cyrillic.el --- Quail package for inputting Cyrillic characters
 
-;; Copyright (C) 1997 Electrotechnical Laboratory, JAPAN.
-;; Licensed to the Free Software Foundation.
-;; Copyright (C) 2001, 2002 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1998, 2001, 2002, 2003, 2004, 2005
+;;   Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2005
+;;   National Institute of Advanced Industrial Science and Technology (AIST)
+;;   Registration Number H14PRO021
 
 ;; Author: TAKAHASHI Naoto <ntakahas@m17n.org>
 ;; Keywords: multilingual, input method, Cyrillic, i18n
@@ -21,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -997,7 +999,7 @@ as follows.
 ;; language-independent and universal.  It should be able to generate all
 ;; Cyrillic symbols.
 (quail-define-package
- "cyrillic-translit" "Cyrillic" ",L6(Bt" nil
+ "cyrillic-translit" "Cyrillic" ",L6(Bt" t
  "Intuitively transliterated keyboard layout.
 Most convenient for entering Russian, but all Cyrillic characters
 are included.  Should handle most cases.  However:

@@ -1,5 +1,6 @@
 ;;; gnus-util.el --- utility functions for Gnus
-;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004
+
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
 ;;        Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -39,9 +40,12 @@
   (require 'cl)
   ;; Fixme: this should be a gnus variable, not nnmail-.
   (defvar nnmail-pathname-coding-system)
+  (defvar nnmail-active-file-coding-system)
 
   ;; Inappropriate references to other parts of Gnus.
   (defvar gnus-emphasize-whitespace-regexp)
+  (defvar gnus-original-article-buffer)
+  (defvar gnus-user-agent)
   )
 (require 'time-date)
 (require 'netrc)
@@ -331,8 +335,8 @@ is slower."
 (defun gnus-completing-read-with-default (default prompt &rest args)
   ;; Like `completing-read', except that DEFAULT is the default argument.
   (let* ((prompt (if default
-		     (concat prompt " (default " default ") ")
-		   (concat prompt " ")))
+		     (concat prompt " (default " default "): ")
+		   (concat prompt ": ")))
 	 (answer (apply 'completing-read prompt args)))
     (if (or (null answer) (zerop (length answer)))
 	default
@@ -1033,14 +1037,6 @@ This function saves the current buffer."
 	 (set-buffer gnus-group-buffer)
 	 (eq major-mode 'gnus-group-mode))))
 
-(defun gnus-remove-duplicates (list)
-  (let (new)
-    (while list
-      (or (member (car list) new)
-	  (setq new (cons (car list) new)))
-      (setq list (cdr list)))
-    (nreverse new)))
-
 (defun gnus-remove-if (predicate list)
   "Return a copy of LIST with all items satisfying PREDICATE removed."
   (let (out)
@@ -1513,41 +1509,48 @@ predicate on the elements."
       (nconc (nreverse res) list1 list2))))
 
 (eval-when-compile
-  (defvar xemacs-codename))
+  (defvar xemacs-codename)
+  (defvar sxemacs-codename)
+  (defvar emacs-program-version))
 
 (defun gnus-emacs-version ()
   "Stringified Emacs version."
-  (let ((system-v
-	 (cond
-	  ((eq gnus-user-agent 'emacs-gnus-config)
-	   system-configuration)
-	  ((eq gnus-user-agent 'emacs-gnus-type)
-	   (symbol-name system-type))
-	  (t nil))))
+  (let* ((lst (if (listp gnus-user-agent)
+		  gnus-user-agent
+		'(gnus emacs type)))
+	 (system-v (cond ((memq 'config lst)
+			  system-configuration)
+			 ((memq 'type lst)
+			  (symbol-name system-type))
+			 (t nil)))
+	 codename emacsname)
+    (cond ((featurep 'sxemacs)
+	   (setq emacsname "SXEmacs"
+		 codename sxemacs-codename))
+	  ((featurep 'xemacs)
+	   (setq emacsname "XEmacs"
+		 codename xemacs-codename))
+	  (t
+	   (setq emacsname "Emacs")))
     (cond
-     ((eq gnus-user-agent 'gnus)
+     ((not (memq 'emacs lst))
       nil)
      ((string-match "^\\(\\([.0-9]+\\)*\\)\\.[0-9]+$" emacs-version)
+      ;; Emacs:
       (concat "Emacs/" (match-string 1 emacs-version)
 	      (if system-v
 		  (concat " (" system-v ")")
 		"")))
-     ((string-match
-       "\\([A-Z]*[Mm][Aa][Cc][Ss]\\)[^(]*\\(\\((beta.*)\\|'\\)\\)?"
-       emacs-version)
-      (concat
-       (match-string 1 emacs-version)
-       (format "/%d.%d" emacs-major-version emacs-minor-version)
-       (if (match-beginning 3)
-	   (match-string 3 emacs-version)
-	 "")
-       (if (boundp 'xemacs-codename)
-	   (concat
-	    " (" xemacs-codename
-	    (if system-v
-		(concat ", " system-v ")")
+     ((or (featurep 'sxemacs) (featurep 'xemacs))
+      ;; XEmacs or SXEmacs:
+      (concat emacsname "/" emacs-program-version
+	      " ("
+	      (when (and (memq 'codename lst)
+			 codename)
+		(concat codename
+			(when system-v ", ")))
+	      (when system-v system-v)
 	      ")"))
-	 "")))
      (t emacs-version))))
 
 (defun gnus-rename-file (old-path new-path &optional trim)

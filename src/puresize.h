@@ -1,5 +1,5 @@
 /* How much read-only Lisp storage a dumped Emacs needs.
-   Copyright (C) 1993, 2002 Free Software Foundation, Inc.
+   Copyright (C) 1993, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +15,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Define PURESIZE, the number of bytes of pure Lisp code to leave space for.
 
@@ -42,7 +42,7 @@ Boston, MA 02111-1307, USA.  */
 #endif
 
 #ifndef BASE_PURESIZE
-#define BASE_PURESIZE (1100000 + SYSTEM_PURESIZE_EXTRA + SITELOAD_PURESIZE_EXTRA)
+#define BASE_PURESIZE (1180000 + SYSTEM_PURESIZE_EXTRA + SITELOAD_PURESIZE_EXTRA)
 #endif
 
 /* Increase BASE_PURESIZE by a ratio depending on the machine's word size.  */

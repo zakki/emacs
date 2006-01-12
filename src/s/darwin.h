@@ -1,5 +1,5 @@
 /* System description header file for Darwin (Mac OS X).
-   Copyright (C) 2001, 02, 2004  Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +15,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 /*
@@ -263,13 +263,13 @@ Boston, MA 02111-1307, USA.  */
 
 /* Indicate that we are compiling for Mac OS X and where to find Mac
    specific headers.  */
-#define C_SWITCH_SYSTEM -fpascal-strings -fno-common -DMAC_OSX -I../mac/src
+#define C_SWITCH_SYSTEM -fpascal-strings -DMAC_OSX -I../mac/src
 
 /* Link in the Carbon lib. */
 #ifdef HAVE_CARBON
 #define LIBS_CARBON -framework Carbon -framework QuickTime
 #else
-#define LIBS_CARBON -framework Carbon
+#define LIBS_CARBON
 #endif
 
 /* The -headerpad option tells ld (see man page) to leave room at the
@@ -328,6 +328,10 @@ struct kboard;
    does not exist.  */
 #undef HAVE_WORKING_VFORK
 #define vfork fork
+
+/* Don't close pty in process.c to make it as controlling terminal.
+   It is already a controlling terminal of subprocess, because we did
+   ioctl TIOCSCTTY.  */
 #define DONT_REOPEN_PTY
 
 #ifdef temacs

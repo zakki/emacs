@@ -1,7 +1,7 @@
 ;; autoload.el --- maintain autoloads in loaddefs.el
 
-;; Copyright (C) 1991,92,93,94,95,96,97, 2001,02,03,04
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1991, 1992, 1993, 1994, 1995, 1996, 1997, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Roland McGrath <roland@gnu.org>
 ;; Keywords: maint
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -86,10 +86,10 @@ or macro definition or a defcustom)."
 
      ;; For special function-like operators, use the `autoload' function.
      ((memq car '(defun define-skeleton defmacro define-derived-mode
-                   define-compilation-mode
-		   define-generic-mode easy-mmode-define-minor-mode
-		   easy-mmode-define-global-mode
-		   define-minor-mode defun* defmacro*))
+                   define-compilation-mode define-generic-mode
+		   easy-mmode-define-global-mode define-global-minor-mode
+		   easy-mmode-define-minor-mode define-minor-mode
+		   defun* defmacro*))
       (let* ((macrop (memq car '(defmacro defmacro*)))
 	     (name (nth 1 form))
 	     (args (case car
@@ -109,6 +109,7 @@ or macro definition or a defcustom)."
 	      (or (and (memq car '(define-skeleton define-derived-mode
 				    define-generic-mode
 				    easy-mmode-define-global-mode
+				    define-global-minor-mode
 				    easy-mmode-define-minor-mode
 				    define-minor-mode)) t)
 		  (eq (car-safe (car body)) 'interactive))
@@ -123,7 +124,26 @@ or macro definition or a defcustom)."
 	    )
 	`(progn
 	   (defvar ,varname ,init ,doc)
-	   (custom-autoload ',varname ,file))))
+	   (custom-autoload ',varname ,file)
+           ;; The use of :require in a defcustom can be annoying, especially
+           ;; when defcustoms are moved from one file to another between
+           ;; releases because the :require arg gets placed in the user's
+           ;; .emacs.  In order for autoloaded minor modes not to need the
+           ;; use of :require, we arrange to store their :setter.
+           ,(let ((setter (condition-case nil
+                              (cadr (memq :set form))
+                            (error nil))))
+              (if (equal setter ''custom-set-minor-mode)
+                  `(put ',varname 'custom-set 'custom-set-minor-mode))))))
+
+     ((eq car 'defgroup)
+      ;; In Emacs this is normally handled separately by cus-dep.el, but for
+      ;; third party packages, it can be convenient to explicitly autoload
+      ;; a group.
+      (let ((groupname (nth 1 form)))
+        `(let ((loads (get ',groupname 'custom-loads)))
+           (if (member ',file loads) nil
+             (put ',groupname 'custom-loads (cons ',file loads))))))
 
      ;; nil here indicates that this is not a special autoload form.
      (t nil))))
@@ -165,7 +185,8 @@ markers before we call `read'."
 	(goto-char (point-min))
 	(read (current-buffer))))))
 
-(defvar autoload-print-form-outbuf)
+(defvar autoload-print-form-outbuf nil
+  "Buffer which gets the output of `autoload-print-form'.")
 
 (defun autoload-print-form (form)
   "Print FORM such that `make-docfile' will find the docstrings.
@@ -482,7 +503,7 @@ Autoload section for %s is up to date."
 (defun update-directory-autoloads (&rest dirs)
   "\
 Update loaddefs.el with all the current autoloads from DIRS, and no old ones.
-This uses `update-file-autoloads' (which see) do its work.
+This uses `update-file-autoloads' (which see) to do its work.
 In an interactive call, you must give one argument, the name
 of a single directory.  In a call from Lisp, you can supply multiple
 directories as separate arguments, but this usage is discouraged.
@@ -557,6 +578,9 @@ directory or directories specified."
 
       (save-buffer))))
 
+(define-obsolete-function-alias 'update-autoloads-from-directories
+    'update-directory-autoloads "22.1")
+
 ;;;###autoload
 (defun batch-update-autoloads ()
   "Update loaddefs.el autoloads in batch mode.
@@ -566,5 +590,5 @@ Calls `update-directory-autoloads' on the command line arguments."
 
 (provide 'autoload)
 
-;;; arch-tag: 00244766-98f4-4767-bf42-8a22103441c6
+;; arch-tag: 00244766-98f4-4767-bf42-8a22103441c6
 ;;; autoload.el ends here

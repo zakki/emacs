@@ -1,6 +1,6 @@
 /* Graphical user interface functions for the Microsoft W32 API.
-   Copyright (C) 1989, 1992, 93, 94, 95, 96, 97, 98, 99, 2000, 01, 04
-     Free Software Foundation, Inc.
+   Copyright (C) 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
+                 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Added by Kevin Gallo */
 
@@ -154,7 +154,7 @@ int display_hourglass_p;
    over text or in the modeline.  */
 
 Lisp_Object Vx_pointer_shape, Vx_nontext_pointer_shape, Vx_mode_pointer_shape;
-Lisp_Object Vx_hourglass_pointer_shape, Vx_window_horizontal_drag_shape, Vx_hand_shape;
+Lisp_Object Vx_hourglass_pointer_shape, Vx_window_horizontal_drag_shape;
 
 /* The shape when over mouse-sensitive text.  */
 
@@ -330,7 +330,7 @@ check_x_frame (frame)
   CHECK_LIVE_FRAME (frame);
   f = XFRAME (frame);
   if (! FRAME_W32_P (f))
-    error ("non-w32 frame used");
+    error ("Non-W32 frame used");
   return f;
 }
 
@@ -360,7 +360,7 @@ check_x_display_info (frame)
       CHECK_LIVE_FRAME (frame);
       f = XFRAME (frame);
       if (! FRAME_W32_P (f))
-	error ("non-w32 frame used");
+	error ("Non-W32 frame used");
       return FRAME_W32_DISPLAY_INFO (f);
     }
 }
@@ -396,10 +396,10 @@ x_window_to_frame (dpyinfo, wdesc)
 }
 
 
-BOOL my_show_window P_ ((struct frame *, HWND, int));
-void my_set_window_pos P_ ((HWND, HWND, int, int, int, int, UINT));
 static Lisp_Object unwind_create_frame P_ ((Lisp_Object));
 static Lisp_Object unwind_create_tip_frame P_ ((Lisp_Object));
+static void my_create_window P_ ((struct frame *));
+static void my_create_tip_window P_ ((struct frame *));
 
 /* TODO: Native Input Method support; see x_create_im.  */
 void x_set_foreground_color P_ ((struct frame *, Lisp_Object, Lisp_Object));
@@ -3848,7 +3848,7 @@ w32_wnd_proc (hwnd, msg, wParam, lParam)
   return 0;
 }
 
-void
+static void
 my_create_window (f)
      struct frame * f;
 {
@@ -3864,7 +3864,7 @@ my_create_window (f)
    indirectly via the Window thread, as we do not need to process Window
    messages for the tooltip.  Creating tooltips indirectly also creates
    deadlocks when tooltips are created for menu items.  */
-void
+static void
 my_create_tip_window (f)
      struct frame *f;
 {
@@ -5285,9 +5285,13 @@ w32_to_x_font (lplogfont, lpxstr, len, specific_charset)
       strcpy (height_pixels, "*");
       strcpy (height_dpi, "*");
     }
+
+#if 0 /* Never put the width in the xfld. It fails on fonts with
+	 double-width characters.  */
   if (lplogfont->lfWidth)
     sprintf (width_pixels, "%u", lplogfont->lfWidth * 10);
   else
+#endif
     strcpy (width_pixels, "*");
 
   _snprintf (lpxstr, len - 1,
@@ -7408,16 +7412,22 @@ compute_tip_xy (f, parms, dx, dy, width, height, root_x, root_y)
 
   if (INTEGERP (top))
     *root_y = XINT (top);
-  else if (*root_y + XINT (dy) - height < 0)
-    *root_y -= XINT (dy);
-  else
-    {
-      *root_y -= height;
+  else if (*root_y + XINT (dy) <= 0)
+    *root_y = 0; /* Can happen for negative dy */
+  else if (*root_y + XINT (dy) + height <= FRAME_W32_DISPLAY_INFO (f)->height)
+    /* It fits below the pointer */
       *root_y += XINT (dy);
-    }
+  else if (height + XINT (dy) <= *root_y)
+    /* It fits above the pointer.  */
+    *root_y -= height + XINT (dy);
+  else
+    /* Put it on the top.  */
+    *root_y = 0;
 
   if (INTEGERP (left))
     *root_x = XINT (left);
+  else if (*root_x + XINT (dx) <= 0)
+    *root_x = 0; /* Can happen for negative dx */
   else if (*root_x + XINT (dx) + width <= FRAME_W32_DISPLAY_INFO (f)->width)
     /* It fits to the right of the pointer.  */
     *root_x += XINT (dx);
@@ -7587,7 +7597,7 @@ Text larger than the specified size is clipped.  */)
   clear_glyph_matrix (w->desired_matrix);
   clear_glyph_matrix (w->current_matrix);
   SET_TEXT_POS (pos, BEGV, BEGV_BYTE);
-  try_window (FRAME_ROOT_WINDOW (f), pos);
+  try_window (FRAME_ROOT_WINDOW (f), pos, 0);
 
   /* Compute width and height of the tooltip.  */
   width = height = 0;
@@ -7760,6 +7770,19 @@ file_dialog_callback (hwnd, msg, wParam, lParam)
   return 0;
 }
 
+/* Since we compile with _WIN32_WINNT set to 0x0400 (for NT4 compatibility)
+   we end up with the old file dialogs. Define a big enough struct for the
+   new dialog to trick GetOpenFileName into giving us the new dialogs on
+   Windows 2000 and XP.  */
+typedef struct
+{
+  OPENFILENAME real_details;
+  void * pReserved;
+  DWORD dwReserved;
+  DWORD FlagsEx;
+} NEWOPENFILENAME;
+
+
 DEFUN ("x-file-dialog", Fx_file_dialog, Sx_file_dialog, 2, 5, 0,
        doc: /* Read file name, prompting with PROMPT in directory DIR.
 Use a file selection dialog.
@@ -7808,39 +7831,58 @@ If ONLY-DIR-P is non-nil, the user can only select directories.  */)
     filename[0] = '\0';
 
   {
-    OPENFILENAME file_details;
+    NEWOPENFILENAME new_file_details;
+    BOOL file_opened = FALSE;
+    OPENFILENAME * file_details = &new_file_details.real_details;
 
     /* Prevent redisplay.  */
     specbind (Qinhibit_redisplay, Qt);
     BLOCK_INPUT;
 
-    bzero (&file_details, sizeof (file_details));
-    file_details.lStructSize = sizeof (file_details);
-    file_details.hwndOwner = FRAME_W32_WINDOW (f);
+    bzero (&new_file_details, sizeof (new_file_details));
+    /* Apparently NT4 crashes if you give it an unexpected size.
+       I'm not sure about Windows 9x, so play it safe.  */
+    if (w32_major_version > 4 && w32_major_version < 95)
+      file_details->lStructSize = sizeof (new_file_details);
+    else
+      file_details->lStructSize = sizeof (file_details);
+
+    file_details->hwndOwner = FRAME_W32_WINDOW (f);
     /* Undocumented Bug in Common File Dialog:
        If a filter is not specified, shell links are not resolved.  */
-    file_details.lpstrFilter = "All Files (*.*)\0*.*\0Directories\0*|*\0\0";
-    file_details.lpstrFile = filename;
-    file_details.nMaxFile = sizeof (filename);
-    file_details.lpstrInitialDir = init_dir;
-    file_details.lpstrTitle = SDATA (prompt);
+    file_details->lpstrFilter = "All Files (*.*)\0*.*\0Directories\0*|*\0\0";
+    file_details->lpstrFile = filename;
+    file_details->nMaxFile = sizeof (filename);
+    file_details->lpstrInitialDir = init_dir;
+    file_details->lpstrTitle = SDATA (prompt);
 
     if (! NILP (only_dir_p))
       default_filter_index = 2;
 
-    file_details.nFilterIndex = default_filter_index;
+    file_details->nFilterIndex = default_filter_index;
 
-    file_details.Flags = (OFN_HIDEREADONLY | OFN_NOCHANGEDIR
+    file_details->Flags = (OFN_HIDEREADONLY | OFN_NOCHANGEDIR
 			  | OFN_EXPLORER | OFN_ENABLEHOOK);
     if (!NILP (mustmatch))
-      file_details.Flags |= OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST;
+      {
+	/* Require that the path to the parent directory exists.  */
+	file_details->Flags |= OFN_PATHMUSTEXIST;
+	/* If we are looking for a file, require that it exists.  */
+	if (NILP (only_dir_p))
+	  file_details->Flags |= OFN_FILEMUSTEXIST;
+      }
 
-    file_details.lpfnHook = (LPOFNHOOKPROC) file_dialog_callback;
+    file_details->lpfnHook = (LPOFNHOOKPROC) file_dialog_callback;
 
-    if (GetOpenFileName (&file_details))
+    file_opened = GetOpenFileName (file_details);
+
+    UNBLOCK_INPUT;
+
+    if (file_opened)
       {
 	dostounix_filename (filename);
-	if (file_details.nFilterIndex == 2)
+
+	if (file_details->nFilterIndex == 2)
 	  {
 	    /* "Directories" selected - strip dummy file name.  */
 	    char * last = strrchr (filename, '/');
@@ -7858,7 +7900,6 @@ If ONLY-DIR-P is non-nil, the user can only select directories.  */)
 			       dir, mustmatch, dir, Qfile_name_history,
 			       default_filename, Qnil);
 
-    UNBLOCK_INPUT;
     file = unbind_to (count, file);
   }
 
@@ -8699,7 +8740,7 @@ fontsets are automatically created.  */);
   DEFVAR_BOOL ("w32-strict-painting",
                &w32_strict_painting,
 	       doc: /* Non-nil means use strict rules for repainting frames.
-Set this to nil to get the old behaviour for repainting; this should
+Set this to nil to get the old behavior for repainting; this should
 only be necessary if the default setting causes problems.  */);
   w32_strict_painting = 1;
 
@@ -8730,6 +8771,8 @@ versions of Windows) characters.  */);
   staticpro (&Qw32_charset_ansi);
   Qw32_charset_ansi = intern ("w32-charset-ansi");
   staticpro (&Qw32_charset_symbol);
+  Qw32_charset_default = intern ("w32-charset-default");
+  staticpro (&Qw32_charset_default);
   Qw32_charset_symbol = intern ("w32-charset-symbol");
   staticpro (&Qw32_charset_shiftjis);
   Qw32_charset_shiftjis = intern ("w32-charset-shiftjis");
@@ -8891,24 +8934,29 @@ void globals_of_w32fns ()
 
 #undef abort
 
+void w32_abort (void) NO_RETURN;
+
 void
 w32_abort()
 {
   int button;
   button = MessageBox (NULL,
 		       "A fatal error has occurred!\n\n"
-		       "Select Abort to exit, Retry to debug, Ignore to continue",
-		       "Emacs Abort Dialog",
+		       "Would you like to attach a debugger?\n\n"
+		       "Select YES to debug, NO to abort Emacs"
+#if __GNUC__
+		       "\n\n(type \"gdb -p <emacs-PID>\" and\n"
+		       "\"continue\" inside GDB before clicking YES.)"
+#endif
+		       , "Emacs Abort Dialog",
 		       MB_ICONEXCLAMATION | MB_TASKMODAL
-		       | MB_SETFOREGROUND | MB_ABORTRETRYIGNORE);
+		       | MB_SETFOREGROUND | MB_YESNO);
   switch (button)
     {
-    case IDRETRY:
+    case IDYES:
       DebugBreak ();
-      break;
-    case IDIGNORE:
-      break;
-    case IDABORT:
+      exit (2);	/* tell the compiler we will never return */
+    case IDNO:
     default:
       abort ();
       break;

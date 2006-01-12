@@ -1,6 +1,6 @@
 # Makefile for GNU Emacs.
-# Copyright (C) 1985, 87, 88, 93, 94, 95, 99, 2000, 01, 03, 2004
-# Free Software Foundation, Inc.
+# Copyright (C) 1985, 1987, 1988, 1993, 1994, 1995, 1999, 2000, 2001, 2002,
+#               2003, 2004, 2005 Free Software Foundation, Inc.
 
 # This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@
 
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-# Boston, MA 02111-1307, USA.
+# the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
 
 
 # Note that this file is edited by msdos/sed1v2.inp for MSDOS.  That
@@ -304,15 +304,16 @@ ALL_CFLAGS=-Demacs -DHAVE_CONFIG_H $(TOOLKIT_DEFINES) $(MYCPPFLAGS) -I. -I${srcd
 #define LIB_X11_LIB -lX11
 #endif
 
+/* xmenu.c should not be compiled on OSX.  */
+#ifndef HAVE_CARBON
+XMENU_OBJ = xmenu.o
+#endif
+
 #ifdef HAVE_X_WINDOWS
 
 XOBJ= xterm.o xfns.o xselect.o xrdb.o fontset.o xsmfns.o fringe.o image.o
 
 #ifdef HAVE_MENUS
-
-#ifndef HAVE_CARBON
-XMENU_OBJ = xmenu.o
-#endif
 
 #ifdef USE_GTK
 GTK_OBJ= gtkutil.o
@@ -454,9 +455,6 @@ LIBX= $(LIBXMENU) $(X11_LDFLAGS) $(LIBXT) LIBTIFF LIBJPEG LIBPNG LIBGIF LIBXPM L
 LIBX= $(LIBXMENU) LD_SWITCH_X_SITE -lX10 LIBX10_MACHINE LIBX10_SYSTEM
 #endif /* not HAVE_X11 */
 #else /* not HAVE_X_WINDOWS */
-#if defined(HAVE_MENUS) && !defined(HAVE_CARBON)
-XMENU_OBJ = xmenu.o
-#endif
 #endif /* not HAVE_X_WINDOWS */
 
 LIBSOUND= @LIBSOUND@
@@ -731,6 +729,7 @@ lisp= \
 	${lispsource}help.elc \
 	${lispsource}indent.elc \
 	${lispsource}isearch.elc \
+	${lispsource}rfn-eshadow.elc \
 	${lispsource}loadup.el \
 	${lispsource}loaddefs.el \
 	${lispsource}bindings.elc \
@@ -783,6 +782,9 @@ lisp= \
 	${lispsource}subr.elc \
 	${lispsource}term/tty-colors.elc \
 	${lispsource}font-core.elc \
+	${lispsource}emacs-lisp/syntax.elc \
+	${lispsource}font-lock.elc \
+	${lispsource}jit-lock.elc \
 	${lispsource}textmodes/fill.elc \
 	${lispsource}textmodes/page.elc \
 	${lispsource}textmodes/paragraphs.elc \
@@ -823,6 +825,7 @@ shortlisp= \
 	../lisp/help.elc \
 	../lisp/indent.elc \
 	../lisp/isearch.elc \
+	../lisp/rfn-eshadow.elc \
 	../lisp/loadup.el \
 	../lisp/loaddefs.el \
 	../lisp/bindings.elc \
@@ -876,6 +879,9 @@ shortlisp= \
 	../lisp/subr.elc \
 	../lisp/term/tty-colors.elc \
 	../lisp/font-core.elc \
+	../lisp/emacs-lisp/syntax.elc \
+	../lisp/font-lock.elc \
+	../lisp/jit-lock.elc \
 	../lisp/textmodes/fill.elc \
 	../lisp/textmodes/page.elc \
 	../lisp/textmodes/paragraphs.elc \
@@ -1164,7 +1170,7 @@ term.o: term.c termchar.h termhooks.h termopts.h $(config_h) cm.h frame.h \
 termcap.o: termcap.c $(config_h)
 terminfo.o: terminfo.c $(config_h)
 tparam.o: tparam.c $(config_h)
-undo.o: undo.c buffer.h commands.h $(config_h)
+undo.o: undo.c buffer.h commands.h window.h $(config_h)
 /* This hack is to discard any space that cpp might put at the beginning
    of UNEXEC when substituting it in.  */
 UNEXEC_ALIAS=UNEXEC
@@ -1252,7 +1258,7 @@ macterm.o: blockinput.h atimer.h systime.h syssignal.h macterm.h macgui.h \
   frame.h charset.h ccl.h dispextern.h fontset.h termhooks.h termopts.h \
   termchar.h gnu.h disptab.h buffer.h window.h keyboard.h $(INTERVAL_SRC) \
   process.h coding.h $(config_h)
-macselect.o: blockinput.h macterm.h macgui.h frame.h $(config_h)
+macselect.o: blockinput.h macterm.h macgui.h frame.h keymap.h $(config_h)
 
 ${emacsapp}Contents/Resources/English.lproj:
 	mkdir -p $@

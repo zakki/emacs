@@ -1,6 +1,6 @@
 @c This is part of the Emacs manual.
 @c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 1999, 2000,
-@c   2001, 2004, 2005 Free Software Foundation, Inc.
+@c   2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @node Files, Buffers, Keyboard Macros, Top
 @chapter File Handling
@@ -281,11 +281,13 @@ Archives}, for more about these features.
 
 @cindex wildcard characters in file names
 @vindex find-file-wildcards
-  If the file name you specify contains shell-style wildcard characters,
-Emacs visits all the files that match it.  Wildcards include @samp{?},
-@samp{*}, and @samp{[@dots{}]} sequences.  @xref{Quoted File Names}, for
-information on how to visit a file whose name actually contains wildcard
-characters.  You can disable the wildcard feature by customizing
+  If the file name you specify contains shell-style wildcard
+characters, Emacs visits all the files that match it.  Wildcards
+include @samp{?}, @samp{*}, and @samp{[@dots{}]} sequences.  To enter
+the wild card @samp{?} in a file name in the minibuffer, you need to
+type @kbd{C-q ?}.  @xref{Quoted File Names}, for information on how to
+visit a file whose name actually contains wildcard characters.  You
+can disable the wildcard feature by customizing
 @code{find-file-wildcards}.
 
   If you visit a file that the operating system won't let you modify,
@@ -365,6 +367,21 @@ variables defined for that file (@pxref{File Variables}).
 
   @dfn{Saving} a buffer in Emacs means writing its contents back into the file
 that was visited in the buffer.
+
+@menu
+* Save Commands::       Commands for saving files.
+* Backup::              How Emacs saves the old version of your file.
+* Customize Save::      Customizing the saving of files.
+* Interlocking::        How Emacs protects against simultaneous editing
+                          of one file by two users.
+* Shadowing: File Shadowing.  Copying files to "shadows" automatically.
+* Time Stamps::         Emacs can update time stamps on saved files.
+@end menu
+
+@node Save Commands
+@subsection Commands for Saving Files
+
+  These are the commands that relate to saving and writing files.
 
 @table @kbd
 @item C-x C-s
@@ -464,8 +481,9 @@ buffer as ``modified'' so that @kbd{C-x C-s} in that buffer
 @kindex C-x C-w
 @findex write-file
   If you wish to mark the buffer as visiting a different file and save it
-right away, use @kbd{C-x C-w} (@code{write-file}).  It is precisely
-equivalent to @code{set-visited-file-name} followed by @kbd{C-x C-s}.
+right away, use @kbd{C-x C-w} (@code{write-file}).  It is
+equivalent to @code{set-visited-file-name} followed by @kbd{C-x C-s}
+(except that @kbd{C-x C-w} asks for confirmation if the file exists).
 @kbd{C-x C-s} used on a buffer that is not visiting a file has the
 same effect as @kbd{C-x C-w}; that is, it reads a file name, marks the
 buffer as visiting that file, and saves it there.  The default file name in
@@ -481,33 +499,6 @@ version on disk does not match what Emacs last read or wrote, Emacs
 notifies you of this fact, because it probably indicates a problem caused
 by simultaneous editing and requires your immediate attention.
 @xref{Interlocking,, Simultaneous Editing}.
-
-@vindex require-final-newline
-  If the value of the variable @code{require-final-newline} is
-@code{t}, Emacs silently puts a newline at the end of any file that
-doesn't already end in one, every time a file is saved or written.  If
-the value is @code{visit}, Emacs adds a newline at the end of any file
-that doesn't have one, just after it visits the file.  (This marks the
-buffer as modified, and you can undo it.)  If the value is
-@code{visit-save}, that means to add newlines both on visiting and on
-saving.  If the value is @code{nil}, Emacs leaves the end of the file
-unchanged; if it's neither @code{nil} nor @code{t}, Emacs asks you
-whether to add a newline.  The default is @code{nil}.
-
-@vindex mode-require-final-newline
-  Many major modes are designed for specific kinds of files that are
-always supposed to end in newlines.  These major modes set the
-variable @code{require-final-newline} according to
-@code{mode-require-final-newline}.  By setting the latter variable,
-you can control how these modes handle final newlines.
-
-@menu
-* Backup::              How Emacs saves the old version of your file.
-* Interlocking::        How Emacs protects against simultaneous editing
-                          of one file by two users.
-* Shadowing: File Shadowing.  Copying files to "shadows" automatically.
-* Time Stamps::         Emacs can update time stamps on saved files.
-@end menu
 
 @node Backup
 @subsection Backup Files
@@ -714,6 +705,38 @@ making backups.  One unfortunate similarity is that these operations
 typically break hard links, disconnecting the file name you visited from
 any alternate names for the same file.  This has nothing to do with
 Emacs---the version control system does it.
+
+@node Customize Save
+@subsection Customizing Saving of Files
+
+@vindex require-final-newline
+  If the value of the variable @code{require-final-newline} is
+@code{t}, saving or writing a file silently puts a newline at the end
+if there isn't already one there.  If the value is @code{visit}, Emacs
+adds a newline at the end of any file that doesn't have one, just
+after it visits the file.  (This marks the buffer as modified, and you
+can undo it.)  If the value is @code{visit-save}, that means to add
+newlines both on visiting and on saving.  If the value is @code{nil},
+Emacs leaves the end of the file unchanged; if it's neither @code{nil}
+nor @code{t}, Emacs asks you whether to add a newline.  The default is
+@code{nil}.
+
+@vindex mode-require-final-newline
+  Many major modes are designed for specific kinds of files that are
+always supposed to end in newlines.  These major modes set the
+variable @code{require-final-newline} according to
+@code{mode-require-final-newline}.  By setting the latter variable,
+you can control how these modes handle final newlines.
+
+@vindex write-region-inhibit-fsync
+  When Emacs saves a file, it invokes the @code{fsync} system call to
+force the data immediately out to disk.  This is important for safety
+if the system crashes or in case of power outage.  However, it can be
+disruptive on laptops using power saving, because it requires the disk
+to spin up each time you save a file.  Setting
+@code{write-region-inhibit-fsync} to a non-@code{nil} value disables
+this synchronization.  Be careful---this means increased risk of data
+loss.
 
 @node Interlocking
 @subsection Protection against Simultaneous Editing
@@ -1267,7 +1290,7 @@ SCCS only if for some reason you cannot use RCS, or one of the
 higher-level systems such as CVS or GNU Arch.
 
 In the following, we discuss mainly RCS, SCCS and CVS.  Nearly
-everything said about CVS applies to Gnu Arch, Subversion and Meta-CVS
+everything said about CVS applies to GNU Arch, Subversion and Meta-CVS
 as well.
 
 @node VC Concepts
@@ -1545,7 +1568,9 @@ working---generating ChangeLog entries from the revision control log.
 
 In the @samp{*VC-Log*} buffer, @kbd{C-c C-f} (@kbd{M-x log-edit-show-files})
 shows the list of files to be committed in case you need to check
-that.
+that.  (This can be a list of more than one file if you use VC Dired
+mode or PCL-CVS.  @xref{VC Dired Mode}, and @ref{Top, , About PCL-CVS,
+pcl-cvs, PCL-CVS --- The Emacs Front-End to CVS}.)
 
 When you have finished editing the log message, type @kbd{C-c C-c} to
 exit the buffer and commit the change.
@@ -1640,7 +1665,7 @@ them; they exist only in the records of the master file.
 @kindex C-x v g
   For some backends, you can display the file @dfn{annotated} with
 per-line version information and using colors to enhance the visual
-appearance, with the the command @kbd{M-x vc-annotate}.
+appearance, with the command @kbd{M-x vc-annotate}.
 It creates a new buffer
 to display file's text, colored to show how old each part is.  Text
 colored red is new, blue means old, and intermediate colors indicate
@@ -1655,45 +1680,42 @@ range from red to blue spans the past 36 days instead of 360 days.  A
 stretch factor greater than 1 means the color range spans more than a
 year.
 
-From the annotate buffer, you can use the following keys to browse the
+  From the annotate buffer, you can use the following keys to browse the
 annotations of past revisions, view diffs, or view log entries:
 
-@itemize @bullet
+@table @kbd
+@item P
+Annotate the previous revision, that is to say, the revision before
+the one currently annotated.  A numeric prefix argument is a repeat
+count, so @kbd{C-u 10 P} would take you back 10 revisions.
 
-@item
-Pressing @kbd{P} annotates the previous revision.  It also takes a
-numeric prefix argument, so for example @kbd{C-u 10 P} would take you
-back 10 revisions.
+@item N
+Annotate the next revision---the one after the revision currently
+annotated.  A numeric prefix argument is a repeat count.
 
-@item
-Pressing @kbd{N} annotates the next revision.  It also takes a numeric
-prefix argument, so for example @kbd{C-u 10 N} would take you forward
-10 revisions.
+@item J
+Annotate the revision indicated by the current line.
 
-@item
-Pressing @kbd{J} annotates the revision at line (as denoted by the
-version number on the same line).
+@item A
+Annotate the revision before the one indicated by the current line.
+This is useful to see the state the file was in before the change on
+the current line was made.
 
-@item
-Pressing @kbd{A} annotates the revision previous to line (as denoted
-by the version number on the same line).  This is useful to see the
-state the file was in before the change on the current line was made.
+@item D
+Display the diff between the current line's revision and the previous
+revision.  This is useful to see what the current line's revision
+actually changed in the file.
 
-@item
-Pressing @kbd{D} shows the diff of the revision at line with its
-previous revision.  This is useful to see what actually changed when
-the revision denoted on the current line was committed.
+@item L
+Show the log of the current line's revision.  This is useful to see
+the author's description of the changes in the revision on the current
+line.
 
-@item
-Pressing @kbd{L} shows the log of the revision at line.  This is
-useful to see the author's description of the changes that occurred
-when the revision denoted on the current line was committed.
-
-@item
-Pressing @kbd{W} annotates the workfile (most up to date) version.  If
-you used @kbd{P} and @kbd{N} to browse to other revisions, use this
-key to return to the latest version.
-@end itemize
+@item W
+Annotate the workfile version--the one you are editing.  If you used
+@kbd{P} and @kbd{N} to browse to other revisions, use this key to
+return to the latest version.
+@end table
 
 @node Secondary VC Commands
 @subsection The Secondary Commands of VC
@@ -1737,7 +1759,8 @@ this situation.
   If locking is in use, @kbd{C-x v i} leaves the file unlocked and
 read-only.  Type @kbd{C-x v v} if you wish to start editing it.  After
 registering a file with CVS, you must subsequently commit the initial
-version by typing @kbd{C-x v v}.
+version by typing @kbd{C-x v v}.  Until you do that, the version
+appears as @samp{@@@@} in the mode line.
 
 @vindex vc-default-init-version
 @cindex initial version number to register
@@ -1765,7 +1788,46 @@ Display version control state and change history.
   To view the detailed version control status and history of a file,
 type @kbd{C-x v l} (@code{vc-print-log}).  It displays the history of
 changes to the current file, including the text of the log entries.  The
-output appears in a separate window.
+output appears in a separate window.  The point is centered at the
+revision of the file that is currently being visited.
+
+From the change log buffer, the following keys are used to move
+between the logs of revisions and files, to view past revisions, and
+to view diffs:
+
+@table @kbd
+@item p
+Move to the previous revision-item in the buffer.  (Revision entries in the log
+buffer are usually in reverse-chronological order, so the previous
+revision-item usually corresponds to a newer revision.)  A numeric
+prefix argument is a repeat count.
+
+@item n
+Move to the next revision-item (which most often corresponds to the
+previous revision of the file).  A numeric prefix argument is a repeat
+count.
+
+@item P
+Move to the log of the previous file, when the logs of multiple files
+are in the log buffer (@pxref{VC Dired Mode}).  Otherwise, just move
+to the beginning of the log.  A numeric prefix argument is a repeat
+count, so @kbd{C-u 10 P} would move backward 10 files.
+
+@item N
+Move to the log of the next file, when the logs of multiple files are
+in the log buffer (@pxref{VC Dired Mode}).  It also takes a numeric
+prefix argument as a repeat count.
+
+@item f
+Visit the revision indicated at the current line, like typing @kbd{C-x
+v ~} and specifying this revision's number (@pxref{Old Versions}).
+
+@item d
+Display the diff (@pxref{Comparing Files}) between the revision
+indicated at the current line and the next earlier revision.  This is
+useful to see what actually changed when the revision indicated on the
+current line was committed.
+@end table
 
 @node VC Undo
 @subsubsection Undoing Version Control Actions
@@ -2548,6 +2610,11 @@ mention the file, so that they use the new name; despite this, the
 snapshot thus modified may not completely work (@pxref{Snapshot
 Caveats}).
 
+  Some backends do not provide an explicit rename operation to their
+repositories.  After issuing @code{vc-rename-file}, use @kbd{C-x v v}
+on the original and renamed buffers and provide the necessary edit
+log.
+
   You cannot use @code{vc-rename-file} on a file that is locked by
 someone else.
 
@@ -2904,7 +2971,7 @@ string; the default is @code{"-c"} to specify a context diff.
 @findex diff-goto-source
   After running @kbd{M-x diff}, you can use @kbd{C-x `} to visit
 successive changed locations in the two source files, as in
-Compilation mode (@pxref{Compilation}.)  In the @samp{*diff*} buffer,
+Compilation mode (@pxref{Compilation Mode}.)  In the @samp{*diff*} buffer,
 you can move to a particular hunk of changes and type @kbd{C-c C-c}
 (@code{diff-goto-source}) to visit the corresponding source location.
 
@@ -2915,13 +2982,19 @@ recent backup.  If you specify the name of a backup file,
 of.
 
 @findex compare-windows
-  The command @kbd{M-x compare-windows} compares the text in the current
-window with that in the next window.  Comparison starts at point in each
-window, and each starting position is pushed on the mark ring in its
-respective buffer.  Then point moves forward in each window, a character
-at a time, until a mismatch between the two windows is reached.  Then
-the command is finished.  For more information about windows in Emacs,
-@ref{Windows}.
+  The command @kbd{M-x compare-windows} compares the text in the
+current window with that in the next window.  (For more information
+about windows in Emacs, @ref{Windows}.)  Comparison starts at point in
+each window, after pushing each initial point value on the mark ring
+in its respective buffer.  Then it moves point forward in each window,
+one character at a time, until it reaches characters that don't match.
+Then the command exits.
+
+  If point in the two windows is followed by non-matching text when
+the command starts, it tries heuristically to advance up to matching
+text in the two windows, and then exits.  So if you use @kbd{M-x
+compare-windows} repeatedly, each time it either skips one matching
+range or finds the start of another.
 
 @vindex compare-ignore-case
 @vindex compare-ignore-whitespace
@@ -2990,8 +3063,10 @@ leaving point unchanged before the contents and the mark after them.
 @findex write-region
   @kbd{M-x write-region} is the inverse of @kbd{M-x insert-file}; it
 copies the contents of the region into the specified file.  @kbd{M-x
-append-to-file} adds the text of the region to the end of the specified
-file.  @xref{Accumulating Text}.
+append-to-file} adds the text of the region to the end of the
+specified file.  @xref{Accumulating Text}.  The variable
+@code{write-region-inhibit-fsync} applies to these commands, as well
+as saving files; see @ref{Customize Save}.
 
 @findex delete-file
 @cindex deletion (of files)
@@ -3051,7 +3126,7 @@ support them, this command is not defined.
 @pindex gzip
 
   Emacs automatically uncompresses compressed files when you visit
-them, and automatically recompress them if you alter them and save
+them, and automatically recompresses them if you alter them and save
 them.  Emacs recognizes compressed files by their file names.  File
 names ending in @samp{.gz} indicate a file compressed with
 @code{gzip}.  Other endings indicate other compression programs.
@@ -3251,6 +3326,7 @@ File Names}).
 @section Quoted File Names
 
 @cindex quoting file names
+@cindex file names, quote special characters
   You can @dfn{quote} an absolute file name to prevent special
 characters and syntax in it from having their special effects.
 The way to do this is to add @samp{/:} at the beginning.

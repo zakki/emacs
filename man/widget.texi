@@ -14,7 +14,7 @@ Copyright @copyright{} 2000, 2002, 2003, 2004, 2005 Free Software Foundation, In
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with the
 Invariant Sections being ``The GNU Manifesto'', ``Distribution'' and
 ``GNU GENERAL PUBLIC LICENSE'', with the Front-Cover texts being ``A GNU
@@ -1282,9 +1282,7 @@ Allows you to enter a character in an editable field.
 @end deffn
 
 @deffn Widget file
-Allows you to edit a file name in an editable field.  If you invoke
-the tag button, you can edit the file name in the mini-buffer with
-completion.
+Allows you to edit a file name in an editable field.
 
 Keywords:
 @table @code

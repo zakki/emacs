@@ -1,7 +1,7 @@
 ;;; server.el --- Lisp code for GNU Emacs running as server process
 
-;; Copyright (C) 1986,87,92,94,95,96,97,98,99,2000,01,02,03,2004
-;;	 Free Software Foundation, Inc.
+;; Copyright (C) 1986, 1987, 1992, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
+;;   2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: William Sommerfeld <wesommer@athena.mit.edu>
 ;; Maintainer: FSF
@@ -23,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -189,6 +189,11 @@ are done with it in the server.")
 			      (not server-existing-buffer))
 			 (server-temp-file-p)))
 	    (kill-buffer (current-buffer)))))))
+  ;; If this is a new client process, set the query-on-exit flag to nil
+  ;; for this process (it isn't inherited from the server process).
+  (when (and (eq (process-status proc) 'open)
+	     (process-query-on-exit-flag proc))
+    (set-process-query-on-exit-flag proc nil))
   (server-log (format "Status changed to %s" (process-status proc)) proc))
 
 (defun server-select-display (display)
@@ -371,7 +376,7 @@ PROC is the server process.  Format of STRING is \"PATH PATH PATH... \\n\"."
 	  (server-switch-buffer (nth 1 client))
 	  (run-hooks 'server-switch-hook)
 	  (unless nowait
-	    (message (substitute-command-keys
+	    (message "%s" (substitute-command-keys
 		      "When done with a buffer, type \\[server-edit]")))))
       ;; Avoid preserving the connection after the last real frame is deleted.
       (if tmp-frame (delete-frame tmp-frame))))
@@ -625,7 +630,7 @@ Arg NEXT-BUFFER is a suggestion; if it is a live buffer, use it."
 	      ;; a minibuffer/dedicated-window (if there's no other).
 	      (error (pop-to-buffer next-buffer)))))))))
 
-(global-set-key "\C-x#" 'server-edit)
+(define-key ctl-x-map "#" 'server-edit)
 
 (defun server-unload-hook ()
   (server-start t)

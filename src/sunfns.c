@@ -1,5 +1,6 @@
 /* Functions for Sun Windows menus and selection buffer.
-   Copyright (C) 1987, 1999, 2001 Free Software Foundation, Inc.
+   Copyright (C) 1987, 1999, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is probably totally obsolete.  In any case, the FSF is
 unwilling to support it.  We agreed to include it in our distribution
@@ -25,8 +26,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Author: Jeff Peck, Sun Microsystems, Inc. <peck@sun.com>
 Original ideas by David Kastan and Eric Negaard, SRI International

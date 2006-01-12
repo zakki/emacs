@@ -1,6 +1,6 @@
 /* Generate doc-string file for GNU Emacs from source files.
-   Copyright (C) 1985, 86, 92, 93, 94, 97, 1999, 2000, 01, 2004
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1992, 1993, 1994, 1997, 1999, 2000, 2001,
+                 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* The arguments given to this program are all the C and Lisp source files
  of GNU Emacs.  .elc and .el and .c files are allowed.

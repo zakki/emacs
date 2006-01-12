@@ -1,6 +1,7 @@
 ;;; w32-win.el --- parse switches controlling interface with W32 window system
 
-;; Copyright (C) 1993, 1994, 2003, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Kevin Gallo
 ;; Keywords: terminals
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -79,6 +80,8 @@
 (require 'dnd)
 (require 'code-pages)
 
+(defvar xlfd-regexp-registry-subnum)
+
 ;; Conditional on new-fontset so bootstrapping works on non-GUI compiles
 (if (fboundp 'new-fontset)
     (require 'fontset))
@@ -108,8 +111,8 @@ Switch to a buffer editing the last file dropped."
 	   (y (cdr coords)))
       (if (and (> x 0) (> y 0))
 	  (set-frame-selected-window nil window))
-      (mapcar (lambda (file-name) 
-		(dnd-handle-one-url window 'private 
+      (mapcar (lambda (file-name)
+		(dnd-handle-one-url window 'private
 				    (concat "file:" file-name)))
 		(car (cdr (cdr event)))))
   (raise-frame)))
@@ -1035,6 +1038,8 @@ XConsortium: rgb.txt,v 10.41 94/02/20 18:39:36 rws Exp")
 
 (substitute-key-definition 'suspend-emacs 'iconify-or-deiconify-frame
 			   global-map)
+
+(define-key function-key-map [S-tab] [backtab])
 
 
 ;;; Do the actual Windows setup here; the above code just defines

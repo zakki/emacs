@@ -1,8 +1,8 @@
-;;; tramp-ftp.el --- Tramp convenience functions for Ange-FTP and EFS -*- coding: iso-8859-1; -*-
+;;; tramp-ftp.el --- Tramp convenience functions for Ange-FTP -*- coding: iso-8859-1; -*-
 
-;; Copyright (C) 2002, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
-;; Author: Michael Albinus <Michael.Albinus@alcatel.de>
+;; Author: Michael Albinus <michael.albinus@gmx.de>
 ;; Keywords: comm, processes
 
 ;; This file is part of GNU Emacs.
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 

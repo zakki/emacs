@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -73,7 +73,9 @@ Return t if file exists."
 		(inhibit-file-name-operation nil))
 	    (save-excursion
 	      (set-buffer buffer)
-	      (insert-file-contents fullname)
+	      ;; Don't let deactivate-mark remain set.
+	      (let (deactivate-mark)
+		(insert-file-contents fullname))
 	      ;; If the loaded file was inserted with no-conversion or
 	      ;; raw-text coding system, make the buffer unibyte.
 	      ;; Otherwise, eval-buffer might try to interpret random
@@ -85,7 +87,9 @@ Return t if file exists."
 	      ;; Make `kill-buffer' quiet.
 	      (set-buffer-modified-p nil))
 	    ;; Have the original buffer current while we eval.
-	    (eval-buffer buffer nil file
+	    (eval-buffer buffer nil
+			 ;; This is compatible with what `load' does.
+			 (if purify-flag file fullname)
 			 ;; If this Emacs is running with --unibyte,
 			 ;; convert multibyte strings to unibyte
 			 ;; after reading them.
@@ -839,6 +843,12 @@ following properties are recognized:
   If the value is non-nil, the coding system preserves composition
   information.
 
+  o ascii-incompatible
+
+  If the value is non-nil, the coding system is not compatible
+  with ASCII, which means it encodes or decodes ASCII character
+  string to the different byte sequence.
+
 These properties are set in PLIST, a property list.  This function
 also sets properties `coding-category' and `alias-coding-systems'
 automatically.
@@ -1153,7 +1163,7 @@ surely saves the buffer with CODING-SYSTEM.  From a program, if you
 don't want to mark the buffer modified, specify t for NOMODIFY.
 If you know exactly what coding system you want to use,
 just set the variable `buffer-file-coding-system' directly."
-  (interactive "zCoding system for saving file (default, nil): \nP")
+  (interactive "zCoding system for saving file (default nil): \nP")
   (check-coding-system coding-system)
   (if (and coding-system buffer-file-coding-system (null force))
       (setq coding-system
@@ -1177,7 +1187,7 @@ do.  If FORCE is nil, get the unspecified aspect (or aspects) from the
 buffer's previous `buffer-file-coding-system' value (if it is
 specified there).  Otherwise, determine it from the file contents as
 usual for visiting a file."
-  (interactive "zCoding system for visited file (default, nil): \nP")
+  (interactive "zCoding system for visited file (default nil): \nP")
   (check-coding-system coding-system)
   (if (and coding-system buffer-file-coding-system (null force))
       (setq coding-system
@@ -1189,8 +1199,11 @@ usual for visiting a file."
   "Set coding system for decoding and encoding file names to CODING-SYSTEM.
 It actually just set the variable `file-name-coding-system' (which
 see) to CODING-SYSTEM."
-  (interactive "zCoding system for file names (default, nil): ")
+  (interactive "zCoding system for file names (default nil): ")
   (check-coding-system coding-system)
+  (if (and coding-system
+	   (coding-system-get coding-system 'ascii-incompatible))
+      (error "%s is not ASCII-compatible" coding-system))
   (setq file-name-coding-system coding-system))
 
 (defvar default-terminal-coding-system nil
@@ -1210,7 +1223,7 @@ or by the previous use of this command."
 				 default-terminal-coding-system)
 			    default-terminal-coding-system)))
 	   (read-coding-system
-	    (format "Coding system for terminal display (default, %s): "
+	    (format "Coding system for terminal display (default %s): "
 		    default)
 	    default))))
   (if (and (not coding-system)
@@ -1239,7 +1252,7 @@ or by the previous use of this command."
 				 default-keyboard-coding-system)
 			    default-keyboard-coding-system)))
 	   (read-coding-system
-	    (format "Coding system for keyboard input (default, %s): "
+	    (format "Coding system for keyboard input (default %s): "
 		    default)
 	    default))))
   (if (and (not coding-system)
@@ -1247,6 +1260,9 @@ or by the previous use of this command."
       (setq coding-system default-keyboard-coding-system))
   (if coding-system
       (setq default-keyboard-coding-system coding-system))
+  (if (and coding-system
+	   (coding-system-get coding-system 'ascii-incompatible))
+      (error "%s is not ASCII-compatible" coding-system))
   (set-keyboard-coding-system-internal coding-system)
   (setq keyboard-coding-system coding-system)
   (encoded-kbd-mode (if coding-system 1 0)))
@@ -1309,7 +1325,7 @@ This setting is effective for the next communication only."
   (interactive
    (list (read-coding-system
 	  (if last-next-selection-coding-system
-	      (format "Coding system for the next X selection (default, %S): "
+	      (format "Coding system for the next X selection (default %S): "
 		      last-next-selection-coding-system)
 	    "Coding system for the next X selection: ")
 	  last-next-selection-coding-system)))
@@ -1609,8 +1625,8 @@ This is used for loading and byte-compiling Emacs Lisp files.")
 	(setq alist (cdr alist))))
     coding-system))
 
-(defun set-auto-coding (filename size)
-  "Return coding system for a file FILENAME of which SIZE bytes follow point.
+(defun find-auto-coding (filename size)
+  "Find a coding system for a file FILENAME of which SIZE bytes follow point.
 These bytes should include at least the first 1k of the file
 and the last 3k of the file, but the middle may be omitted.
 
@@ -1624,12 +1640,21 @@ contents of the current buffer following point against
 succeed, it checks to see if any function in `auto-coding-functions'
 gives a match.
 
-The return value is the specified coding system, or nil if nothing is
-specified.
+If a coding system is specifed, the return value is a
+cons (CODING . SOURCE), where CODING is the specified coding
+system and SOURCE is a symbol `auto-coding-alist',
+`auto-coding-regexp-alist', `coding:', or `auto-coding-functions'
+indicating by what CODING is specified.  Note that the validity
+of CODING is not checked; it's callers responsibility to check
+it.
+
+If nothing is specified, the return value is nil.
 
 The variable `set-auto-coding-function' (which see) is set to this
 function by default."
-  (or (auto-coding-alist-lookup filename)
+  (or (let ((coding-system (auto-coding-alist-lookup filename)))
+	(if coding-system
+	    (cons coding-system 'auto-coding-alist)))
       ;; Try using `auto-coding-regexp-alist'.
       (save-excursion
 	(let ((alist auto-coding-regexp-alist)
@@ -1639,7 +1664,8 @@ function by default."
 	      (when (re-search-forward regexp (+ (point) size) t)
 		(setq coding-system (cdr (car alist)))))
 	    (setq alist (cdr alist)))
-	  coding-system))
+	  (if coding-system
+	      (cons coding-system 'auto-coding-regexp-alist))))
       (let* ((case-fold-search t)
 	     (head-start (point))
 	     (head-end (+ head-start (min size 1024)))
@@ -1673,9 +1699,7 @@ function by default."
 		       (re-search-forward
 			"\\(.*;\\)?[ \t]*coding:[ \t]*\\([^ ;]+\\)"
 			head-end t))
-	      (setq coding-system (intern (match-string 2)))
-	      (or (coding-system-p coding-system)
-		  (setq coding-system nil)))))
+	      (setq coding-system (intern (match-string 2))))))
 
 	;; If no coding: tag in the head, check the tail.
 	;; Here we must pay attention to the case that the end-of-line
@@ -1716,10 +1740,9 @@ function by default."
 		  (setq coding-system 'raw-text))
 		(when (and (not coding-system)
 			   (re-search-forward re-coding tail-end t))
-		  (setq coding-system (intern (match-string 1)))
-		  (or (coding-system-p coding-system)
-		      (setq coding-system nil))))))
-	coding-system)
+		  (setq coding-system (intern (match-string 1)))))))
+	(if coding-system
+	    (cons coding-system :coding)))
       ;; Finally, try all the `auto-coding-functions'.
       (let ((funcs auto-coding-functions)
 	    (coding-system nil))
@@ -1729,7 +1752,16 @@ function by default."
 				    (goto-char (point-min))
 				    (funcall (pop funcs) size))
 				(error nil))))
-	coding-system)))
+	(if coding-system
+	    (cons coding-system 'auto-coding-functions)))))
+
+(defun set-auto-coding (filename size)
+  "Return coding system for a file FILENAME of which SIZE bytes follow point.
+See `find-auto-coding' for how the coding system is found.
+Return nil if an invalid coding system is found."
+  (let ((found (find-auto-coding filename size)))
+    (if (and found (coding-system-p (car found)))
+	(car found))))
 
 (setq set-auto-coding-function 'set-auto-coding)
 

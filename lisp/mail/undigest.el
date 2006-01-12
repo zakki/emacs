@@ -1,7 +1,7 @@
 ;;; undigest.el --- digest-cracking support for the RMAIL mail reader
 
-;; Copyright (C) 1985, 1986, 1994, 1996, 2002
-;; Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1994, 1996, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: mail
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -40,7 +40,7 @@
   "^----.*\\([Ff]orwarded\\|[Oo]riginal\\).*[Mm]essage"
   "*Regexp to match the string that introduces forwarded messages.
 This is not a header, but a string contained in the body of the message.
-You may need to customise it for local needs."
+You may need to customize it for local needs."
   :type 'regexp
   :group 'rmail-headers)
 

@@ -1,6 +1,7 @@
 ;;; w32-fns.el --- Lisp routines for Windows NT
 
-;; Copyright (C) 1994, 2001, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1994, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Geoff Voelker <voelker@cs.washington.edu>
 ;; Keywords: internal
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -33,6 +34,8 @@
 ;; audio bell initialized.
 
 ;;; Code:
+
+(defvar explicit-shell-file-name)
 
 ;; Map delete and backspace
 (define-key function-key-map [backspace] "\177")
@@ -60,7 +63,7 @@ That includes all Windows systems except for 9X/Me."
 
 (defun w32-shell-name ()
   "Return the name of the shell being used."
-  (or (and (boundp 'explicit-shell-file-name) explicit-shell-file-name)
+  (or (bound-and-true-p explicit-shell-file-name)
       (getenv "ESHELL")
       (getenv "SHELL")
       (and (w32-using-nt) "cmd.exe")
@@ -272,7 +275,7 @@ shell requires it (see `w32-shell-dos-semantics')."
 (defun set-w32-system-coding-system (coding-system)
   "Set the coding system used by the Windows system to CODING-SYSTEM.
 This is used for things like passing font names with non-ASCII
-characters in them to the system. For a list of possible values of
+characters in them to the system.  For a list of possible values of
 CODING-SYSTEM, use \\[list-coding-systems].
 
 This function is provided for backward compatibility, since
@@ -280,7 +283,7 @@ This function is provided for backward compatibility, since
   (interactive
    (list (let ((default locale-coding-system))
            (read-coding-system
-            (format "Coding system for system calls (default, %s): "
+            (format "Coding system for system calls (default %s): "
                     default)
             default))))
   (check-coding-system coding-system)
@@ -355,8 +358,8 @@ This function is provided for backward compatibility, since
 Creates entries in `w32-charset-info-alist'.
 XLFD-CHARSET is a string which will appear in the XLFD font name to
 identify the character set. WINDOWS-CHARSET is a symbol identifying
-the Windows character set this maps to. For the list of possible
-values, see the documentation for `w32-charset-info-alist'. CODEPAGE
+the Windows character set this maps to.  For the list of possible
+values, see the documentation for `w32-charset-info-alist'.  CODEPAGE
 can be a numeric codepage that Windows uses to display the character
 set, t for Unicode output with no codepage translation or nil for 8
 bit output with no translation."
@@ -421,7 +424,7 @@ bit output with no translation."
 (defun x-select-text (text &optional push)
   "Make TEXT the last selected text.
 If `x-select-enable-clipboard' is non-nil, copy the text to the system
-clipboard as well. Optional PUSH is ignored on Windows."
+clipboard as well.  Optional PUSH is ignored on Windows."
   (if x-select-enable-clipboard
       (w32-set-clipboard-data text))
   (setq x-last-selected-text text))
@@ -453,6 +456,18 @@ they were unset."
 (setq interprogram-cut-function 'x-select-text)
 (setq interprogram-paste-function 'x-get-selection-value)
 
+
+;;;; Support for build process
+(defun w32-batch-update-autoloads ()
+  "Like `batch-update-autoloads', but takes the name of the autoloads file
+from the command line.
+
+This is required because some Windows build environments, such as MSYS,
+munge command-line arguments that include file names to a horrible mess
+that Emacs is unable to cope with."
+  (let ((generated-autoload-file
+	 (expand-file-name (pop command-line-args-left))))
+    (batch-update-autoloads)))
 
 ;;; arch-tag: c49b48cc-0f4f-454f-a274-c2dc34815e14
 ;;; w32-fns.el ends here

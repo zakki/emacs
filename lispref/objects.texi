@@ -1,7 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2003
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2002, 2003,
+@c   2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/objects
 @node Lisp Data Types, Numbers, Introduction, Top
@@ -78,10 +78,10 @@ syntax.  @xref{Read and Print}.
   In most cases, an object's printed representation is also a read
 syntax for the object.  However, some types have no read syntax, since
 it does not make sense to enter objects of these types as constants in
-a Lisp program.  These objects are printed in @dfn{hash notation}: the
-characters @samp{#<} followed by a descriptive string (typically the
-type name followed by the name of the object), and closed with a
-matching @samp{>}.  For example:
+a Lisp program.  These objects are printed in @dfn{hash notation},
+which consists of the characters @samp{#<}, a descriptive string
+(typically the type name followed by the name of the object), and a
+closing @samp{>}.  For example:
 
 @example
 (current-buffer)
@@ -291,7 +291,8 @@ you @emph{must} use a second @samp{\} to quote it: @samp{?\\}.
 vertical tab, formfeed, space, return, del, and escape as @samp{?\a},
 @samp{?\b}, @samp{?\t}, @samp{?\n}, @samp{?\v}, @samp{?\f},
 @samp{?\s}, @samp{?\r}, @samp{?\d}, and @samp{?\e}, respectively.
-Thus,
+(@samp{?\s} followed by a dash has a different meaning---it applies
+the ``super'' modifier to the following character.)  Thus,
 
 @example
 ?\a @result{} 7                 ; @r{control-g, @kbd{C-g}}
@@ -311,7 +312,7 @@ Thus,
   These sequences which start with backslash are also known as
 @dfn{escape sequences}, because backslash plays the role of an
 ``escape character''; this terminology has nothing to do with the
-character @key{ESC}.  @samp{\s} is meant for use only in character
+character @key{ESC}.  @samp{\s} is meant for use in character
 constants; in string constants, just write the space.
 
 @cindex control characters
@@ -621,6 +622,7 @@ come to refer to any structure made out of cons cells.
 @dfn{atoms}.
 
 @cindex parenthesis
+@cindex @samp{(@dots{})} in lists
   The read syntax and printed representation for lists are identical, and
 consist of a left parenthesis, an arbitrary number of elements, and a
 right parenthesis.  Here are examples of lists:
@@ -706,7 +708,6 @@ buttercup)}, sketched in a different manner:
 @end group
 @end smallexample
 
-@cindex @samp{(@dots{})} in lists
 @cindex @code{nil} in lists
 @cindex empty list
   A list with no elements in it is the @dfn{empty list}; it is identical
@@ -749,7 +750,7 @@ two-element list:
 @end group
 @end example
 
-  The same list represented in the first box notation looks like this:
+  The same list represented in the second box notation looks like this:
 
 @example
 @group
@@ -776,7 +777,7 @@ two-element list:
   @dfn{Dotted pair notation} is a general syntax for cons cells that
 represents the @sc{car} and @sc{cdr} explicitly.  In this syntax,
 @code{(@var{a} .@: @var{b})} stands for a cons cell whose @sc{car} is
-the object @var{a}, and whose @sc{cdr} is the object @var{b}.  Dotted
+the object @var{a} and whose @sc{cdr} is the object @var{b}.  Dotted
 pair notation is more general than list syntax because the @sc{cdr}
 does not have to be a list.  However, it is more cumbersome in cases
 where list syntax would work.  In dotted pair notation, the list
@@ -913,9 +914,9 @@ you can get the same effect with nested one-dimensional arrays.)  Each
 type of array has its own read syntax; see the following sections for
 details.
 
-  The array type is contained in the sequence type and
-contains the string type, the vector type, the bool-vector type, and the
-char-table type.
+  The array type is a subset of the sequence type, and contains the
+string type, the vector type, the bool-vector type, and the char-table
+type.
 
 @node String Type
 @subsection String Type
@@ -1166,8 +1167,8 @@ only the first 3 bits are used:
 
     A hash table is a very fast kind of lookup table, somewhat like an
 alist in that it maps keys to corresponding values, but much faster.
-Hash tables have no read syntax, and
-print using hash notation.  @xref{Hash Tables}.
+Hash tables have no read syntax, and print using hash notation.
+@xref{Hash Tables}, for functions that operate on hash tables.
 
 @example
 (make-hash-table)
@@ -1607,7 +1608,6 @@ to a non-@code{nil} value.  @xref{Output Variables}.
 
 @node Type Predicates
 @section Type Predicates
-@cindex predicates
 @cindex type checking
 @kindex wrong-type-argument
 
@@ -1820,8 +1820,7 @@ describing the data type.
 
 @defun eq object1 object2
 This function returns @code{t} if @var{object1} and @var{object2} are
-the same object, @code{nil} otherwise.  The ``same object'' means that a
-change in one will be reflected by the same change in the other.
+the same object, @code{nil} otherwise.
 
 @code{eq} returns @code{t} if @var{object1} and @var{object2} are
 integers with the same value.  Also, since symbol names are normally
@@ -1829,7 +1828,8 @@ unique, if the arguments are symbols with the same name, they are
 @code{eq}.  For other types (e.g., lists, vectors, strings), two
 arguments with the same contents or elements are not necessarily
 @code{eq} to each other: they are @code{eq} only if they are the same
-object.
+object, meaning that a change in the contents of one will be reflected
+by the same change in the contents of the other.
 
 @example
 @group
@@ -1942,6 +1942,7 @@ always true.
 @end group
 @end example
 
+@cindex equality of strings
 Comparison of strings is case-sensitive, but does not take account of
 text properties---it compares only the characters in the strings.  For
 technical reasons, a unibyte string and a multibyte string are

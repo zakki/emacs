@@ -1,11 +1,10 @@
 ;;; recentf.el --- setup a menu of recently opened files
 
-;; Copyright (C) 1999, 2000, 2001, 2002, 2003, 2005
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Ponce <david@dponce.com>
 ;; Created: July 19 1999
-;; Maintainer: FSF
 ;; Keywords: files
 
 ;; This file is part of GNU Emacs.
@@ -22,24 +21,24 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
 ;; This package maintains a menu for visiting files that were operated
-;; on recently.  When enabled a new "Open Recent" submenu is displayed
-;; in the "Files" menu.  The recent files list is automatically saved
-;; across Emacs sessions.  You can customize the number of recent
-;; files displayed, the location of the menu and others options (see
-;; the source code for details).
+;; on recently.  When enabled a new "Open Recent" sub menu is
+;; displayed in the "Files" menu.  The recent files list is
+;; automatically saved across Emacs sessions.  You can customize the
+;; number of recent files displayed, the location of the menu and
+;; others options (see the source code for details).
 
 ;;; History:
 ;;
 
 ;;; Code:
 (require 'easymenu)
-(require 'wid-edit)
+(require 'tree-widget)
 (require 'timer)
 
 ;;; Internal data
@@ -47,9 +46,9 @@
 (defvar recentf-list nil
   "List of recently opened files.")
 
-(defvar recentf-data-cache nil
-  "Cache of data used to build the recentf menu.
-The menu is rebuilt when this data has changed.")
+(defsubst recentf-enabled-p ()
+  "Return non-nil if recentf mode is currently enabled."
+  (memq 'recentf-save-list kill-emacs-hook))
 
 ;;; Customization
 ;;
@@ -65,7 +64,7 @@ You should define the options of your own filters in this group."
 
 (defcustom recentf-max-saved-items 20
   "*Maximum number of items of the recent list that will be saved.
-nil means to save the whole list.
+A nil value means to save the whole list.
 See the command `recentf-save-list'."
   :group 'recentf
   :type 'integer)
@@ -75,6 +74,15 @@ See the command `recentf-save-list'."
   :group 'recentf
   :type 'file)
 
+(defcustom recentf-save-file-modes 384 ;; 0600
+  "Mode bits of recentf save file, as an integer, or nil.
+If non-nil, after writing `recentf-save-file', set its mode bits to
+this value.  By default give R/W access only to the user who owns that
+file.  See also the function `set-file-modes'."
+  :group 'recentf
+  :type '(choice (const :tag "Don't change" nil)
+          integer))
+  
 (defcustom recentf-exclude nil
   "*List of regexps and predicates for filenames excluded from the recent list.
 When a filename matches any of the regexps or satisfies any of the
@@ -103,10 +111,13 @@ remote access."
 (defun recentf-menu-customization-changed (variable value)
   "Function called when the recentf menu customization has changed.
 Set VARIABLE with VALUE, and force a rebuild of the recentf menu."
-  (when (featurep 'recentf)
-    ;; Unavailable until recentf has been loaded.
-    (recentf-clear-data))
-  (set-default variable value))
+  (if (and (featurep 'recentf) (recentf-enabled-p))
+      (progn
+        ;; Unavailable until recentf has been loaded.
+        (recentf-hide-menu)
+        (set-default variable value)
+        (recentf-show-menu))
+    (set-default variable value)))
 
 (defcustom recentf-menu-title "Open Recent"
   "*Name of the recentf menu."
@@ -134,18 +145,16 @@ If nil add it at end of menu (see also `easy-menu-add-item')."
   "*Function to invoke with a filename item of the recentf menu.
 The default is to call `find-file' to edit the selected file."
   :group 'recentf
-  :type 'function
-  :set 'recentf-menu-customization-changed)
+  :type 'function)
 
 (defcustom recentf-max-menu-items 10
   "*Maximum number of items in the recentf menu."
   :group 'recentf
-  :type 'integer
-  :set 'recentf-menu-customization-changed)
+  :type 'integer)
 
 (defcustom recentf-menu-filter nil
   "*Function used to filter files displayed in the recentf menu.
-nil means no filter.  The following functions are predefined:
+A nil value means no filter.  The following functions are predefined:
 
 - `recentf-sort-ascending'
     Sort menu items in ascending order.
@@ -174,7 +183,7 @@ nil means no filter.  The following functions are predefined:
 - `recentf-arrange-by-dir'
     Show a sub-menu for each directory.
 - `recentf-filter-changer'
-    Manage a ring of filters.
+    Manage a menu of filters.
 
 The filter function is called with one argument, the list of menu
 elements used to build the menu and must return a new list of menu
@@ -195,20 +204,22 @@ elements (see `recentf-make-menu-element' for menu element form)."
                 (function-item recentf-arrange-by-mode)
                 (function-item recentf-arrange-by-dir)
                 (function-item recentf-filter-changer)
-                function)
-  :set 'recentf-menu-customization-changed)
+                function))
+
+(defcustom recentf-menu-open-all-flag nil
+  "*Non-nil means to show an \"All...\" item in the menu.
+This item will replace the \"More...\" item."
+  :group 'recentf
+  :type 'boolean)
 
 (defcustom recentf-menu-append-commands-flag t
-  "*non-nil means to append command items to the menu."
+  "*Non-nil means to append command items to the menu."
   :group 'recentf
-  :type 'boolean
-  :set 'recentf-menu-customization-changed)
+  :type 'boolean)
 
-(defvaralias 'recentf-menu-append-commands-p
-  'recentf-menu-append-commands-flag)
-(make-obsolete-variable 'recentf-menu-append-commands-p
-                        'recentf-menu-append-commands-flag
-                        "22.1")
+(define-obsolete-variable-alias 'recentf-menu-append-commands-p
+                                'recentf-menu-append-commands-flag
+                                "22.1")
 
 (defcustom recentf-auto-cleanup 'mode
   "*Define when to automatically cleanup the recent list.
@@ -244,7 +255,7 @@ cleanup the list."
            (recentf-auto-cleanup))))
 
 (defcustom recentf-initialize-file-name-history t
-  "*non-nil means to initialize `file-name-history' with the recent list.
+  "*Non-nil means to initialize `file-name-history' with the recent list.
 If `file-name-history' is not empty, do nothing."
   :group 'recentf
   :type  'boolean)
@@ -254,12 +265,24 @@ If `file-name-history' is not empty, do nothing."
   :group 'recentf
   :type 'hook)
 
-(defcustom recentf-filename-handler nil
-  "Function to call to process filename handled by recentf.
-It is passed a filename to give a chance to transform it.
-If it returns nil, the filename is left unchanged."
+(defcustom recentf-filename-handlers nil
+  "Functions to post process recent file names.
+They are successively passed a file name to transform it."
   :group 'recentf
-  :type 'function)
+  :type '(choice
+          (const :tag "None" nil)
+          (repeat :tag "Functions"
+           (choice
+            (const file-truename)
+            (const abbreviate-file-name)
+            (function :tag "Other function")))))
+
+(defcustom recentf-show-file-shortcuts-flag t
+  "Whether to show ``[N]'' for the Nth item up to 10.
+If non-nil, `recentf-open-files' will show labels for keys that can be
+used as shortcuts to open the Nth file."
+  :group 'recentf
+  :type 'boolean)
 
 ;;; Utilities
 ;;
@@ -306,7 +329,7 @@ specifies a maximum number of elements to insert.  By default insert
 the full list."
   (let ((value (symbol-value variable)))
     (if (atom value)
-        (insert (format "\n(setq %S %S)\n" variable value))
+        (insert (format "\n(setq %S '%S)\n" variable value))
       (when (and (integerp limit) (> limit 0))
         (setq value (recentf-trunc-list value limit)))
       (insert (format "\n(setq %S\n      '(" variable))
@@ -346,15 +369,25 @@ filenames."
     (and m (setq recentf-list (delq (car m) recentf-list)))
     (push filename recentf-list)))
 
+(defun recentf-apply-filename-handlers (name)
+  "Apply `recentf-filename-handlers' to file NAME.
+Return the transformed file name, or NAME if any handler failed, or
+returned nil."
+  (or (condition-case nil
+          (let ((handlers recentf-filename-handlers)
+                (filename name))
+            (while (and filename handlers)
+              (setq filename (funcall (car handlers) filename)
+                    handlers (cdr handlers)))
+            filename)
+        (error nil))
+      name))
+
 (defsubst recentf-expand-file-name (name)
-  "Convert filename NAME to absolute, and canonicalize it.
-See also the function `expand-file-name'.
-If defined, call the function `recentf-filename-handler' to post
-process the canonical name."
-  (let* ((filename (expand-file-name name)))
-    (or (and recentf-filename-handler
-             (funcall recentf-filename-handler filename))
-        filename)))
+  "Convert file NAME to absolute, and canonicalize it.
+NAME is first passed to the function `expand-file-name', then to
+`recentf-filename-handlers' to post process it."
+  (recentf-apply-filename-handlers (expand-file-name name)))
 
 (defun recentf-include-p (filename)
   "Return non-nil if FILENAME should be included in the recent list.
@@ -419,24 +452,44 @@ Return non-nil if F1 is less than F2."
 
 ;;; Menu building
 ;;
+(defsubst recentf-digit-shortcut-command-name (n)
+  "Return a command name to open the Nth most recent file.
+See also the command `recentf-open-most-recent-file'."
+  (intern (format "recentf-open-most-recent-file-%d" n)))
+
+(defvar recentf--shortcuts-keymap
+  (let ((km (make-sparse-keymap)))
+    (dolist (k '(0 9 8 7 6 5 4 3 2 1))
+      (let ((cmd (recentf-digit-shortcut-command-name k)))
+        ;; Define a shortcut command.
+        (defalias cmd
+          `(lambda ()
+             (interactive)
+             (recentf-open-most-recent-file ,k)))
+        ;; Bind it to a digit key.
+        (define-key km (vector (+ k ?0)) cmd)))
+    km)
+  "Digit shortcuts keymap.")
+
 (defvar recentf-menu-items-for-commands
-  (list ["Cleanup list"
-         recentf-cleanup
-         :help "Remove all excluded and non-kept files from the recent list"
-         :active t]
-        ["Edit list..."
-         recentf-edit-list
-         :help "Edit the files that are kept in the recent list"
-         :active t]
-        ["Save list now"
-         recentf-save-list
-         :help "Save the list of recently opened files now"
-         :active t]
-        ["Options..."
-         (customize-group "recentf")
-         :help "Customize recently opened files menu and options"
-         :active t]
-        )
+  (list
+   ["Cleanup list"
+    recentf-cleanup
+    :help "Remove duplicates, and obsoletes files from the recent list"
+    :active t]
+   ["Edit list..."
+    recentf-edit-list
+    :help "Manually remove files from the recent list"
+    :active t]
+   ["Save list now"
+    recentf-save-list
+    :help "Save the list of recently opened files now"
+    :active t]
+   ["Options..."
+    (customize-group "recentf")
+    :help "Customize recently opened files menu and options"
+    :active t]
+   )
   "List of menu items for recentf commands.")
 
 (defvar recentf-menu-filter-commands nil
@@ -518,48 +571,88 @@ menu-elements (no sub-menu)."
         (nconc l others))
     l))
 
-(defun recentf-make-menu-items ()
-  "Make menu items from the recent list."
-  (setq recentf-menu-filter-commands nil)
-  (let ((file-items
-         (mapcar 'recentf-make-menu-item
-                 (recentf-apply-menu-filter
-                  recentf-menu-filter
-                  (recentf-menu-elements recentf-max-menu-items)))))
-    (append (or file-items (list ["No files" t
-                                  :help "No recent file to open"
-                                  :active nil]))
-            (and (< recentf-max-menu-items (length recentf-list))
-                 (list ["More..." recentf-open-more-files
-                        :help "Open files that are not in the menu"
-                        :active t]))
-            (and recentf-menu-filter-commands
-                 (cons "---"
-                       recentf-menu-filter-commands))
-            (and recentf-menu-append-commands-flag
-                 (cons "---"
-                       recentf-menu-items-for-commands)))))
+;; Count the number of assigned menu shortcuts.
+(defvar recentf-menu-shortcuts)
 
-(defsubst recentf-make-menu-item (elt)
+(defun recentf-make-menu-items (&optional menu)
+  "Make menu items from the recent list.
+This is a menu filter function which ignores the MENU argument."
+  (setq recentf-menu-filter-commands nil)
+  (let* ((recentf-menu-shortcuts 0)
+         (file-items
+          (condition-case err
+              (mapcar 'recentf-make-menu-item
+                      (recentf-apply-menu-filter
+                       recentf-menu-filter
+                       (recentf-menu-elements recentf-max-menu-items)))
+            (error
+             (message "recentf update menu failed: %s"
+                      (error-message-string err))))))
+    (append
+     (or file-items
+         '(["No files" t
+            :help "No recent file to open"
+            :active nil]))
+     (if recentf-menu-open-all-flag
+         '(["All..." recentf-open-files
+            :help "Open recent files through a dialog"
+            :active t])
+       (and (< recentf-max-menu-items (length recentf-list))
+            '(["More..." recentf-open-more-files
+               :help "Open files not in the menu through a dialog"
+               :active t])))
+     (and recentf-menu-filter-commands '("---"))
+     recentf-menu-filter-commands
+     (and recentf-menu-items-for-commands '("---"))
+     recentf-menu-items-for-commands)))
+
+(defun recentf-menu-value-shortcut (name)
+  "Return a shortcut digit for file NAME.
+Return nil if file NAME is not one of the ten more recent."
+  (let ((i 0) k)
+    (while (and (not k) (< i 10))
+      (if (string-equal name (nth i recentf-list))
+          (progn
+            (setq recentf-menu-shortcuts (1+ recentf-menu-shortcuts))
+            (setq k (% (1+ i) 10)))
+        (setq i (1+ i))))
+    k))
+
+(defun recentf-make-menu-item (elt)
   "Make a menu item from menu element ELT."
   (let ((item  (recentf-menu-element-item  elt))
         (value (recentf-menu-element-value elt)))
     (if (recentf-sub-menu-element-p elt)
         (cons item (mapcar 'recentf-make-menu-item value))
-      (vector item (list recentf-menu-action value)
-              :help (concat "Open " value)
-              :active t))))
+      (let ((k (and (< recentf-menu-shortcuts 10)
+                    (recentf-menu-value-shortcut value))))
+        (vector item
+                ;; If the file name is one of the ten more recent, use
+                ;; a digit shortcut command to open it, else use an
+                ;; anonymous command.
+                (if k
+                    (recentf-digit-shortcut-command-name k)
+                  `(lambda ()
+                     (interactive)
+                     (,recentf-menu-action ,value)))
+                :help (concat "Open " value)
+                :active t)))))
 
 (defsubst recentf-menu-bar ()
   "Return the keymap of the global menu bar."
   (lookup-key global-map [menu-bar]))
 
-(defun recentf-clear-data ()
-  "Clear data used to build the recentf menu.
-This force a rebuild of the menu."
-  (easy-menu-remove-item (recentf-menu-bar)
-                         recentf-menu-path recentf-menu-title)
-  (setq recentf-data-cache nil))
+(defun recentf-show-menu ()
+  "Show the menu of recently opened files."
+  (easy-menu-add-item
+   (recentf-menu-bar) recentf-menu-path
+   (list recentf-menu-title :filter 'recentf-make-menu-items)
+   recentf-menu-before))
+
+(defun recentf-hide-menu ()
+  "Hide the menu of recently opened files."
+  (easy-menu-remove-item (recentf-menu-bar) recentf-menu-path
+                         recentf-menu-title))
 
 ;;; Predefined menu filters
 ;;
@@ -665,19 +758,24 @@ Filenames are relative to the `default-directory'."
 ;;
 (defcustom recentf-arrange-rules
   '(
-    ("Elisp files (%d)" ".\\.el$")
-    ("Java files (%d)"  ".\\.java$")
-    ("C/C++ files (%d)" "c\\(pp\\)?$")
+    ("Elisp files (%d)" ".\\.el\\'")
+    ("Java files (%d)"  ".\\.java\\'")
+    ("C/C++ files (%d)" "c\\(pp\\)?\\'")
     )
   "*List of rules used by `recentf-arrange-by-rule' to build sub-menus.
 A rule is a pair (SUB-MENU-TITLE . MATCHER).  SUB-MENU-TITLE is the
 displayed title of the sub-menu where a '%d' `format' pattern is
 replaced by the number of items in the sub-menu.  MATCHER is a regexp
 or a list of regexps.  Items matching one of the regular expressions in
-MATCHER are added to the corresponding sub-menu."
+MATCHER are added to the corresponding sub-menu.
+SUB-MENU-TITLE can be a function.  It is passed every items that
+matched the corresponding MATCHER, and it must return a
+pair (SUB-MENU-TITLE . ITEM).  SUB-MENU-TITLE is a computed sub-menu
+title that can be another function.  ITEM is the received item which
+may have been modified to match another rule."
   :group 'recentf-filters
-  :type '(repeat (cons string (repeat regexp)))
-  :set 'recentf-menu-customization-changed)
+  :type '(repeat (cons (choice string function)
+                       (repeat regexp))))
 
 (defcustom recentf-arrange-by-rule-others "Other files (%d)"
   "*Title of the `recentf-arrange-by-rule' sub-menu.
@@ -687,8 +785,7 @@ displayed in the main recent files menu.  A '%d' `format' pattern in
 the title is replaced by the number of items in the sub-menu."
   :group 'recentf-filters
   :type '(choice (const  :tag "Main menu" nil)
-                 (string :tag "Title"))
-  :set 'recentf-menu-customization-changed)
+                 (string :tag "Title")))
 
 (defcustom recentf-arrange-by-rules-min-items 0
   "*Minimum number of items in a `recentf-arrange-by-rule' sub-menu.
@@ -697,12 +794,11 @@ corresponding sub-menu items are displayed in the main recent files
 menu or in the `recentf-arrange-by-rule-others' sub-menu if
 defined."
   :group 'recentf-filters
-  :type 'number
-  :set 'recentf-menu-customization-changed)
+  :type 'number)
 
 (defcustom recentf-arrange-by-rule-subfilter nil
   "*Function called by a rule based filter to filter sub-menu elements.
-nil means no filter.  See also `recentf-menu-filter'.
+A nil value means no filter.  See also `recentf-menu-filter'.
 You can't use another rule based filter here."
   :group 'recentf-filters
   :type '(choice (const nil) function)
@@ -711,72 +807,82 @@ You can't use another rule based filter here."
                              recentf-arrange-by-mode
                              recentf-arrange-by-dir))
            (error "Recursive use of a rule based filter"))
-         (recentf-menu-customization-changed variable value)))
+         (set-default variable value)))
 
-(defun recentf-match-rule-p (matcher filename)
-  "Return non-nil if the rule specified by MATCHER match FILENAME.
-See `recentf-arrange-rules' for details on MATCHER."
-  (if (stringp matcher)
-      (string-match matcher filename)
-    (while (and (consp matcher)
-                (not (string-match (car matcher) filename)))
-      (setq matcher (cdr matcher)))
-    matcher))
+(defun recentf-match-rule (file)
+  "Return the rule that match FILE."
+  (let ((rules recentf-arrange-rules)
+        match found)
+    (while (and (not found) rules)
+      (setq match (cdar rules))
+      (when (stringp match)
+        (setq match (list match)))
+      (while (and match (not (string-match (car match) file)))
+        (setq match (cdr match)))
+      (if match
+          (setq found (cons (caar rules) file))
+        (setq rules (cdr rules))))
+    found))
 
 (defun recentf-arrange-by-rule (l)
   "Filter the list of menu-elements L.
 Arrange them in sub-menus following rules in `recentf-arrange-rules'."
-  (if (not recentf-arrange-rules)
-      l
-    (let ((menus (mapcar #'(lambda (r) (list (car r)))
-                         recentf-arrange-rules))
-          menu others min file rules elts count)
+  (when recentf-arrange-rules
+    (let (menus others menu file min count)
+      ;; Put menu items into sub-menus as defined by rules.
       (dolist (elt l)
-        (setq file  (recentf-menu-element-value elt)
-              rules recentf-arrange-rules
-              elts  menus
-              menu  nil)
-        (while (and (not menu) rules)
-          (when (recentf-match-rule-p (cdar rules) file)
-            (setq menu (car elts))
-            (recentf-set-menu-element-value
-             menu (cons elt (recentf-menu-element-value menu))))
-          (setq rules (cdr rules)
-                elts  (cdr elts)))
-        (unless menu
-          (push elt others)))
-
-      (setq l nil
-            min (if (natnump recentf-arrange-by-rules-min-items)
-                    recentf-arrange-by-rules-min-items 0))
-      (dolist (menu menus)
-        (when (setq elts (recentf-menu-element-value menu))
-          (setq count (length elts))
-          (if (< count min)
-              (setq others (nconc elts others))
-            (recentf-set-menu-element-item
-             menu (format (recentf-menu-element-item menu) count))
-            (recentf-set-menu-element-value
-             menu (recentf-apply-menu-filter
-                   recentf-arrange-by-rule-subfilter (nreverse elts)))
-            (push menu l))))
-
-      (if (and (stringp recentf-arrange-by-rule-others) others)
-          (nreverse
-           (cons
-            (recentf-make-menu-element
-             (format recentf-arrange-by-rule-others (length others))
-             (recentf-apply-menu-filter
-              recentf-arrange-by-rule-subfilter (nreverse others)))
-            l))
-        (nconc
-         (nreverse l)
-         (recentf-apply-menu-filter
-          recentf-arrange-by-rule-subfilter (nreverse others)))))
-    ))
+        (setq file (recentf-menu-element-value elt)
+              menu (recentf-match-rule file))
+        (while (functionp (car menu))
+          (setq menu (funcall (car menu) (cdr menu))))
+        (if (not (stringp (car menu)))
+            (push elt others)
+          (setq menu (or (assoc (car menu) menus)
+                         (car (push (list (car menu)) menus))))
+          (recentf-set-menu-element-value
+           menu (cons elt (recentf-menu-element-value menu)))))
+      ;; Finalize each sub-menu:
+      ;; - truncate it depending on the value of
+      ;;   `recentf-arrange-by-rules-min-items',
+      ;; - replace %d by the number of menu items,
+      ;; - apply `recentf-arrange-by-rule-subfilter' to menu items.
+      (setq min (if (natnump recentf-arrange-by-rules-min-items)
+                    recentf-arrange-by-rules-min-items 0)
+            l nil)
+      (dolist (elt menus)
+        (setq menu (recentf-menu-element-value elt)
+              count (length menu))
+        (if (< count min)
+            (setq others (nconc menu others))
+          (recentf-set-menu-element-item
+           elt (format (recentf-menu-element-item elt) count))
+          (recentf-set-menu-element-value
+           elt (recentf-apply-menu-filter
+                recentf-arrange-by-rule-subfilter (nreverse menu)))
+          (push elt l)))
+      ;; Add the menu items remaining in the `others' bin.
+      (when (setq others (nreverse others))
+        (setq l (nconc
+                 l
+                 ;; Put items in an sub menu.
+                 (if (stringp recentf-arrange-by-rule-others)
+                     (list
+                      (recentf-make-menu-element
+                       (format recentf-arrange-by-rule-others
+                               (length others))
+                       (recentf-apply-menu-filter
+                        recentf-arrange-by-rule-subfilter others)))
+                   ;; Append items to the main menu.
+                   (recentf-apply-menu-filter
+                    recentf-arrange-by-rule-subfilter others)))))))
+  l)
 
 ;;; Predefined rule based menu filters
 ;;
+(defun recentf-indirect-mode-rule (file)
+  "Apply a second level `auto-mode-alist' regexp to FILE."
+  (recentf-match-rule (substring file 0 (match-beginning 0))))
+
 (defun recentf-build-mode-rules ()
   "Convert `auto-mode-alist' to menu filter rules.
 Rules obey `recentf-arrange-rules' format."
@@ -785,12 +891,20 @@ Rules obey `recentf-arrange-rules' format."
     (dolist (mode auto-mode-alist)
       (setq regexp (car mode)
             mode   (cdr mode))
-      (when (symbolp mode)
-        (setq rule-name (symbol-name mode))
-        (if (string-match "\\(.*\\)-mode$" rule-name)
-            (setq rule-name (match-string 1 rule-name)))
-        (setq rule-name (concat rule-name " (%d)")
-              rule (assoc rule-name rules))
+      (when mode
+        (cond
+         ;; Build a special "strip suffix" rule from entries of the
+         ;; form (REGEXP FUNCTION NON-NIL).  Notice that FUNCTION is
+         ;; ignored by the menu filter.  So in some corner cases a
+         ;; wrong mode could be guessed.
+         ((and (consp mode) (cadr mode))
+          (setq rule-name 'recentf-indirect-mode-rule))
+         ((and mode (symbolp mode))
+          (setq rule-name (symbol-name mode))
+          (if (string-match "\\(.*\\)-mode$" rule-name)
+              (setq rule-name (match-string 1 rule-name)))
+          (setq rule-name (concat rule-name " (%d)"))))
+        (setq rule (assoc rule-name rules))
         (if rule
             (setcdr rule (cons regexp (cdr rule)))
           (push (list rule-name regexp) rules))))
@@ -804,21 +918,6 @@ Rules obey `recentf-arrange-rules' format."
         (recentf-arrange-by-rule-others "others (%d)"))
     (recentf-arrange-by-rule l)))
 
-(defun recentf-build-dir-rules (l)
-  "Convert directories in menu-elements L to menu filter rules.
-Rules obey `recentf-arrange-rules' format."
-  (let (dirs)
-    (mapcar #'(lambda (e)
-                (let ((dir (file-name-directory
-                            (recentf-menu-element-value e))))
-                  (or (recentf-string-member dir dirs)
-                      (push dir dirs))))
-            l)
-    (mapcar #'(lambda (d)
-                (cons (concat d " (%d)")
-                      (concat "\\`" d)))
-            (nreverse (sort dirs 'recentf-string-lessp)))))
-
 (defun recentf-file-name-nondir (l)
   "Filter the list of menu-elements L to show filenames sans directory.
 This simplified version of `recentf-show-basenames' does not handle
@@ -830,23 +929,27 @@ duplicates.  It is used by `recentf-arrange-by-dir' as its
                (recentf-menu-element-value e)))
           l))
 
+(defun recentf-dir-rule (file)
+  "Return as a sub-menu, the directory FILE belongs to."
+  (cons (file-name-directory file) file))
+
 (defun recentf-arrange-by-dir (l)
   "Split the list of menu-elements L into sub-menus by directory."
-  (let ((recentf-arrange-rules (recentf-build-dir-rules l))
+  (let ((recentf-arrange-rules '((recentf-dir-rule . ".*")))
         (recentf-arrange-by-rule-subfilter 'recentf-file-name-nondir)
         recentf-arrange-by-rule-others)
-    (nreverse (recentf-arrange-by-rule l))))
+    (recentf-arrange-by-rule l)))
 
-;;; Ring of menu filters
+;;; Menu of menu filters
 ;;
-(defvar recentf-filter-changer-state nil
-  "Used by `recentf-filter-changer' to hold its state.")
+(defvar recentf-filter-changer-current nil
+  "Current filter used by `recentf-filter-changer'.")
 
 (defcustom recentf-filter-changer-alist
   '(
-    (recentf-arrange-by-mode . "*Files by Mode*")
-    (recentf-arrange-by-dir  . "*Files by Directory*")
-    (recentf-arrange-by-rule . "*Files by User Rule*")
+    (recentf-arrange-by-mode . "Grouped by Mode")
+    (recentf-arrange-by-dir  . "Grouped by Directory")
+    (recentf-arrange-by-rule . "Grouped by Custom Rules")
     )
   "*List of filters managed by `recentf-filter-changer'.
 Each filter is defined by a pair (FUNCTION . LABEL), where FUNCTION is
@@ -855,77 +958,38 @@ that filter."
   :group 'recentf-filters
   :type '(repeat (cons function string))
   :set (lambda (variable value)
-         (setq recentf-filter-changer-state nil)
-         (recentf-menu-customization-changed variable value)))
+         (setq recentf-filter-changer-current nil)
+         (set-default variable value)))
 
-(defun recentf-filter-changer-goto-next ()
-  "Go to the next filter available.
+(defun recentf-filter-changer-select (filter)
+  "Select FILTER as the current menu filter.
 See `recentf-filter-changer'."
-  (setq recentf-filter-changer-state (cdr recentf-filter-changer-state))
-  (recentf-clear-data))
-
-(defsubst recentf-filter-changer-get-current ()
-  "Get the current filter available.
-See `recentf-filter-changer'."
-  (unless recentf-filter-changer-state
-    (setq recentf-filter-changer-state recentf-filter-changer-alist))
-  (car recentf-filter-changer-state))
-
-(defsubst recentf-filter-changer-get-next ()
-  "Get the next filter available.
-See `recentf-filter-changer'."
-  ;; At this point the current filter is the first element of
-  ;; `recentf-filter-changer-state'.
-  (car (or (cdr recentf-filter-changer-state)
-           ;; There is no next element in
-           ;; `recentf-filter-changer-state', so loop back to the
-           ;; first element of `recentf-filter-changer-alist'.
-           recentf-filter-changer-alist)))
+  (setq recentf-filter-changer-current filter))
 
 (defun recentf-filter-changer (l)
-  "Manage a ring of menu filters.
-`recentf-filter-changer-alist' defines the filters in the ring.
-Filtering of L is delegated to the current filter in the ring.  A
-filter menu item is displayed allowing to dynamically activate the
-next filter in the ring.  If the filter ring is empty, L is left
-unchanged."
-  (let ((filter (recentf-filter-changer-get-current)))
-    (when filter
-      (setq l (recentf-apply-menu-filter (car filter) l)
-            filter (recentf-filter-changer-get-next))
-      (when filter
-        (setq recentf-menu-filter-commands
-              (list (vector (cdr filter)
-                            '(recentf-filter-changer-goto-next)
-                            t)))))
-    l))
-
-;;; Common dialog stuff
-;;
-(defun recentf-cancel-dialog (&rest ignore)
-  "Cancel the current dialog.
-Used internally by recentf dialogs.
-IGNORE arguments."
-  (interactive)
-  (kill-buffer (current-buffer))
-  (message "Dialog canceled"))
-
-(defvar recentf-dialog-mode-map
-  (let ((km (make-sparse-keymap)))
-    (define-key km "q" 'recentf-cancel-dialog)
-    (define-key km [down-mouse-1] 'widget-button-click)
-    (set-keymap-parent km widget-keymap)
-    km)
-  "Keymap used in recentf dialogs.")
-
-(defun recentf-dialog-mode ()
-  "Major mode of recentf dialogs.
-
-\\{recentf-dialog-mode-map}"
-  (interactive)
-  (setq major-mode 'recentf-dialog-mode)
-  (setq mode-name "recentf-dialog")
-  (use-local-map recentf-dialog-mode-map))
+  "Manage a sub-menu of menu filters.
+`recentf-filter-changer-alist' defines the filters in the menu.
+Filtering of L is delegated to the selected filter in the menu."
+  (unless recentf-filter-changer-current
+    (setq recentf-filter-changer-current
+          (caar recentf-filter-changer-alist)))
+  (if (not recentf-filter-changer-current)
+      l
+    (setq recentf-menu-filter-commands
+          (list
+           `("Show files"
+             ,@(mapcar
+                #'(lambda (f)
+                    `[,(cdr f)
+                      (setq recentf-filter-changer-current ',(car f))
+                      ;;:active t
+                      :style radio ;;radio Don't work with GTK :-(
+                      :selected (eq recentf-filter-changer-current
+                                    ',(car f))
+                      ;;:help ,(cdr f)
+                      ])
+                recentf-filter-changer-alist))))
+    (recentf-apply-menu-filter recentf-filter-changer-current l)))
 
 ;;; Hooks
 ;;
@@ -942,197 +1006,244 @@ That is, remove a non kept file from the recent list."
   (and buffer-file-name
        (recentf-remove-if-non-kept buffer-file-name)))
 
-(defun recentf-update-menu ()
-  "Update the recentf menu from the current recent list."
-  (let ((cache (cons default-directory recentf-list)))
-    ;; Does nothing, if nothing has changed.
-    (unless (equal recentf-data-cache cache)
-      (setq recentf-data-cache cache)
-      (condition-case err
-          (easy-menu-add-item
-           (recentf-menu-bar) recentf-menu-path
-           (easy-menu-create-menu recentf-menu-title
-                                  (recentf-make-menu-items))
-           recentf-menu-before)
-        (error
-         (message "recentf update menu failed: %s"
-                  (error-message-string err)))))))
-
 (defconst recentf-used-hooks
   '(
     (find-file-hook       recentf-track-opened-file)
     (write-file-functions recentf-track-opened-file)
     (kill-buffer-hook     recentf-track-closed-file)
-    (menu-bar-update-hook recentf-update-menu)
     (kill-emacs-hook      recentf-save-list)
     )
   "Hooks used by recentf.")
-
-(defsubst recentf-enabled-p ()
-  "Return non-nil if recentf mode is currently enabled."
-  (memq 'recentf-update-menu menu-bar-update-hook))
 
 ;;; Commands
 ;;
-(defvar recentf-edit-selected-items nil
-  "List of files to be deleted from the recent list.
-Used internally by `recentf-edit-list'.")
 
-(defun recentf-edit-list-action (widget &rest ignore)
-  "Checkbox WIDGET action that toogles a file selection.
-Used internally by `recentf-edit-list'.
-IGNORE other arguments."
-  (let ((value (widget-get widget ':tag)))
-    ;; if value is already in the selected items
-    (if (memq value recentf-edit-selected-items)
-        ;; then remove it
-        (progn
-          (setq recentf-edit-selected-items
-                (delq value recentf-edit-selected-items))
-          (message "%s removed from selection" value))
-      ;; else add it
-      (push value recentf-edit-selected-items)
-      (message "%s added to selection" value))))
-
-(defun recentf-edit-list ()
-  "Show a dialog buffer to edit the recent list.
-That is to select files to be deleted from the recent list."
+;;; Common dialog stuff
+;;
+(defun recentf-cancel-dialog (&rest ignore)
+  "Cancel the current dialog.
+IGNORE arguments."
   (interactive)
-  (with-current-buffer
-      (get-buffer-create (format "*%s - Edit list*" recentf-menu-title))
-    (switch-to-buffer (current-buffer))
+  (kill-buffer (current-buffer))
+  (message "Dialog canceled"))
+
+(defun recentf-dialog-goto-first (widget-type)
+  "Move the cursor to the first WIDGET-TYPE in current dialog.
+Go to the beginning of buffer if not found."
+  (goto-char (point-min))
+  (condition-case nil
+      (let (done)
+        (widget-move 1)
+        (while (not done)
+          (if (eq widget-type (widget-type (widget-at (point))))
+              (setq done t)
+            (widget-move 1))))
+    (error
+     (goto-char (point-min)))))
+
+(defvar recentf-dialog-mode-map
+  (let ((km (copy-keymap recentf--shortcuts-keymap)))
+    (set-keymap-parent km widget-keymap)
+    (define-key km "q" 'recentf-cancel-dialog)
+    (define-key km [follow-link] "\C-m")
+    km)
+  "Keymap used in recentf dialogs.")
+
+(define-derived-mode recentf-dialog-mode nil "recentf-dialog"
+  "Major mode of recentf dialogs.
+
+\\{recentf-dialog-mode-map}"
+  :syntax-table nil
+  :abbrev-table nil
+  (setq truncate-lines t))
+
+(defmacro recentf-dialog (name &rest forms)
+  "Show a dialog buffer with NAME, setup with FORMS."
+  (declare (indent 1) (debug t))
+  `(with-current-buffer (get-buffer-create ,name)
     ;; Cleanup buffer
-    (kill-all-local-variables)
     (let ((inhibit-read-only t)
           (ol (overlay-lists)))
-      (erase-buffer)
-      ;; Delete all the overlays.
       (mapc 'delete-overlay (car ol))
-      (mapc 'delete-overlay (cdr ol)))
-    (setq recentf-edit-selected-items nil)
-    ;; Insert the dialog header
+      (mapc 'delete-overlay (cdr ol))
+      (erase-buffer))
+    (recentf-dialog-mode)
+    ,@forms
+    (widget-setup)
+    (switch-to-buffer (current-buffer))))
+
+;;; Edit list dialog
+;;
+(defvar recentf-edit-list nil)
+
+(defun recentf-edit-list-select (widget &rest ignore)
+  "Toggle a file selection based on the checkbox WIDGET state.
+IGNORE other arguments."
+  (let ((value (widget-get widget :tag))
+        (check (widget-value widget)))
+    (if check
+        (add-to-list 'recentf-edit-list value)
+      (setq recentf-edit-list (delq value recentf-edit-list)))
+    (message "%s %sselected" value (if check "" "un"))))
+
+(defun recentf-edit-list-validate (&rest ignore)
+  "Process the recent list when the edit list dialog is committed.
+IGNORE arguments."
+  (if recentf-edit-list
+      (let ((i 0))
+        (dolist (e recentf-edit-list)
+          (setq recentf-list (delq e recentf-list)
+                i (1+ i)))
+        (kill-buffer (current-buffer))
+        (message "%S file(s) removed from the list" i))
+    (message "No file selected")))
+
+(defun recentf-edit-list ()
+  "Show a dialog to delete selected files from the recent list."
+  (interactive)
+  (unless recentf-list
+    (error "The list of recent files is empty"))
+  (recentf-dialog (format "*%s - Edit list*" recentf-menu-title)
+    (set (make-local-variable 'recentf-edit-list) nil)
     (widget-insert
-     "\
-Select the files to be deleted from the recent list.\n\n\
-Click on Ok to update the list. \
-Click on Cancel or type \"q\" to quit.\n")
+     "Click on OK to delete selected files from the recent list.
+Click on Cancel or type `q' to cancel.\n")
     ;; Insert the list of files as checkboxes
     (dolist (item recentf-list)
-      (widget-create
-       'checkbox
-       :value nil                       ; unselected checkbox
-       :format "\n %[%v%]  %t"
-       :tag item
-       :notify 'recentf-edit-list-action))
+      (widget-create 'checkbox
+                     :value nil         ; unselected checkbox
+                     :format "\n %[%v%]  %t"
+                     :tag item
+                     :notify 'recentf-edit-list-select))
     (widget-insert "\n\n")
-    ;; Insert the Ok button
     (widget-create
      'push-button
-     :notify (lambda (&rest ignore)
-               (if recentf-edit-selected-items
-                   (let ((i 0))
-                     (kill-buffer (current-buffer))
-                     (dolist (e recentf-edit-selected-items)
-                       (setq recentf-list (delq e recentf-list)
-                             i (1+ i)))
-                     (message "%S file(s) removed from the list" i)
-                     (recentf-clear-data))
-                 (message "No file selected")))
+     :notify 'recentf-edit-list-validate
+     :help-echo "Delete selected files from the recent list"
      "Ok")
     (widget-insert " ")
-    ;; Insert the Cancel button
     (widget-create
      'push-button
      :notify 'recentf-cancel-dialog
      "Cancel")
-    (recentf-dialog-mode)
-    (widget-setup)
-    (goto-char (point-min))))
-
+    (recentf-dialog-goto-first 'checkbox)))
+
+;;; Open file dialog
+;;
 (defun recentf-open-files-action (widget &rest ignore)
-  "Button WIDGET action that open a file.
-Used internally by `recentf-open-files'.
+  "Open the file stored in WIDGET's value when notified.
 IGNORE other arguments."
   (kill-buffer (current-buffer))
   (funcall recentf-menu-action (widget-value widget)))
 
-(defvar recentf-open-files-item-shift ""
-  "Amount of space to shift right sub-menu items.
-Used internally by `recentf-open-files'.")
+;; List of files associated to a digit shortcut key.
+(defvar recentf--files-with-key nil)
+
+(defun recentf-show-digit-shortcut-filter (l)
+  "Filter the list of menu-elements L to show digit shortcuts."
+  (let ((i 0))
+    (dolist (e l)
+      (setq i (1+ i))
+      (recentf-set-menu-element-item
+       e (format "[%d] %s" (% i 10) (recentf-menu-element-item e))))
+    l))
 
 (defun recentf-open-files-item (menu-element)
-  "Insert an item widget for MENU-ELEMENT in the current dialog buffer.
-Used internally by `recentf-open-files'."
-  (let ((item (car menu-element))
-        (file (cdr menu-element)))
-    (if (consp file)               ; This is a sub-menu
-        (let* ((shift recentf-open-files-item-shift)
-               (recentf-open-files-item-shift (concat shift "  ")))
-          (widget-create
-           'item
-           :tag item
-           :sample-face 'bold
-           :format (concat shift "%{%t%}:\n"))
-          (mapc 'recentf-open-files-item file)
-          (widget-insert "\n"))
-      (widget-create
-       'push-button
-       :button-face 'default
-       :tag item
-       :help-echo (concat "Open " file)
-       :format (concat recentf-open-files-item-shift "%[%t%]")
-       :notify 'recentf-open-files-action
-       file)
-      (widget-insert "\n"))))
+  "Return a widget to display MENU-ELEMENT in a dialog buffer."
+  (if (consp (cdr menu-element))
+      ;; Represent a sub-menu with a tree widget
+      `(tree-widget
+        :open t
+        :match ignore
+        :node (item :tag ,(car menu-element)
+                    :sample-face bold
+                    :format "%{%t%}:\n")
+        ,@(mapcar 'recentf-open-files-item
+                  (cdr menu-element)))
+    ;; Represent a single file with a link widget
+    `(link :tag ,(car menu-element)
+           :button-prefix ""
+           :button-suffix ""
+           :button-face default
+           :format "%[%t%]\n"
+           :help-echo ,(concat "Open " (cdr menu-element))
+           :action recentf-open-files-action
+           ,(cdr menu-element))))
+
+(defun recentf-open-files-items (files)
+  "Return a list of widgets to display FILES in a dialog buffer."
+  (set (make-local-variable 'recentf--files-with-key)
+       (recentf-trunc-list files 10))
+  (mapcar 'recentf-open-files-item
+          (append
+           ;; When requested group the files with shortcuts together
+           ;; at the top of the list.
+           (when recentf-show-file-shortcuts-flag
+             (setq files (nthcdr 10 files))
+             (recentf-apply-menu-filter
+              'recentf-show-digit-shortcut-filter
+              (mapcar 'recentf-make-default-menu-element
+                      recentf--files-with-key)))
+           ;; Then the other files.
+           (recentf-apply-menu-filter
+            recentf-menu-filter
+            (mapcar 'recentf-make-default-menu-element
+                    files)))))
 
 (defun recentf-open-files (&optional files buffer-name)
-  "Show a dialog buffer to open a recent file.
-If optional argument FILES is non-nil, it specifies the list of
-recently-opened files to choose from.  It is the whole recent list
-otherwise.
-If optional argument BUFFER-NAME is non-nil, it specifies which buffer
-name to use for the interaction.  It is \"*`recentf-menu-title'*\" by
-default."
+  "Show a dialog to open a recent file.
+If optional argument FILES is non-nil, it is a list of recently-opened
+files to choose from.  It defaults to the whole recent list.
+If optional argument BUFFER-NAME is non-nil, it is a buffer name to
+use for the dialog.  It defaults to \"*`recentf-menu-title'*\"."
   (interactive)
-  (unless files
-    (setq files recentf-list))
-  (unless buffer-name
-    (setq buffer-name (format "*%s*" recentf-menu-title)))
-  (with-current-buffer (get-buffer-create buffer-name)
-    (switch-to-buffer (current-buffer))
-    ;; Cleanup buffer
-    (kill-all-local-variables)
-    (let ((inhibit-read-only t)
-          (ol (overlay-lists)))
-      (erase-buffer)
-      ;; Delete all the overlays.
-      (mapc 'delete-overlay (car ol))
-      (mapc 'delete-overlay (cdr ol)))
-    ;; Insert the dialog header
-    (widget-insert "Click on a file to open it. ")
-    (widget-insert "Click on Cancel or type \"q\" to quit.\n\n" )
-    ;; Insert the list of files as buttons
-    (let ((recentf-open-files-item-shift ""))
-      (mapc 'recentf-open-files-item
-            (recentf-apply-menu-filter
-             recentf-menu-filter
-             (mapcar 'recentf-make-default-menu-element files))))
-    (widget-insert "\n")
-    ;; Insert the Cancel button
+  (unless (or files recentf-list)
+    (error "There is no recent file to open"))
+  (recentf-dialog (or buffer-name (format "*%s*" recentf-menu-title))
+    (widget-insert "Click on a file"
+                   (if recentf-show-file-shortcuts-flag
+                       ", or type the corresponding digit key,"
+                     "")
+                   " to open it.\n"
+                   "Click on Cancel or type `q' to cancel.\n")
+    ;; Use a L&F that looks like the recentf menu.
+    (tree-widget-set-theme "folder")
+    (apply 'widget-create
+           `(group
+             :indent 2
+             :format "\n%v\n"
+             ,@(recentf-open-files-items (or files recentf-list))))
     (widget-create
      'push-button
      :notify 'recentf-cancel-dialog
      "Cancel")
-    (recentf-dialog-mode)
-    (widget-setup)
-    (goto-char (point-min))))
+    (recentf-dialog-goto-first 'link)))
 
 (defun recentf-open-more-files ()
-  "Show a dialog buffer to open a recent file that is not in the menu."
+  "Show a dialog to open a recent file that is not in the menu."
   (interactive)
   (recentf-open-files (nthcdr recentf-max-menu-items recentf-list)
                       (format "*%s - More*" recentf-menu-title)))
 
+(defun recentf-open-most-recent-file (&optional n)
+  "Open the Nth most recent file.
+Optional argument N must be a valid digit number.  It defaults to 1.
+1 opens the most recent file, 2 the second most recent one, etc..
+0 opens the tenth most recent file."
+  (interactive "p")
+  (cond
+   ((zerop n) (setq n 10))
+   ((and (> n 0) (< n 10)))
+   ((error "Recent file number out of range [0-9], %d" n)))
+  (let ((file (nth (1- n) (or recentf--files-with-key recentf-list))))
+    (unless file (error "Not that many recent files"))
+    ;; Close the open files dialog.
+    (when recentf--files-with-key
+      (kill-buffer (current-buffer)))
+    (funcall recentf-menu-action file)))
+
+;;; Save/load/cleanup the recent list
+;;
 (defconst recentf-save-file-header
   ";;; Automatically generated by `recentf' on %s.\n"
   "Header to be written into the `recentf-save-file'.")
@@ -1149,16 +1260,18 @@ Write data into the file specified by `recentf-save-file'."
   (interactive)
   (condition-case error
       (with-temp-buffer
-	(erase-buffer)
-	(set-buffer-file-coding-system recentf-save-file-coding-system)
-	(insert (format recentf-save-file-header (current-time-string)))
-	(recentf-dump-variable 'recentf-list recentf-max-saved-items)
-	(recentf-dump-variable 'recentf-filter-changer-state)
-	(insert "\n\n;;; Local Variables:\n"
-		(format ";;; coding: %s\n" recentf-save-file-coding-system)
-		";;; End:\n")
-	(write-file (expand-file-name recentf-save-file))
-	nil)
+        (erase-buffer)
+        (set-buffer-file-coding-system recentf-save-file-coding-system)
+        (insert (format recentf-save-file-header (current-time-string)))
+        (recentf-dump-variable 'recentf-list recentf-max-saved-items)
+        (recentf-dump-variable 'recentf-filter-changer-current)
+        (insert "\n\n;;; Local Variables:\n"
+                (format ";;; coding: %s\n" recentf-save-file-coding-system)
+                ";;; End:\n")
+        (write-file (expand-file-name recentf-save-file))
+        (when recentf-save-file-modes
+          (set-file-modes recentf-save-file recentf-save-file-modes))
+        nil)
     (error
      (warn "recentf mode: %s" (error-message-string error)))))
 
@@ -1177,18 +1290,26 @@ empty `file-name-history' with the recent list."
                                            recentf-list))))))
 
 (defun recentf-cleanup ()
-  "Remove all non-kept and excluded files from the recent list."
+  "Cleanup the recent list.
+That is, remove duplicates, non-kept, and excluded files."
   (interactive)
   (message "Cleaning up the recentf list...")
   (let ((n 0) newlist)
     (dolist (f recentf-list)
+      (setq f (recentf-expand-file-name f))
       (if (and (recentf-include-p f)
-               (recentf-keep-p f))
+               (recentf-keep-p f)
+               (not (recentf-string-member f newlist)))
           (push f newlist)
         (setq n (1+ n))
         (message "File %s removed from the recentf list" f)))
     (message "Cleaning up the recentf list...done (%d removed)" n)
     (setq recentf-list (nreverse newlist))))
+
+;;; The minor mode
+;;
+(defvar recentf-mode-map (make-sparse-keymap)
+  "Keymap to use in recentf mode.")
 
 ;;;###autoload
 (define-minor-mode recentf-mode
@@ -1197,15 +1318,20 @@ With prefix argument ARG, turn on if positive, otherwise off.
 Returns non-nil if the new state is enabled.
 
 When recentf mode is enabled, it maintains a menu for visiting files
-that were operated on recently."
+that were operated on recently.
+
+\\{recentf-mode-map}"
   :global t
   :group 'recentf
+  :keymap recentf-mode-map
   (unless (and recentf-mode (recentf-enabled-p))
     (if recentf-mode
-        (recentf-load-list)
+        (progn
+          (recentf-load-list)
+          (recentf-show-menu))
+      (recentf-hide-menu)
       (recentf-save-list))
     (recentf-auto-cleanup)
-    (recentf-clear-data)
     (let ((hook-setup (if recentf-mode 'add-hook 'remove-hook)))
       (dolist (hook recentf-used-hooks)
         (apply hook-setup hook)))
@@ -1218,5 +1344,5 @@ that were operated on recently."
 
 (run-hooks 'recentf-load-hook)
 
-;;; arch-tag: 78f1eec9-0d16-4d19-a4eb-2e4529edb62a
+;; arch-tag: 78f1eec9-0d16-4d19-a4eb-2e4529edb62a
 ;;; recentf.el ends here

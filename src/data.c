@@ -1,6 +1,6 @@
 /* Primitive operations on Lisp data types for GNU Emacs Lisp interpreter.
-   Copyright (C) 1985,86,88,93,94,95,97,98,99, 2000, 2001, 03, 2004
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1988, 1993, 1994, 1995, 1997, 1998, 1999, 2000,
+                 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -719,6 +719,7 @@ determined by DEFINITION.  */)
      (symbol, definition, docstring)
      register Lisp_Object symbol, definition, docstring;
 {
+  CHECK_SYMBOL (symbol);
   if (CONSP (XSYMBOL (symbol)->function)
       && EQ (XCAR (XSYMBOL (symbol)->function), Qautoload))
     LOADHIST_ATTACH (Fcons (Qt, symbol));
@@ -1708,12 +1709,20 @@ From now on the default value will apply in this buffer.  Return VARIABLE.  */)
 DEFUN ("make-variable-frame-local", Fmake_variable_frame_local, Smake_variable_frame_local,
        1, 1, "vMake Variable Frame Local: ",
        doc: /* Enable VARIABLE to have frame-local bindings.
-When a frame-local binding exists in the current frame,
-it is in effect whenever the current buffer has no buffer-local binding.
-A frame-local binding is actually a frame parameter value;
-thus, any given frame has a local binding for VARIABLE if it has
-a value for the frame parameter named VARIABLE.  Return VARIABLE.
-See `modify-frame-parameters' for how to set frame parameters.  */)
+This does not create any frame-local bindings for VARIABLE,
+it just makes them possible.
+
+A frame-local binding is actually a frame parameter value.
+If a frame F has a value for the frame parameter named VARIABLE,
+that also acts as a frame-local binding for VARIABLE in F--
+provided this function has been called to enable VARIABLE
+to have frame-local bindings at all.
+
+The only way to create a frame-local binding for VARIABLE in a frame
+is to set the VARIABLE frame parameter of that frame.  See
+`modify-frame-parameters' for how to set frame parameters.
+
+Buffer-local bindings take precedence over frame-local bindings.  */)
      (variable)
      register Lisp_Object variable;
 {

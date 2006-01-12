@@ -1,6 +1,6 @@
 ;;; button.el --- clickable buttons
 ;;
-;; Copyright (C) 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 ;;
 ;; Author: Miles Bader <miles@gnu.org>
 ;; Keywords: extensions
@@ -19,8 +19,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 ;;
@@ -55,7 +55,7 @@
 		   (:foreground "lightblue"))
 		  (t :underline t))
   "Default face used for buttons."
-  :group 'faces)
+  :group 'basic-faces)
 
 ;;;###autoload
 (defvar button-map
@@ -69,6 +69,7 @@
 (defvar button-buffer-map
   (let ((map (make-sparse-keymap)))
     (define-key map [?\t] 'forward-button)
+    (define-key map "\e\t" 'backward-button)
     (define-key map [backtab] 'backward-button)
     map)
   "Keymap useful for buffers containing buttons.

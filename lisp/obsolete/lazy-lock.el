@@ -1,7 +1,7 @@
 ;;; lazy-lock.el --- lazy demand-driven fontification for fast Font Lock mode
 
-;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 2001
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Simon Marshall <simon@gnu.org>
 ;; Maintainer: FSF
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -299,6 +299,10 @@ until TEST returns nil."
    `(while (progn ,@body ,test)))
  (put 'do-while 'lisp-indent-function (get 'while 'lisp-indent-function)))
 
+(defgroup lazy-lock nil
+  "Font Lock support mode to fontify lazily."
+  :group 'font-lock)
+
 (defvar lazy-lock-mode nil)			; Whether we are turned on.
 (defvar lazy-lock-buffers nil)			; For deferral.
 (defvar lazy-lock-timers (cons nil nil))	; For deferral and stealth.
@@ -506,7 +510,7 @@ When Lazy Lock mode is enabled, fontification can be lazy in a number of ways:
   been idle for `lazy-lock-stealth-time' seconds, while Emacs remains idle.
   This is useful if any buffer has any deferred fontification.
 
-Basic Font Lock mode on-the-fly fontification behaviour fontifies modified
+Basic Font Lock mode on-the-fly fontification behavior fontifies modified
 lines only.  Thus, if `lazy-lock-defer-contextually' is non-nil, Lazy Lock mode
 on-the-fly fontification may fontify differently, albeit correctly.  In any
 event, to refontify some lines you can use \\[font-lock-fontify-block].
@@ -522,8 +526,8 @@ verbosity is controlled via the variable `lazy-lock-stealth-verbose'."
 		   (if arg (> (prefix-numeric-value arg) 0) (not was-on)))))
     (cond ((and now-on (not font-lock-mode))
 	   ;; Turned on `lazy-lock-mode' rather than `font-lock-mode'.
-	   (let ((font-lock-support-mode 'lazy-lock-mode))
-	     (font-lock-mode t)))
+           (message "Use font-lock-support-mode rather than calling lazy-lock-mode")
+           (sit-for 2))
 	  (now-on
 	   ;; Turn ourselves on.
 	   (set (make-local-variable 'lazy-lock-mode) t)
@@ -1050,5 +1054,5 @@ verbosity is controlled via the variable `lazy-lock-stealth-verbose'."
 
 (provide 'lazy-lock)
 
-;;; arch-tag: c1776846-f046-4a45-9684-54b951b12fc9
+;; arch-tag: c1776846-f046-4a45-9684-54b951b12fc9
 ;;; lazy-lock.el ends here

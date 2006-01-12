@@ -1,7 +1,7 @@
 ;;; paragraphs.el --- paragraph and sentence parsing
 
-;; Copyright (C) 1985, 86, 87, 91, 94, 95, 96, 1997, 1999, 2000, 2001, 2004
-;;    Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1987, 1991, 1994, 1995, 1996, 1997, 1999, 2000,
+;;   2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: wp
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -159,23 +159,32 @@ to obtain the value of this variable."
   :group 'paragraphs
   :type '(choice regexp (const :tag "Use default value" nil)))
 
+(defcustom sentence-end-base "[.?!][]\"'$B!I$,1r}(B)}]*"
+  "*Regexp matching the basic end of a sentence, not including following space."
+  :group 'paragraphs
+  :type 'string
+  :version "22.1")
+
 (defun sentence-end ()
   "Return the regexp describing the end of a sentence.
 
 This function returns either the value of the variable `sentence-end'
 if it is non-nil, or the default value constructed from the
-variables `sentence-end-double-space', `sentence-end-without-period'
-and `sentence-end-without-space'.  The default value specifies
-that in order to be recognized as the end of a sentence, the
-ending period, question mark, or exclamation point must be
-followed by two spaces, unless it's inside some sort of quotes or
-parenthesis.  See Info node `(elisp)Standard Regexps'."
+variables `sentence-end-base', `sentence-end-double-space',
+`sentence-end-without-period' and `sentence-end-without-space'.
+
+The default value specifies that in order to be recognized as the
+end of a sentence, the ending period, question mark, or exclamation point
+must be followed by two spaces, with perhaps some closing delimiters
+in between.  See Info node `(elisp)Standard Regexps'."
   (or sentence-end
       (concat (if sentence-end-without-period "\\w  \\|")
-              "\\([.?!][]\"'\xd0c9\x5397d)}]*"
+	      "\\("
+	      sentence-end-base
               (if sentence-end-double-space
                   "\\($\\| $\\|\t\\|  \\)" "\\($\\|[\t ]\\)")
-              "\\|[" sentence-end-without-space "]+\\)"
+              "\\|[" sentence-end-without-space "]+"
+	      "\\)"
               "[ \t\n]*")))
 
 (defcustom page-delimiter "^\014"
@@ -358,7 +367,7 @@ If ARG is negative, point is put at end of this paragraph, mark is put
 at beginning of this or a previous paragraph.
 
 Interactively, if this command is repeated
-or (in Transient Mark mode) if the mark is active, 
+or (in Transient Mark mode) if the mark is active,
 it marks the next ARG paragraphs after the ones already marked."
   (interactive "p\np")
   (unless arg (setq arg 1))
@@ -493,9 +502,9 @@ ones already marked."
   (interactive "*p")
   (transpose-subr 'forward-sentence arg))
 
-;;; Local Variables:
-;;; coding: iso-2022-7bit
-;;; End:
+;; Local Variables:
+;; coding: iso-2022-7bit
+;; End:
 
-;;; arch-tag: e727eb1a-527a-4464-b9d7-9d3ec0d1a575
+;; arch-tag: e727eb1a-527a-4464-b9d7-9d3ec0d1a575
 ;;; paragraphs.el ends here

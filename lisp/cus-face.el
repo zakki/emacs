@@ -1,6 +1,7 @@
 ;;; cus-face.el --- customization support for faces
 ;;
-;; Copyright (C) 1996, 1997, 1999, 2000, 2001, 2002 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 ;;
 ;; Author: Per Abrahamsen <abraham@dina.kvl.dk>
 ;; Keywords: help, faces
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 ;;
@@ -46,7 +47,7 @@
 	  (dolist (frame (frame-list))
 	    (face-spec-set face value frame)))
 	;; When making a face after frames already exist
-	(if (memq window-system '(x w32))
+	(if (memq window-system '(x w32 mac))
 	    (make-face-x-resource-internal face))))
     ;; Don't record SPEC until we see it causes no errors.
     (put face 'face-defface-spec spec)
@@ -59,6 +60,7 @@
 
 ;;; Face attributes.
 
+;;;###autoload
 (defconst custom-face-attributes
   '((:family
      (string :tag "Font Family"
@@ -318,9 +320,18 @@ FACE's list property `theme-face' \(using `custom-push-theme')."
 	    (let ((face (nth 0 entry))
 		  (spec (nth 1 entry))
 		  (now (nth 2 entry))
-		  (comment (nth 3 entry)))
-	      (put face 'saved-face spec)
-	      (put face 'saved-face-comment comment)
+		  (comment (nth 3 entry))
+		  oldspec)
+	      ;; If FACE is actually an alias, customize the face it
+	      ;; is aliased to.
+	      (if (get face 'face-alias)
+		  (setq face (get face 'face-alias)))
+
+	      (setq oldspec (get face 'theme-face))
+	      (when (not (and oldspec (eq 'user (caar oldspec))))
+		(put face 'saved-face spec)
+		(put face 'saved-face-comment comment))
+
 	      (custom-push-theme 'theme-face face theme 'set spec)
 	      (when (or now immediate)
 		(put face 'force-face (if now 'rogue 'immediate)))
@@ -333,58 +344,37 @@ FACE's list property `theme-face' \(using `custom-push-theme')."
 	;; Old format, a plist of FACE SPEC pairs.
 	(let ((face (nth 0 args))
 	      (spec (nth 1 args)))
+	  (if (get face 'face-alias)
+		  (setq face (get face 'face-alias)))
 	  (put face 'saved-face spec)
 	  (custom-push-theme 'theme-face face theme 'set spec))
 	(setq args (cdr (cdr args))))))))
 
-;;;###autoload
-(defun custom-theme-face-value (face theme)
-  "Return spec of FACE in THEME if THEME modifies FACE.
-Value is nil otherwise.  The association between theme and spec for FACE
-is stored in FACE's property `theme-face'.  The appropriate face
-is retrieved using `custom-theme-value'."
-  ;; Returns car because the value is stored inside a one element list
-  (car-safe (custom-theme-value theme (get face 'theme-face))))
-
-(defun custom-theme-reset-internal-face (face to-theme)
-  "Reset FACE to the value defined by TO-THEME.
-If FACE is not defined in TO-THEME, reset FACE to the standard
-value.  See `custom-theme-face-value'.  The standard value is
-stored in SYMBOL's property `face-defface-spec' by `defface'."
-  (let ((spec (custom-theme-face-value face to-theme))
-	was-in-theme)
-    (setq was-in-theme spec)
-    (setq spec (or spec (get face 'face-defface-spec)))
-    (when spec
-      (put face 'save-face was-in-theme)
-      (when (or (get face 'force-face) (facep face))
-	      (unless (facep face)
-		(make-empty-face face))
-	      (face-spec-set face spec)))
-    spec))
-
+;; XEmacs compability function.  In XEmacs, when you reset a Custom
+;; Theme, you have to specify the theme to reset it to.  We just apply
+;; the next theme.
 ;;;###autoload
 (defun custom-theme-reset-faces (theme &rest args)
-  "Reset the value of the face to values previously defined.
-Associate this setting with THEME.
+  "Reset the specs in THEME of some faces to their specs in other themes.
+Each of the arguments ARGS has this form:
 
-ARGS is a list of lists of the form
+    (FACE IGNORED)
 
-    (FACE TO-THEME)
-
-This means reset FACE to its value in TO-THEME."
+This means reset FACE.  The argument IGNORED is ignored."
   (custom-check-theme theme)
-  (mapcar '(lambda (arg)
-	     (apply 'custom-theme-reset-internal-face arg)
-	     (custom-push-theme 'theme-face (car arg) theme 'reset (cadr arg)))
-	  args))
+  (dolist (arg args)
+    (custom-push-theme 'theme-face (car arg) theme 'reset)))
 
 ;;;###autoload
 (defun custom-reset-faces (&rest args)
-  "Reset the value of the face to values previously saved.
-This is the setting assosiated the `user' theme.
+  "Reset the specs of some faces to their specs in specified themes.
+This creates settings in the `user' theme.
 
-ARGS is defined as for `custom-theme-reset-faces'"
+Each of the arguments ARGS has this form:
+
+    (FACE FROM-THEME)
+
+This means reset FACE to its value in FROM-THEME."
   (apply 'custom-theme-reset-faces 'user args))
 
 ;;; The End.

@@ -1,6 +1,7 @@
 ;;; url-mail.el --- Mail Uniform Resource Locator retrieval code
 
-;; Copyright (c) 1996 - 1999 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Keywords: comm, data, processes
 
@@ -18,8 +19,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -72,7 +73,7 @@
 	(setq headers-start (match-end 0)
 	      to (url-unhex-string (substring url 0 (match-beginning 0)))
 	      args (url-parse-query-string
-		    (substring url headers-start nil) t))
+		    (substring url headers-start nil) t t))
       (setq to (url-unhex-string url)))
     (setq source-url (url-view-url t))
     (if (and url-request-data (not (assoc "subject" args)))
@@ -83,16 +84,27 @@
     (if (and source-url (not (assoc "x-url-from" args)))
 	(setq args (cons (list "x-url-from" source-url) args)))
 
-    (if (assoc "to" args)
-	(push (cdr (assoc "to" args)) to)
-      (setq args (cons (list "to" to) args)))
+    (let ((tolist (assoc "to" args)))
+      (if tolist
+	  (if (not (string= to ""))
+	      (setcdr tolist
+		      (list (concat to ", " (cadr tolist)))))
+	(setq args (cons (list "to" to) args))))
+
     (setq subject (cdr-safe (assoc "subject" args)))
-    (if (fboundp url-mail-command) (funcall url-mail-command) (mail))
+    (if (eq url-mail-command 'compose-mail)
+	(compose-mail nil nil nil 'new)
+      (if (eq url-mail-command 'mail)
+	  (mail 'new)
+	(funcall url-mail-command)))
     (while args
       (if (string= (caar args) "body")
 	  (progn
 	    (goto-char (point-max))
-	    (insert (mapconcat 'identity (cdar args) "\n")))
+	    (insert (mapconcat 
+		     #'(lambda (string)
+			 (replace-regexp-in-string "\r\n" "\n" string))
+		     (cdar args) "\n")))
 	(url-mail-goto-field (caar args))
 	(setq func (intern-soft (concat "mail-" (caar args))))
 	(insert (mapconcat 'identity (cdar args) ", ")))
@@ -116,12 +128,14 @@
       ;; It seems Microsoft-ish to send without warning.
       ;; Fixme: presumably this should depend on a privacy setting.
       (if (y-or-n-p "Send this auto-generated mail? ")
-	  (cond ((eq url-mail-command 'compose-mail)
-		 (funcall (get mail-user-agent 'sendfunc) nil))
-		;; otherwise, we can't be sure
-		((fboundp 'message-send-and-exit)
-		 (message-send-and-exit))
-		(t (mail-send-and-exit nil)))))
+	  (let ((buffer (current-buffer)))
+	    (cond ((eq url-mail-command 'compose-mail)
+		   (funcall (get mail-user-agent 'sendfunc) nil))
+		  ;; otherwise, we can't be sure
+		  ((fboundp 'message-send-and-exit)
+		   (message-send-and-exit))
+		  (t (mail-send-and-exit nil)))
+	    (kill-buffer buffer))))
     nil))
 
 (provide 'url-mailto)

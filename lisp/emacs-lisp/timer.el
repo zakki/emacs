@@ -1,6 +1,6 @@
 ;;; timer.el --- run a function with args at some time in future
 
-;; Copyright (C) 1996 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 
@@ -18,8 +18,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -161,8 +161,11 @@ fire repeatedly that many seconds apart."
   (aset timer 6 args)
   timer)
 
-(defun timer-activate (timer &optional triggered-p)
-  "Put TIMER on the list of active timers."
+(defun timer-activate (timer &optional triggered-p reuse-cell)
+  "Put TIMER on the list of active timers.
+
+REUSE-CELL, if non-nil, is a cons cell to reuse instead
+of allocating a new one."
   (if (and (timerp timer)
 	   (integerp (aref timer 1))
 	   (integerp (aref timer 2))
@@ -180,20 +183,28 @@ fire repeatedly that many seconds apart."
 			     (> (aref timer 3) (aref (car timers) 3)))))
 	  (setq last timers
 		timers (cdr timers)))
+	(if reuse-cell
+	    (progn
+	      (setcar reuse-cell timer)
+	      (setcdr reuse-cell timers))
+	  (setq reuse-cell (cons timer timers)))
 	;; Insert new timer after last which possibly means in front of queue.
 	(if last
-	    (setcdr last (cons timer timers))
-	  (setq timer-list (cons timer timers)))
+	    (setcdr last reuse-cell)
+	  (setq timer-list reuse-cell))
 	(aset timer 0 triggered-p)
 	(aset timer 7 nil)
 	nil)
     (error "Invalid or uninitialized timer")))
 
-(defun timer-activate-when-idle (timer &optional dont-wait)
+(defun timer-activate-when-idle (timer &optional dont-wait reuse-cell)
   "Arrange to activate TIMER whenever Emacs is next idle.
 If optional argument DONT-WAIT is non-nil, then enable the
 timer to activate immediately, or at the right time, if Emacs
-is already idle."
+is already idle.
+
+REUSE-CELL, if non-nil, is a cons cell to reuse instead
+of allocating a new one."
   (if (and (timerp timer)
 	   (integerp (aref timer 1))
 	   (integerp (aref timer 2))
@@ -211,10 +222,15 @@ is already idle."
 			     (> (aref timer 3) (aref (car timers) 3)))))
 	  (setq last timers
 		timers (cdr timers)))
+	(if reuse-cell
+	    (progn
+	      (setcar reuse-cell timer)
+	      (setcdr reuse-cell timers))
+	  (setq reuse-cell (cons timer timers)))
 	;; Insert new timer after last which possibly means in front of queue.
 	(if last
-	    (setcdr last (cons timer timers))
-	  (setq timer-idle-list (cons timer timers)))
+	    (setcdr last reuse-cell)
+	  (setq timer-idle-list reuse-cell))
 	(aset timer 0 (not dont-wait))
 	(aset timer 7 t)
 	nil)
@@ -230,6 +246,18 @@ is already idle."
   (setq timer-list (delq timer timer-list))
   (setq timer-idle-list (delq timer timer-idle-list))
   nil)
+
+;; Remove TIMER from the list of active timers or idle timers.
+;; Only to be used in this file.  It returns the cons cell
+;; that was removed from the list.
+(defun cancel-timer-internal (timer)
+  (let ((cell1 (memq timer timer-list))
+	(cell2 (memq timer timer-idle-list)))
+    (if cell1
+	(setq timer-list (delq timer timer-list)))
+    (if cell2
+	(setq timer-idle-list (delq timer timer-idle-list)))
+    (or cell1 cell2)))
 
 ;;;###autoload
 (defun cancel-function-timers (function)
@@ -270,13 +298,13 @@ This function is called, by name, directly by the C code."
   (setq timer-event-last timer)
   (let ((inhibit-quit t))
     (if (timerp timer)
-	(let (retrigger)
-	  ;; Delete from queue.
-	  (cancel-timer timer)
+	(let (retrigger cell)
+	  ;; Delete from queue.  Record the cons cell that was used.
+	  (setq cell (cancel-timer-internal timer))
 	  ;; Re-schedule if requested.
 	  (if (aref timer 4)
 	      (if (aref timer 7)
-		  (timer-activate-when-idle timer)
+		  (timer-activate-when-idle timer nil cell)
 		(timer-inc-time timer (aref timer 4) 0)
 		;; If real time has jumped forward,
 		;; perhaps because Emacs was suspended for a long time,
@@ -287,7 +315,7 @@ This function is called, by name, directly by the C code."
 				      (aref timer 4))))
 		      (if (> repeats timer-max-repeats)
 			  (timer-inc-time timer (* (aref timer 4) repeats)))))
-		(timer-activate timer t)
+		(timer-activate timer t cell)
 		(setq retrigger t)))
 	  ;; Run handler.
 	  ;; We do this after rescheduling so that the handler function
@@ -404,31 +432,60 @@ This function returns a timer object which you can use in `cancel-timer'."
 
 ;;;###autoload (put 'with-timeout 'lisp-indent-function 1)
 
+(defvar with-timeout-timers nil
+  "List of all timers used by currently pending `with-timeout' calls.")
+
 ;;;###autoload
 (defmacro with-timeout (list &rest body)
   "Run BODY, but if it doesn't finish in SECONDS seconds, give up.
 If we give up, we run the TIMEOUT-FORMS and return the value of the last one.
-The call should look like:
- (with-timeout (SECONDS TIMEOUT-FORMS...) BODY...)
 The timeout is checked whenever Emacs waits for some kind of external
-event \(such as keyboard input, input from subprocesses, or a certain time);
+event (such as keyboard input, input from subprocesses, or a certain time);
 if the program loops without waiting in any way, the timeout will not
-be detected."
+be detected.
+\n(fn (SECONDS TIMEOUT-FORMS...) BODY)"
   (let ((seconds (car list))
 	(timeout-forms (cdr list)))
     `(let ((with-timeout-tag (cons nil nil))
-	   with-timeout-value with-timeout-timer)
+	   with-timeout-value with-timeout-timer
+	   (with-timeout-timers with-timeout-timers))
        (if (catch with-timeout-tag
 	     (progn
 	       (setq with-timeout-timer
 		     (run-with-timer ,seconds nil
 				      'with-timeout-handler
 				      with-timeout-tag))
+	       (push with-timeout-timer with-timeout-timers)
 	       (setq with-timeout-value (progn . ,body))
 	       nil))
 	   (progn . ,timeout-forms)
 	 (cancel-timer with-timeout-timer)
 	 with-timeout-value))))
+
+(defun with-timeout-suspend ()
+  "Stop the clock for `with-timeout'.  Used by debuggers.
+The idea is that the time you spend in the debugger should not
+count against these timeouts.
+
+The value is a list that the debugger can pass to `with-timeout-unsuspend'
+when it exits, to make these timers start counting again."
+  (mapcar (lambda (timer)
+	    (cancel-timer timer)
+	    (list timer
+		  (time-subtract
+		   ;; The time that this timer will go off.
+		   (list (aref timer 1) (aref timer 2) (aref timer 3))
+		   (current-time))))
+	  with-timeout-timers))
+
+(defun with-timeout-unsuspend (timer-spec-list)
+  "Restart the clock for `with-timeout'.
+The argument should be a value previously returned by `with-timeout-suspend'."
+  (dolist (elt timer-spec-list)
+    (let ((timer (car elt))
+	  (delay (cadr elt)))
+      (timer-set-time timer (time-add (current-time) delay)) 
+      (timer-activate timer))))
 
 (defun y-or-n-p-with-timeout (prompt seconds default-value)
   "Like (y-or-n-p PROMPT), with a timeout.

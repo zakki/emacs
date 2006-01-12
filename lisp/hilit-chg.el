@@ -1,6 +1,7 @@
 ;;; hilit-chg.el --- minor mode displaying buffer changes with special face
 
-;; Copyright (C) 1998, 2000, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1998, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Richard Sharman <rsharman@pobox.com>
 ;; Keywords: faces
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -37,9 +38,9 @@
 ;; it on to active mode to see them, then toggle it back off to avoid
 ;; distraction.
 ;;
-;; When active, changes are displayed in `highlight-changes-face'.  When
-;; text is deleted, the following character is displayed in
-;; `highlight-changes-delete-face' face.
+;; When active, changes are displayed in the `highlight-changes' face.
+;; When text is deleted, the following character is displayed in the
+;; `highlight-changes-delete' face.
 ;;
 ;;
 ;; You can "age" different sets of changes by using
@@ -48,10 +49,10 @@
 ;; changes.  You can customize these "rotated" faces in two ways.  You can
 ;; either explicitly define each face by customizing
 ;; `highlight-changes-face-list'.  If, however, the faces differ from
-;; `highlight-changes-face' only in the foreground color, you can simply set
-;; `highlight-changes-colours'.  If `highlight-changes-face-list' is nil when
+;; the `highlight-changes' face only in the foreground color, you can simply set
+;; `highlight-changes-colors'.  If `highlight-changes-face-list' is nil when
 ;; the faces are required they will be constructed from
-;; `highlight-changes-colours'.
+;; `highlight-changes-colors'.
 ;;
 ;;
 ;; When a Highlight Changes mode is on (either active or passive) you can go
@@ -81,11 +82,11 @@
 ;;
 ;; Example usage:
 ;; (defun my-highlight-changes-enable-hook ()
-;;   (add-hook 'local-write-file-hooks 'highlight-changes-rotate-faces)
+;;   (add-hook 'write-file-functions 'highlight-changes-rotate-faces nil t)
 ;; )
 ;;
 ;; (defun my-highlight-changes-disable-hook ()
-;;   (remove-hook 'local-write-file-hooks 'highlight-changes-rotate-faces)
+;;   (remove-hook 'write-file-functions 'highlight-changes-rotate-faces t)
 ;; )
 ;;
 ;; (add-hook 'highlight-changes-enable-hook 'my-highlight-changes-enable-hook)
@@ -212,41 +213,48 @@
 ;; However, having it set for non-delete changes can be annoying because all
 ;; indentation on inserts gets underlined (which can look pretty ugly!).
 
-(defface highlight-changes-face
-  '((((min-colors 88) (class color)) (:foreground "red1" ))
+(defface highlight-changes
+  '((((min-colors 88) (class color)) (:foreground "red1"))
     (((class color)) (:foreground "red" ))
     (t (:inverse-video t)))
   "Face used for highlighting changes."
   :group 'highlight-changes)
+;; backward-compatibility alias
+(put 'highlight-changes-face 'face-alias 'highlight-changes)
 
 ;; This looks pretty ugly, actually.  Maybe the underline should be removed.
-(defface highlight-changes-delete-face
+(defface highlight-changes-delete
   '((((min-colors 88) (class color)) (:foreground "red1" :underline t))
     (((class color)) (:foreground "red" :underline t))
     (t (:inverse-video t)))
   "Face used for highlighting deletions."
   :group 'highlight-changes)
+;; backward-compatibility alias
+(put 'highlight-changes-delete-face 'face-alias 'highlight-changes-delete)
 
 
 
-;; A (not very good) default list of colours to rotate through.
+;; A (not very good) default list of colors to rotate through.
 ;;
-(defcustom highlight-changes-colours
+(defcustom highlight-changes-colors
   (if (eq (frame-parameter nil 'background-mode) 'light)
       ;; defaults for light background:
       '( "magenta" "blue" "darkgreen" "chocolate" "sienna4" "NavyBlue")
       ;; defaults for dark background:
     '("yellow" "magenta" "blue" "maroon" "firebrick" "green4" "DarkOrchid"))
-  "*Colours used by `highlight-changes-rotate-faces'.
+  "*Colors used by `highlight-changes-rotate-faces'.
 The newest rotated change will be displayed in the first element of this list,
 the next older will be in the second element etc.
 
 This list is used if `highlight-changes-face-list' is nil, otherwise that
 variable overrides this list.  If you only care about foreground
-colours then use this, if you want fancier faces then set
+colors then use this, if you want fancier faces then set
 `highlight-changes-face-list'."
   :type '(repeat color)
   :group 'highlight-changes)
+
+(define-obsolete-variable-alias 'highlight-changes-colours
+                                'highlight-changes-colors "22.1")
 
 
 ;; If you invoke highlight-changes-mode with no argument, should it start in
@@ -263,7 +271,7 @@ This variable must be set to one of the symbols `active' or `passive'."
 (defcustom highlight-changes-global-initial-state 'passive
   "*What state `global-highlight-changes' should start in.
 This is used if `global-highlight-changes' is called with no argument.
-This variable must be set to either `active' or `passive'"
+This variable must be set to either `active' or `passive'."
   :type '(choice (const :tag "Active" active)
 		 (const :tag "Passive" passive))
   :group 'highlight-changes)
@@ -295,8 +303,8 @@ A list means the elements are major modes suitable for Highlight
 Changes mode, or a list whose first element is `not' followed by major
 modes which are not suitable.
 
-t means the buffer is suitable if it is visiting a file and its name
-does not begin with ` ' or `*'.
+A value of t means the buffer is suitable if it is visiting a file and
+its name does not begin with ` ' or `*'.
 
 A value of nil means no buffers are suitable for `global-highlight-changes'
 \(effectively disabling the mode).
@@ -347,15 +355,15 @@ remove it from existing buffers."
 	     )
 	  (while p
 	    (setq old-name (car p))
-	    (setq new-name (intern (format "highlight-changes-face-%d" n)))
+	    (setq new-name (intern (format "highlight-changes-%d" n)))
 	    (if (eq old-name new-name)
 		nil
 	      ;; A new face has been inserted: we don't want to modify the
 	      ;; default face so copy it.  Better, though, (I think) is to
 	      ;; make a new face have the same attributes as
-	      ;; highlight-changes-face .
+	      ;; the `highlight-changes' face.
 	      (if (eq old-name 'default)
-		  (copy-face 'highlight-changes-face  new-name)
+		  (copy-face 'highlight-changes new-name)
 		(copy-face old-name new-name)
 		))
 	    (setq new-list (append  (list new-name) new-list))
@@ -377,16 +385,16 @@ remove it from existing buffers."
 (defcustom highlight-changes-face-list nil
   "*A list of faces used when rotating changes.
 Normally the variable is initialized to nil and the list is created from
-`highlight-changes-colours' when needed.  However, you can set this variable
+`highlight-changes-colors' when needed.  However, you can set this variable
 to any list of faces.  You will have to do this if you want faces which
-don't just differ from `highlight-changes-face' by the foreground colour.
+don't just differ from the `highlight-changes' face by the foreground color.
 Otherwise, this list will be constructed when needed from
-`highlight-changes-colours'."
+`highlight-changes-colors'."
   :type '(choice
 	  (repeat
 	    :notify hilit-chg-cust-fix-changes-face-list
 	    face  )
-	  (const :tag "Derive from highlight-changes-colours"  nil)
+	  (const :tag "Derive from highlight-changes-colors"  nil)
 	  )
   :group 'highlight-changes)
 
@@ -445,7 +453,7 @@ This is the opposite of `hilit-chg-hide-changes'."
   (let ((ov (make-overlay start end))
 	face)
     (if (eq prop 'hilit-chg-delete)
-	(setq face 'highlight-changes-delete-face)
+	(setq face 'highlight-changes-delete)
       (setq face (nth 1 (member prop hilit-chg-list))))
     (if face
 	(progn
@@ -481,7 +489,7 @@ This is the opposite of `hilit-chg-display-changes'."
   "Fix change overlays in region between BEG and END.
 
 Ensure the overlays agree with the changes as determined from
-the text properties of type `hilit-chg' ."
+the text properties of type `hilit-chg'."
   ;; Remove or alter overlays in region beg..end
   (let (ov-start ov-end	 props q)
     ;; temp for debugging:
@@ -634,12 +642,12 @@ Functions:
 \\[highlight-changes-remove-highlight] - remove the change face from the region
 \\[highlight-changes-rotate-faces] - rotate different \"ages\" of changes \
 through
-	various faces.
+	various faces
 
 Hook variables:
-`highlight-changes-enable-hook'  - when enabling Highlight Changes mode.
+`highlight-changes-enable-hook'  - when enabling Highlight Changes mode
 `highlight-changes-toggle-hook'  - when entering active or passive state
-`highlight-changes-disable-hook' - when turning off Highlight Changes mode."
+`highlight-changes-disable-hook' - when turning off Highlight Changes mode"
   (interactive "P")
   (if (or (display-color-p)
 	  (and (fboundp 'x-display-grayscale-p) (x-display-grayscale-p)))
@@ -665,6 +673,7 @@ Hook variables:
 	(if new-highlight-changes-mode
 	    ;; mode is turned on -- but may be passive
 	    (progn
+	      (add-to-list 'desktop-locals-to-save 'highlight-changes-mode)
 	      (hilit-chg-set new-highlight-changes-mode)
 	      (or was-on
 		  ;; run highlight-changes-enable-hook once
@@ -727,24 +736,24 @@ Hook variables:
   ;; so we pick up any changes?
   (if (or (null highlight-changes-face-list)  ; Don't do it if it
 	  force) ; already exists unless FORCE non-nil.
-      (let ((p highlight-changes-colours)
+      (let ((p highlight-changes-colors)
 	    (n 1) name)
 	(setq highlight-changes-face-list nil)
 	(while p
-	  (setq name (intern (format "highlight-changes-face-%d" n)))
-	  (copy-face 'highlight-changes-face name)
+	  (setq name (intern (format "highlight-changes-%d" n)))
+	  (copy-face 'highlight-changes name)
 	  (set-face-foreground name (car p))
 	  (setq highlight-changes-face-list
 		(append highlight-changes-face-list (list name)))
 	  (setq p (cdr p))
 	  (setq n (1+ n)))))
-  (setq hilit-chg-list (list 'hilit-chg 'highlight-changes-face))
+  (setq hilit-chg-list (list 'hilit-chg 'highlight-changes))
   (let ((p highlight-changes-face-list)
 	(n 1)
 	last-category last-face)
     (while p
       (setq last-category (intern (format "change-%d" n)))
-      ;; (setq last-face (intern (format "highlight-changes-face-%d" n)))
+      ;; (setq last-face (intern (format "highlight-changes-%d" n)))
       (setq last-face (car p))
       (setq hilit-chg-list
 	    (append hilit-chg-list
@@ -774,11 +783,11 @@ of `highlight-changes-face-list', one level older changes are shown in
 face described by the second element, and so on.  Very old changes remain
 shown in the last face in the list.
 
-You can automatically rotate colours when the buffer is saved
-by adding the following to `local-write-file-hooks', by evaling it in the
-buffer to be saved):
+You can automatically rotate colors when the buffer is saved by adding
+this function to `write-file-functions' as a buffer-local value.  To do
+this, eval the following in the buffer to be saved:
 
-  \(add-hook 'local-write-file-hooks 'highlight-changes-rotate-faces)"
+  \(add-hook 'write-file-functions 'highlight-changes-rotate-faces nil t)"
   (interactive)
   ;; If not in active mode do nothing but don't complain because this
   ;; may be bound to a hook.
@@ -793,8 +802,7 @@ buffer to be saved):
 	;; and display them all if active
 	(if (eq highlight-changes-mode 'active)
 	    (hilit-chg-display-changes))))
-  ;; This always returns nil so it is safe to use in
-  ;; local-write-file-hook
+  ;; This always returns nil so it is safe to use in write-file-functions
   nil)
 
 ;; ========================================================================
@@ -842,7 +850,7 @@ is non-nil."
 
       (setq change-a (car change-info))
       (setq change-b (car (cdr change-info)))
-      
+
       (hilit-chg-make-list)
       (while change-a
 	(setq a-start (nth 0 (car change-a)))
@@ -879,18 +887,18 @@ The default is the current buffer and the one in the next window.
 If either buffer is modified and is visiting a file, you are prompted
 to save the file.
 
-Unless the buffer is unmodified and visiting a file,  the buffer is
+Unless the buffer is unmodified and visiting a file, the buffer is
 written to a temporary file for comparison.
 
 If a buffer is read-only, differences will be highlighted but no property
 changes are made, so \\[highlight-changes-next-change] and
 \\[highlight-changes-previous-change] will not work."
   (interactive
-   (list 
+   (list
     (get-buffer (read-buffer "buffer-a " (current-buffer) t))
     (get-buffer
      (read-buffer "buffer-b "
-		  (window-buffer (next-window (selected-window))) t)))) 
+		  (window-buffer (next-window (selected-window))) t))))
   (let ((file-a (buffer-file-name buf-a))
 	(file-b (buffer-file-name buf-b)))
     (highlight-markup-buffers buf-a file-a buf-b file-b)
@@ -917,10 +925,10 @@ changes are made, so \\[highlight-changes-next-change] and
 	       nil			;; default
 	       'yes			;; must exist
 	       (let ((f (buffer-file-name (current-buffer))))
-		 (if f 
+		 (if f
 		     (progn
 		       (setq f (make-backup-file-name f))
-		       (or (file-exists-p f) 
+		       (or (file-exists-p f)
 			   (setq f nil)))
 		   )
 		 f))))
@@ -1103,9 +1111,9 @@ variable `highlight-changes-global-changes-existing-buffers' is non-nil).
 
 A buffer is appropriate for Highlight Changes mode if all these are true:
 - the buffer is not a special buffer (one whose name begins with
-  `*' or ` ')
+  `*' or ` '),
 - the buffer's mode is suitable as per variable
-  `highlight-changes-global-modes'
+  `highlight-changes-global-modes',
 - Highlight Changes mode is not already on for this buffer.
 
 This function is called from `hilit-chg-update-all-buffers' or
@@ -1146,6 +1154,16 @@ from `global-highlight-changes' when turning on global Highlight Changes mode."
 		   (hilit-chg-turn-off-maybe))
 		 )))
    (buffer-list)))
+
+;;;; Desktop support.
+
+;; Called by `desktop-create-buffer' to restore `highlight-changes-mode'.
+(defun hilit-chg-desktop-restore (desktop-buffer-locals)
+  (highlight-changes-mode
+   (or (cdr (assq 'highlight-changes-mode desktop-buffer-locals)) 1)))
+
+(add-to-list 'desktop-minor-mode-handlers
+             '(highlight-changes-mode . hilit-chg-desktop-restore))
 
 ;; ===================== debug ==================
 ;; For debug & test use:

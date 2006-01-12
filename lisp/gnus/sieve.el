@@ -1,5 +1,6 @@
 ;;; sieve.el --- Utilities to manage sieve scripts
-;; Copyright (C) 2001, 2003 Free Software Foundation, Inc.
+
+;; Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Simon Josefsson <simon@josefsson.org>
 
@@ -17,8 +18,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -244,7 +245,7 @@ Used to bracket operations which move point in the sieve-buffer."
   (if (eq last-command 'sieve-help)
       ;; would need minor-mode for log-edit-mode
       (describe-function 'sieve-mode)
-    (message (substitute-command-keys
+    (message "%s" (substitute-command-keys
 	      "`\\[sieve-edit-script]':edit `\\[sieve-activate]':activate `\\[sieve-deactivate]':deactivate `\\[sieve-remove]':remove"))))
 
 (defun sieve-bury-buffer (buf &optional mainbuf)

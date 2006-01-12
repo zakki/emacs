@@ -1,7 +1,7 @@
 ;;; vip.el --- a VI Package for GNU Emacs
 
-;; Copyright (C) 1986, 1987, 1988, 1992, 1993, 1998, 2005
-;;        Free Software Foundation, Inc.
+;; Copyright (C) 1986, 1987, 1988, 1992, 1993, 1998, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Masahiko Sato <ms@sail.stanford.edu>
 ;; Keywords: emulations
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -893,7 +893,7 @@ is the name of the register for COM."
 each line in the region."
   (setq vip-quote-string
 	(let ((str
-	       (vip-read-string (format "quote string \(default \"%s\"\): "
+	       (vip-read-string (format "quote string (default %s): "
 					vip-quote-string))))
 	  (if (string= str "") vip-quote-string str)))
   (vip-enlarge-region (point) (mark))
@@ -1112,9 +1112,10 @@ the query replace mode will toggle between string replace and regexp replace."
 	    (replace-match (vip-read-string
 			    (format "Replace regexp \"%s\" with: " str))
 			   nil nil))
-	(replace-string
-	 str
-	 (vip-read-string (format "Replace \"%s\" with: " str)))))))
+	(with-no-warnings
+	  (replace-string
+	   str
+	   (vip-read-string (format "Replace \"%s\" with: " str))))))))
 
 
 ;; basic cursor movement.  j, k, l, m commands.
@@ -1342,7 +1343,7 @@ after search."
 (defun vip-find-char-forward (arg)
   "Find char on the line.  If called interactively read the char to find
 from the terminal, and if called from vip-repeat, the char last used is
-used.  This behaviour is controlled by the sign of prefix numeric value."
+used.  This behavior is controlled by the sign of prefix numeric value."
   (interactive "P")
   (let ((val (vip-p-val arg)) (com (vip-getcom arg)))
     (if (> val 0)
@@ -2292,7 +2293,7 @@ a token has type \(command, address, end-mark\) and value."
 			     (setq cont nil))
 			    (t (error "Extra character at end of a command")))))))
 	    ((string= ex-token-type "non-command")
-	     (error (format "%s: Not an editor command" ex-token)))
+	     (error "%s: Not an editor command" ex-token))
 	    ((string= ex-token-type "whole")
 	     (setq ex-addresses
 		   (cons (point-max) (cons (point-min) ex-addresses))))
@@ -2830,7 +2831,8 @@ a token has type \(command, address, end-mark\) and value."
       (skip-chars-forward " \t")
       (if (looking-at "[\n|]") (error "Missing rhs"))
       (set-mark (point))
-      (end-of-buffer)
+      (with-no-warnings
+	(end-of-buffer))
       (backward-char 1)
       (setq string (buffer-substring (mark) (point))))
     (if (not (lookup-key ex-map char))
@@ -2900,7 +2902,8 @@ a token has type \(command, address, end-mark\) and value."
 	(setq file (buffer-substring (point) (mark)))))
       (if variant
 	  (shell-command command t)
-	(insert-file file))))
+	(with-no-warnings
+	  (insert-file file)))))
 
 (defun ex-set ()
   (eval (list 'setq

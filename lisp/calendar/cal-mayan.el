@@ -1,9 +1,11 @@
 ;;; cal-mayan.el --- calendar functions for the Mayan calendars
 
-;; Copyright (C) 1992, 1993, 1995, 1997 Free Software Foundation, Inc.
+;; Copyright (C) 1992, 1993, 1995, 1997, 2001, 2002, 2003, 2004, 2005
+;;   Free Software Foundation, Inc.
 
 ;; Author: Stewart M. Clamen <clamen@cs.cmu.edu>
 ;;	Edward M. Reingold <reingold@cs.uiuc.edu>
+;; Maintainer: Glenn Morris <rgm@gnu.org>
 ;; Keywords: calendar
 ;; Human-Keywords: Mayan calendar, Maya, calendar, diary
 
@@ -21,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -52,6 +54,8 @@
 ;; pages 383-404.
 
 ;;; Code:
+
+(defvar date)
 
 (require 'calendar)
 

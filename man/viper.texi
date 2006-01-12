@@ -7,12 +7,12 @@
 @setfilename ../info/viper
 
 @copying
-Copyright @copyright{} 1995, 1996, 1997, 2001, 2002 Free Software
-Foundation, Inc.
+Copyright @copyright{} 1995, 1996, 1997, 2001, 2002, 2003, 2004,
+   2005 Free Software Foundation, Inc.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, with the Front-Cover texts being ``A GNU
 Manual'', and with the Back-Cover Texts as in (a) below.  A copy of the
@@ -206,7 +206,7 @@ Emacs can edit several files at once.  A file in Emacs is placed in a
 @dfn{buffer} that usually has the same name as the file.  Buffers are also used
 for other purposes, such as shell interfaces, directory editing, etc.
 @xref{Dired,,Directory Editor,emacs,The
-Gnu Emacs Manual}, for an example.@refill
+GNU Emacs Manual}, for an example.@refill
 
 A buffer has a distinguished position called the @dfn{point}.
 A @dfn{point} is always between 2 characters, and is @dfn{looking at}
@@ -507,9 +507,8 @@ modes designed for editing files, such as cc-mode or latex-mode, use key
 sequences that begin with @kbd{C-x} and @kbd{C-c}.
 
 There is also a key that lets you temporarily escape to Vi command state
-from Emacs or Insert states: typing @kbd{C-c \} will let you execute a
-single Vi command while staying in Viper's Emacs or Insert state.
-In Insert state, the same can also be achieved by typing @kbd{C-z}.
+from the Insert state: typing @kbd{C-z} will let you execute a
+single Vi command while staying in Viper's Insert state.
 
 
 @node Vi State, Insert State, Emacs State, States in Viper
@@ -2583,7 +2582,7 @@ above block should be commented out.
 Even though these commands are sometimes useful, they are no substitute for
 the powerful @emph{tag table} facility of Emacs.  Viper's @kbd{:tag} command
 in a primitive interface to Emacs tags.  @xref{Tags,Tags,Tags,emacs,
-The Gnu Emacs Manual}, for more information on tags.
+The GNU Emacs Manual}, for more information on tags.
 
 The following two commands are normally bound to a mouse click and are part
 of Viper.  They work only if Emacs runs as an application under X
@@ -4502,6 +4501,7 @@ kin@@isi.com (Kin Cho),
 kwzh@@gnu.org (Karl Heuer),
 lindstro@@biostat.wisc.edu (Mary Lindstrom),
 lektu@@terra.es (Juanma Barranquero),
+lennart.borgman.073@@student.lu.se (Lennart Borgman),
 minakaji@@osaka.email.ne.jp (Mikio Nakajima),
 Mark.Bordas@@East.Sun.COM (Mark Bordas),
 meyering@@comco.com (Jim Meyering),
@@ -4519,6 +4519,7 @@ sawdey@@lcse.umn.edu (Aaron Sawdey),
 simonb@@prl.philips.co.uk (Simon Blanchard),
 spadgett1@@nc.rr.com (Samuel Padgett),
 stephen@@farrell.org (Stephen Farrell),
+storm@@cua.dk (Kim F. Storm),
 sudish@@MindSpring.COM (Sudish Joseph),
 schwab@@issan.informatik.uni-dortmund.de (Andreas Schwab)
 terra@@diku.dk (Morten Welinder),

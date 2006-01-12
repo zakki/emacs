@@ -4,7 +4,8 @@
 ;; Maintainer: FSF
 ;; Keywords: c, matching, tools
 
-;; Copyright (C) 1994, 1995, 2002, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; This file is part of GNU Emacs.
 
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -191,7 +192,7 @@ To override this, give an argument to `ff-find-other-file'."
        (setq fname (buffer-substring (match-beginning 2) (match-end 2)))))
     )
   "*A list of regular expressions for `ff-find-file'.
-Specifies how to recognise special constructs such as include files
+Specifies how to recognize special constructs such as include files
 etc. and an associated method for extracting the filename from that
 construct.")
 
@@ -215,7 +216,7 @@ Set by default to `cc-search-directories', expanded at run-time.
 
 This list is searched through with each extension specified in
 `ff-other-file-alist' that matches this file's extension.  So the
-longer the list, the longer it'll take to realise that a file
+longer the list, the longer it'll take to realize that a file
 may not exist.
 
 A typical format is
@@ -340,7 +341,7 @@ Variables of interest include:
    If non-nil, traces which directories are being searched.
 
  - `ff-special-constructs'
-   A list of regular expressions specifying how to recognise special
+   A list of regular expressions specifying how to recognize special
    constructs such as include files etc, and an associated method for
    extracting the filename from that construct.
 
@@ -943,21 +944,17 @@ and the name of the file passed in."
 
 ;; bind with (setq ff-pre-load-hook 'ff-which-function-are-we-in)
 ;;
+(defvar ada-procedure-start-regexp)
+(defvar ada-package-start-regexp)
+
 (defun ff-which-function-are-we-in ()
   "Return the name of the function whose definition/declaration point is in.
 Also remember that name in `ff-function-name'."
-
-  (setq ff-function-name nil)
-
-  (save-excursion
-    (if (re-search-backward ada-procedure-start-regexp nil t)
-        (setq ff-function-name (buffer-substring (match-beginning 0)
-                                                 (match-end 0)))
-      ; we didn't find a procedure start, perhaps there is a package
-      (if (re-search-backward ada-package-start-regexp nil t)
-          (setq ff-function-name (buffer-substring (match-beginning 0)
-                                                   (match-end 0)))
-        ))))
+  (setq ff-function-name
+        (save-excursion
+          (if (or (re-search-backward ada-procedure-start-regexp nil t)
+                  (re-search-backward ada-package-start-regexp nil t))
+              (match-string 0)))))
 
 ;; bind with (setq ff-post-load-hook 'ff-set-point-accordingly)
 ;;
@@ -971,5 +968,5 @@ That name was previously determined by `ff-which-function-are-we-in'."
 
 (provide 'find-file)
 
-;;; arch-tag: 5a2fc49e-3b0a-4708-9acf-fb14e471a97a
+;; arch-tag: 5a2fc49e-3b0a-4708-9acf-fb14e471a97a
 ;;; find-file.el ends here

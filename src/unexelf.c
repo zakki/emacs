@@ -1,5 +1,5 @@
-/* Copyright (C) 1985,86,87,88,90,92,1999,2000,01,2003
-   Free Software Foundation, Inc.
+/* Copyright (C) 1985, 1986, 1987, 1988, 1990, 1992, 1999, 2000, 2001,
+                 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +15,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.
 
 In other words, you are welcome to use, share and improve this program.
 You are forbidden to forbid anyone else to use, share and improve
@@ -412,7 +412,7 @@ temacs:
 #include <string.h>
 #else
 #include <config.h>
-extern void fatal (char *, ...);
+extern void fatal (const char *msgid, ...);
 #endif
 
 #include <sys/types.h>
@@ -682,7 +682,7 @@ unexec (new_name, old_name, data_start, bss_start, entry_address)
   ElfW(Addr) new_data2_addr;
 
   int n, nn;
-  int old_bss_index, old_sbss_index;
+  int old_bss_index, old_sbss_index, old_plt_index;
   int old_data_index, new_data2_index;
   int old_mdebug_index;
   struct stat stat_buf;
@@ -702,7 +702,7 @@ unexec (new_name, old_name, data_start, bss_start, entry_address)
 #if MAP_ANON == 0
   mmap_fd = open ("/dev/zero", O_RDONLY);
   if (mmap_fd < 0)
-    fatal ("Can't open /dev/zero for reading: errno %d\n", errno);
+    fatal ("Can't open /dev/zero for reading: errno %d\n", errno, 0);
 #endif
 
   /* We cannot use malloc here because that may use sbrk.  If it does,
@@ -713,7 +713,7 @@ unexec (new_name, old_name, data_start, bss_start, entry_address)
   old_base = mmap (NULL, old_file_size, PROT_READ | PROT_WRITE,
 		   MAP_ANON | MAP_PRIVATE, mmap_fd, 0);
   if (old_base == MAP_FAILED)
-    fatal ("Can't allocate buffer for %s\n", old_name);
+    fatal ("Can't allocate buffer for %s\n", old_name, 0);
 
   if (read (old_file, old_base, stat_buf.st_size) != stat_buf.st_size)
     fatal ("Didn't read all of %s: errno %d\n", old_name, errno);
@@ -740,14 +740,33 @@ unexec (new_name, old_name, data_start, bss_start, entry_address)
   old_sbss_index = find_section (".sbss", old_section_names,
 				 old_name, old_file_h, old_section_h, 1);
   if (old_sbss_index != -1)
-    if (OLD_SECTION_H (old_sbss_index).sh_type == SHT_PROGBITS)
+    if (OLD_SECTION_H (old_sbss_index).sh_type != SHT_NOBITS)
       old_sbss_index = -1;
 
-  if (old_sbss_index == -1)
+  /* PowerPC64 has .plt in the BSS section.  */
+  old_plt_index = find_section (".plt", old_section_names,
+				old_name, old_file_h, old_section_h, 1);
+  if (old_plt_index != -1)
+    if (OLD_SECTION_H (old_plt_index).sh_type != SHT_NOBITS)
+      old_plt_index = -1;
+
+  if (old_sbss_index == -1 && old_plt_index == -1)
     {
       old_bss_addr = OLD_SECTION_H (old_bss_index).sh_addr;
       old_bss_size = OLD_SECTION_H (old_bss_index).sh_size;
       new_data2_index = old_bss_index;
+    }
+  else if (old_plt_index != -1
+	   && (old_sbss_index == -1
+	       || (OLD_SECTION_H (old_sbss_index).sh_addr
+		   > OLD_SECTION_H (old_plt_index).sh_addr)))
+    {
+      old_bss_addr = OLD_SECTION_H (old_plt_index).sh_addr;
+      old_bss_size = OLD_SECTION_H (old_bss_index).sh_size
+	+ OLD_SECTION_H (old_plt_index).sh_size;
+      if (old_sbss_index != -1)
+	old_bss_size += OLD_SECTION_H (old_sbss_index).sh_size;
+      new_data2_index = old_plt_index;
     }
   else
     {
@@ -802,7 +821,7 @@ unexec (new_name, old_name, data_start, bss_start, entry_address)
   new_base = mmap (NULL, new_file_size, PROT_READ | PROT_WRITE,
 		   MAP_ANON | MAP_PRIVATE, mmap_fd, 0);
   if (new_base == MAP_FAILED)
-    fatal ("Can't allocate buffer for %s\n", old_name);
+    fatal ("Can't allocate buffer for %s\n", old_name, 0);
 
   new_file_h = (ElfW(Ehdr) *) new_base;
   new_program_h = (ElfW(Phdr) *) ((byte *) new_base + old_file_h->e_phoff);
@@ -934,7 +953,7 @@ unexec (new_name, old_name, data_start, bss_start, entry_address)
       if (n == old_bss_index
 	  /* The new bss and sbss section's size is zero, and its file offset
 	     and virtual address should be off by NEW_DATA2_SIZE.  */
-	  || n == old_sbss_index
+	  || n == old_sbss_index || n == old_plt_index
 	  )
 	{
 	  /* NN should be `old_s?bss_index + 1' at this point. */
@@ -1079,7 +1098,7 @@ unexec (new_name, old_name, data_start, bss_start, entry_address)
 	  && old_mdebug_index != -1)
         {
 	  int diff = NEW_SECTION_H(nn).sh_offset
-	 	- OLD_SECTION_H(old_mdebug_index).sh_offset;
+		- OLD_SECTION_H(old_mdebug_index).sh_offset;
 	  HDRR *phdr = (HDRR *)(NEW_SECTION_H (nn).sh_offset + new_base);
 
 	  if (diff)
@@ -1257,9 +1276,13 @@ unexec (new_name, old_name, data_start, bss_start, entry_address)
   /* Write out new_file, and free the buffers.  */
 
   if (write (new_file, new_base, new_file_size) != new_file_size)
+#ifndef emacs
+    fatal ("Didn't write %d bytes: errno %d\n",
+	   new_file_size, errno);
+#else
     fatal ("Didn't write %d bytes to %s: errno %d\n",
 	   new_file_size, new_base, errno);
-
+#endif
   munmap (old_base, old_file_size);
   munmap (new_base, new_file_size);
 

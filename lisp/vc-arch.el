@@ -1,7 +1,6 @@
 ;;; vc-arch.el --- VC backend for the Arch version-control system
 
-;; Copyright (C) 1995, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author:      FSF (see vc.el for full credits)
 ;; Maintainer:  Stefan Monnier <monnier@gnu.org>
@@ -20,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -178,7 +177,7 @@ Only the value `maybe' can be trusted :-(."
 (defun vc-arch-root (file)
   "Return the root directory of a Arch project, if any."
   (or (vc-file-getprop file 'arch-root)
-      (vc-file-setprop 
+      (vc-file-setprop
        ;; Check the =tagging-method, in case someone naively manually
        ;; creates a {arch} directory somewhere.
        file 'arch-root (vc-find-root file "{arch}/=tagging-method"))))
@@ -357,7 +356,7 @@ Return non-nil if FILE is unchanged."
 (defun vc-arch-checkout-model (file) 'implicit)
 
 (defun vc-arch-checkin (file rev comment)
-  (if rev (error "Committing to a specific revision is unsupported."))
+  (if rev (error "Committing to a specific revision is unsupported"))
   (let ((summary (file-relative-name file (vc-arch-root file))))
     ;; Extract a summary from the comment.
     (when (or (string-match "\\`Summary:[ \t]*\\(.*[^ \t\n]\\)\\([ \t]*\n\\)*" comment)
@@ -376,7 +375,7 @@ Return non-nil if FILE is unchanged."
       ;; so we can diff with the current file.
       (setq newvers nil))
   (if newvers
-      (error "Diffing specific revisions not implemented.")
+      (error "Diffing specific revisions not implemented")
     (let* ((async (and (not vc-disable-async-diff) (fboundp 'start-process)))
 	   ;; Run the command from the root dir.
 	   (default-directory (vc-arch-root file))

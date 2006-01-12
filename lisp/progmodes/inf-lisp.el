@@ -1,6 +1,7 @@
 ;;; inf-lisp.el --- an inferior-lisp mode
 
-;; Copyright (C) 1988, 1993, 1994 Free Software Foundation, Inc.
+;; Copyright (C) 1988, 1993, 1994, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Olin Shivers <shivers@cs.cmu.edu>
 ;; Keywords: processes, lisp
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -161,7 +162,7 @@ but it works only in Common Lisp."
 
 ;;;###autoload
 (defcustom inferior-lisp-prompt "^[^> \n]*>+:? *"
-  "Regexp to recognise prompts in the Inferior Lisp mode.
+  "Regexp to recognize prompts in the Inferior Lisp mode.
 Defaults to \"^[^> \\n]*>+:? *\", which works pretty good for Lucid, kcl,
 and franz.  This variable is used to initialize `comint-prompt-regexp' in the
 Inferior Lisp buffer.

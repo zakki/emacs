@@ -1,6 +1,7 @@
 ;;; cperl-mode.el --- Perl code editing commands for Emacs
 
-;; Copyright (C) 1985,86,87,91,92,93,94,95,96,97,98,99,2000,03,2004,2005
+;; Copyright (C) 1985, 1986, 1987, 1991, 1992, 1993, 1994, 1995, 1996, 1997,
+;; 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
 ;;     Free Software Foundation, Inc.
 
 ;; Author: Ilya Zakharevich and Bob Olson
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Corrections made by Ilya Zakharevich cperl@ilyaz.org
 
@@ -66,6 +67,9 @@
 ;; likewise with m, tr, y, q, qX instead of s
 
 ;;; Code:
+
+(defvar vc-rcs-header)
+(defvar vc-sccs-header)
 
 ;; Some macros are needed for `defcustom'
 (eval-when-compile
@@ -166,6 +170,7 @@
 
 (defgroup cperl-faces nil
   "Fontification colors."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :prefix "cperl-"
   :group 'cperl)
 
@@ -343,7 +348,7 @@ Affects: `cperl-font-lock', `cperl-electric-lbrace-space',
   :group 'cperl-indentation-details)
 
 (defvar cperl-vc-header-alist nil)
-(make-obsolete-variable 
+(make-obsolete-variable
  'cperl-vc-header-alist
  "use cperl-vc-rcs-header or cperl-vc-sccs-header instead.")
 
@@ -369,7 +374,7 @@ Affects: `cperl-font-lock', `cperl-electric-lbrace-space',
 
 (defcustom cperl-info-on-command-no-prompt nil
   "*Not-nil (and non-null) means not to prompt on C-h f.
-The opposite behaviour is always available if prefixed with C-c.
+The opposite behavior is always available if prefixed with C-c.
 Can be overwritten by `cperl-hairy' if nil."
   :type '(choice (const null) boolean)
   :group 'cperl-affected-by-hairy)
@@ -564,11 +569,11 @@ when syntaxifying a chunk of buffer."
     (font-lock-variable-name-face	nil nil		bold)
     (font-lock-function-name-face	nil nil		bold italic box)
     (font-lock-constant-face		nil "LightGray"	bold)
-    (cperl-array-face			nil "LightGray"	bold underline)
-    (cperl-hash-face			nil "LightGray"	bold italic underline)
+    (cperl-array			nil "LightGray"	bold underline)
+    (cperl-hash				nil "LightGray"	bold italic underline)
     (font-lock-comment-face		nil "LightGray"	italic)
     (font-lock-string-face		nil nil		italic underline)
-    (cperl-nonoverridable-face		nil nil		italic underline)
+    (cperl-nonoverridable		nil nil		italic underline)
     (font-lock-type-face		nil nil		underline)
     (underline				nil "LightGray"	strikeout))
   "List given as an argument to `ps-extend-face-list' in `cperl-ps-print'."
@@ -583,7 +588,7 @@ when syntaxifying a chunk of buffer."
 (defvar cperl-dark-foreground
   (cperl-choose-color "orchid1" "orange"))
 
-(defface cperl-nonoverridable-face
+(defface cperl-nonoverridable
   `((((class grayscale) (background light))
      (:background "Gray90" :slant italic :underline t))
     (((class grayscale) (background dark))
@@ -595,8 +600,10 @@ when syntaxifying a chunk of buffer."
     (t (:weight bold :underline t)))
   "Font Lock mode face used non-overridable keywords and modifiers of regexps."
   :group 'cperl-faces)
+;; backward-compatibility alias
+(put 'cperl-nonoverridable-face 'face-alias 'cperl-nonoverridable)
 
-(defface cperl-array-face
+(defface cperl-array
   `((((class grayscale) (background light))
      (:background "Gray90" :weight bold))
     (((class grayscale) (background dark))
@@ -608,8 +615,10 @@ when syntaxifying a chunk of buffer."
     (t (:weight bold)))
   "Font Lock mode face used to highlight array names."
   :group 'cperl-faces)
+;; backward-compatibility alias
+(put 'cperl-array-face 'face-alias 'cperl-array)
 
-(defface cperl-hash-face
+(defface cperl-hash
   `((((class grayscale) (background light))
      (:background "Gray90" :weight bold :slant italic))
     (((class grayscale) (background dark))
@@ -621,6 +630,8 @@ when syntaxifying a chunk of buffer."
     (t (:weight bold :slant italic)))
   "Font Lock mode face used to highlight hash names."
   :group 'cperl-faces)
+;; backward-compatibility alias
+(put 'cperl-hash-face 'face-alias 'cperl-hash)
 
 
 
@@ -867,8 +878,8 @@ B) Speed of editing operations.
 (defvar cperl-tips-faces 'please-ignore-this-line
   "CPerl mode uses following faces for highlighting:
 
-  `cperl-array-face'		Array names
-  `cperl-hash-face'		Hash names
+  `cperl-array'			Array names
+  `cperl-hash'			Hash names
   `font-lock-comment-face'	Comments, PODs and whatever is considered
 				syntaxically to be not code
   `font-lock-constant-face'	HERE-doc delimiters, labels, delimiters of
@@ -879,7 +890,7 @@ B) Speed of editing operations.
 				(except those conflicting with Perl operators),
 				package names (when recognized), format names
   `font-lock-keyword-face'	Control flow switch constructs, declarators
-  `cperl-nonoverridable-face'	Non-overridable keywords, modifiers of RExen
+  `cperl-nonoverridable'	Non-overridable keywords, modifiers of RExen
   `font-lock-string-face'	Strings, qw() constructs, RExen, POD sections,
 				literal parts and the terminator of formats
 				and whatever is syntaxically considered
@@ -887,7 +898,7 @@ B) Speed of editing operations.
   `font-lock-type-face'		Overridable keywords
   `font-lock-variable-name-face' Variable declarations, indirect array and
 				hash names, POD headers/item names
-  `cperl-invalid-face'		Trailing whitespace
+  `cperl-invalid'		Trailing whitespace
 
 Note that in several situations the highlighting tries to inform about
 possible confusion, such as different colors for function names in
@@ -1303,7 +1314,7 @@ you type it inside the inline block of control construct, like
 and you are on a boundary of a statement inside braces, it will
 transform the construct into a multiline and will place you into an
 appropriately indented blank line.  If you need a usual
-`newline-and-indent' behaviour, it is on \\[newline-and-indent],
+`newline-and-indent' behavior, it is on \\[newline-and-indent],
 see documentation on `cperl-electric-linefeed'.
 
 Use \\[cperl-invert-if-unless] to change a construction of the form
@@ -1481,7 +1492,7 @@ or as help on variables `cperl-tips', `cperl-problems',
   (make-local-variable 'comment-start-skip)
   (setq comment-start-skip "#+ *")
   (make-local-variable 'defun-prompt-regexp)
-  (setq defun-prompt-regexp "^[ \t]*sub[ \t\n]+\\([^ \t\n{(;]+\\)\\([ \t\n]*([^()]*)[ \t\n]*\\)?[ \t\n]*)")
+  (setq defun-prompt-regexp "^[ \t]*sub[ \t\n]+\\([^ \t\n{(;]+\\)\\([ \t\n]*([^()]*)[ \t\n]*\\)?[ \t\n]*")
   (make-local-variable 'comment-indent-function)
   (setq comment-indent-function 'cperl-comment-indent)
   (make-local-variable 'parse-sexp-ignore-comments)
@@ -1510,7 +1521,8 @@ or as help on variables `cperl-tips', `cperl-problems',
 	 (t
 	  '((cperl-load-font-lock-keywords
 	     cperl-load-font-lock-keywords-1
-	     cperl-load-font-lock-keywords-2)))))
+	     cperl-load-font-lock-keywords-2)
+            nil nil ((?_ . "w"))))))
   (make-local-variable 'cperl-syntax-state)
   (if cperl-use-syntax-table-text-property
       (progn
@@ -1767,7 +1779,7 @@ char is \"{\", insert extra newline before only if
 	 (save-excursion
 	   (skip-chars-backward "$")
 	   (looking-at "\\(\\$\\$\\)*\\$\\([^\\$]\\|$\\)"))
-	 (insert ?\ ))
+	 (insert ?\s))
     ;; Check whether we are in comment
     (if (and
 	 (save-excursion
@@ -1863,7 +1875,7 @@ to nil."
   (let ((beg (save-excursion (beginning-of-line) (point)))
 	(dollar (and (eq last-command-char ?$)
 		     (eq this-command 'self-insert-command)))
-	(delete (and (memq last-command-char '(?\  ?\n ?\t ?\f))
+	(delete (and (memq last-command-char '(?\s ?\n ?\t ?\f))
 		     (memq this-command '(self-insert-command newline))))
 	my do)
     (and (save-excursion
@@ -1938,7 +1950,7 @@ to nil."
 
 (defun cperl-electric-pod ()
   "Insert a POD chunk appropriate after a =POD directive."
-  (let ((delete (and (memq last-command-char '(?\  ?\n ?\t ?\f))
+  (let ((delete (and (memq last-command-char '(?\s ?\n ?\t ?\f))
 		     (memq this-command '(self-insert-command newline))))
 	head1 notlast name p really-delete over)
     (and (save-excursion
@@ -2216,7 +2228,7 @@ key.  Will untabify if `cperl-electric-backspace-untabify' is non-nil."
 	   (memq last-command '(cperl-electric-semi
 				cperl-electric-terminator
 				cperl-electric-lbrace))
-	   (memq (preceding-char) '(?\  ?\t ?\n)))
+	   (memq (preceding-char) '(?\s ?\t ?\n)))
       (let (p)
 	(if (eq last-command 'cperl-electric-lbrace)
 	    (skip-chars-forward " \t\n"))
@@ -2228,7 +2240,7 @@ key.  Will untabify if `cperl-electric-backspace-untabify' is non-nil."
 	 (setq this-command 'cperl-electric-else-really))
     (if (and cperl-auto-newline
 	     (eq last-command 'cperl-electric-else-really)
-	     (memq (preceding-char) '(?\  ?\t ?\n)))
+	     (memq (preceding-char) '(?\s ?\t ?\n)))
 	(let (p)
 	  (skip-chars-forward " \t\n")
 	  (setq p (point))
@@ -3031,7 +3043,7 @@ Returns true if comment is found."
 	      (progn
 		(setq i (point) i2 i)
 		(if ender
-		    (if (memq (following-char) '(?\  ?\t ?\n ?\f))
+		    (if (memq (following-char) '(?\s ?\t ?\n ?\f))
 			(progn
 			  (if (looking-at "[ \t\n\f]+\\(#[^\n]*\n[ \t\n\f]*\\)+")
 			      (goto-char (match-end 0))
@@ -3167,7 +3179,7 @@ the sections using `cperl-pod-head-face', `cperl-pod-face',
 	 (cperl-nonoverridable-face
 	  (if (boundp 'cperl-nonoverridable-face)
 	      cperl-nonoverridable-face
-	    'cperl-nonoverridable-face))
+	    'cperl-nonoverridable))
 	 (stop-point (if ignore-max
 			 (point-max)
 		       max))
@@ -3661,7 +3673,7 @@ the sections using `cperl-pod-head-face', `cperl-pod-face',
 			(forward-word 1) ; skip modifiers s///s
 			(if tail (cperl-commentify tail (point) t))
 			(cperl-postpone-fontification
-			 e1 (point) 'face 'cperl-nonoverridable-face)))
+			 e1 (point) 'face 'cperl-nonoverridable)))
 		  ;; Check whether it is m// which means "previous match"
 		  ;; and highlight differently
 		  (setq is-REx
@@ -3834,7 +3846,11 @@ the sections using `cperl-pod-head-face', `cperl-pod-face',
       (and (buffer-modified-p)
 	   (not modified)
 	   (set-buffer-modified-p nil))
-      (set-syntax-table cperl-mode-syntax-table))
+      ;; I do not understand what this is doing here.  It breaks font-locking
+      ;; because it resets the syntax-table from font-lock-syntax-table to
+      ;; cperl-mode-syntax-table.
+      ;; (set-syntax-table cperl-mode-syntax-table)
+      )
     (car err-l)))
 
 (defun cperl-backward-to-noncomment (lim)
@@ -4019,7 +4035,7 @@ Returns some position at the last line."
 	      (setq p (point))
 	      (skip-chars-forward " \t\n")
 	      (delete-region p (point))
-	      (insert (make-string cperl-indent-region-fix-constructs ?\ ))
+	      (insert (make-string cperl-indent-region-fix-constructs ?\s))
 	      (beginning-of-line)))
 	;; Looking at:
 	;; }     else
@@ -4027,7 +4043,7 @@ Returns some position at the last line."
 	    (progn
 	      (search-forward "}")
 	      (delete-horizontal-space)
-	      (insert (make-string cperl-indent-region-fix-constructs ?\ ))
+	      (insert (make-string cperl-indent-region-fix-constructs ?\s))
 	      (beginning-of-line)))
 	;; Looking at:
 	;; else   {
@@ -4036,7 +4052,7 @@ Returns some position at the last line."
 	    (progn
 	      (forward-word 1)
 	      (delete-horizontal-space)
-	      (insert (make-string cperl-indent-region-fix-constructs ?\ ))
+	      (insert (make-string cperl-indent-region-fix-constructs ?\s))
 	      (beginning-of-line)))
 	;; Looking at:
 	;; foreach my    $var
@@ -4045,7 +4061,7 @@ Returns some position at the last line."
 	    (progn
 	      (forward-word 2)
 	      (delete-horizontal-space)
-	      (insert (make-string cperl-indent-region-fix-constructs ?\ ))
+	      (insert (make-string cperl-indent-region-fix-constructs ?\s))
 	      (beginning-of-line)))
 	;; Looking at:
 	;; foreach my $var     (
@@ -4055,7 +4071,7 @@ Returns some position at the last line."
 	      (forward-sexp 3)
 	      (delete-horizontal-space)
 	      (insert
-	       (make-string cperl-indent-region-fix-constructs ?\ ))
+	       (make-string cperl-indent-region-fix-constructs ?\s))
 	      (beginning-of-line)))
 	;; Looking at:
 	;; } foreach my $var ()    {
@@ -4099,7 +4115,7 @@ Returns some position at the last line."
 				  (cperl-fix-line-spacing end parse-data)
 				  (setq ret (point)))))
 			(insert
-			 (make-string cperl-indent-region-fix-constructs ?\ ))))
+			 (make-string cperl-indent-region-fix-constructs ?\s))))
 		     ((and (looking-at "[ \t]*\n")
 			   (not (if ml
 				    cperl-extra-newline-before-brace-multiline
@@ -4108,7 +4124,7 @@ Returns some position at the last line."
 		      (skip-chars-forward " \t\n")
 		      (delete-region pp (point))
 		      (insert
-		       (make-string cperl-indent-region-fix-constructs ?\ ))))
+		       (make-string cperl-indent-region-fix-constructs ?\s))))
 		    ;; Now we are before `{'
 		    (if (looking-at "[ \t\n]*{[ \t]*[^ \t\n#]")
 			(progn
@@ -4285,7 +4301,7 @@ indentation and initial hashes.  Behaves usually outside of comment."
 	(looking-at "#+[ \t]*")
 	(setq start (point) c (current-column)
 	      comment-fill-prefix
-	      (concat (make-string (current-column) ?\ )
+	      (concat (make-string (current-column) ?\s)
 		      (buffer-substring (match-beginning 0) (match-end 0)))
 	      spaces (progn (skip-chars-backward " \t")
 			    (buffer-substring (point) start))
@@ -4344,7 +4360,7 @@ indentation and initial hashes.  Behaves usually outside of comment."
 	 fill-column)
       (let ((c (save-excursion (beginning-of-line)
 			       (cperl-to-comment-or-eol) (point)))
-	    (s (memq (following-char) '(?\ ?\t))) marker)
+	    (s (memq (following-char) '(?\s ?\t))) marker)
 	(if (>= c (point))
 	    ;; Don't break line inside code: only inside comment.
 	    nil
@@ -4355,11 +4371,11 @@ indentation and initial hashes.  Behaves usually outside of comment."
 	  (if (bolp) (progn (re-search-forward "#+[ \t]*")
 			    (goto-char (match-end 0))))
 	  ;; Following space could have gone:
-	  (if (or (not s) (memq (following-char) '(?\ ?\t))) nil
+	  (if (or (not s) (memq (following-char) '(?\s ?\t))) nil
 	    (insert " ")
 	    (backward-char 1))
 	  ;; Previous space could have gone:
-	  (or (memq (preceding-char) '(?\ ?\t)) (insert " "))))))
+	  (or (memq (preceding-char) '(?\s ?\t)) (insert " "))))))
 
 (defun cperl-imenu-addback (lst &optional isback name)
   ;; We suppose that the lst is a DAG, unless the first element only
@@ -4710,7 +4726,7 @@ indentation and initial hashes.  Behaves usually outside of comment."
 	      "u\\(se\\|n\\(shift\\|ti\\(l\\|e\\)\\|def\\|less\\)\\)\\|"
 	      "while\\|y\\|__\\(END\\|DATA\\)__" ;__DATA__ added manually
 	      "\\|[sm]"			; Added manually
-	      "\\)\\>") 2 'cperl-nonoverridable-face)
+	      "\\)\\>") 2 'cperl-nonoverridable)
 	    ;;		(mapconcat 'identity
 	    ;;			   '("#endif" "#else" "#ifdef" "#ifndef" "#if"
 	    ;;			     "#include" "#define" "#undef")
@@ -4773,15 +4789,15 @@ indentation and initial hashes.  Behaves usually outside of comment."
 		'(
 		  ("\\(\\([@%]\\|\$#\\)[a-zA-Z_:][a-zA-Z0-9_:]*\\)" 1
 		   (if (eq (char-after (match-beginning 2)) ?%)
-		       cperl-hash-face
-		     cperl-array-face)
+		       'cperl-hash
+		     'cperl-array)
 		   t)			; arrays and hashes
 		  ("\\(\\([$@]+\\)[a-zA-Z_:][a-zA-Z0-9_:]*\\)[ \t]*\\([[{]\\)"
 		   1
 		   (if (= (- (match-end 2) (match-beginning 2)) 1)
 		       (if (eq (char-after (match-beginning 3)) ?{)
-			   cperl-hash-face
-			 cperl-array-face) ; arrays and hashes
+			   'cperl-hash
+			 'cperl-array) ; arrays and hashes
 		     font-lock-variable-name-face) ; Just to put something
 		   t)
 		  ;;("\\([smy]\\|tr\\)\\([^a-z_A-Z0-9]\\)\\(\\([^\n\\]*||\\)\\)\\2")
@@ -4854,21 +4870,21 @@ indentation and initial hashes.  Behaves usually outside of comment."
 		      [nil		nil		t		t	t]
 		      nil
 		      [nil		nil		t		t	t])
-		(list 'cperl-nonoverridable-face
+		(list 'cperl-nonoverridable
 		      ["chartreuse3"	("orchid1" "orange")
 		       nil		"Gray80"]
 		      [nil		nil		"gray90"]
 		      [nil		nil		nil		t	t]
 		      [nil		nil		t		t]
 		      [nil		nil		t		t	t])
-		(list 'cperl-array-face
+		(list 'cperl-array
 		      ["blue"		"yellow" 	nil		"Gray80"]
 		      ["lightyellow2"	("navy" "os2blue" "darkgreen")
 		       "gray90"]
 		      t
 		      nil
 		      nil)
-		(list 'cperl-hash-face
+		(list 'cperl-hash
 		      ["red"		"red"	 	nil		"Gray80"]
 		      ["lightyellow2"	("navy" "os2blue" "darkgreen")
 		       "gray90"]
@@ -4891,15 +4907,15 @@ indentation and initial hashes.  Behaves usually outside of comment."
 			    "Face for variable names")
 	  (cperl-force-face font-lock-type-face
 			    "Face for data types")
-	  (cperl-force-face cperl-nonoverridable-face
+	  (cperl-force-face cperl-nonoverridable
 			    "Face for data types from another group")
 	  (cperl-force-face font-lock-comment-face
 			    "Face for comments")
 	  (cperl-force-face font-lock-function-name-face
 			    "Face for function names")
-	  (cperl-force-face cperl-hash-face
+	  (cperl-force-face cperl-hash
 			    "Face for hashes")
-	  (cperl-force-face cperl-array-face
+	  (cperl-force-face cperl-array
 			    "Face for arrays")
 	  ;;(defvar font-lock-constant-face 'font-lock-constant-face)
 	  ;;(defvar font-lock-variable-name-face 'font-lock-variable-name-face)
@@ -4909,7 +4925,7 @@ indentation and initial hashes.  Behaves usually outside of comment."
 	  ;;	"Face to use for data types."))
 	  ;;(or (boundp 'cperl-nonoverridable-face)
 	  ;;    (defconst cperl-nonoverridable-face
-	  ;;	'cperl-nonoverridable-face
+	  ;;	'cperl-nonoverridable
 	  ;;	"Face to use for data types from another group."))
 	  ;;(if (not cperl-xemacs-p) nil
 	  ;;  (or (boundp 'font-lock-comment-face)
@@ -4925,26 +4941,24 @@ indentation and initial hashes.  Behaves usually outside of comment."
 	  ;;	  'font-lock-function-name-face
 	  ;;	  "Face to use for function names.")))
 	  (if (and
-	       (not (cperl-is-face 'cperl-array-face))
+	       (not (cperl-is-face 'cperl-array))
 	       (cperl-is-face 'font-lock-emphasized-face))
-	      (copy-face 'font-lock-emphasized-face 'cperl-array-face))
+	      (copy-face 'font-lock-emphasized-face 'cperl-array))
 	  (if (and
-	       (not (cperl-is-face 'cperl-hash-face))
+	       (not (cperl-is-face 'cperl-hash))
 	       (cperl-is-face 'font-lock-other-emphasized-face))
-	      (copy-face 'font-lock-other-emphasized-face
-			 'cperl-hash-face))
+	      (copy-face 'font-lock-other-emphasized-face 'cperl-hash))
 	  (if (and
-	       (not (cperl-is-face 'cperl-nonoverridable-face))
+	       (not (cperl-is-face 'cperl-nonoverridable))
 	       (cperl-is-face 'font-lock-other-type-face))
-	      (copy-face 'font-lock-other-type-face
-			 'cperl-nonoverridable-face))
+	      (copy-face 'font-lock-other-type-face 'cperl-nonoverridable))
 	  ;;(or (boundp 'cperl-hash-face)
 	  ;;    (defconst cperl-hash-face
-	  ;;	'cperl-hash-face
+	  ;;	'cperl-hash
 	  ;;	"Face to use for hashes."))
 	  ;;(or (boundp 'cperl-array-face)
 	  ;;    (defconst cperl-array-face
-	  ;;	'cperl-array-face
+	  ;;	'cperl-array
 	  ;;	"Face to use for arrays."))
 	  ;; Here we try to guess background
 	  (let ((background
@@ -4983,17 +4997,17 @@ indentation and initial hashes.  Behaves usually outside of comment."
 				       "pink")))
 	       (t
 		(set-face-background 'font-lock-type-face "gray90"))))
-	    (if (cperl-is-face 'cperl-nonoverridable-face)
+	    (if (cperl-is-face 'cperl-nonoverridable)
 		nil
-	      (copy-face 'font-lock-type-face 'cperl-nonoverridable-face)
+	      (copy-face 'font-lock-type-face 'cperl-nonoverridable)
 	      (cond
 	       ((eq background 'light)
-		(set-face-foreground 'cperl-nonoverridable-face
+		(set-face-foreground 'cperl-nonoverridable
 				     (if (x-color-defined-p "chartreuse3")
 					 "chartreuse3"
 				       "chartreuse")))
 	       ((eq background 'dark)
-		(set-face-foreground 'cperl-nonoverridable-face
+		(set-face-foreground 'cperl-nonoverridable
 				     (if (x-color-defined-p "orchid1")
 					 "orchid1"
 				       "orange")))))
@@ -5045,20 +5059,15 @@ indentation and initial hashes.  Behaves usually outside of comment."
     '(setq ps-bold-faces
 	   ;; 			font-lock-variable-name-face
 	   ;;			font-lock-constant-face
-	   (append '(cperl-array-face
-		     cperl-hash-face)
+	   (append '(cperl-array cperl-hash)
 		   ps-bold-faces)
 	   ps-italic-faces
 	   ;;			font-lock-constant-face
-	   (append '(cperl-nonoverridable-face
-		     cperl-hash-face)
+	   (append '(cperl-nonoverridable cperl-hash)
 		   ps-italic-faces)
 	   ps-underlined-faces
 	   ;;	     font-lock-type-face
-	   (append '(cperl-array-face
-		     cperl-hash-face
-		     underline
-		     cperl-nonoverridable-face)
+	   (append '(cperl-array cperl-hash underline cperl-nonoverridable)
 		   ps-underlined-faces))))
 
 (defvar ps-print-face-extension-alist)
@@ -5091,27 +5100,27 @@ Style of printout regulated by the variable `cperl-ps-print-face-properties'."
 ;;;   (defvar ps-italic-faces nil)
 ;;;   (setq ps-bold-faces
 ;;; 	(append '(font-lock-emphasized-face
-;;; 		  cperl-array-face
+;;; 		  cperl-array
 ;;; 		  font-lock-keyword-face
 ;;; 		  font-lock-variable-name-face
 ;;; 		  font-lock-constant-face
 ;;; 		  font-lock-reference-face
 ;;; 		  font-lock-other-emphasized-face
-;;; 		  cperl-hash-face)
+;;; 		  cperl-hash)
 ;;; 		ps-bold-faces))
 ;;;   (setq ps-italic-faces
-;;; 	(append '(cperl-nonoverridable-face
+;;; 	(append '(cperl-nonoverridable
 ;;; 		  font-lock-constant-face
 ;;; 		  font-lock-reference-face
 ;;; 		  font-lock-other-emphasized-face
-;;; 		  cperl-hash-face)
+;;; 		  cperl-hash)
 ;;; 		ps-italic-faces))
 ;;;   (setq ps-underlined-faces
 ;;; 	(append '(font-lock-emphasized-face
-;;; 		  cperl-array-face
+;;; 		  cperl-array
 ;;; 		  font-lock-other-emphasized-face
-;;; 		  cperl-hash-face
-;;; 		  cperl-nonoverridable-face font-lock-type-face)
+;;; 		  cperl-hash
+;;; 		  cperl-nonoverridable font-lock-type-face)
 ;;; 		ps-underlined-faces))
 ;;;   (cons 'font-lock-type-face ps-underlined-faces))
 
@@ -5210,7 +5219,7 @@ side-effect of memorizing only."
       (set (car setting) (cdr setting)))))
 
 (defun cperl-set-style-back ()
-  "Restore a style memorised by `cperl-set-style'."
+  "Restore a style memorized by `cperl-set-style'."
   (interactive)
   (or cperl-old-style (error "The style was not changed"))
   (let (setting)
@@ -5444,7 +5453,7 @@ Will not move the position at the start to the left."
 	    (setq e (point))
 	    (skip-chars-backward " \t")
 	    (delete-region (point) e)
-	    (indent-to-column col) ;(make-string (- col (current-column)) ?\ ))
+	    (indent-to-column col) ;(make-string (- col (current-column)) ?\s))
 	    (beginning-of-line 2)
 	    (and (< (point) end)
 		 (re-search-forward search end t)

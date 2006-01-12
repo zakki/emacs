@@ -1,6 +1,7 @@
 ;;; cl-extra.el --- Common Lisp features, part 2 -*-byte-compile-dynamic: t;-*-
 
-;; Copyright (C) 1993,2000,2003  Free Software Foundation, Inc.
+;; Copyright (C) 1993, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Dave Gillespie <daveg@synaptics.com>
 ;; Keywords: extensions
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -38,9 +39,7 @@
 
 ;;; Code:
 
-(or (memq 'cl-19 features)
-    (error "Tried to load `cl-extra' before `cl'!"))
-
+(require 'cl)
 
 ;;; Type coercion.
 
@@ -744,6 +743,11 @@ This also does some trivial optimizations to make the form prettier."
 	 (let* ((args (cl-macroexpand-body (cdr form) env)) (p args))
 	   (while (and p (symbolp (car p))) (setq p (cddr p)))
 	   (if p (cl-macroexpand-all (cons 'setf args)) (cons 'setq args))))
+        ((consp (car form))
+         (cl-macroexpand-all (list* 'funcall
+                                    (list 'function (car form))
+                                    (cdr form))
+                             env))
 	(t (cons (car form) (cl-macroexpand-body (cdr form) env)))))
 
 (defun cl-macroexpand-body (body &optional env)
@@ -763,5 +767,5 @@ This also does some trivial optimizations to make the form prettier."
 
 (run-hooks 'cl-extra-load-hook)
 
-;;; arch-tag: bcd03437-0871-43fb-a8f1-ad0e0b5427ed
+;; arch-tag: bcd03437-0871-43fb-a8f1-ad0e0b5427ed
 ;;; cl-extra.el ends here

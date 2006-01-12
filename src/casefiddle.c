@@ -1,6 +1,6 @@
 /* GNU Emacs case conversion functions.
-   Copyright (C) 1985,94,97,98,99, 2001, 2002, 2004, 2005
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1994, 1997, 1998, 1999, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -92,7 +92,8 @@ casify_object (flag, obj)
 	      else if (!UPPERCASEP (c)
 		       && (!inword || flag != CASE_CAPITALIZE_UP))
 		c = UPCASE1 (c);
-	      if (ASCII_BYTE_P (c) || (! multibyte && SINGLE_BYTE_CHAR_P (c)))
+	      if ((ASCII_BYTE_P (c) && from_len == 1)
+		  || (! multibyte && SINGLE_BYTE_CHAR_P (c)))
 		SSET (obj, i, c);
 	      else
 		{
@@ -100,7 +101,10 @@ casify_object (flag, obj)
 		  if (from_len == to_len)
 		    CHAR_STRING (c, SDATA (obj) + i);
 		  else
-		    Faset (obj, make_number (n), make_number (c));
+		    {
+		      Faset (obj, make_number (n), make_number (c));
+		      len += to_len - from_len;
+		    }
 		}
 	      if ((int) flag >= (int) CASE_CAPITALIZE)
 		inword = SYNTAX (c) == Sword;

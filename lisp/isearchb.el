@@ -1,6 +1,6 @@
 ;;; isearchb --- a marriage between iswitchb and isearch
 
-;; Copyright (C) 2004 John Wiegley
+;; Copyright (C) 2004, 2005 John Wiegley
 
 ;; Author: John Wiegley <johnw@gnu.org>
 ;; Created: 16 Apr 2004
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -213,7 +213,7 @@ accessed via isearchb."
    ((eq last-command 'isearchb-activate)
     (if isearchb-last-buffer
 	(switch-to-buffer isearchb-last-buffer)
-      (error "isearchb: There is no previous buffer to toggle to."))
+      (error "isearchb: There is no previous buffer to toggle to"))
     (isearchb-stop nil t))
    (t
     (message "isearchb: ")

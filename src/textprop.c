@@ -1,6 +1,6 @@
 /* Interface code for dealing with text properties.
-   Copyright (C) 1993, 1994, 1995, 1997, 1999, 2000, 2001, 2002, 2003, 2004
-   Free Software Foundation, Inc.
+   Copyright (C) 1993, 1994, 1995, 1997, 1999, 2000, 2001, 2002, 2003,
+                 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 #include "lisp.h"
@@ -719,7 +719,7 @@ it finds a change in some text property, or the beginning or end of an
 overlay, and returns the position of that.
 If none is found, the function returns (point-max).
 
-If the optional third argument LIMIT is non-nil, don't search
+If the optional second argument LIMIT is non-nil, don't search
 past position LIMIT; return LIMIT if nothing is found before LIMIT.  */)
      (position, limit)
      Lisp_Object position, limit;
@@ -744,7 +744,7 @@ finds a change in some text property, or the beginning or end of an
 overlay, and returns the position of that.
 If none is found, the function returns (point-max).
 
-If the optional third argument LIMIT is non-nil, don't search
+If the optional second argument LIMIT is non-nil, don't search
 past position LIMIT; return LIMIT if nothing is found before LIMIT.  */)
      (position, limit)
      Lisp_Object position, limit;
@@ -1316,8 +1316,8 @@ the designated part of OBJECT.  */)
    properties PROPERTIES.  OBJECT is the buffer or string containing
    the text.  OBJECT nil means use the current buffer.
    SIGNAL_AFTER_CHANGE_P nil means don't signal after changes.  Value
-   is non-nil if properties were replaced; it is nil if there weren't
-   any properties to replace.  */
+   is nil if the function _detected_ that it did not replace any
+   properties, non-nil otherwise.  */
 
 Lisp_Object
 set_text_properties (start, end, properties, object, signal_after_change_p)
@@ -1341,7 +1341,7 @@ set_text_properties (start, end, properties, object, signal_after_change_p)
       && XFASTINT (end) == SCHARS (object))
     {
       if (! STRING_INTERVALS (object))
-	return Qt;
+	return Qnil;
 
       STRING_SET_INTERVALS (object, NULL_INTERVAL);
       return Qt;

@@ -1,5 +1,6 @@
 /* GNU Emacs routines to deal with syntax tables; also word and list parsing.
-   Copyright (C) 1985, 87, 93, 94, 95, 97, 1998, 1999, 2004 Free Software Foundation, Inc.
+   Copyright (C) 1985, 1987, 1993, 1994, 1995, 1997, 1998, 1999, 2002,
+                 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -132,7 +133,7 @@ update_syntax_table (charpos, count, init, object)
 {
   Lisp_Object tmp_table;
   int cnt = 0, invalidate = 1;
-  INTERVAL i, oldi;
+  INTERVAL i;
 
   if (init)
     {
@@ -163,7 +164,7 @@ update_syntax_table (charpos, count, init, object)
       gl_state.e_property = INTERVAL_LAST_POS (i) - gl_state.offset;
       goto update;
     }
-  oldi = i = count > 0 ? gl_state.forward_i : gl_state.backward_i;
+  i = count > 0 ? gl_state.forward_i : gl_state.backward_i;
 
   /* We are guaranteed to be called with CHARPOS either in i,
      or further off.  */
@@ -248,7 +249,8 @@ update_syntax_table (charpos, count, init, object)
 	    }
 	  else
 	    {
-	      gl_state.b_property = i->position + LENGTH (i) - gl_state.offset;
+	      gl_state.b_property
+		= i->position + LENGTH (i) - gl_state.offset;
 	      gl_state.backward_i = i;
 	    }
 	  return;
@@ -257,7 +259,12 @@ update_syntax_table (charpos, count, init, object)
 	{
 	  if (count > 0)
 	    {
-	      gl_state.e_property = i->position + LENGTH (i) - gl_state.offset;
+	      gl_state.e_property
+		= i->position + LENGTH (i) - gl_state.offset
+		/* e_property at EOB is not set to ZV but to ZV+1, so that
+		   we can do INC(from);UPDATE_SYNTAX_TABLE_FORWARD without
+		   having to check eob between the two.  */
+		+ (NULL_INTERVAL_P (next_interval (i)) ? 1 : 0);
 	      gl_state.forward_i = i;
 	    }
 	  else
@@ -923,7 +930,7 @@ text property.  */)
   p = SDATA (string);
   code = (enum syntaxcode) syntax_spec_code[*p++];
   if (((int) code & 0377) == 0377)
-    error ("invalid syntax description letter: %c", p[-1]);
+    error ("Invalid syntax description letter: %c", p[-1]);
 
   if (code == Sinherit)
     return Qnil;
@@ -3013,7 +3020,7 @@ Parsing stops at TO or when certain criteria are met;
  point is set to where parsing stops.
 If fifth arg OLDSTATE is omitted or nil,
  parsing assumes that FROM is the beginning of a function.
-Value is a list of ten elements describing final state of parsing:
+Value is a list of elements describing final state of parsing:
  0. depth in parens.
  1. character address of start of innermost containing list; nil if none.
  2. character address of start of last complete sexp terminated.
@@ -3032,7 +3039,7 @@ If third arg TARGETDEPTH is non-nil, parsing stops if the depth
 in parentheses becomes equal to TARGETDEPTH.
 Fourth arg STOPBEFORE non-nil means stop when come to
  any character that starts a sexp.
-Fifth arg OLDSTATE is a nine-element list like what this function returns.
+Fifth arg OLDSTATE is a list like what this function returns.
  It is used to initialize the state of the parse.  Elements number 1, 2, 6
  and 8 are ignored; you can leave off element 8 (the last) entirely.
 Sixth arg COMMENTSTOP non-nil means stop at the start of a comment.
@@ -3167,6 +3174,14 @@ syms_of_syntax ()
   staticpro (&Qsyntax_table_p);
 
   staticpro (&Vsyntax_code_object);
+
+  staticpro (&gl_state.object);
+  staticpro (&gl_state.global_code);
+  staticpro (&gl_state.current_syntax_table);
+  staticpro (&gl_state.old_prop);
+
+  /* Defined in regex.c */
+  staticpro (&re_match_object);
 
   Qscan_error = intern ("scan-error");
   staticpro (&Qscan_error);

@@ -1,9 +1,10 @@
 ;;; supercite.el --- minor mode for citing mail and news replies
 
-;; Copyright (C) 1993, 1997, 2003, 2004, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1997, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: 1993 Barry A. Warsaw <bwarsaw@python.org>
-;; Maintainer:    Glenn Morris <gmorris@ast.cam.ac.uk>
+;; Maintainer:    Glenn Morris <rgm@gnu.org>
 ;; Created:       February 1993
 ;; Last Modified: 1993/09/22 18:58:46
 ;; Keywords: mail, news
@@ -24,8 +25,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;; LCD Archive Entry
 ;; supercite|Barry A. Warsaw|supercite-help@python.org
@@ -44,28 +45,28 @@
 ;; vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 
 (defgroup supercite nil
-  "Supercite package"
+  "Supercite package."
   :prefix "sc-"
   :group 'mail
   :group 'news)
 
 (defgroup supercite-frames nil
-  "Supercite (regi) frames"
+  "Supercite (regi) frames."
   :prefix "sc-"
   :group 'supercite)
 
 (defgroup supercite-attr nil
-  "Supercite attributions"
+  "Supercite attributions."
   :prefix "sc-"
   :group 'supercite)
 
 (defgroup supercite-cite nil
-  "Supercite citings"
+  "Supercite citings."
   :prefix "sc-"
   :group 'supercite)
 
 (defgroup supercite-hooks nil
-  "Hooking into supercite"
+  "Hooking into supercite."
   :prefix "sc-"
   :group 'supercite)
 
@@ -642,8 +643,8 @@ the list should be unique."
 	    (prog1 quit-flag (setq quit-flag nil)))
 	  (progn
 	    (message "%s%s" p (single-key-description event))
-	    (and (fboundp 'deallocate-event)
-		 (deallocate-event event))
+	    (if (fboundp 'deallocate-event)
+		(deallocate-event event))
 	    (setq quit-flag nil)
 	    (signal 'quit '())))
       (let ((char
@@ -658,8 +659,8 @@ the list should be unique."
 	 ((setq elt (rassq char alist))
 	  (message "%s%s" p (car elt))
 	  (setq p (cdr elt)))
-	 ((and (fboundp 'button-release-event-p)
-	       (button-release-event-p event)) ; ignore them
+	 ((if (fboundp 'button-release-event-p)
+	      (button-release-event-p event)) ; ignore them
 	  nil)
 	 (t
 	  (message "%s%s" p (single-key-description event))
@@ -669,8 +670,8 @@ the list should be unique."
 	  (discard-input)
 	  (if (eq p prompt)
 	      (setq p (concat "Try again.  " prompt)))))))
-    (and (fboundp 'deallocate-event)
-	 (deallocate-event event))
+    (if (fboundp 'deallocate-event)
+	(deallocate-event event))
     p))
 
 (defun sc-scan-info-alist (alist)
@@ -720,6 +721,7 @@ the list should be unique."
     (sc-mail-warn-if-non-rfc822-p (sc-mail-error-in-mail-field))
     (end                          (setq sc-mail-headers-end (point))))
   "Regi frame for glomming mail header information.")
+(put 'sc-mail-glom-frame 'risky-local-variable t)
 
 (defvar curline)			; dynamic bondage
 
@@ -1316,6 +1318,8 @@ use it instead of `sc-citation-root-regexp'."
 	  sc-citation-delimiter
 	  sc-citation-separator))
 
+(defvar filladapt-prefix-table)
+
 (defun sc-setup-filladapt ()
   "Setup `filladapt-prefix-table' to handle Supercited paragraphs."
   (let* ((fa-sc-elt 'filladapt-supercite-included-text)
@@ -1513,7 +1517,8 @@ non-nil."
 	       (progn (forward-line -1)
 		      (or (= (point) (mail-header-end))
 			  (and (eq major-mode 'mh-letter-mode)
-			       (mh-in-header-p)))))
+			       (with-no-warnings
+				 (mh-in-header-p))))))
 	  (progn (forward-line)
 		 (let ((kill-lines-magic t))
 		   (kill-line))))))

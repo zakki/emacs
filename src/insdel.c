@@ -1,6 +1,6 @@
 /* Buffer insertion/deletion and gap motion for GNU Emacs.
-   Copyright (C) 1985, 86,93,94,95,97,98, 1999, 2000, 01, 2003, 2005
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1993, 1994, 1995, 1997, 1998, 1999, 2000, 2001,
+                 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -749,9 +749,10 @@ insert (string, nbytes)
 {
   if (nbytes > 0)
     {
-      int opoint = PT;
-      insert_1 (string, nbytes, 0, 1, 0);
-      signal_after_change (opoint, 0, PT - opoint);
+      int len = chars_in_text (string, nbytes), opoint;
+      insert_1_both (string, len, nbytes, 0, 1, 0);
+      opoint = PT - len;
+      signal_after_change (opoint, 0, len);
       update_compositions (opoint, PT, CHECK_BORDER);
     }
 }
@@ -765,9 +766,10 @@ insert_and_inherit (string, nbytes)
 {
   if (nbytes > 0)
     {
-      int opoint = PT;
-      insert_1 (string, nbytes, 1, 1, 0);
-      signal_after_change (opoint, 0, PT - opoint);
+      int len = chars_in_text (string, nbytes), opoint;
+      insert_1_both (string, len, nbytes, 1, 1, 0);
+      opoint = PT - len;
+      signal_after_change (opoint, 0, len);
       update_compositions (opoint, PT, CHECK_BORDER);
     }
 }
@@ -813,10 +815,10 @@ insert_before_markers (string, nbytes)
 {
   if (nbytes > 0)
     {
-      int opoint = PT;
-
-      insert_1 (string, nbytes, 0, 1, 1);
-      signal_after_change (opoint, 0, PT - opoint);
+      int len = chars_in_text (string, nbytes), opoint;
+      insert_1_both (string, len, nbytes, 0, 1, 1);
+      opoint = PT - len;
+      signal_after_change (opoint, 0, len);
       update_compositions (opoint, PT, CHECK_BORDER);
     }
 }
@@ -830,10 +832,10 @@ insert_before_markers_and_inherit (string, nbytes)
 {
   if (nbytes > 0)
     {
-      int opoint = PT;
-
-      insert_1 (string, nbytes, 1, 1, 1);
-      signal_after_change (opoint, 0, PT - opoint);
+      int len = chars_in_text (string, nbytes), opoint;
+      insert_1_both (string, len, nbytes, 1, 1, 1);
+      opoint = PT - len;
+      signal_after_change (opoint, 0, len);
       update_compositions (opoint, PT, CHECK_BORDER);
     }
 }
@@ -2393,6 +2395,7 @@ void
 syms_of_insdel ()
 {
   staticpro (&combine_after_change_list);
+  staticpro (&combine_after_change_buffer);
   combine_after_change_list = Qnil;
   combine_after_change_buffer = Qnil;
 

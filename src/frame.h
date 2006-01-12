@@ -1,5 +1,6 @@
 /* Define frame-object for GNU Emacs.
-   Copyright (C) 1993, 1994, 1999, 2000, 2001 Free Software Foundation, Inc.
+   Copyright (C) 1993, 1994, 1999, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Don't multiply include: dispextern.h includes macterm.h which
    includes frame.h some emacs source includes both dispextern.h and
@@ -463,6 +464,13 @@ struct frame
      realized.  Reset to zero whenever the default face changes.
      Used to see the difference between a font change and face change.  */
   unsigned default_face_done_p : 1;
+
+  /* Set to non-zero if this frame has already been hscrolled during
+     current redisplay.  */
+  unsigned already_hscrolled_p : 1;
+
+  /* Set to non-zero when current redisplay has updated frame.  */
+  unsigned updated_p : 1;
 };
 
 #ifdef MULTI_KBOARD
@@ -821,13 +829,13 @@ extern Lisp_Object selected_frame;
 			Display-related Macros
  ***********************************************************************/
 
-/* Canonical y-unit on frame F.  
+/* Canonical y-unit on frame F.
    This value currently equals the line height of the frame (which is
    the height of the default font of F).  */
 
 #define FRAME_LINE_HEIGHT(F) ((F)->line_height)
 
-/* Canonical x-unit on frame F. 
+/* Canonical x-unit on frame F.
    This value currently equals the average width of the default font of F.  */
 
 #define FRAME_COLUMN_WIDTH(F) ((F)->column_width)

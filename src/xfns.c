@@ -1,6 +1,6 @@
 /* Functions for the X window system.
    Copyright (C) 1989, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
-     2001, 2002, 2003, 2004, 2005  Free Software Foundation.
+                 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 #include <stdio.h>
@@ -153,6 +153,10 @@ int display_hourglass_p;
 /* Non-zero means prompt with the old GTK file selection dialog.  */
 
 int x_use_old_gtk_file_dialog;
+
+/* If non-zero, by default show hidden files in the GTK file chooser.  */
+
+int x_gtk_show_hidden_files;
 
 /* The background and shape of the mouse pointer, and shape when not
    over text or in the modeline.  */
@@ -608,7 +612,7 @@ x_real_positions (f, xptr, yptr)
 
   if (! had_errors)
     {
-      int ign;
+      unsigned int ign;
       Window child, rootw;
 
       /* Get the real coordinates for the WM window upper left corner */
@@ -794,9 +798,7 @@ xg_set_icon (f, file)
     {
       GdkPixbuf *pixbuf;
       GError *err = NULL;
-      char *filename;
-
-      filename = SDATA (found);
+      char *filename = (char *) SDATA (found);
       BLOCK_INPUT;
 
       pixbuf = gdk_pixbuf_new_from_file (filename, &err);
@@ -817,6 +819,22 @@ xg_set_icon (f, file)
 
   UNGCPRO;
   return result;
+}
+
+int
+xg_set_icon_from_xpm_data (f, data)
+    FRAME_PTR f;
+    char **data;
+{
+  int result = 0;
+  GdkPixbuf *pixbuf = gdk_pixbuf_new_from_xpm_data ((const char **) data);
+
+  if (!pixbuf)
+    return 0;
+
+  gtk_window_set_icon (GTK_WINDOW (FRAME_GTK_OUTER_WIDGET (f)), pixbuf);
+  g_object_unref (pixbuf);
+  return 1;
 }
 #endif /* USE_GTK */
 
@@ -1515,11 +1533,12 @@ x_set_scroll_bar_background (f, value, oldval)
    Otherwise store 0 in *STRINGP, which means that the `encoding' of
    the result should be `COMPOUND_TEXT'.  */
 
-unsigned char *
-x_encode_text (string, coding_system, selectionp, text_bytes, stringp)
+static unsigned char *
+x_encode_text (string, coding_system, selectionp, text_bytes, stringp, freep)
      Lisp_Object string, coding_system;
      int *text_bytes, *stringp;
      int selectionp;
+     int *freep;
 {
   unsigned char *str = SDATA (string);
   int chars = SCHARS (string);
@@ -1536,6 +1555,7 @@ x_encode_text (string, coding_system, selectionp, text_bytes, stringp)
       /* No multibyte character in OBJ.  We need not encode it.  */
       *text_bytes = bytes;
       *stringp = 1;
+      *freep = 0;
       return str;
     }
 
@@ -1563,6 +1583,7 @@ x_encode_text (string, coding_system, selectionp, text_bytes, stringp)
   *stringp = (charset_info == 1
 	      || (!EQ (coding_system, Qcompound_text)
 		  && !EQ (coding_system, Qcompound_text_with_extensions)));
+  *freep = 1;
   return buf;
 }
 
@@ -1601,15 +1622,12 @@ x_set_name_internal (f, name)
 	   in the future which can encode all Unicode characters.
 	   But, for the moment, there's no way to know that the
 	   current window manager supports it or not.  */
-	text.value = x_encode_text (name, coding_system, 0, &bytes, &stringp);
+	text.value = x_encode_text (name, coding_system, 0, &bytes, &stringp,
+				    &do_free_text_value);
 	text.encoding = (stringp ? XA_STRING
 			 : FRAME_X_DISPLAY_INFO (f)->Xatom_COMPOUND_TEXT);
 	text.format = 8;
 	text.nitems = bytes;
-
-        /* Check early, because ENCODE_UTF_8 below may GC and name may be
-           relocated.  */
-        do_free_text_value = text.value != SDATA (name);
 
 	if (NILP (f->icon_name))
 	  {
@@ -1619,17 +1637,16 @@ x_set_name_internal (f, name)
 	  {
 	    /* See the above comment "Note: Encoding strategy".  */
 	    icon.value = x_encode_text (f->icon_name, coding_system, 0,
-					&bytes, &stringp);
+					&bytes, &stringp, &do_free_icon_value);
 	    icon.encoding = (stringp ? XA_STRING
 			     : FRAME_X_DISPLAY_INFO (f)->Xatom_COMPOUND_TEXT);
 	    icon.format = 8;
 	    icon.nitems = bytes;
-            do_free_icon_value = icon.value != SDATA (f->icon_name);
 	  }
 
 #ifdef USE_GTK
         gtk_window_set_title (GTK_WINDOW (FRAME_GTK_OUTER_WIDGET (f)),
-                              SDATA (ENCODE_UTF_8 (name)));
+                              (char *) SDATA (ENCODE_UTF_8 (name)));
 #else /* not USE_GTK */
 	XSetWMName (FRAME_X_DISPLAY (f), FRAME_OUTER_WINDOW (f), &text);
 #endif /* not USE_GTK */
@@ -1987,7 +2004,7 @@ xic_create_fontsetname (base_fontname, motif)
 	 - the same but with the family also replaced with -*-*-.  */
       char *p = base_fontname;
       int i;
-      
+
       for (i = 0; *p; p++)
 	if (*p == '-') i++;
       if (i != 14)
@@ -2011,7 +2028,7 @@ xic_create_fontsetname (base_fontname, motif)
 	  char *allcs = "*-*-*-*-*-*-*";
 	  char *allfamilies = "-*-*-";
 	  char *all = "*-*-*-*-";
-	  
+
 	  for (i = 0, p = base_fontname; i < 8; p++)
 	    {
 	      if (*p == '-')
@@ -3289,7 +3306,7 @@ This function is an internal primitive--use `make-frame' instead.  */)
 
   /* We need to do this after creating the X window, so that the
      icon-creation functions can say whose icon they're describing.  */
-  x_default_parameter (f, parms, Qicon_type, Qnil,
+  x_default_parameter (f, parms, Qicon_type, Qt,
 		       "bitmapIcon", "BitmapIcon", RES_TYPE_SYMBOL);
 
   x_default_parameter (f, parms, Qauto_raise, Qnil,
@@ -3367,9 +3384,16 @@ This function is an internal primitive--use `make-frame' instead.  */)
                        FRAME_OUTER_WINDOW (f),
                        dpyinfo->Xatom_wm_client_leader,
                        XA_WINDOW, 32, PropModeReplace,
-                       (char *) &dpyinfo->client_leader_window, 1);
+                       (unsigned char *) &dpyinfo->client_leader_window, 1);
       UNBLOCK_INPUT;
     }
+
+  /* Initialize `default-minibuffer-frame' in case this is the first
+     frame on this display device.  */
+  if (FRAME_HAS_MINIBUF_P (f)
+      && (!FRAMEP (kb->Vdefault_minibuffer_frame)
+          || !FRAME_LIVE_P (XFRAME (kb->Vdefault_minibuffer_frame))))
+    kb->Vdefault_minibuffer_frame = frame;
 
   UNGCPRO;
 
@@ -4931,16 +4955,22 @@ compute_tip_xy (f, parms, dx, dy, width, height, root_x, root_y)
 
   if (INTEGERP (top))
     *root_y = XINT (top);
-  else if (*root_y + XINT (dy) - height < 0)
-    *root_y -= XINT (dy);
-  else
-    {
-      *root_y -= height;
+  else if (*root_y + XINT (dy) <= 0)
+    *root_y = 0; /* Can happen for negative dy */
+  else if (*root_y + XINT (dy) + height <= FRAME_X_DISPLAY_INFO (f)->height)
+    /* It fits below the pointer */
       *root_y += XINT (dy);
-    }
+  else if (height + XINT (dy) <= *root_y)
+    /* It fits above the pointer.  */
+    *root_y -= height + XINT (dy);
+  else
+    /* Put it on the top.  */
+    *root_y = 0;
 
   if (INTEGERP (left))
     *root_x = XINT (left);
+  else if (*root_x + XINT (dx) <= 0)
+    *root_x = 0; /* Can happen for negative dx */
   else if (*root_x + XINT (dx) + width <= FRAME_X_DISPLAY_INFO (f)->width)
     /* It fits to the right of the pointer.  */
     *root_x += XINT (dx);
@@ -5097,7 +5127,7 @@ Text larger than the specified size is clipped.  */)
   clear_glyph_matrix (w->desired_matrix);
   clear_glyph_matrix (w->current_matrix);
   SET_TEXT_POS (pos, BEGV, BEGV_BYTE);
-  try_window (FRAME_ROOT_WINDOW (f), pos);
+  try_window (FRAME_ROOT_WINDOW (f), pos, 0);
 
   /* Compute width and height of the tooltip.  */
   width = height = 0;
@@ -5221,8 +5251,27 @@ Value is t if tooltip was open, nil otherwise.  */)
 			File selection dialog
  ***********************************************************************/
 
-#ifdef USE_MOTIF
+DEFUN ("x-uses-old-gtk-dialog", Fx_uses_old_gtk_dialog,
+       Sx_uses_old_gtk_dialog,
+       0, 0, 0,
+       doc: /* Return t if the old Gtk+ file selection dialog is used.  */)
+     ()
+{
+#ifdef USE_GTK
+  extern int use_dialog_box;
+  extern int use_file_dialog;
 
+  if (use_dialog_box
+      && use_file_dialog
+      && have_menus_p ()
+      && xg_uses_old_file_dialog ())
+    return Qt;
+#endif
+  return Qnil;
+}
+
+
+#ifdef USE_MOTIF
 /* Callback for "OK" and "Cancel" on file selection dialog.  */
 
 static void
@@ -5507,7 +5556,8 @@ DEFUN ("x-backspace-delete-keys-p", Fx_backspace_delete_keys_p,
        doc: /* Check if both Backspace and Delete keys are on the keyboard of FRAME.
 FRAME nil means use the selected frame.
 Value is t if we know that both keys are present, and are mapped to the
-usual X keysyms.  */)
+usual X keysyms.  Value is `lambda' if we cannot determine if both keys are
+present and mapped to the usual X keysyms.  */)
      (frame)
      Lisp_Object frame;
 {
@@ -5526,7 +5576,7 @@ usual X keysyms.  */)
   if (!XkbLibraryVersion (&major, &minor))
     {
       UNBLOCK_INPUT;
-      return Qnil;
+      return Qlambda;
     }
 
   /* Check that the server supports XKB.  */
@@ -5535,7 +5585,7 @@ usual X keysyms.  */)
   if (!XkbQueryExtension (dpy, &op, &event, &error, &major, &minor))
     {
       UNBLOCK_INPUT;
-      return Qnil;
+      return Qlambda;
     }
 
   /* In this code we check that the keyboard has physical keys with names
@@ -5590,7 +5640,7 @@ usual X keysyms.  */)
   UNBLOCK_INPUT;
   return have_keys;
 #else /* not HAVE_XKBGETKEYBOARD */
-  return Qnil;
+  return Qlambda;
 #endif /* not HAVE_XKBGETKEYBOARD */
 }
 
@@ -5753,6 +5803,14 @@ chooser is used instead.  To turn off all file dialogs set the
 variable `use-file-dialog'.  */);
   x_use_old_gtk_file_dialog = 0;
 
+  DEFVAR_BOOL ("x-gtk-show-hidden-files", &x_gtk_show_hidden_files,
+    doc: /* *If non-nil, the GTK file chooser will by default show hidden files.
+Note that this is just the default, there is a toggle button on the file
+chooser to show or not show hidden files on a case by case basis.  */);
+  x_gtk_show_hidden_files = 0;
+
+  Fprovide (intern ("x"), Qnil);
+
 #ifdef USE_X_TOOLKIT
   Fprovide (intern ("x-toolkit"), Qnil);
 #ifdef USE_MOTIF
@@ -5839,6 +5897,7 @@ variable `use-file-dialog'.  */);
   last_show_tip_args = Qnil;
   staticpro (&last_show_tip_args);
 
+  defsubr (&Sx_uses_old_gtk_dialog);
 #if defined (USE_MOTIF) || defined (USE_GTK)
   defsubr (&Sx_file_dialog);
 #endif

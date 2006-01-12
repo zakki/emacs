@@ -1,6 +1,7 @@
 /* Random utility Lisp functions.
-   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 1998, 1999, 2000,
-     2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997,
+                 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 
@@ -76,10 +77,10 @@ Lisp_Object Qcodeset, Qdays, Qmonths, Qpaper;
 
 extern Lisp_Object Qinput_method_function;
 
-static int internal_equal ();
+static int internal_equal P_ ((Lisp_Object , Lisp_Object, int, int));
 
 extern long get_random ();
-extern void seed_random ();
+extern void seed_random P_ ((long));
 
 #ifndef HAVE_UNISTD_H
 extern long time ();
@@ -1153,13 +1154,13 @@ Beware, this often doesn't really do what you think it does.
 It is similar to (decode-coding-string STRING 'emacs-mule-unix).
 If you're not sure, whether to use `string-as-multibyte' or
 `string-to-multibyte', use `string-to-multibyte'.  Beware:
-   (aref (string-as-multibyte "\201") 0) -> 129 (aka ?\201)
-   (aref (string-as-multibyte "\300") 0) -> 192 (aka ?\300)
-   (aref (string-as-multibyte "\300\201") 0) -> 192 (aka ?\300)
-   (aref (string-as-multibyte "\300\201") 1) -> 129 (aka ?\201)
+   (aref (string-as-multibyte "\\201") 0) -> 129 (aka ?\\201)
+   (aref (string-as-multibyte "\\300") 0) -> 192 (aka ?\\300)
+   (aref (string-as-multibyte "\\300\\201") 0) -> 192 (aka ?\\300)
+   (aref (string-as-multibyte "\\300\\201") 1) -> 129 (aka ?\\201)
 but
-   (aref (string-as-multibyte "\201\300") 0) -> 2240
-   (aref (string-as-multibyte "\201\300") 1) -> <error>  */)
+   (aref (string-as-multibyte "\\201\\300") 0) -> 2240
+   (aref (string-as-multibyte "\\201\\300") 1) -> <error>  */)
      (string)
      Lisp_Object string;
 {
@@ -1471,7 +1472,7 @@ The value is actually the tail of LIST whose car is ELT.  */)
 
 DEFUN ("memq", Fmemq, Smemq, 2, 2, 0,
        doc: /* Return non-nil if ELT is an element of LIST.
-Comparison done with EQ.  The value is actually the tail of LIST
+Comparison done with `eq'.  The value is actually the tail of LIST
 whose car is ELT.  */)
      (elt, list)
      Lisp_Object elt, list;
@@ -1892,8 +1893,8 @@ Lisp_Object merge ();
 DEFUN ("sort", Fsort, Ssort, 2, 2, 0,
        doc: /* Sort LIST, stably, comparing elements using PREDICATE.
 Returns the sorted list.  LIST is modified by side effects.
-PREDICATE is called with two elements of LIST, and should return t
-if the first element is "less" than the second.  */)
+PREDICATE is called with two elements of LIST, and should return non-nil
+if the first element should sort before the second.  */)
      (list, predicate)
      Lisp_Object list, predicate;
 {
@@ -2249,7 +2250,7 @@ internal_equal (o1, o2, depth, props)
 	  if (!internal_equal (OVERLAY_START (o1), OVERLAY_START (o2),
 			       depth + 1, props)
 	      || !internal_equal (OVERLAY_END (o1), OVERLAY_END (o2),
-				  depth + 1))
+				  depth + 1, props))
 	    return 0;
 	  o1 = XOVERLAY (o1)->plist;
 	  o2 = XOVERLAY (o2)->plist;
@@ -2546,14 +2547,14 @@ RANGE should be nil (for the default value),
 a vector which identifies a character set or a row of a character set,
 a character set name, or a character code.
 If the characters in the specified range have different values,
-an error is signalled.
+an error is signaled.
 
 Note that this function doesn't check the parent of CHAR-TABLE.  */)
      (char_table, range)
      Lisp_Object char_table, range;
 {
   int charset_id, c1 = 0, c2 = 0;
-  int size, i;
+  int size;
   Lisp_Object ch, val, current_default;
 
   CHECK_CHAR_TABLE (char_table);
@@ -3513,7 +3514,8 @@ particular subfeatures supported in this version of FEATURE.  */)
   CHECK_SYMBOL (feature);
   CHECK_LIST (subfeatures);
   if (!NILP (Vautoload_queue))
-    Vautoload_queue = Fcons (Fcons (Vfeatures, Qnil), Vautoload_queue);
+    Vautoload_queue = Fcons (Fcons (make_number (0), Vfeatures),
+			     Vautoload_queue);
   tem = Fmemq (feature, Vfeatures);
   if (NILP (tem))
     Vfeatures = Fcons (feature, Vfeatures);
@@ -3558,14 +3560,20 @@ The normal messages at start and end of loading FILENAME are suppressed.  */)
 {
   register Lisp_Object tem;
   struct gcpro gcpro1, gcpro2;
+  int from_file = load_in_progress;
 
   CHECK_SYMBOL (feature);
 
   /* Record the presence of `require' in this file
      even if the feature specified is already loaded.
      But not more than once in any file,
-     and not when we aren't loading a file.  */
-  if (load_in_progress)
+     and not when we aren't loading or reading from a file.  */
+  if (!from_file)
+    for (tem = Vcurrent_load_list; CONSP (tem); tem = XCDR (tem))
+      if (NILP (XCDR (tem)) && STRINGP (XCAR (tem)))
+	from_file = 1;
+
+  if (from_file)
     {
       tem = Fcons (Qrequire, feature);
       if (NILP (Fmember (tem, Vcurrent_load_list)))
@@ -5486,7 +5494,7 @@ DEFUN ("remhash", Fremhash, Sremhash, 2, 2, 0,
 
 DEFUN ("maphash", Fmaphash, Smaphash, 2, 2, 0,
        doc: /* Call FUNCTION for all entries in hash table TABLE.
-FUNCTION is called with 2 arguments KEY and VALUE.  */)
+FUNCTION is called with two arguments, KEY and VALUE.  */)
      (function, table)
      Lisp_Object function, table;
 {
@@ -5832,7 +5840,7 @@ syms_of_fns ()
   DEFVAR_LISP ("features", &Vfeatures,
     doc: /* A list of symbols which are the features of the executing emacs.
 Used by `featurep' and `require', and altered by `provide'.  */);
-  Vfeatures = Qnil;
+  Vfeatures = Fcons (intern ("emacs"), Qnil);
   Qsubfeatures = intern ("subfeatures");
   staticpro (&Qsubfeatures);
 

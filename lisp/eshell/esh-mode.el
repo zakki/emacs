@@ -1,6 +1,7 @@
 ;;; esh-mode.el --- user interface
 
-;; Copyright (C) 1999, 2000, 2001, 2004 Free Software Foundation
+;; Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@gnu.org>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 (provide 'esh-mode)
 
@@ -818,7 +819,7 @@ This is done after all necessary filtering has been done."
   "Go to the end of buffer in all windows showing it.
 Movement occurs if point in the selected window is not after the
 process mark, and `this-command' is an insertion command.  Insertion
-commands recognised are `self-insert-command', `yank', and
+commands recognized are `self-insert-command', `yank', and
 `hilit-yank'.  Depends on the value of
 `eshell-scroll-to-bottom-on-input'.
 

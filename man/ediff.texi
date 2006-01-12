@@ -25,12 +25,12 @@
 This file documents Ediff, a comprehensive visual interface to Unix diff
 and patch utilities.
 
-Copyright 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002 Free Software
-Foundation, Inc.
+Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
+   2003, 2004, 2005 Free Software Foundation, Inc.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, with the Front-Cover texts being ``A GNU
 Manual'', and with the Back-Cover Texts as in (a) below.  A copy of the
@@ -2266,7 +2266,7 @@ version control, Ediff first tries to check the file out.
 
 @item ediff-make-buffers-readonly-at-startup nil
 @vindex ediff-make-buffers-readonly-at-startup
-If t, all variant buffers are made read-only at Ediff startup.
+If @code{t}, all variant buffers are made read-only at Ediff startup.
 
 @item ediff-keep-variants
 @vindex @code{ediff-keep-variants}
@@ -2416,6 +2416,7 @@ Aaron Gross (aaron@@bfr.co.il),
 Thorbjoern Hansen (thorbjoern.hansen@@mchp.siemens.de),
 Marcus Harnisch (marcus_harnisch@@mint-tech.com),
 Steven E. Harris (seh@@panix.com),
+Aaron S. Hawley (Aaron.Hawley@@uvm.edu),
 Xiaoli Huang (hxl@@epic.com),
 Andreas Jaeger (aj@@suse.de),
 Lars Magne Ingebrigtsen (larsi@@ifi.uio.no),

@@ -1,6 +1,6 @@
 ;;; filesets.el --- handle group of files
 
-;; Copyright (C) 2002, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Thomas Link <t.link@gmx.at>
 ;; Maintainer: FSF
@@ -19,8 +19,8 @@
 ;; GNU General Public License for more details.
 
 ;; A copy of the GNU General Public License can be obtained from this
-;; program's author or from the Free Software Foundation, Inc., 675 Mass
-;; Ave, Cambridge, MA 02139, USA.
+;; program's author or from the Free Software Foundation, Inc.,
+;; 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 (defvar filesets-version "1.8.4")
 (defvar filesets-homepage
@@ -650,8 +650,8 @@ the filename."
 Has the form ((FILE-PATTERN VIEWER PROPERTIES) ...), VIEWER being either a
 function or a command name as string.
 
-Properties is an association list determining filesets' behaviour in
-several conditions. Choose one from this list:
+Properties is an association list determining filesets' behavior in
+several conditions.  Choose one from this list:
 
 :ignore-on-open-all ... Don't open files of this type automatically --
 i.e. on open-all-files-events or when running commands

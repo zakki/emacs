@@ -1,6 +1,7 @@
 ;;; ffap.el --- find file (or url) at point
 
-;; Copyright (C) 1995, 96, 97, 2000, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1996, 1997, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Michelangelo Grigni <mic@mathcs.emory.edu>
 ;; Maintainer: Rajesh Vaidheeswarran  <rv@gnu.org>
@@ -22,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 
 ;;; Commentary:
@@ -1379,9 +1380,7 @@ If `ffap-url-regexp' is not nil, the FILENAME may also be an URL.
 With a prefix, this command behaves exactly like `ffap-file-finder'.
 If `ffap-require-prefix' is set, the prefix meaning is reversed.
 See also the variables `ffap-dired-wildcards', `ffap-newfile-prompt',
-and the functions `ffap-file-at-point' and `ffap-url-at-point'.
-
-See <ftp://ftp.mathcs.emory.edu/pub/mic/emacs/> for latest version."
+and the functions `ffap-file-at-point' and `ffap-url-at-point'."
   (interactive)
   (if (and (interactive-p)
 	   (if ffap-require-prefix (not current-prefix-arg)
@@ -1520,7 +1519,9 @@ Applies `ffap-menu-text-plist' text properties at all matches."
   (let ((ffap-next-regexp (or ffap-menu-regexp ffap-next-regexp))
 	(range (- (point-max) (point-min)))
 	(mod (buffer-modified-p))	; was buffer modified?
-	buffer-read-only		; to set text-properties
+	;; inhibit-read-only works on read-only text properties
+	;; as well as read-only buffers.
+	(inhibit-read-only t)		; to set text-properties
 	item
 	;; Avoid repeated searches of the *mode-alist:
 	(major-mode (if (assq major-mode ffap-string-at-point-mode-alist)
@@ -1710,6 +1711,9 @@ Only intended for interactive use."
   ;; Note "l", "L", "m", "M" are taken:
   (local-set-key "\M-l" 'ffap-gnus-next)
   (local-set-key "\M-m" 'ffap-gnus-menu))
+
+(defvar gnus-summary-buffer)
+(defvar gnus-article-buffer)
 
 (defun ffap-gnus-wrapper (form)		; used by both commands below
   (and (eq (current-buffer) (get-buffer gnus-summary-buffer))

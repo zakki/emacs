@@ -1,7 +1,8 @@
 ;;; ebrowse.el --- Emacs C++ class browser & tags facility
 
-;; Copyright (C) 1992, 93, 94, 95, 96, 97, 98, 99, 2000, 2001, 2002, 2005
-;;  Free Software Foundation Inc.
+;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
+;; 2002, 2003, 2004, 2005
+;; Free Software Foundation Inc.
 
 ;; Author: Gerd Moellmann <gerd@gnu.org>
 ;; Maintainer: FSF
@@ -21,7 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+;; the Free Software Foundation, 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -157,50 +159,64 @@ This space is used to display markers."
   :group 'ebrowse)
 
 
-(defface ebrowse-tree-mark-face
+(defface ebrowse-tree-mark
   '((((min-colors 88)) (:foreground "red1"))
     (t (:foreground "red")))
   "*The face used for the mark character in the tree."
   :group 'ebrowse-faces)
+;; backward-compatibility alias
+(put 'ebrowse-tree-mark-face 'face-alias 'ebrowse-tree-mark)
 
 
-(defface ebrowse-root-class-face
+(defface ebrowse-root-class
   '((((min-colors 88)) (:weight bold :foreground "blue1"))
     (t (:weight bold :foreground "blue")))
   "*The face used for root classes in the tree."
   :group 'ebrowse-faces)
+;; backward-compatibility alias
+(put 'ebrowse-root-class-face 'face-alias 'ebrowse-root-class)
 
 
-(defface ebrowse-file-name-face
+(defface ebrowse-file-name
   '((t (:italic t)))
   "*The face for filenames displayed in the tree."
   :group 'ebrowse-faces)
+;; backward-compatibility alias
+(put 'ebrowse-file-name-face 'face-alias 'ebrowse-file-name)
 
 
-(defface ebrowse-default-face
+(defface ebrowse-default
   '((t nil))
   "*Face for everything else in the tree not having other faces."
   :group 'ebrowse-faces)
+;; backward-compatibility alias
+(put 'ebrowse-default-face 'face-alias 'ebrowse-default)
 
 
-(defface ebrowse-member-attribute-face
+(defface ebrowse-member-attribute
   '((((min-colors 88)) (:foreground "red1"))
     (t (:foreground "red")))
   "*Face used to display member attributes."
   :group 'ebrowse-faces)
+;; backward-compatibility alias
+(put 'ebrowse-member-attribute-face 'face-alias 'ebrowse-member-attribute)
 
 
-(defface ebrowse-member-class-face
+(defface ebrowse-member-class
   '((t (:foreground "purple")))
   "*Face used to display the class title in member buffers."
   :group 'ebrowse-faces)
+;; backward-compatibility alias
+(put 'ebrowse-member-class-face 'face-alias 'ebrowse-member-class)
 
 
-(defface ebrowse-progress-face
+(defface ebrowse-progress
   '((((min-colors 88)) (:background "blue1"))
     (t (:background "blue")))
   "*Face for progress indicator."
   :group 'ebrowse-faces)
+;; backward-compatibility alias
+(put 'ebrowse-progress-face 'face-alias 'ebrowse-progress)
 
 
 
@@ -883,7 +899,7 @@ this is the first progress message displayed."
     (message (concat title ": "
 		     (propertize (make-string ebrowse-n-boxes
 					      (if (display-color-p) ?\  ?+))
-				 'face 'ebrowse-progress-face)))))
+				 'face 'ebrowse-progress)))))
 
 
 ;;; Reading a tree from disk
@@ -924,7 +940,8 @@ NOCONFIRM."
     (loop for member-buffer in (ebrowse-same-tree-member-buffer-list)
 	  do (kill-buffer member-buffer))
     (erase-buffer)
-    (insert-file (or buffer-file-name ebrowse--tags-file-name))
+    (with-no-warnings
+      (insert-file (or buffer-file-name ebrowse--tags-file-name)))
     (ebrowse-tree-mode)
     (current-buffer)))
 
@@ -1310,7 +1327,7 @@ With PREFIX, insert that many filenames."
 			     (ebrowse-ts-class tree))
 			    "unknown")
 		    ")"))
-	  (ebrowse-set-face start (point) 'ebrowse-file-name-face)
+	  (ebrowse-set-face start (point) 'ebrowse-file-name)
 	  (beginning-of-line)
 	  (forward-line 1))))))
 
@@ -1781,7 +1798,7 @@ INFO is a list (TREE-HEADER TREE-OR-MEMBER MEMBER-LIST)."
       ;; START will be 0.
       (when (and (boundp 'ebrowse-debug)
 		 (symbol-value 'ebrowse-debug))
-	(y-or-n-p (format "start = %d" start))
+	(y-or-n-p (format "start = %d? " start))
 	(y-or-n-p pattern))
       (setf found
 	    (loop do (goto-char (max (point-min) (- start offset)))
@@ -1828,7 +1845,7 @@ TREE denotes the class shown."
    start end
    `(mouse-face highlight ebrowse-what mark ebrowse-tree ,tree
 		help-echo "double-mouse-1: mark/unmark"))
-  (ebrowse-set-face start end 'ebrowse-tree-mark-face))
+  (ebrowse-set-face start end 'ebrowse-tree-mark))
 
 
 (defun* ebrowse-draw-tree-fn (&aux stack1 stack2 start)
@@ -1855,8 +1872,8 @@ This function may look weird, but this is faster than recursion."
 	  (when (ebrowse-template-p class)
 	    (insert "<>"))
 	  (ebrowse-set-face start (point) (if (zerop level)
-					      'ebrowse-root-class-face
-					    'ebrowse-default-face))
+					      'ebrowse-root-class
+					    'ebrowse-default))
 	  (setf start-of-class-name start
 		end-of-class-name (point))
 	  ;; If filenames are to be displayed...
@@ -1867,7 +1884,7 @@ This function may look weird, but this is faster than recursion."
 		    (or (ebrowse-cs-file class)
 			"unknown")
 		    ")")
-	    (ebrowse-set-face start (point) 'ebrowse-file-name-face))
+	    (ebrowse-set-face start (point) 'ebrowse-file-name))
 	  (ebrowse-set-mark-props start-of-line (1+ start-of-line) tree)
 	  (add-text-properties
 	   start-of-class-name end-of-class-name
@@ -2694,7 +2711,7 @@ the class cursor is on."
       (insert "<>"))
     (setq class-name-end (point))
     (insert ":\n\n")
-    (ebrowse-set-face start (point) 'ebrowse-member-class-face)
+    (ebrowse-set-face start (point) 'ebrowse-member-class)
     (add-text-properties
      class-name-start class-name-end
      '(ebrowse-what class-name
@@ -2810,7 +2827,7 @@ TREE is the class tree of MEMBER-LIST."
 	    (ebrowse-draw-member-attributes member-struc)
 	    (insert ">")
 	    (ebrowse-set-face start (point)
-			      'ebrowse-member-attribute-face)))
+			      'ebrowse-member-attribute)))
 	(insert " ")
 	(ebrowse-draw-member-regexp member-struc))))
   (insert "\n")
@@ -2841,7 +2858,7 @@ TREE is the class tree in which the members are found."
 	    (ebrowse-draw-member-attributes member)
 	    (insert "> ")
 	    (ebrowse-set-face start-of-entry (point)
-			      'ebrowse-member-attribute-face))
+			      'ebrowse-member-attribute))
 	  ;; insert member name truncated to column width
 	  (setq start-of-name (point))
 	  (insert (substring name 0

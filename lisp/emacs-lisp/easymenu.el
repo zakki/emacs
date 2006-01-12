@@ -1,7 +1,7 @@
 ;;; easymenu.el --- support the easymenu interface for defining a menu
 
-;; Copyright (C) 1994, 1996, 1998, 1999, 2000, 2004, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1996, 1998, 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Keywords: emulations
 ;; Author: Richard Stallman <rms@gnu.org>
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -454,8 +454,8 @@ If the menu located by PATH has no submenu named NAME, add one.
 If the optional argument BEFORE is present, add it just before
 the submenu named BEFORE, otherwise add it at the end of the menu.
 
-Either call this from `menu-bar-update-hook' or use a menu filter,
-to implement dynamic menus."
+To implement dynamic menus, either call this from
+`menu-bar-update-hook' or use a menu filter."
   (easy-menu-add-item nil path (easy-menu-create-menu name items) before))
 
 ;; XEmacs needs the following two functions to add and remove menus.

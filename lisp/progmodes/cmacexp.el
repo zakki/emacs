@@ -1,6 +1,7 @@
 ;;; cmacexp.el --- expand C macros in a region
 
-;; Copyright (C) 1992, 1994, 1996, 2000 Free Software Foundation, Inc.
+;; Copyright (C) 1992, 1994, 1996, 2000, 2001, 2002, 2003, 2004
+;; Free Software Foundation, Inc.
 
 ;; Author: Francesco Potorti` <pot@gnu.org>
 ;; Adapted-By: ESR
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -92,6 +93,9 @@
 
 (provide 'cmacexp)
 
+(defvar msdos-shells)
+
+
 (defgroup c-macro nil
   "Expand C macros in a region."
   :group 'c)
@@ -146,8 +150,9 @@ Normally display output in temp buffer, but
 prefix arg means replace the region with it.
 
 `c-macro-preprocessor' specifies the preprocessor to use.
-Prompt for arguments to the preprocessor \(e.g. `-DDEBUG -I ./include')
-if the user option `c-macro-prompt-flag' is non-nil.
+Tf the user option `c-macro-prompt-flag' is non-nil
+prompt for arguments to the preprocessor \(e.g. `-DDEBUG -I ./include'),
+otherwise use `c-macro-cppflags'.
 
 Noninteractive args are START, END, SUBST.
 For use inside Lisp programs, see also `c-macro-expansion'."
@@ -341,13 +346,13 @@ Optional arg DISPLAY non-nil means show messages in the echo area."
 		    (format "\n#line %d \"%s\"\n" startlinenum filename)))
 
 	  ;; Call the preprocessor.
-	  (if display (message mymsg))
+	  (if display (message "%s" mymsg))
 	  (setq exit-status
 		(call-process-region 1 (point-max)
 				     shell-file-name
 				     t (list t tempname) nil "-c"
 				     cppcommand))
-	  (if display (message (concat mymsg "done")))
+	  (if display (message "%s" (concat mymsg "done")))
 	  (if (= (buffer-size) 0)
 	      ;; Empty output is normal after a fatal error.
 	      (insert "\nPreprocessor produced no output\n")

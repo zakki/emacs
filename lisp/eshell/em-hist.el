@@ -1,6 +1,7 @@
 ;;; em-hist.el --- history list management
 
-;; Copyright (C) 1999, 2000, 2004 Free Software Foundation
+;; Copyright (C) 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@gnu.org>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 (provide 'em-hist)
 
@@ -204,6 +205,8 @@ element, regardless of any text on the command line.  In that case,
   (define-key eshell-isearch-map [(control ?c)] 'eshell-isearch-cancel-map)
   (define-key eshell-isearch-cancel-map [(control ?c)] 'eshell-isearch-cancel))
 
+(defvar eshell-rebind-keys-alist)
+
 ;;; Functions:
 
 (defun eshell-hist-initialize ()
@@ -217,10 +220,10 @@ element, regardless of any text on the command line.  In that case,
 
   (if (and (eshell-using-module 'eshell-rebind)
 	   (not eshell-non-interactive-p))
-      (let ((rebind-alist (symbol-value 'eshell-rebind-keys-alist)))
+      (let ((rebind-alist eshell-rebind-keys-alist))
 	(make-local-variable 'eshell-rebind-keys-alist)
-	(set 'eshell-rebind-keys-alist
-	     (append rebind-alist eshell-hist-rebind-keys-alist))
+	(setq eshell-rebind-keys-alist
+	      (append rebind-alist eshell-hist-rebind-keys-alist))
 	(set (make-local-variable 'search-invisible) t)
 	(set (make-local-variable 'search-exit-option) t)
 	(add-hook 'isearch-mode-hook
@@ -504,7 +507,7 @@ See also `eshell-read-history'."
 	;; Change "completion" to "history reference"
 	;; to make the display accurate.
 	(with-output-to-temp-buffer history-buffer
-	  (display-completion-list history)
+	  (display-completion-list history prefix)
 	  (set-buffer history-buffer)
 	  (forward-line 3)
 	  (while (search-backward "completion" nil 'move)

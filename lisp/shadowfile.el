@@ -1,6 +1,7 @@
 ;;; shadowfile.el --- automatic file copying
 
-;; Copyright (C) 1993, 1994, 2001, 2002 Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Boris Goldowsky <boris@gnu.org>
 ;; Keywords: comm files
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -437,7 +438,7 @@ in the cluster."
 		       (sit-for 2))
 		     try-regexp))
 ;	 (username (read-no-blanks-input
-;		    (format "Username [default: %s]: "
+;		    (format "Username (default %s): "
 ;			    (shadow-get-user primary))
 ;		    (if old (or (shadow-cluster-username old) "")
 ;		      (user-login-name))))
@@ -457,7 +458,7 @@ specific hostnames, or names of clusters \(see `shadow-define-cluster')."
 	 (name (nth 2 hup))
 	 user site group)
     (while (setq site (shadow-read-site))
-      (setq user (read-string (format "Username [default %s]: "
+      (setq user (read-string (format "Username (default %s): "
 				      (shadow-get-user site)))
 	    name (read-string "Filename: " name))
       (setq group (cons (shadow-make-fullname site

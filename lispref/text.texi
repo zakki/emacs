@@ -1,8 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999,
-@c 2000, 2001, 2004, 2005
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2000, 2001,
+@c   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/text
 @node Text, Non-ASCII Characters, Markers, Top
@@ -192,12 +191,11 @@ This is the contents of buffer foo
 
 @group
 (buffer-substring 1 10)
-@result{} "This is t"
+     @result{} "This is t"
 @end group
 @group
 (buffer-substring (point-max) 10)
-@result{} "he contents of buffer foo
-"
+     @result{} "he contents of buffer foo\n"
 @end group
 @end example
 @end defun
@@ -258,8 +256,7 @@ This is the contents of buffer foo
 ---------- Buffer: foo ----------
 
 (buffer-string)
-     @result{} "This is the contents of buffer foo
-"
+     @result{} "This is the contents of buffer foo\n"
 @end group
 @end example
 @end defun
@@ -398,8 +395,8 @@ overlay.
 
 @defun insert-char character count &optional inherit
 This function inserts @var{count} instances of @var{character} into the
-current buffer before point.  The argument @var{count} should be a
-number, and @var{character} must be a character.  The value is @code{nil}.
+current buffer before point.  The argument @var{count} should be an
+integer, and @var{character} must be a character.  The value is @code{nil}.
 
 This function does not convert unibyte character codes 128 through 255
 to multibyte characters, not even if the current buffer is a multibyte
@@ -473,6 +470,9 @@ it except to install it on a keymap.
 
 In an interactive call, @var{count} is the numeric prefix argument.
 
+Self-insertion translates the input character through
+@code{translation-table-for-input}.  @xref{Translation of Characters}.
+
 This command calls @code{auto-fill-function} whenever that is
 non-@code{nil} and the character inserted is in the table
 @code{auto-fill-chars} (@pxref{Auto Filling}).
@@ -480,10 +480,9 @@ non-@code{nil} and the character inserted is in the table
 @c Cross refs reworded to prevent overfull hbox.  --rjc 15mar92
 This command performs abbrev expansion if Abbrev mode is enabled and
 the inserted character does not have word-constituent
-syntax. (@xref{Abbrevs}, and @ref{Syntax Class Table}.)
-
-This is also responsible for calling @code{blink-paren-function} when
-the inserted character has close parenthesis syntax (@pxref{Blinking}).
+syntax. (@xref{Abbrevs}, and @ref{Syntax Class Table}.)  It is also
+responsible for calling @code{blink-paren-function} when the inserted
+character has close parenthesis syntax (@pxref{Blinking}).
 
 Do not try substituting your own definition of
 @code{self-insert-command} for the standard one.  The editor command
@@ -1203,8 +1202,8 @@ text in the buffer automatically add elements to the front of the undo
 list, which is in the variable @code{buffer-undo-list}.
 
 @defvar buffer-undo-list
-This variable's value is the undo list of the current buffer.
-A value of @code{t} disables the recording of undo information.
+This buffer-local variable's value is the undo list of the current
+buffer. A value of @code{t} disables the recording of undo information.
 @end defvar
 
 Here are the kinds of elements an undo list can have:
@@ -1244,19 +1243,6 @@ Here's how you might undo the change:
 (put-text-property @var{beg} @var{end} @var{property} @var{value})
 @end example
 
-@item (apply @var{funname} . @var{args})
-This kind of element records a change that can be undone by evaluating
-(@code{apply} @var{funname} @var{args}).
-
-@item (apply @var{delta} @var{beg} @var{end} @var{funname} . @var{args})
-This kind of element records a change that can be undone by evaluating
-(@code{apply} @var{funname} @var{args}).  The integer values @var{beg}
-and @var{end} is buffer positions of the range affected by this change
-and @var{delta} is an integer value which is the number of bytes added
-or deleted in that range by this change.  This kind of element
-enables undo limited to a region to determine whether the element
-pertains to that region.
-
 @item (@var{marker} . @var{adjustment})
 This kind of element records the fact that the marker @var{marker} was
 relocated due to deletion of surrounding text, and that it moved
@@ -1272,6 +1258,9 @@ This is an extensible undo item, which records a change limited to the
 range @var{beg} to @var{end}, which increased the size of the buffer
 by @var{delta}.  It is undone by calling @var{funname} with arguments
 @var{args}.
+
+This kind of element enables undo limited to a region to determine
+whether the element pertains to that region.
 
 @item nil
 This element is a boundary.  The elements between two boundaries are
@@ -1497,10 +1486,10 @@ of justification.  It can be @code{left}, @code{right}, @code{full},
 follow specified justification style (see @code{current-justification},
 below).  @code{nil} means to do full justification.
 
-If @var{eop} is non-@code{nil}, that means do left-justification if
-@code{current-justification} specifies full justification.  This is used
-for the last line of a paragraph; even if the paragraph as a whole is
-fully justified, the last line should not be.
+If @var{eop} is non-@code{nil}, that means do only left-justification
+if @code{current-justification} specifies full justification.  This is
+used for the last line of a paragraph; even if the paragraph as a
+whole is fully justified, the last line should not be.
 
 If @var{nosqueeze} is non-@code{nil}, that means do not change interior
 whitespace.
@@ -1667,8 +1656,12 @@ line won't be broken there.
 @section Adaptive Fill Mode
 @cindex Adaptive Fill mode
 
-  Adaptive Fill mode chooses a fill prefix automatically from the text
-in each paragraph being filled.
+  When @dfn{Adaptive Fill Mode} is enabled, Emacs determines the fill
+prefix automatically from the text in each paragraph being filled
+rather than using a predetermined value.  During filling, this fill
+prefix gets inserted at the start of the second and subsequent lines
+of the paragraph as described in @ref{Filling}, and in @ref{Auto
+Filling}.
 
 @defopt adaptive-fill-mode
 Adaptive Fill mode is enabled when this variable is non-@code{nil}.
@@ -1677,38 +1670,79 @@ It is @code{t} by default.
 
 @defun fill-context-prefix from to
 This function implements the heart of Adaptive Fill mode; it chooses a
-fill prefix based on the text between @var{from} and @var{to}.  It does
-this by looking at the first two lines of the paragraph, based on the
-variables described below.
+fill prefix based on the text between @var{from} and @var{to},
+typically the start and end of a paragraph.  It does this by looking
+at the first two lines of the paragraph, based on the variables
+described below.
 @c The optional argument first-line-regexp is not documented
 @c because it exists for internal purposes and might be eliminated
 @c in the future.
+
+Usually, this function returns the fill prefix, a string.  However,
+before doing this, the function makes a final check (not specially
+mentioned in the following) that a line starting with this prefix
+wouldn't look like the start of a paragraph.  Should this happen, the
+function signals the anomaly by returning @code{nil} instead.
+
+In detail, @code{fill-context-prefix} does this:
+
+@enumerate
+@item
+It takes a candidate for the fill prefix from the first line---it
+tries first the function in @code{adaptive-fill-function} (if any),
+then the regular expression @code{adaptive-fill-regexp} (see below).
+The first non-@code{nil} result of these, or the empty string if
+they're both @code{nil}, becomes the first line's candidate.
+@item
+If the paragraph has as yet only one line, the function tests the
+validity of the prefix candidate just found.  The function then
+returns the candidate if it's valid, or a string of spaces otherwise.
+(see the description of @code{adaptive-fill-first-line-regexp} below).
+@item
+When the paragraph already has two lines, the function next looks for
+a prefix candidate on the second line, in just the same way it did for
+the first line.  If it doesn't find one, it returns @code{nil}.
+@item
+The function now compares the two candidate prefixes heuristically: if
+the non-whitespace characters in the line 2 candidate occur in the
+same order in the line 1 candidate, the function returns the line 2
+candidate.  Otherwise, it returns the largest initial substring which
+is common to both candidates (which might be the empty string).
+@end enumerate
 @end defun
 
 @defopt adaptive-fill-regexp
-This variable holds a regular expression to control Adaptive Fill mode.
 Adaptive Fill mode matches this regular expression against the text
 starting after the left margin whitespace (if any) on a line; the
 characters it matches are that line's candidate for the fill prefix.
+
+@w{@samp{"[ \t]*\\([-|#;>*]+[ \t]*\\|(?[0-9]+[.)][ \t]*\\)*"}} is the
+default value.  This matches a number enclosed in parentheses or
+followed by a period, or certain punctuation characters, or any
+sequence of these intermingled with whitespace.  In particular, it
+matches a sequence of whitespace, possibly empty.
 @end defopt
 
 @defopt adaptive-fill-first-line-regexp
-In a one-line paragraph, if the candidate fill prefix matches this
-regular expression, or if it matches @code{comment-start-skip}, then it
-is used---otherwise, spaces amounting to the same width are used
-instead.
+Used only in one-line paragraphs, this regular expression acts as an
+additional check of the validity of the one available candidate fill
+prefix: the candidate must match this regular expression, or match
+@code{comment-start-skip}.  If it doesn't, @code{fill-context-prefix}
+replaces the candidate with a string of spaces ``of the same width''
+as it.
 
-However, the fill prefix is never taken from a one-line paragraph
-if it would act as a paragraph starter on subsequent lines.
+The default value of this variable is @w{@samp{"\\`[ \t]*\\'"}}, which
+matches only a string of whitespace.  The effect of this default is to
+force the fill prefixes found in one-line paragraphs always to be pure
+whitespace.
 @end defopt
 
 @defopt adaptive-fill-function
 You can specify more complex ways of choosing a fill prefix
 automatically by setting this variable to a function.  The function is
-called when @code{adaptive-fill-regexp} does not match, with point after
-the left margin of a line, and it should return the appropriate fill
-prefix based on that line.  If it returns @code{nil}, that means it sees
-no fill prefix in that line.
+called with point after the left margin (if any) of a line, and it
+must preserve point.  It should return either ``that line's'' fill
+prefix or @code{nil}, meaning it has failed to determine a prefix.
 @end defopt
 
 @node Auto Filling
@@ -1726,8 +1760,8 @@ justify existing text, see @ref{Filling}.
 justification style to refill portions of the text.  @xref{Margins}.
 
 @defvar auto-fill-function
-The value of this variable should be a function (of no arguments) to be
-called after self-inserting a character from the table
+The value of this buffer-local variable should be a function (of no
+arguments) to be called after self-inserting a character from the table
 @code{auto-fill-chars}.  It may be @code{nil}, in which case nothing
 special is done in that case.
 
@@ -1764,7 +1798,7 @@ a buffer.  This is in contrast to the function @code{sort}, which
 rearranges the order of the elements of a list (@pxref{Rearrangement}).
 The values returned by these functions are not meaningful.
 
-@defun sort-subr reverse nextrecfun endrecfun &optional startkeyfun endkeyfun
+@defun sort-subr reverse nextrecfun endrecfun &optional startkeyfun endkeyfun predicate
 This function is the general text-sorting routine that subdivides a
 buffer into records and then sorts them.  Most of the commands in this
 section use this function.
@@ -1817,6 +1851,10 @@ to the end of the sort key.  This argument is optional.  If
 is no need for @var{endkeyfun} if @var{startkeyfun} returns a
 non-@code{nil} value.
 @end enumerate
+
+The argument @var{predicate} is the function to use to compare keys.
+If keys are numbers, it defaults to @code{<}; otherwise it defaults to
+@code{string<}.
 
 As an example of @code{sort-subr}, here is the complete function
 definition for @code{sort-lines}:
@@ -2676,7 +2714,7 @@ list.
 
 @defun remove-list-of-text-properties start end list-of-properties &optional object
 Like @code{remove-text-properties} except that
-@var{list-of-properties} is a list property names only, not an
+@var{list-of-properties} is a list of property names only, not an
 alternating list of property names and values.
 @end defun
 
@@ -2697,6 +2735,8 @@ from the specified range of text.  Here's an example:
 @example
 (set-text-properties @var{start} @var{end} nil)
 @end example
+
+Do not rely on the return value of this function.
 @end defun
 
   The easiest way to make a string with text properties
@@ -2923,7 +2963,8 @@ A cons cell of the form @code{(foreground-color . @var{color-name})} or
 just the foreground color or just the background color.
 
 @code{(foreground-color . @var{color-name})} is equivalent to
-@code{(:foreground @var{color-name})}, and likewise for the background.
+specifying @code{(:foreground @var{color-name})}, and likewise for the
+background.
 @end itemize
 
 You can use Font Lock Mode (@pxref{Font Lock Mode}), to dynamically
@@ -3078,8 +3119,8 @@ that character a non-@code{nil} @var{cursor} text property.
 @item pointer
 @kindex pointer @r{(text property)}
 This specifies a specific pointer shape when the mouse pointer is over
-this text or image.  See the variable @var{void-area-text-pointer}
-for possible pointer shapes.
+this text or image.  @xref{Pointer Shape}, for possible pointer
+shapes.
 
 @item line-spacing
 @kindex line-spacing @r{(text property)}
@@ -3105,6 +3146,10 @@ and end of the part of the buffer being modified.  Note that if a
 particular modification hook function appears on several characters
 being modified by a single primitive, you can't predict how many times
 the function will be called.
+
+If these functions modify the buffer, they should bind
+@code{inhibit-modification-hooks} to @code{t} around doing so, to
+avoid confusing the internal mechanism that calls these hooks.
 
 @item insert-in-front-hooks
 @itemx insert-behind-hooks
@@ -3483,7 +3528,7 @@ buffer.
 graphical applications use @key{Mouse-1} for following links.  For
 compatibility, @key{Mouse-1} follows links in Emacs too, when you
 click on a link quickly without moving the mouse.  The user can
-customize this behaviour through the variable
+customize this behavior through the variable
 @code{mouse-1-click-follows-link}.
 
   To define text as a link at the Lisp level, you should bind the
@@ -3515,9 +3560,9 @@ The action code is always @code{t}.
 
 For example, here is how Info mode handles @key{Mouse-1}:
 
-@example
+@smallexample
 (define-key Info-mode-map [follow-link] 'mouse-face)
-@end example
+@end smallexample
 
 @item a function
 If the condition is a valid function, @var{func}, then a position
@@ -3528,11 +3573,11 @@ action code.
 For example, here is how pcvs enables @key{Mouse-1} to follow links on
 file names only:
 
-@example
+@smallexample
 (define-key map [follow-link]
   (lambda (pos)
-    (if (eq (get-char-property pos 'face) 'cvs-filename-face) t)))
-@end example
+    (eq (get-char-property pos 'face) 'cvs-filename-face)))
+@end smallexample
 
 @item anything else
 If the condition value is anything else, then the position is inside a
@@ -4218,7 +4263,7 @@ arguments.
   Output of messages into the @samp{*Messages*} buffer does not
 call these functions.
 
-@defmac combine-after-change-calls body...
+@defmac combine-after-change-calls body@dots{}
 The macro executes @var{body} normally, but arranges to call the
 after-change functions just once for a series of several changes---if
 that seems safe.

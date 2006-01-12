@@ -1,5 +1,6 @@
 ;;; gnus-sieve.el --- Utilities to manage sieve scripts for Gnus
-;; Copyright (C) 2001, 2003 Free Software Foundation, Inc.
+
+;; Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: NAGY Andras <nagya@inf.elte.hu>,
 ;;	Simon Josefsson <simon@josefsson.org>
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -129,7 +130,7 @@ Return nil if no rule could be guessed."
     (let ((rule (gnus-sieve-guess-rule-for-article))
 	  (info (gnus-get-info gnus-newsgroup-name)))
       (if (null rule)
-	  (error "Could not guess rule for article.")
+	  (error "Could not guess rule for article")
 	(gnus-info-set-params info (cons rule (gnus-info-params info)))
 	(message "Added rule in group %s for article: %s" gnus-newsgroup-name
 		 rule)))))

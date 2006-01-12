@@ -1,9 +1,10 @@
 ;;; idlw-toolbar.el --- a debugging toolbar for IDLWAVE
-;; Copyright (c) 1999, 2000, 2001,2002 Free Software Foundation
+;; Copyright (c) 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation
 
 ;; Author: Carsten Dominik <dominik@astro.uva.nl>
 ;; Maintainer: J.D. Smith <jdsmith@as.arizona.edu>
-;; Version: 5.5
+;; Version: 5.7_22
 ;; Keywords: processes
 
 ;; This file is part of GNU Emacs.
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -43,6 +44,9 @@
     (list 'image :type 'xpm :data image)))
 
 (defvar default-toolbar)
+(defvar idlwave-toolbar)
+(defvar idlwave-toolbar-is-possible)
+
 (if (not (or (and (featurep 'xemacs)                ; This is XEmacs
 		  (featurep 'xpm)                   ; need xpm
 		  (featurep 'toolbar))              ; ... and the toolbar

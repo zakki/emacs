@@ -1,6 +1,6 @@
 /* Window definitions for GNU Emacs.
-   Copyright (C) 1985,86,93,95,97,98,99, 2000,01,03,04
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1993, 1995, 1997, 1998, 1999, 2000, 2001,
+                 2002, 2003, 2004, 2005, 2006 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #ifndef WINDOW_H_INCLUDED
 #define WINDOW_H_INCLUDED
@@ -290,11 +290,6 @@ struct window
        be changed during redisplay.  If point is not in the window,
        accept that.  */
     unsigned frozen_window_start_p : 1;
-
-    /* 1 means that this window's height is temporarily fixed.  Used
-       in resize_mini_window to precent resizing selected_window, if
-       possible.  */
-    unsigned height_fixed_p : 1;
 };
 
 /* 1 if W is a minibuffer window.  */
@@ -870,6 +865,7 @@ extern Lisp_Object Vwindow_list;
 
 EXFUN (Fwindow_end, 2);
 EXFUN (Fselected_window, 0);
+EXFUN (Fwindow_minibuffer_p, 1);
 EXFUN (Fdelete_window, 1);
 EXFUN (Fwindow_buffer, 1);
 EXFUN (Fget_buffer_window, 2);

@@ -1,7 +1,8 @@
 /* Header for coding system handler.
-   Copyright (C) 2004, 2005  Free Software Foundation, Inc.
-   Copyright (C) 1995, 1997 Electrotechnical Laboratory, JAPAN.
-   Licensed to the Free Software Foundation.
+   Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
+   Copyright (C) 1995, 1997, 1998, 2000
+     National Institute of Advanced Industrial Science and Technology (AIST)
+     Registration Number H14PRO021
 
 This file is part of GNU Emacs.
 
@@ -17,8 +18,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #ifndef EMACS_CODING_H
 #define EMACS_CODING_H
@@ -601,7 +602,7 @@ struct coding_system
 
 /* Decode the string STR using the specified coding system
    for system functions, if any.  */
-#define DECODE_SYSTEM(name)						   \
+#define DECODE_SYSTEM(str)						   \
   (! NILP (Vlocale_coding_system)					   \
    && !EQ (Vlocale_coding_system, make_number (0))			   \
    ? code_convert_string_norecord (str, Vlocale_coding_system, 0)	   \
@@ -628,7 +629,7 @@ extern int code_convert_region P_ ((int, int, int, int, struct coding_system *,
 extern Lisp_Object run_pre_post_conversion_on_str P_ ((Lisp_Object,
 						       struct coding_system *,
 						       int));
-extern void run_pre_write_conversin_on_c_str P_ ((unsigned char **, int *, 
+extern void run_pre_write_conversin_on_c_str P_ ((unsigned char **, int *,
 						  int, int,
 						  struct coding_system *));
 
@@ -666,7 +667,7 @@ extern Lisp_Object eol_mnemonic_undecided;
 
 #ifdef emacs
 extern Lisp_Object Qfile_coding_system;
-extern Lisp_Object Qcall_process, Qcall_process_region, Qprocess_argument;
+extern Lisp_Object Qcall_process, Qcall_process_region;
 extern Lisp_Object Qstart_process, Qopen_network_stream;
 extern Lisp_Object Qwrite_region;
 

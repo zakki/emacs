@@ -1,5 +1,7 @@
 ;;; mm-extern.el --- showing message/external-body
-;; Copyright (C) 2000, 2001, 2003 Free Software Foundation, Inc.
+
+;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Shenghuo Zhu <zsh@cs.rochester.edu>
 ;; Keywords: message external-body
@@ -18,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -30,6 +32,8 @@
 (require 'mm-util)
 (require 'mm-decode)
 (require 'mm-url)
+
+(defvar gnus-article-mime-handles)
 
 (defvar mm-extern-function-alist
   '((local-file . mm-extern-local-file)
@@ -52,7 +56,7 @@
     (mm-disable-multibyte)
     (if (file-exists-p name)
 	(mm-insert-file-contents name nil nil nil nil t)
-      (error (format "File %s is gone" name)))))
+      (error "File %s is gone" name))))
 
 (defun mm-extern-url (handle)
   (erase-buffer)
@@ -124,7 +128,7 @@ If NO-DISPLAY is nil, display it. Otherwise, do nothing after replacing."
 	 handles)
     (unless (mm-handle-cache handle)
       (unless func
-	(error (format "Access type (%s) is not supported" access-type)))
+	(error "Access type (%s) is not supported" access-type))
       (with-temp-buffer
 	(mm-insert-part handle)
 	(goto-char (point-max))

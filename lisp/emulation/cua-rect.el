@@ -1,6 +1,7 @@
 ;;; cua-rect.el --- CUA unified rectangle support
 
-;; Copyright (C) 1997-2002, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Kim F. Storm <storm@cua.dk>
 ;; Keywords: keyboard emulations convenience CUA
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Acknowledgements
 
@@ -64,6 +65,7 @@
 ;; List of overlays used to display current rectangle.
 (defvar cua--rectangle-overlays nil)
 (make-variable-buffer-local 'cua--rectangle-overlays)
+(put 'cua--rectangle-overlays 'permanent-local t)
 
 (defvar cua--overlay-keymap
   (let ((map (make-sparse-keymap)))
@@ -755,7 +757,7 @@ If command is repeated at same position, delete the rectangle."
       (sit-for 0)  ; make window top/bottom reliable
       (cua--rectangle-operation nil t nil nil nil ; do not tabify
         '(lambda (s e l r v)
-           (let ((rface (if v 'cua-rectangle-face 'cua-rectangle-noselect-face))
+           (let ((rface (if v 'cua-rectangle 'cua-rectangle-noselect))
                  overlay bs ms as)
 	     (when (cua--rectangle-virtual-edges)
 	       (let ((lb (line-beginning-position))
@@ -780,7 +782,7 @@ If command is repeated at same position, delete the rectangle."
 			       (make-string
 				(- l cl0 (if (and (= le pl) (/= le lb)) 1 0))
 				(if cua--virtual-edges-debug ?. ?\s))
-			       'face 'default))
+			       'face (or (get-text-property (1- s) 'face) 'default)))
 		     (if (/= pl le)
 			 (setq s (1- s))))
 		   (cond
@@ -832,6 +834,7 @@ If command is repeated at same position, delete the rectangle."
 	     (overlay-put overlay 'after-string as)
 	     (overlay-put overlay 'face rface)
 	     (overlay-put overlay 'keymap cua--overlay-keymap)
+	     (overlay-put overlay 'window (selected-window))
 	     (setq new (cons overlay new))))))
     ;; Trim old trailing overlays.
     (mapcar (function delete-overlay) old)
@@ -992,7 +995,7 @@ With prefix argument, the toggle restriction."
 (defun cua-do-rectangle-padding ()
   (interactive)
   (if buffer-read-only
-      (message "Cannot do padding in read-only buffer.")
+      (message "Cannot do padding in read-only buffer")
     (cua--rectangle-operation nil nil t t t)
     (cua--rectangle-set-corners))
   (cua--keep-active))
@@ -1098,14 +1101,14 @@ The length of STRING need not be the same as the rectangle width."
        '(lambda (l r)
           (cua--rectangle-right (max l (+ l (length string) -1)))))))
 
-(defun cua-fill-char-rectangle (ch)
+(defun cua-fill-char-rectangle (character)
   "Replace CUA rectangle contents with CHARACTER."
   (interactive "cFill rectangle with character: ")
   (cua--rectangle-operation 'clear nil t 1 nil
    '(lambda (s e l r)
       (delete-region s e)
       (move-to-column l t)
-      (insert-char ch (- r l)))))
+      (insert-char character (- r l)))))
 
 (defun cua-replace-in-rectangle (regexp newtext)
   "Replace REGEXP with NEWTEXT in each line of CUA rectangle."
@@ -1137,9 +1140,9 @@ The length of STRING need not be the same as the rectangle width."
          (t nil)))))
 
 (defvar cua--rectangle-seq-format "%d"
-  "Last format used by cua-sequence-rectangle.")
+  "Last format used by `cua-sequence-rectangle'.")
 
-(defun cua-sequence-rectangle (first incr fmt)
+(defun cua-sequence-rectangle (first incr format)
   "Resequence each line of CUA rectangle starting from FIRST.
 The numbers are formatted according to the FORMAT string."
   (interactive
@@ -1150,13 +1153,13 @@ The numbers are formatted according to the FORMAT string."
          (string-to-number
           (read-string "Increment: (1) " nil nil "1"))
          (read-string (concat "Format: (" cua--rectangle-seq-format ") "))))
-  (if (= (length fmt) 0)
-      (setq fmt cua--rectangle-seq-format)
-    (setq cua--rectangle-seq-format fmt))
+  (if (= (length format) 0)
+      (setq format cua--rectangle-seq-format)
+    (setq cua--rectangle-seq-format format))
   (cua--rectangle-operation 'clear nil t 1 nil
      '(lambda (s e l r)
          (delete-region s e)
-         (insert (format fmt first))
+         (insert (format format first))
          (setq first (+ first incr)))))
 
 (defmacro cua--convert-rectangle-as (command tabify)
@@ -1239,6 +1242,7 @@ The numbers are formatted according to the FORMAT string."
 	       (setq z (cdr z)))
 	     (if cua--debug
 		 (print (list (current-column) cc) auxbuf))
+	     (just-one-space 0)
              (indent-to cc))))
       (if (> tr 0)
 	  (message "Warning:  Truncated %d row%s" tr (if (> tr 1) "s" "")))
@@ -1355,7 +1359,9 @@ With prefix arg, indent to that column."
 
 (defun cua-help-for-rectangle (&optional help)
   (interactive)
-  (let ((M (if cua-use-hyper-key " H-" " M-")))
+  (let ((M (cond ((eq cua--rectangle-modifier-key 'hyper) " H-")
+		 ((eq cua--rectangle-modifier-key 'super) " s-")
+		 (t " M-"))))
     (message
      (concat (if help "C-?:help" "")
              M "p:pad" M "o:open" M "c:close" M "b:blank"
@@ -1391,7 +1397,12 @@ With prefix arg, indent to that column."
       (if (and mark-active
                (not deactivate-mark))
           (cua--highlight-rectangle)
-        (cua--deactivate-rectangle)))
+        (cua--deactivate-rectangle))
+    (when cua--rectangle-overlays
+      ;; clean-up after revert-buffer
+      (mapcar (function delete-overlay) cua--rectangle-overlays)
+      (setq cua--rectangle-overlays nil)
+      (setq deactivate-mark t)))
   (when cua--rect-undo-set-point
     (goto-char cua--rect-undo-set-point)
     (setq cua--rect-undo-set-point nil)))
@@ -1402,12 +1413,11 @@ With prefix arg, indent to that column."
   (cua--M/H-key cua--rectangle-keymap key cmd))
 
 (defun cua--init-rectangles ()
-  (unless (eq cua-use-hyper-key 'only)
-    (define-key cua--rectangle-keymap [(control return)] 'cua-clear-rectangle-mark)
-    (define-key cua--region-keymap    [(control return)] 'cua-toggle-rectangle-mark))
-  (when cua-use-hyper-key
-    (cua--rect-M/H-key 'space			       'cua-clear-rectangle-mark)
-    (cua--M/H-key cua--region-keymap 'space	       'cua-toggle-rectangle-mark))
+  (define-key cua--rectangle-keymap [(control return)] 'cua-clear-rectangle-mark)
+  (define-key cua--region-keymap    [(control return)] 'cua-toggle-rectangle-mark)
+  (unless (eq cua--rectangle-modifier-key 'meta)
+    (cua--rect-M/H-key ?\s			       'cua-clear-rectangle-mark)
+    (cua--M/H-key cua--region-keymap ?\s	       'cua-toggle-rectangle-mark))
 
   (define-key cua--rectangle-keymap [remap copy-region-as-kill] 'cua-copy-rectangle)
   (define-key cua--rectangle-keymap [remap kill-ring-save]      'cua-copy-rectangle)

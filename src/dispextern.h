@@ -1,6 +1,6 @@
 /* Interface definitions for display code.
-   Copyright (C) 1985,93,94,97,98,99, 2000,01,02,03, 2004, 2005
-     Free Software Foundation, Inc.
+   Copyright (C) 1985, 1993, 1994, 1997, 1998, 1999, 2000, 2001, 2002,
+                 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* New redisplay written by Gerd Moellmann <gerd@gnu.org>.  */
 
@@ -377,7 +377,8 @@ struct glyph
 
 #define FACE_ID_BITS	21
 
-  /* Face of the glyph.  */
+  /* Face of the glyph.  This is a realized face ID,
+     an index in the face cache of the frame.  */
   unsigned face_id : FACE_ID_BITS;
 
   /* Type of font used to display the character glyph.  May be used to
@@ -1192,10 +1193,18 @@ struct glyph_string
      stipple pattern.  */
   unsigned stippled_p : 1;
 
-  /* 1 means only the foreground of this glyph string must be drawn,
-     and we should use the physical height of the line this glyph
-     string appears in as clip rect.  */
-  unsigned for_overlaps_p : 1;
+#define OVERLAPS_PRED		(1 << 0)
+#define OVERLAPS_SUCC		(1 << 1)
+#define OVERLAPS_BOTH		(OVERLAPS_PRED | OVERLAPS_SUCC)
+#define OVERLAPS_ERASED_CURSOR 	(1 << 2)
+  /* Non-zero means only the foreground of this glyph string must be
+     drawn, and we should use the physical height of the line this
+     glyph string appears in as clip rect.  If the value is
+     OVERLAPS_ERASED_CURSOR, the clip rect is restricted to the rect
+     of the erased cursor.  OVERLAPS_PRED and OVERLAPS_SUCC mean we
+     draw overlaps with the preceding and the succeeding rows,
+     respectively.  */
+  unsigned for_overlaps : 3;
 
   /* The GC to use for drawing this glyph string.  */
 #if defined(HAVE_X_WINDOWS) || defined(MAC_OS)
@@ -1608,6 +1617,7 @@ enum face_id
   CURSOR_FACE_ID,
   MOUSE_FACE_ID,
   MENU_FACE_ID,
+  VERTICAL_BORDER_FACE_ID,
   BASIC_FACE_ID_SENTINEL
 };
 
@@ -1993,6 +2003,10 @@ struct it
   /* 1 means overlay strings at end_charpos have been processed.  */
   unsigned overlay_strings_at_end_processed_p : 1;
 
+  /* 1 means to ignore overlay strings at current pos, as they have
+     already been processed.  */
+  unsigned ignore_overlay_strings_at_pos_p : 1;
+
   /* 1 means the actual glyph is not available in the current
      system.  */
   unsigned glyph_not_available_p : 1;
@@ -2288,7 +2302,7 @@ struct redisplay_interface
      This function is called from redraw_overlapping_rows after
      desired rows have been made current.  */
   void (*fix_overlapping_area) P_ ((struct window *w, struct glyph_row *row,
-				    enum glyph_row_area area));
+				    enum glyph_row_area area, int));
 
 #ifdef HAVE_WINDOW_SYSTEM
 
@@ -2617,7 +2631,7 @@ int line_bottom_y P_ ((struct it *));
 int display_prop_intangible_p P_ ((Lisp_Object));
 void resize_echo_area_exactly P_ ((void));
 int resize_mini_window P_ ((struct window *, int));
-int try_window P_ ((Lisp_Object, struct text_pos));
+int try_window P_ ((Lisp_Object, struct text_pos, int));
 void window_box P_ ((struct window *, int, int *, int *, int *, int *));
 int window_box_height P_ ((struct window *));
 int window_text_bottom_y P_ ((struct window *));
@@ -2631,6 +2645,8 @@ int estimate_mode_line_height P_ ((struct frame *, enum face_id));
 void pixel_to_glyph_coords P_ ((struct frame *, int, int, int *, int *,
 				NativeRectangle *, int));
 int glyph_to_pixel_coords P_ ((struct window *, int, int, int *, int *));
+void remember_mouse_glyph P_ ((struct frame *, int, int, NativeRectangle *));
+
 void mark_window_display_accurate P_ ((Lisp_Object, int));
 void redisplay_preserve_echo_area P_ ((int));
 void set_cursor_from_row P_ ((struct window *, struct glyph_row *,
@@ -2688,7 +2704,7 @@ extern int x_stretch_cursor_p;
 extern struct cursor_pos output_cursor;
 
 extern void x_fix_overlapping_area P_ ((struct window *, struct glyph_row *,
-					enum glyph_row_area));
+					enum glyph_row_area, int));
 extern void draw_phys_cursor_glyph P_ ((struct window *,
 					  struct glyph_row *,
 					  enum draw_glyphs_face));
@@ -2706,6 +2722,8 @@ extern void x_clear_cursor P_ ((struct window *));
 extern void x_draw_vertical_border P_ ((struct window *w));
 
 extern void frame_to_window_pixel_xy P_ ((struct window *, int *, int *));
+extern int get_glyph_string_clip_rects P_ ((struct glyph_string *,
+					    NativeRectangle *, int));
 extern void get_glyph_string_clip_rect P_ ((struct glyph_string *,
 					    NativeRectangle *nr));
 extern Lisp_Object find_hot_spot P_ ((Lisp_Object, int, int));
@@ -2819,6 +2837,7 @@ int merge_faces P_ ((struct frame *, Lisp_Object, int, int));
 int compute_char_face P_ ((struct frame *, int, Lisp_Object));
 void free_all_realized_faces P_ ((Lisp_Object));
 extern Lisp_Object Qforeground_color, Qbackground_color;
+extern Lisp_Object Qframe_set_background_mode;
 extern char unspecified_fg[], unspecified_bg[];
 void free_realized_multibyte_face P_ ((struct frame *, int));
 
@@ -2938,6 +2957,7 @@ Lisp_Object sit_for P_ ((int, int, int, int, int));
 void init_display P_ ((void));
 void syms_of_display P_ ((void));
 extern Lisp_Object Qredisplay_dont_pause;
+GLYPH spec_glyph_lookup_face P_ ((struct window *, GLYPH));
 
 /* Defined in term.c */
 
@@ -2962,7 +2982,6 @@ extern void calculate_costs P_ ((struct frame *));
 extern void set_tty_color_mode P_ ((struct frame *, Lisp_Object));
 extern void tty_setup_colors P_ ((int));
 extern void term_init P_ ((char *));
-extern void fatal P_ ((/* char *, ... */));
 void cursor_to P_ ((int, int));
 extern int tty_capable_p P_ ((struct frame *, unsigned, unsigned long, unsigned long));
 

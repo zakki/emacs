@@ -1,8 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999,
-@c 2000, 2003, 2004
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2000, 2002,
+@c   2003, 2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/variables
 @node Variables, Functions, Control Structures, Top
@@ -569,7 +568,7 @@ though being declared using @code{defcustom}@footnote{They may also be
 declared equivalently in @file{cus-start.el}.} or by the first character
 of their @code{variable-documentation} property.  If the property exists
 and is a string, and its first character is @samp{*}, then the variable
-is a user option.
+is a user option.  Aliases of user options are also user options.
 @end defun
 
 @kindex variable-interactive
@@ -901,6 +900,62 @@ foo                       ;; @r{@code{foo} was changed.}
 @example
 (or (member @var{value} @var{var})
     (setq @var{var} (cons @var{value} @var{var})))
+@end example
+
+@defun add-to-ordered-list symbol element &optional order
+This function sets the variable @var{symbol} by inserting
+@var{element} into the old value, which must be a list, at the
+position specified by @var{order}.  If @var{element} is already a
+member of the list, its position in the list is adjusted according
+to @var{order}.  Membership is tested using @code{eq}.
+This function returns the resulting list, whether updated or not.
+
+The @var{order} is typically a number (integer or float), and the
+elements of the list are sorted in non-decreasing numerical order.
+
+@var{order} may also be omitted or @code{nil}.  Then the numeric order
+of @var{element} stays unchanged if it already has one; otherwise,
+@var{element} has no numeric order.  Elements without a numeric list
+order are placed at the end of the list, in no particular order.
+
+Any other value for @var{order} removes the numeric order of @var{element}
+if it already has one; otherwise, it is equivalent to @code{nil}.
+
+The argument @var{symbol} is not implicitly quoted;
+@code{add-to-ordered-list} is an ordinary function, like @code{set}
+and unlike @code{setq}.  Quote the argument yourself if that is what
+you want.
+
+The ordering information is stored in a hash table on @var{symbol}'s
+@code{list-order} property.
+@end defun
+
+Here's a scenario showing how to use @code{add-to-ordered-list}:
+
+@example
+(setq foo '())
+     @result{} nil
+
+(add-to-ordered-list 'foo 'a 1)     ;; @r{Add @code{a}.}
+     @result{} (a)
+
+(add-to-ordered-list 'foo 'c 3)     ;; @r{Add @code{c}.}
+     @result{} (a c)
+
+(add-to-ordered-list 'foo 'b 2)     ;; @r{Add @code{b}.}
+     @result{} (a b c)
+
+(add-to-ordered-list 'foo 'b 4)     ;; @r{Move @code{b}.}
+     @result{} (a c b)
+
+(add-to-ordered-list 'foo 'd)       ;; @r{Append @code{d}.}
+     @result{} (a c b d)
+
+(add-to-ordered-list 'foo 'e)       ;; @r{Add @code{e}}.
+     @result{} (a c b e d)
+
+foo                       ;; @r{@code{foo} was changed.}
+     @result{} (a c b e d)
 @end example
 
 @node Variable Scoping
@@ -1589,8 +1644,7 @@ already has a default value, that value remains unchanged.
 If the variable is terminal-local, this function signals an error,
 because such variables cannot have frame-local bindings as well.
 @xref{Multiple Displays}.  A few variables that are implemented
-specially in Emacs can be (and usually are) buffer-local, but can never
-be frame-local.
+specially in Emacs can be buffer-local, but can never be frame-local.
 
 This command returns @var{variable}.
 @end deffn
@@ -1722,24 +1776,24 @@ be called later, or an expression that would be executed later, simply
 visiting a file could take over your Emacs.  To prevent this, Emacs
 takes care not to allow to set such file local variables.
 
-  For one thing, any variable whose name ends in @samp{-command},
-@samp{-frame-alist}, @samp{-function}, @samp{-functions},
-@samp{-hook}, @samp{-hooks}, @samp{-form}, @samp{-forms}, @samp{-map},
-@samp{-map-alist}, @samp{-mode-alist}, @samp{-program}, or
-@samp{-predicate} cannot be given a file local value.  In general,
-you should use such a name whenever it is appropriate for the
-variable's meaning.  The variables @samp{font-lock-keywords},
-@samp{font-lock-keywords-[0-9]}, and
-@samp{font-lock-syntactic-keywords} cannot be given file local values either.
-These rules can be overridden by giving the variable's
-name a non-@code{nil} @code{safe-local-variable} property.  If one
-gives it a @code{safe-local-variable} property of @code{t}, then one
-can give the variable any file local value.  One can also give any
-symbol, including the above, a @code{safe-local-variable} property
-that is a function taking exactly one argument.  In that case, giving
-a variable with that name a file local value is only allowed if the
-function returns non-@code{nil} when called with that value as
-argument.
+  For one thing, any variable whose name ends in any of
+@samp{-command}, @samp{-frame-alist}, @samp{-function},
+@samp{-functions}, @samp{-hook}, @samp{-hooks}, @samp{-form},
+@samp{-forms}, @samp{-map}, @samp{-map-alist}, @samp{-mode-alist},
+@samp{-program}, or @samp{-predicate} cannot be given a file local
+value.  In general, you should use such a name whenever it is
+appropriate for the variable's meaning.  The variables
+@samp{font-lock-keywords}, @samp{font-lock-keywords} followed by a
+digit, and @samp{font-lock-syntactic-keywords} cannot be given file
+local values either.  These rules can be overridden by giving the
+variable's name a non-@code{nil} @code{safe-local-variable} property.
+If one gives it a @code{safe-local-variable} property of @code{t},
+then one can give the variable any file local value.  One can also
+give any symbol, including the above, a @code{safe-local-variable}
+property that is a function taking exactly one argument.  In that
+case, giving a variable with that name a file local value is only
+allowed if the function returns non-@code{nil} when called with that
+value as argument.
 
   In addition, any variable whose name has a non-@code{nil}
 @code{risky-local-variable} property is also ignored.  So are all
@@ -1785,19 +1839,19 @@ chosen, or because its meaning has partly changed---it can be useful
 to keep the old name as an @emph{alias} of the new one for
 compatibility.  You can do this with @code{defvaralias}.
 
-@defun defvaralias alias-var base-var &optional docstring
-This function defines the symbol @var{alias-var} as a variable alias
-for symbol @var{base-var}. This means that retrieving the value of
-@var{alias-var} returns the value of @var{base-var}, and changing the
-value of @var{alias-var} changes the value of @var{base-var}.
+@defun defvaralias new-alias base-variable &optional docstring
+This function defines the symbol @var{new-alias} as a variable alias
+for symbol @var{base-variable}. This means that retrieving the value of
+@var{new-alias} returns the value of @var{base-variable}, and changing the
+value of @var{new-alias} changes the value of @var{base-variable}.
 
 If the @var{docstring} argument is non-@code{nil}, it specifies the
-documentation for @var{alias-var}; otherwise, the alias gets the same
-documentation as @var{base-var} has, if any, unless @var{base-var} is
-itself an alias, in which case @var{alias-var} gets the documentation
-of the variable at the end of the chain of aliases.
+documentation for @var{new-alias}; otherwise, the alias gets the same
+documentation as @var{base-variable} has, if any, unless
+@var{base-variable} is itself an alias, in which case @var{new-alias} gets
+the documentation of the variable at the end of the chain of aliases.
 
-This function returns @var{base-var}.
+This function returns @var{base-variable}.
 @end defun
 
   Variable aliases are convenient for replacing an old name for a
@@ -1805,12 +1859,12 @@ variable with a new name.  @code{make-obsolete-variable} declares that
 the old name is obsolete and therefore that it may be removed at some
 stage in the future.
 
-@defun make-obsolete-variable variable new &optional when
+@defun make-obsolete-variable obsolete-name current-name &optional when
 This function makes the byte-compiler warn that the variable
-@var{variable} is obsolete.  If @var{new} is a symbol, it is the
-variable's new name; then the warning message says to use @var{new}
-instead of @var{variable}.  If @var{new} is a string, this is the
-message and there is no replacement variable.
+@var{obsolete-name} is obsolete.  If @var{current-name} is a symbol, it is
+the variable's new name; then the warning message says to use
+@var{current-name} instead of @var{obsolete-name}.  If @var{current-name}
+is a string, this is the message and there is no replacement variable.
 
 If provided, @var{when} should be a string indicating when the
 variable was first made obsolete---for example, a date or a release
@@ -1820,20 +1874,14 @@ number.
   You can make two variables synonyms and declare one obsolete at the
 same time using the macro @code{define-obsolete-variable-alias}.
 
-@defmac define-obsolete-variable-alias variable new &optional when docstring
-This macro marks the variable @var{variable} as obsolete and also
-makes it an alias for the variable @var{new}.  A typical call has the form:
+@defmac define-obsolete-variable-alias obsolete-name current-name &optional when docstring
+This macro marks the variable @var{obsolete-name} as obsolete and also
+makes it an alias for the variable @var{current-name}.  It is
+equivalent to the following:
 
 @example
-(define-obsolete-variable-alias 'old-var 'new-var "22.1" "Doc.")
-@end example
-
-@noindent
-which is equivalent to the following two lines of code:
-
-@example
-(defvaralias 'oldvar 'newvar "Doc.")
-(make-obsolete-variable 'old-var 'new-var "22.1")
+(defvaralias @var{obsolete-name} @var{current-name} @var{docstring})
+(make-obsolete-variable @var{obsolete-name} @var{current-name} @var{when})
 @end example
 @end defmac
 

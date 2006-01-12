@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -32,6 +32,9 @@
 (eval-when-compile
   (defvar dos-codepage)
   (autoload 'widget-value "wid-edit"))
+
+(defvar mac-system-coding-system)
+(defvar mac-system-locale)
 
 ;;; MULE related key bindings and menus.
 
@@ -275,7 +278,7 @@ wrong, use this command again to toggle back to the right mode."
 		       buffer-file-coding-system)))
      (list (read-coding-system
 	    (if default
-		(format "Coding system for following command (default, %s): " default)
+		(format "Coding system for following command (default %s): " default)
 	      "Coding system for following command: ")
 	    default))))
   (let* ((keyseq (read-key-sequence
@@ -321,9 +324,11 @@ This sets the following coding systems:
   o coding system of a newly created buffer
   o default coding system for subprocess I/O
 This also sets the following values:
-  o default value used as `file-name-coding-system' for converting file names.
+  o default value used as `file-name-coding-system' for converting file names
+      if CODING-SYSTEM is ASCII-compatible.
   o default value for the command `set-terminal-coding-system' (not on MSDOS)
-  o default value for the command `set-keyboard-coding-system'."
+  o default value for the command `set-keyboard-coding-system'
+      if CODING-SYSTEM is ASCII-compatible.."
   (check-coding-system coding-system)
   (setq-default buffer-file-coding-system coding-system)
   (if (fboundp 'ucs-set-table-for-input)
@@ -331,14 +336,18 @@ This also sets the following values:
 	(or (local-variable-p 'buffer-file-coding-system buffer)
 	    (ucs-set-table-for-input buffer))))
 
-  (if (and default-enable-multibyte-characters (not (eq system-type 'darwin)))
+  (if (and default-enable-multibyte-characters (not (eq system-type 'darwin))
+	   (or (not coding-system)
+	       (not (coding-system-get coding-system 'ascii-incompatible))))
       ;; The file-name coding system on Darwin systems is always utf-8.
       (setq default-file-name-coding-system coding-system))
   ;; If coding-system is nil, honor that on MS-DOS as well, so
   ;; that they could reset the terminal coding system.
   (unless (and (eq window-system 'pc) coding-system)
     (setq default-terminal-coding-system coding-system))
-  (setq default-keyboard-coding-system coding-system)
+  (if (or (not coding-system)
+	  (not (coding-system-get coding-system 'ascii-incompatible)))
+      (setq default-keyboard-coding-system coding-system))
   ;; Preserve eol-type from existing default-process-coding-systems.
   ;; On non-unix-like systems in particular, these may have been set
   ;; carefully by the user, or by the startup code, to deal with the
@@ -607,7 +616,7 @@ or nil if all characters are encodable."
   (interactive
    (list (let ((default (or buffer-file-coding-system 'us-ascii)))
 	   (read-coding-system
-	    (format "Coding-system (default, %s): " default)
+	    (format "Coding-system (default %s): " default)
 	    default))))
   (let ((pos (unencodable-char-position (point) (point-max) coding-system)))
     (if pos
@@ -624,7 +633,7 @@ then call `write-region', then afterward this variable will be non-nil
 only if the user was explicitly asked and specified a coding system.")
 
 (defvar select-safe-coding-system-accept-default-p nil
-  "If non-nil, a function to control the behaviour of coding system selection.
+  "If non-nil, a function to control the behavior of coding system selection.
 The meaning is the same as the argument ACCEPT-DEFAULT-P of the
 function `select-safe-coding-system' (which see).  This variable
 overrides that argument.")
@@ -814,7 +823,7 @@ returned without any user interaction.  See also the command
 `prefer-coding-system'.
 
 However, the user is queried if the chosen coding system is
-inconsistent with what would be selected by `set-auto-coding' from
+inconsistent with what would be selected by `find-auto-coding' from
 coding cookies &c. if the contents of the region were read from a
 file.  (That could lead to data corruption in a file subsequently
 re-visited and edited.)
@@ -844,7 +853,33 @@ and TO is ignored."
 	   (not (listp default-coding-system)))
       (setq default-coding-system (list default-coding-system)))
 
-  (let ((no-other-defaults nil))
+  (let ((no-other-defaults nil)
+	auto-cs)
+    (unless (or (stringp from) find-file-literally)    
+      ;; Find an auto-coding that is specified for the the current
+      ;; buffer and file from the region FROM and TO.
+      (save-excursion
+	(save-restriction
+	  (widen)
+	  (goto-char from)
+	  (setq auto-cs (find-auto-coding (or file buffer-file-name "")
+					  (- to from)))
+	  (if auto-cs
+	      (if (coding-system-p (car auto-cs))
+		  (setq auto-cs (car auto-cs))
+		(display-warning
+		 :warning
+		 (format "\
+Invalid coding system `%s' is specified
+for the current buffer/file by the %s.
+It is highly recommended to fix it before writing to a file."
+			 (car auto-cs)
+			 (if (eq (cdr auto-cs) :coding) ":coding tag"
+			   (format "variable `%s'" (cdr auto-cs)))))
+		(or (yes-or-no-p "Really proceed with writing? ")
+		    (error "Save aborted"))
+		(setq auto-cs nil))))))
+
     (if (eq (car default-coding-system) t)
 	(setq no-other-defaults t
 	      default-coding-system (cdr default-coding-system)))
@@ -853,6 +888,15 @@ and TO is ignored."
     (setq default-coding-system
 	  (mapcar (function (lambda (x) (cons x (coding-system-base x))))
 		  default-coding-system))
+
+    (if (and auto-cs (not no-other-defaults))
+	;; If the file has a coding cookie, try to use it before anything
+	;; else (i.e. before default-coding-system which will typically come
+	;; from file-coding-system-alist).
+	(let ((base (coding-system-base auto-cs)))
+	  (or (memq base '(nil undecided))
+	      (rassq base default-coding-system)
+	      (push (cons auto-cs base) default-coding-system))))
 
     ;; From now on, the list of defaults is reversed.
     (setq default-coding-system (nreverse default-coding-system))
@@ -887,56 +931,49 @@ and TO is ignored."
 	     (coding-system-get preferred 'mime-charset)
 	     (not (rassq base default-coding-system))
 	     (push (cons preferred base)
-		   default-coding-system)))))
+		   default-coding-system))))
 
-  (if select-safe-coding-system-accept-default-p
-      (setq accept-default-p select-safe-coding-system-accept-default-p))
+    (if select-safe-coding-system-accept-default-p
+	(setq accept-default-p select-safe-coding-system-accept-default-p))
 
-  (let ((codings (find-coding-systems-region from to))
-	(coding-system nil)
-	safe rejected unsafe)
-    (if (eq (car codings) 'undecided)
-	;; Any coding system is ok.
-	(setq coding-system t)
-      ;; Classify the defaults into safe, rejected, and unsafe.
-      (dolist (elt default-coding-system)
-	(if (memq (cdr elt) codings)
-	    (if (and (functionp accept-default-p)
-		     (not (funcall accept-default-p (cdr elt))))
-		(push (car elt) rejected)
-	      (push (car elt) safe))
-	  (push (car elt) unsafe)))
-      (if safe
-	  (setq coding-system (car safe))))
+    (let ((codings (find-coding-systems-region from to))
+	  (coding-system nil)
+	  safe rejected unsafe)
+      (if (eq (car codings) 'undecided)
+	  ;; Any coding system is ok.
+	  (setq coding-system t)
+	;; Classify the defaults into safe, rejected, and unsafe.
+	(dolist (elt default-coding-system)
+	  (if (memq (cdr elt) codings)
+	      (if (and (functionp accept-default-p)
+		       (not (funcall accept-default-p (cdr elt))))
+		  (push (car elt) rejected)
+		(push (car elt) safe))
+	    (push (car elt) unsafe)))
+	(if safe
+	    (setq coding-system (car safe))))
 
-    ;; If all the defaults failed, ask a user.
-    (when (not coding-system)
-      (setq coding-system (select-safe-coding-system-interactively
-			   from to codings unsafe rejected (car codings))))
+      ;; If all the defaults failed, ask a user.
+      (when (not coding-system)
+	(setq coding-system (select-safe-coding-system-interactively
+			     from to codings unsafe rejected (car codings))))
 
-    (if (vectorp (coding-system-eol-type coding-system))
-	(let ((eol (coding-system-eol-type buffer-file-coding-system)))
-	  (if (numberp eol)
-	      (setq coding-system
-		    (coding-system-change-eol-conversion coding-system eol)))))
+      (if (vectorp (coding-system-eol-type coding-system))
+	  (let ((eol (coding-system-eol-type buffer-file-coding-system)))
+	    (if (numberp eol)
+		(setq coding-system
+		      (coding-system-change-eol-conversion coding-system eol)))))
 
-    (if (eq coding-system t)
-	(setq coding-system buffer-file-coding-system))
-    ;; Check we're not inconsistent with what `coding:' spec &c would
-    ;; give when file is re-read.
-    ;; But don't do this if we explicitly ignored the cookie
-    ;; by using `find-file-literally'.
-    (unless (or (stringp from)
-		find-file-literally
-		(and coding-system
-		     (memq (coding-system-type coding-system) '(0 5))))
-      (let ((auto-cs (save-excursion
-		       (save-restriction
-			 (widen)
-			 (narrow-to-region from to)
-			 (goto-char (point-min))
-			 (set-auto-coding (or file buffer-file-name "")
-					  (buffer-size))))))
+      (if (eq coding-system t)
+	  (setq coding-system buffer-file-coding-system))
+      ;; Check we're not inconsistent with what `coding:' spec &c would
+      ;; give when file is re-read.
+      ;; But don't do this if we explicitly ignored the cookie
+      ;; by using `find-file-literally'.
+      (when (and auto-cs
+		 (not (and
+		       coding-system
+		       (memq (coding-system-type coding-system) '(0 5)))))
 	;; Merge coding-system and auto-cs as far as possible.
 	(if (not coding-system)
 	    (setq coding-system auto-cs)
@@ -968,8 +1005,8 @@ and TO is ignored."
 		     (format "Selected encoding %s disagrees with \
 %s specified by file contents.  Really save (else edit coding cookies \
 and try again)? " coding-system auto-cs))
-	      (error "Save aborted")))))
-    coding-system))
+	      (error "Save aborted"))))
+      coding-system)))
 
 (setq select-safe-coding-system-function 'select-safe-coding-system)
 
@@ -993,10 +1030,19 @@ it asks the user to select a proper coding system."
 	;; We should never use no-conversion for outgoing mail.
 	(setq coding nil))
     (if (fboundp select-safe-coding-system-function)
-	(funcall select-safe-coding-system-function
-		 (point-min) (point-max) coding
-		 (function (lambda (x) (coding-system-get x 'mime-charset))))
-      coding)))
+	(setq coding
+	      (funcall select-safe-coding-system-function
+		       (point-min) (point-max) coding
+		       (function (lambda (x)
+				   (coding-system-get x 'mime-charset))))))
+    (if coding
+	;; Be sure to use LF for end-of-line.
+	(setq coding (coding-system-change-eol-conversion coding 'unix))
+      ;; No coding system is decided.  Usually this is the case that
+      ;; the current buffer contains only ASCII.  So, we hope
+      ;; iso-8859-1 works.
+      (setq coding 'iso-8859-1-unix))
+    coding))
 
 ;;; Language support stuff.
 
@@ -1080,6 +1126,13 @@ For a list of useful values for KEY and their meanings,
 see `language-info-alist'."
   (if (symbolp lang-env)
       (setq lang-env (symbol-name lang-env)))
+  (set-language-info-internal lang-env key info)
+  (if (equal lang-env current-language-environment)
+      (set-language-environment lang-env)))
+
+(defun set-language-info-internal (lang-env key info)
+  "Internal use only.
+Arguments are the same as `set-language-info'."
   (let (lang-slot key-slot)
     (setq lang-slot (assoc lang-env language-info-alist))
     (if (null lang-slot)		; If no slot for the language, add it.
@@ -1150,9 +1203,11 @@ in the European submenu in each of those two menus."
     (define-key-after setup-map (vector (intern lang-env))
       (cons lang-env 'setup-specified-language-environment) t)
 
-    (while alist
-      (set-language-info lang-env (car (car alist)) (cdr (car alist)))
-      (setq alist (cdr alist)))))
+    (dolist (elt alist)
+      (set-language-info-internal lang-env (car elt) (cdr elt)))
+    
+    (if (equal lang-env current-language-environment)
+	(set-language-environment lang-env))))
 
 (defun read-language-name (key prompt &optional default)
   "Read a language environment name which has information for KEY.
@@ -1444,7 +1499,7 @@ which marks the variable `default-input-method' as set for Custom buffers."
   "Describe input method INPUT-METHOD."
   (interactive
    (list (read-input-method-name
-	  "Describe input method (default, current choice): ")))
+	  "Describe input method (default current choice): ")))
   (if (and input-method (symbolp input-method))
       (setq input-method (symbol-name input-method)))
   (help-setup-xref (list #'describe-input-method
@@ -1569,7 +1624,7 @@ at point in the current buffer.
 But, if this flag is non-nil, it displays them in echo area instead.")
 
 (defvar input-method-exit-on-invalid-key nil
-  "This flag controls the behaviour of an input method on invalid key input.
+  "This flag controls the behavior of an input method on invalid key input.
 Usually, when a user types a key which doesn't start any character
 handled by the input method, the key is handled by turning off the
 input method temporarily.  After that key, the input method is re-enabled.
@@ -1743,7 +1798,9 @@ The default status is as follows:
 (defun set-display-table-and-terminal-coding-system (language-name &optional coding-system)
   "Set up the display table and terminal coding system for LANGUAGE-NAME."
   (let ((coding (get-language-info language-name 'unibyte-display)))
-    (if coding
+    (if (and coding
+	     (or (not coding-system)
+		 (coding-system-equal coding coding-system)))
 	(standard-display-european-internal)
       ;; The following 2 lines undo the 8-bit display that we set up
       ;; in standard-display-european-internal, which see.  This is in
@@ -1764,7 +1821,7 @@ which is the name of a language environment.  For example, \"Latin-1\"
 specifies the character set for the major languages of Western Europe."
   (interactive (list (read-language-name
 		      nil
-		      "Set language environment (default, English): ")))
+		      "Set language environment (default English): ")))
   (if language-name
       (if (symbolp language-name)
 	  (setq language-name (symbol-name language-name)))
@@ -1821,16 +1878,18 @@ specifies the character set for the major languages of Western Europe."
 	    (load syntax nil t))
 	;; No information for syntax and case.  Reset to the defaults.
 	(let ((syntax-table (standard-syntax-table))
-	      (case-table (standard-case-table))
+	      (standard-table (standard-case-table))
+	      (case-table (make-char-table 'case-table))
 	      (ch (if (eq window-system 'pc) 128 160)))
 	  (while (< ch 256)
 	    (modify-syntax-entry ch " " syntax-table)
-	    (aset case-table ch ch)
 	    (setq ch (1+ ch)))
+	  (dotimes (i 128)
+	    (aset case-table i (aref standard-table i)))
 	  (set-char-table-extra-slot case-table 0 nil)
 	  (set-char-table-extra-slot case-table 1 nil)
-	  (set-char-table-extra-slot case-table 2 nil))
-	(set-standard-case-table (standard-case-table))
+	  (set-char-table-extra-slot case-table 2 nil)
+	  (set-standard-case-table case-table))
 	(let ((list (buffer-list)))
 	  (while list
 	    (with-current-buffer (car list)
@@ -1846,7 +1905,7 @@ specifies the character set for the major languages of Western Europe."
   ;; Don't invoke fontset-related functions if fontsets aren't
   ;; supported in this build of Emacs.
   (when (fboundp 'fontset-list)
-    (let ((overriding-fontspec (get-language-info language-name 
+    (let ((overriding-fontspec (get-language-info language-name
 						  'overriding-fontspec)))
       (if overriding-fontspec
 	  (set-overriding-fontspec-internal overriding-fontspec))))
@@ -1855,7 +1914,6 @@ specifies the character set for the major languages of Western Europe."
     (if (functionp func)
 	(funcall func)))
   (if (and utf-translate-cjk-mode
-	   utf-translate-cjk-lang-env
 	   (not (eq utf-translate-cjk-lang-env language-name))
 	   (catch 'tag
 	     (dolist (charset (get-language-info language-name 'charset))
@@ -1941,7 +1999,7 @@ of `buffer-file-coding-system' set by this function."
   (interactive
    (list (read-language-name
 	  'documentation
-	  "Describe language environment (default, current choice): ")))
+	  "Describe language environment (default current choice): ")))
   (if (null language-name)
       (setq language-name current-language-environment))
   (if (or (null language-name)
@@ -1969,7 +2027,7 @@ of `buffer-file-coding-system' set by this function."
 	      (l (copy-sequence input-method-alist)))
 	  (insert "Input methods")
 	  (when input-method
-	    (insert " (default, " input-method ")")
+	    (insert " (default " input-method ")")
 	    (setq input-method (assoc input-method input-method-alist))
 	    (setq l (cons input-method (delete input-method l))))
 	  (insert ":\n")
@@ -2082,7 +2140,7 @@ of `buffer-file-coding-system' set by this function."
     ;; That's actually what the GNU locales define, modulo things like
     ;; en_IN -- fx.
     ("en_IN" "English" utf-8) ; glibc uses utf-8 for English in India
-    ("en" . "Latin-1") ; English
+    ("en" "English" iso-8859-1) ; English
     ("eo" . "Latin-3") ; Esperanto
     ("es" "Spanish" iso-8859-1)
     ("et" . "Latin-1") ; Estonian
@@ -2399,12 +2457,15 @@ See also `locale-charset-language-names', `locale-language-names',
 		    (= 0 (length locale))) ; nil or empty string
 	  (setq locale (getenv (pop vars))))))
 
-    (unless (or locale (not (fboundp 'mac-get-preference)))
-      (setq locale (mac-get-preference "AppleLocale"))
-      (unless locale
-	(let ((languages (mac-get-preference "AppleLanguages")))
-	  (unless (= (length languages) 0) ; nil or empty vector
-	    (setq locale (aref languages 0))))))
+    (unless locale
+      ;; The two tests are kept separate so the byte-compiler sees
+      ;; that mac-get-preference is only called after checking its existence.
+      (when (fboundp 'mac-get-preference)
+        (setq locale (mac-get-preference "AppleLocale"))
+        (unless locale
+          (let ((languages (mac-get-preference "AppleLanguages")))
+            (unless (= (length languages) 0) ; nil or empty vector
+              (setq locale (aref languages 0)))))))
     (unless (or locale (not (boundp 'mac-system-locale)))
       (setq locale mac-system-locale))
 
@@ -2597,8 +2658,8 @@ It can be retrieved with `(get-char-code-property CHAR PROPNAME)'."
    (if (and coding-system (eq (coding-system-type coding-system) 2))
        ;; Try to get a pretty description for ISO 2022 escape sequences.
        (function (lambda (x) (or (cdr (assq x iso-2022-control-alist))
-				 (format "0x%02X" x))))
-     (function (lambda (x) (format "0x%02X" x))))
+				 (format "#x%02X" x))))
+     (function (lambda (x) (format "#x%02X" x))))
    str " "))
 
 (defun encode-coding-char (char coding-system)

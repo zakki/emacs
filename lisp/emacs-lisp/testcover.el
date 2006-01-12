@@ -1,6 +1,6 @@
 ;;;; testcover.el -- Visual code-coverage tool
 
-;; Copyright (C) 2002 Free Software Foundation, Inc.
+;; Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Jonathan Yavner <jyavner@member.fsf.org>
 ;; Maintainer: Jonathan Yavner <jyavner@member.fsf.org>
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 
 ;;; Commentary:
@@ -73,7 +73,7 @@
 ;;;==========================================================================
 
 (defgroup testcover nil
-  "Code-coverage tester"
+  "Code-coverage tester."
   :group 'lisp
   :prefix "testcover-"
   :version "21.1")
@@ -150,12 +150,12 @@ call to one of the `testcover-1value-functions'."
 1-valued, no error if actually multi-valued."
   :group 'testcover)
 
-(defface testcover-nohits-face
+(defface testcover-nohits
   '((t (:background "DeepPink2")))
   "Face for forms that had no hits during coverage test"
   :group 'testcover)
 
-(defface testcover-1value-face
+(defface testcover-1value
   '((t (:background "Wheat2")))
   "Face for forms that always produced the same value during coverage test"
   :group 'testcover)
@@ -477,8 +477,8 @@ same value during coverage testing."
 (defun testcover-mark (def)
   "Marks one DEF (a function or macro symbol) to highlight its contained forms
 that did not get completely tested during coverage tests.
-  A marking of testcover-nohits-face (default = red) indicates that the
-form was never evaluated.  A marking of testcover-1value-face
+  A marking with the face `testcover-nohits' (default = red) indicates that the
+form was never evaluated.  A marking using the `testcover-1value' face
 \(default = tan) indicates that the form always evaluated to the same value.
   The forms throw, error, and signal are not marked.  They do not return and
 would always get a red mark.  Some forms that always return the same
@@ -506,8 +506,8 @@ eliminated by adding more test cases."
 	  (setq ov (make-overlay (1- j) j))
 	  (overlay-put ov 'face
 		       (if (memq data '(unknown 1value))
-			   'testcover-nohits-face
-			 'testcover-1value-face))))
+			   'testcover-nohits
+			 'testcover-1value))))
       (set-buffer-modified-p changed))))
 
 (defun testcover-mark-all (&optional buffer)

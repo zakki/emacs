@@ -1,6 +1,7 @@
 /* Lisp functions pertaining to editing.
-   Copyright (C) 1985, 1986, 1987, 1989, 1993, 1994, 1995, 1996, 1997, 1998,
-     1999, 2000, 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1989, 1993, 1994, 1995, 1996,
+                 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -36,6 +37,8 @@ Boston, MA 02111-1307, USA.  */
 #include <sys/utsname.h>
 #endif
 
+#include "lisp.h"
+
 /* systime.h includes <sys/time.h> which, on some systems, is required
    for <sys/resource.h>; thus systime.h must be included before
    <sys/resource.h> */
@@ -47,7 +50,6 @@ Boston, MA 02111-1307, USA.  */
 
 #include <ctype.h>
 
-#include "lisp.h"
 #include "intervals.h"
 #include "buffer.h"
 #include "charset.h"
@@ -70,7 +72,6 @@ Boston, MA 02111-1307, USA.  */
 extern char **environ;
 #endif
 
-extern Lisp_Object make_time P_ ((time_t));
 extern size_t emacs_strftimeu P_ ((char *, size_t, const char *,
 				   const struct tm *, int));
 static int tm_diff P_ ((struct tm *, struct tm *));
@@ -2471,9 +2472,9 @@ determines whether case is significant or ignored.  */)
 {
   register int begp1, endp1, begp2, endp2, temp;
   register struct buffer *bp1, *bp2;
-  register Lisp_Object *trt
+  register Lisp_Object trt
     = (!NILP (current_buffer->case_fold_search)
-       ? XCHAR_TABLE (current_buffer->case_canon_table)->contents : 0);
+       ? current_buffer->case_canon_table : Qnil);
   int chars = 0;
   int i1, i2, i1_byte, i2_byte;
 
@@ -2592,10 +2593,10 @@ determines whether case is significant or ignored.  */)
 	  i2++;
 	}
 
-      if (trt)
+      if (!NILP (trt))
 	{
-	  c1 = XINT (trt[c1]);
-	  c2 = XINT (trt[c2]);
+	  c1 = CHAR_TABLE_TRANSLATE (trt, c1);
+	  c2 = CHAR_TABLE_TRANSLATE (trt, c2);
 	}
       if (c1 < c2)
 	return make_number (- 1 - chars);
@@ -2660,7 +2661,7 @@ Both characters must have the same length of multi-byte form.  */)
     {
       len = CHAR_STRING (XFASTINT (fromchar), fromstr);
       if (CHAR_STRING (XFASTINT (tochar), tostr) != len)
-	error ("Characters in subst-char-in-region have different byte-lengths");
+	error ("Characters in `subst-char-in-region' have different byte-lengths");
       if (!ASCII_BYTE_P (*tostr))
 	{
 	  /* If *TOSTR is in the range 0x80..0x9F and TOCHAR is not a
@@ -2856,6 +2857,8 @@ It returns the number of characters changed.  */)
 	{
 	  if (tt)
 	    {
+	      /* Reload as signal_after_change in last iteration may GC.  */
+	      tt = SDATA (table);
 	      if (string_multibyte)
 		{
 		  str = tt + string_char_to_byte (table, oc);
@@ -3117,10 +3120,11 @@ The message also goes into the `*Messages*' buffer.
 The first argument is a format control string, and the rest are data
 to be formatted under control of the string.  See `format' for details.
 
-If the first argument is nil, the function clears any existing message;
-this lets the minibuffer contents show.  See also `current-message'.
+If the first argument is nil or the empty string, the function clears
+any existing message; this lets the minibuffer contents show.  See
+also `current-message'.
 
-usage: (message STRING &rest ARGS)  */)
+usage: (message FORMAT-STRING &rest ARGS)  */)
      (nargs, args)
      int nargs;
      Lisp_Object *args;
@@ -3147,10 +3151,10 @@ If a dialog box is not available, use the echo area.
 The first argument is a format control string, and the rest are data
 to be formatted under control of the string.  See `format' for details.
 
-If the first argument is nil, clear any existing message; let the
-minibuffer contents show.
+If the first argument is nil or the empty string, clear any existing
+message; let the minibuffer contents show.
 
-usage: (message-box STRING &rest ARGS)  */)
+usage: (message-box FORMAT-STRING &rest ARGS)  */)
      (nargs, args)
      int nargs;
      Lisp_Object *args;
@@ -3209,10 +3213,10 @@ Otherwise, use the echo area.
 The first argument is a format control string, and the rest are data
 to be formatted under control of the string.  See `format' for details.
 
-If the first argument is nil, clear any existing message; let the
-minibuffer contents show.
+If the first argument is nil or the empty string, clear any existing
+message; let the minibuffer contents show.
 
-usage: (message-or-box STRING &rest ARGS)  */)
+usage: (message-or-box FORMAT-STRING &rest ARGS)  */)
      (nargs, args)
      int nargs;
      Lisp_Object *args;
@@ -3259,10 +3263,7 @@ usage: (propertize STRING &rest PROPERTIES)  */)
   string = Fcopy_sequence (args[0]);
 
   for (i = 1; i < nargs; i += 2)
-    {
-      CHECK_SYMBOL (args[i]);
-      properties = Fcons (args[i], Fcons (args[i + 1], properties));
-    }
+    properties = Fcons (args[i], Fcons (args[i + 1], properties));
 
   Fadd_text_properties (make_number (0),
 			make_number (SCHARS (string)),
@@ -3280,8 +3281,8 @@ usage: (propertize STRING &rest PROPERTIES)  */)
    : SBYTES (STRING))
 
 DEFUN ("format", Fformat, Sformat, 1, MANY, 0,
-       doc: /* Format a string out of a control-string and arguments.
-The first argument is a control string.
+       doc: /* Format a string out of a format-string and arguments.
+The first argument is a format control string.
 The other arguments are substituted into it to make the result, a string.
 It may contain %-sequences meaning to substitute the next argument.
 %s means print a string argument.  Actually, prints any object, with `princ'.
@@ -3423,7 +3424,9 @@ usage: (format STRING &rest OBJECTS)  */)
 	   digits to print after the '.' for floats, or the max.
 	   number of chars to print from a string.  */
 
-	while (index ("-0# ", *format))
+	while (format != end
+	       && (*format == '-' || *format == '0' || *format == '#'
+		   || * format == ' '))
 	  ++format;
 
 	if (*format >= '0' && *format <= '9')
@@ -3659,7 +3662,7 @@ usage: (format STRING &rest OBJECTS)  */)
 		    ++nchars;
 		  }
 
-	      start = nchars;
+	      info[n].start = start = nchars;
 	      nchars += nchars_string;
 	      end = nchars;
 
@@ -3673,6 +3676,8 @@ usage: (format STRING &rest OBJECTS)  */)
 	      p += copy_text (SDATA (args[n]), p,
 			      nbytes,
 			      STRING_MULTIBYTE (args[n]), multibyte);
+
+	      info[n].end = nchars;
 
 	      if (negative)
 		while (padding-- > 0)
@@ -3710,9 +3715,9 @@ usage: (format STRING &rest OBJECTS)  */)
 	      else
 		p += this_nchars;
 	      nchars += this_nchars;
+	      info[n].end = nchars;
 	    }
 
-	  info[n].end = nchars;
 	}
       else if (STRING_MULTIBYTE (args[0]))
 	{

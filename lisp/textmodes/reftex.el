@@ -3,7 +3,7 @@
 ;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.28
+;; Version: VERSIONTAG
 ;; Keywords: tex
 
 ;; This file is part of GNU Emacs.
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;---------------------------------------------------------------------------
 ;;
@@ -301,7 +301,7 @@
 ;;; Define the formal stuff for a minor mode named RefTeX.
 ;;;
 
-(defconst reftex-version "RefTeX version 4.28"
+(defconst reftex-version "RefTeX version VERSIONTAG"
   "Version string for RefTeX.")
 
 (defvar reftex-mode nil
@@ -454,6 +454,7 @@ on the menu bar.
   (defvar tex-main-file)
   (defvar outline-minor-mode)
   (defvar font-lock-mode)
+  (defvar font-lock-keywords)
   (defvar font-lock-fontify-region-function)
   (defvar font-lock-syntactic-keywords))
 
@@ -576,7 +577,7 @@ on the menu bar.
       )
      (t
       ;; Use buffer file name.
-      (buffer-file-name)))
+      (setq master (buffer-file-name))))
     (expand-file-name master)))
 
 (defun reftex-is-multi ()
@@ -1232,7 +1233,7 @@ This enforces rescanning the buffer on next use."
   ;; Error out in a buffer without a file.
   (if (and reftex-mode
 	   (not (buffer-file-name)))
-      (error "RefTeX works only in buffers visiting a file."))
+      (error "RefTeX works only in buffers visiting a file"))
 
   ;; Make sure we have the symbols tied
   (if (eq reftex-docstruct-symbol nil)
@@ -2261,7 +2262,7 @@ IGNORE-WORDS List of words which should be removed from the string."
 
 (defun reftex-use-fonts ()
   ;; Return t if we can and want to use fonts.
-  (and window-system
+  (and ; window-system
        reftex-use-fonts
        (featurep 'font-lock)))
 

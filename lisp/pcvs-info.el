@@ -1,7 +1,7 @@
 ;;; pcvs-info.el --- internal representation of a fileinfo entry
 
 ;; Copyright (C) 1991, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-;;   2000, 2004, 2005  Free Software Foundation, Inc.
+;;   2000, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Stefan Monnier <monnier@cs.yale.edu>
 ;; Keywords: pcl-cvs
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -61,7 +61,7 @@ to confuse some users sometimes."
 ;;;; Faces for fontification
 ;;;;
 
-(defface cvs-header-face
+(defface cvs-header
   '((((class color) (background dark))
      (:foreground "lightyellow" :weight bold))
     (((class color) (background light))
@@ -69,8 +69,10 @@ to confuse some users sometimes."
     (t (:weight bold)))
   "PCL-CVS face used to highlight directory changes."
   :group 'pcl-cvs)
+;; backward-compatibility alias
+(put 'cvs-header-face 'face-alias 'cvs-header)
 
-(defface cvs-filename-face
+(defface cvs-filename
   '((((class color) (background dark))
      (:foreground "lightblue"))
     (((class color) (background light))
@@ -78,8 +80,10 @@ to confuse some users sometimes."
     (t ()))
   "PCL-CVS face used to highlight file names."
   :group 'pcl-cvs)
+;; backward-compatibility alias
+(put 'cvs-filename-face 'face-alias 'cvs-filename)
 
-(defface cvs-unknown-face
+(defface cvs-unknown
   '((((class color) (background dark))
      (:foreground "red"))
     (((class color) (background light))
@@ -87,8 +91,10 @@ to confuse some users sometimes."
     (t (:slant italic)))
   "PCL-CVS face used to highlight unknown file status."
   :group 'pcl-cvs)
+;; backward-compatibility alias
+(put 'cvs-unknown-face 'face-alias 'cvs-unknown)
 
-(defface cvs-handled-face
+(defface cvs-handled
   '((((class color) (background dark))
      (:foreground "pink"))
     (((class color) (background light))
@@ -96,8 +102,10 @@ to confuse some users sometimes."
     (t ()))
   "PCL-CVS face used to highlight handled file status."
   :group 'pcl-cvs)
+;; backward-compatibility alias
+(put 'cvs-handled-face 'face-alias 'cvs-handled)
 
-(defface cvs-need-action-face
+(defface cvs-need-action
   '((((class color) (background dark))
      (:foreground "orange"))
     (((class color) (background light))
@@ -105,8 +113,10 @@ to confuse some users sometimes."
     (t (:slant italic)))
   "PCL-CVS face used to highlight status of files needing action."
   :group 'pcl-cvs)
+;; backward-compatibility alias
+(put 'cvs-need-action-face 'face-alias 'cvs-need-action)
 
-(defface cvs-marked-face
+(defface cvs-marked
   '((((min-colors 88) (class color) (background dark))
      (:foreground "green1" :weight bold))
     (((class color) (background dark))
@@ -116,14 +126,18 @@ to confuse some users sometimes."
     (t (:weight bold)))
   "PCL-CVS face used to highlight marked file indicator."
   :group 'pcl-cvs)
+;; backward-compatibility alias
+(put 'cvs-marked-face 'face-alias 'cvs-marked)
 
-(defface cvs-msg-face
+(defface cvs-msg
   '((t (:slant italic)))
   "PCL-CVS face used to highlight CVS messages."
   :group 'pcl-cvs)
+;; backward-compatibility alias
+(put 'cvs-msg-face 'face-alias 'cvs-msg)
 
-(defvar cvs-fi-up-to-date-face 'cvs-handled-face)
-(defvar cvs-fi-unknown-face 'cvs-unknown-face)
+(defvar cvs-fi-up-to-date-face 'cvs-handled)
+(defvar cvs-fi-unknown-face 'cvs-unknown)
 (defvar cvs-fi-conflict-face 'font-lock-warning-face)
 
 ;; There is normally no need to alter the following variable, but if
@@ -332,19 +346,17 @@ For use by the cookie package."
      (case type
        (DIRCHANGE (concat "In directory "
 			  (cvs-add-face (cvs-fileinfo->full-name fileinfo)
-					'cvs-header-face t
-					'cvs-goal-column t)
+					'cvs-header t 'cvs-goal-column t)
 			  ":"))
        (MESSAGE
 	(cvs-add-face (format "Message: %s" (cvs-fileinfo->full-log fileinfo))
-		      'cvs-msg-face))
+		      'cvs-msg))
        (t
 	(let* ((status (if (cvs-fileinfo->marked fileinfo)
-			   (cvs-add-face "*" 'cvs-marked-face)
+			   (cvs-add-face "*" 'cvs-marked)
 			 " "))
 	       (file (cvs-add-face (cvs-fileinfo->pp-name fileinfo)
-				   'cvs-filename-face t
-				   'cvs-goal-column t))
+				   'cvs-filename t 'cvs-goal-column t))
 	       (base (or (cvs-fileinfo->base-rev fileinfo) ""))
 	       (head (cvs-fileinfo->head-rev fileinfo))
 	       (type
@@ -357,7 +369,7 @@ For use by the cookie package."
 						(downcase (symbol-name type))
 						"-face"))))
 			      (or (and (boundp sym) (symbol-value sym))
-				  'cvs-need-action-face))))
+				  'cvs-need-action))))
 		  (cvs-add-face str face cvs-status-map)))
 	       (side (or
 		      ;; maybe a subtype

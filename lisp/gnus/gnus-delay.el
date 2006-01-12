@@ -1,6 +1,6 @@
 ;;; gnus-delay.el --- Delayed posting of articles
 
-;; Copyright (C) 2001, 2002, 2003  Free Software Foundation, Inc.
+;; Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Kai Groﬂjohann <Kai.Grossjohann@CS.Uni-Dortmund.DE>
 ;; Keywords: mail, news, extensions
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -39,7 +39,6 @@
 (require 'gnus-draft)
 (autoload 'parse-time-string "parse-time" nil nil)
 
-;;;###autoload
 (defgroup gnus-delay nil
   "Arrange for sending postings later."
   :version "22.1"
@@ -195,5 +194,5 @@ Checking delayed messages is skipped if optional arg NO-CHECK is non-nil."
 ;; coding: iso-8859-1
 ;; End:
 
-;;; arch-tag: fb2ad634-a897-4142-a503-f5991ec2349d
+;; arch-tag: fb2ad634-a897-4142-a503-f5991ec2349d
 ;;; gnus-delay.el ends here

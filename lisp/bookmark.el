@@ -1,6 +1,7 @@
 ;;; bookmark.el --- set bookmarks, maybe annotate them, jump to them later
 
-;; Copyright (C) 1993, 1994, 1995, 1996, 1997, 2001, 2003 Free Software Foundation
+;; Copyright (C) 1993, 1994, 1995, 1996, 1997, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Karl Fogel <kfogel@red-bean.com>
 ;; Maintainer: Karl Fogel <kfogel@red-bean.com>
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -169,7 +170,7 @@ recently set ones come first, oldest ones come last)."
 
 
 (defcustom bookmark-automatically-show-annotations t
-  "*nil means don't show annotations when jumping to a bookmark."
+  "*Non-nil means show annotations when jumping to a bookmark."
   :type 'boolean
   :group 'bookmark)
 
@@ -197,6 +198,13 @@ following in your `.emacs' file:
   :group 'bookmark)
 
 
+(defface bookmark-menu-heading
+  '((t (:inherit font-lock-type-face)))
+  "Face used to highlight the heading in bookmark menu buffers."
+  :group 'bookmark
+  :version "22.1")
+
+
 ;;; No user-serviceable parts beyond this point.
 
 ;; Is it XEmacs?
@@ -209,12 +217,6 @@ following in your `.emacs' file:
 
 ;; suggested for lucid compatibility by david hughes:
 (or (fboundp 'frame-height)  (defalias 'frame-height 'screen-height))
-
-;; This variable is probably obsolete now...
-(or (boundp 'baud-rate)
-    ;; some random value higher than 9600
-    (setq baud-rate 19200))
-
 
 
 ;;; Keymap stuff:
@@ -309,7 +311,8 @@ through a file easier.")
 (defvar bookmark-yank-point 0)
 (defvar bookmark-current-buffer nil)
 
-
+(defvar Info-current-node)
+(defvar Info-suffix-list)
 
 ;; Helper functions.
 
@@ -332,14 +335,14 @@ through a file easier.")
 
 
 (defun bookmark-get-bookmark (bookmark)
-  "Return the full entry for BOOKMARK in bookmark-alist.
+  "Return the full entry for BOOKMARK in `bookmark-alist'.
 If BOOKMARK is not a string, return nil."
   (when (stringp bookmark)
     (assoc-string bookmark bookmark-alist bookmark-completion-ignore-case)))
 
 
 (defun bookmark-get-bookmark-record (bookmark)
-  "Return the guts of the entry for BOOKMARK in bookmark-alist.
+  "Return the guts of the entry for BOOKMARK in `bookmark-alist'.
 That is, all information but the name."
   (car (cdr (bookmark-get-bookmark bookmark))))
 
@@ -442,8 +445,7 @@ That is, all information but the name."
              (list (cons 'info-node node)))))
 
   (message "%S" (assq 'info-node (bookmark-get-bookmark-record bookmark)))
-  (sit-for 4)
-  )
+  (sit-for 4))
 
 
 (defvar bookmark-history nil
@@ -618,7 +620,7 @@ You should never need to change this.")
 
 
 (defun bookmark-alist-from-buffer ()
-  "Return a bookmark-alist (in any format) from the current buffer.
+  "Return a `bookmark-alist' (in any format) from the current buffer.
 The buffer must of course contain bookmark format information.
 Does not care from where in the buffer it is called, and does not
 affect point."
@@ -658,7 +660,7 @@ affect point."
 
 (defun bookmark-upgrade-file-format-from-0 ()
   "Upgrade a bookmark file of format 0 (the original format) to format 1.
-This expects to be called from point-min in a bookmark file."
+This expects to be called from `point-min' in a bookmark file."
   (message "Upgrading bookmark format from 0 to %d..."
            bookmark-file-format-version)
   (let* ((old-list (bookmark-alist-from-buffer))
@@ -675,7 +677,7 @@ This expects to be called from point-min in a bookmark file."
 
 (defun bookmark-grok-file-format-version ()
   "Return an integer which is the file-format version of this bookmark file.
-This expects to be called from point-min in a bookmark file."
+This expects to be called from `point-min' in a bookmark file."
   (if (looking-at "^;;;;")
       (save-excursion
         (save-match-data
@@ -690,7 +692,7 @@ This expects to be called from point-min in a bookmark file."
 (defun bookmark-maybe-upgrade-file-format ()
   "Check the file-format version of this bookmark file.
 If the version is not up-to-date, upgrade it automatically.
-This expects to be called from point-min in a bookmark file."
+This expects to be called from `point-min' in a bookmark file."
   (let ((version (bookmark-grok-file-format-version)))
     (cond
      ((= version bookmark-file-format-version)
@@ -713,6 +715,14 @@ This expects to be called from point-min in a bookmark file."
 
 
 ;;; end file-format stuff
+
+
+;;; Generic helpers.
+
+(defun bookmark-maybe-message (fmt &rest args)
+  "Apply `message' to FMT and ARGS, but only if the display is fast enough."
+  (if (>= baud-rate 9600)
+      (apply 'message fmt args)))
 
 
 ;;; Core code:
@@ -782,7 +792,7 @@ the list of bookmarks.\)"
 (defun bookmark-kill-line (&optional newline-too)
   "Kill from point to end of line.
 If optional arg NEWLINE-TOO is non-nil, delete the newline too.
-Does not affect the kill-ring."
+Does not affect the kill ring."
   (let ((eol (save-excursion (end-of-line) (point))))
     (delete-region (point) eol)
     (if (and newline-too (looking-at "\n"))
@@ -841,11 +851,11 @@ the bookmark (and file, and point) specified in buffer local variables."
 
 (defvar bookmark-read-annotation-text-func 'bookmark-default-annotation-text
   "Function to return default text to use for a bookmark annotation.
-It takes the name of the bookmark, as a string, as an arg.")
+It takes one argument, the name of the bookmark, as a string.")
 
 (defun bookmark-read-annotation-mode (buf point parg bookmark)
   "Mode for composing annotations for a bookmark.
-Wants BUF POINT PARG and BOOKMARK.
+Wants BUF, POINT, PARG, and BOOKMARK.
 When you have finished composing, type \\[bookmark-send-annotation] to send
 the annotation.
 
@@ -932,7 +942,7 @@ Lines beginning with `#' are ignored."
 
 
 (defun bookmark-insert-current-bookmark ()
-  "Insert this buffer's value of bookmark-current-bookmark.
+  "Insert this buffer's value of `bookmark-current-bookmark'.
 Default to file name if it's nil."
   (interactive)
   (let ((str
@@ -992,6 +1002,8 @@ In Info, return the current node."
     (insert string)))
 
 
+(defvar Info-current-file)
+
 (defun bookmark-buffer-file-name ()
   "Return the current buffer's file in a way useful for bookmarks.
 For example, if this is a Info buffer, return the Info file's name."
@@ -1034,6 +1046,10 @@ For example, if this is a Info buffer, return the Info file's name."
                    (lambda (x y) (string-lessp (car x) (car y))))))))
 
 
+(defvar bookmark-after-jump-hook nil
+  "Hook run after `bookmark-jump' jumps to a bookmark.
+Useful for example to unhide text in `outline-mode'.")
+
 ;;;###autoload
 (defun bookmark-jump (bookmark)
   "Jump to bookmark BOOKMARK (a point in some file).
@@ -1043,7 +1059,7 @@ bookmarks.  See help on function `bookmark-load' for more about
 this.
 
 If the file pointed to by BOOKMARK no longer exists, you will be asked
-if you wish to give the bookmark a new location, and bookmark-jump
+if you wish to give the bookmark a new location, and `bookmark-jump'
 will then jump to the new location, as well as recording it in place
 of the old one in the permanent bookmark record."
   (interactive
@@ -1056,6 +1072,7 @@ of the old one in the permanent bookmark record."
     (and cell
          (switch-to-buffer (car cell))
          (goto-char (cdr cell))
+	 (progn (run-hooks 'bookmark-after-jump-hook) t)
 	 (if bookmark-automatically-show-annotations
              ;; if there is an annotation for this bookmark,
              ;; show it in a buffer.
@@ -1101,7 +1118,8 @@ be retrieved from a VC backend, else return nil."
                 ;; Info nodes must be visited with care.
                 (progn
                   (require 'info)
-                  (Info-find-node file info-node))
+		  (with-no-warnings
+		    (Info-find-node file info-node)))
               ;; Else no Info.  Can do an ordinary find-file:
               (set-buffer (find-file-noselect file))
               (goto-char place))
@@ -1166,12 +1184,14 @@ minibuffer history list `bookmark-history'."
     (prog1
 	(insert (bookmark-location bookmark)) ; *Return this line*
       (if (and (display-color-p) (display-mouse-p))
-	  (add-text-properties start
-			       (save-excursion (re-search-backward
-						"[^ \t]")
+	  (add-text-properties
+	   start
+	   (save-excursion (re-search-backward
+			    "[^ \t]")
 					       (1+ (point)))
-			       '(mouse-face highlight
-				 help-echo "mouse-2: go to this bookmark"))))))
+	   '(mouse-face highlight
+	     follow-link t
+	     help-echo "mouse-2: go to this bookmark in other window"))))))
 
 ;;;###autoload
 (defalias 'bookmark-locate 'bookmark-insert-location)
@@ -1303,8 +1323,8 @@ Saves by default in the file defined by the variable
 `bookmark-default-file'.  With a prefix arg, save it in file FILE
 \(second argument\).
 
-If you are calling this from Lisp, the two arguments are PREFIX-ARG
-and FILE, and if you just want it to write to the default file, then
+If you are calling this from Lisp, the two arguments are PARG and
+FILE, and if you just want it to write to the default file, then
 pass no arguments.  Or pass in nil and FILE, and it will save in FILE
 instead.  If you pass in one argument, and it is non-nil, then the
 user will be interactively queried for a file to save in.
@@ -1338,14 +1358,12 @@ for a file, defaulting to the file defined by variable
 (defun bookmark-write-file (file)
   (save-excursion
     (save-window-excursion
-      (if (>= baud-rate 9600)
-          (message "Saving bookmarks to file %s..." file))
-      (set-buffer (let ((enable-local-variables nil))
-                    (find-file-noselect file)))
+      (bookmark-maybe-message "Saving bookmarks to file %s..." file)
+      (set-buffer (get-buffer-create " *Bookmarks*"))
       (goto-char (point-min))
+      (delete-region (point-min) (point-max))
       (let ((print-length nil)
 	    (print-level nil))
-	(delete-region (point-min) (point-max))
 	(bookmark-insert-file-format-version-stamp)
 	(pp bookmark-alist (current-buffer))
 	(let ((version-control
@@ -1356,11 +1374,11 @@ for a file, defaulting to the file defined by variable
 		(t
 		 t))))
           (condition-case nil
-              (write-file file)
+              (write-region (point-min) (point-max) file)
             (file-error (message "Can't write %s" file)))
 	  (kill-buffer (current-buffer))
-	  (if (>= baud-rate 9600)
-	      (message "Saving bookmarks to file %s...done" file)))))))
+          (bookmark-maybe-message
+           "Saving bookmarks to file %s...done" file))))))
 
 
 (defun bookmark-import-new-list (new-list)
@@ -1426,8 +1444,8 @@ method buffers use to resolve name collisions."
   (if (file-readable-p file)
       (save-excursion
         (save-window-excursion
-          (if (and (null no-msg) (>= baud-rate 9600))
-              (message "Loading bookmarks from %s..." file))
+          (if (null no-msg)
+              (bookmark-maybe-message "Loading bookmarks from %s..." file))
           (set-buffer (let ((enable-local-variables nil))
                         (find-file-noselect file)))
           (goto-char (point-min))
@@ -1450,8 +1468,8 @@ method buffers use to resolve name collisions."
                   (bookmark-bmenu-surreptitiously-rebuild-list))
               (error "Invalid bookmark list in %s" file)))
           (kill-buffer (current-buffer)))
-	(if (and (null no-msg) (>= baud-rate 9600))
-            (message "Loading bookmarks from %s...done" file)))
+	(if (null no-msg)
+            (bookmark-maybe-message "Loading bookmarks from %s...done" file)))
     (error "Cannot read bookmark file %s" file)))
 
 
@@ -1544,6 +1562,8 @@ deletion, or > if it is flagged for displaying."
   (let ((inhibit-read-only t))
     (erase-buffer)
     (insert "% Bookmark\n- --------\n")
+    (add-text-properties (point-min) (point)
+			 '(font-lock-face bookmark-menu-heading))
     (bookmark-maybe-sort-alist)
     (mapcar
      (lambda (full-record)
@@ -1557,12 +1577,14 @@ deletion, or > if it is flagged for displaying."
 	 (let ((start (point)))
 	   (insert (bookmark-name-from-full-record full-record))
 	   (if (and (display-color-p) (display-mouse-p))
-	       (add-text-properties start
-				    (save-excursion (re-search-backward
-						     "[^ \t]")
-						    (1+ (point)))
-				    '(mouse-face highlight
-				      help-echo "mouse-2: go to this bookmark")))
+	       (add-text-properties
+		start
+		(save-excursion (re-search-backward
+				 "[^ \t]")
+				(1+ (point)))
+		'(mouse-face highlight
+		  follow-link t
+		  help-echo "mouse-2: go to this bookmark in other window")))
 	   (insert "\n")
 	   )))
      bookmark-alist))
@@ -1686,13 +1708,15 @@ Optional argument SHOW means show them unconditionally."
 		(let ((start (point)))
 		  (insert (car bookmark-bmenu-hidden-bookmarks))
 		  (if (and (display-color-p) (display-mouse-p))
-		      (add-text-properties start
-					   (save-excursion (re-search-backward
-							    "[^ \t]")
-							   (1+ (point)))
-					   '(mouse-face highlight
-					     help-echo
-					     "mouse-2: go to this bookmark"))))
+		      (add-text-properties
+		       start
+		       (save-excursion (re-search-backward
+					"[^ \t]")
+				       (1+ (point)))
+		       '(mouse-face highlight
+			 follow-link t
+			 help-echo
+			 "mouse-2: go to this bookmark in other window"))))
                 (setq bookmark-bmenu-hidden-bookmarks
                       (cdr bookmark-bmenu-hidden-bookmarks))
                 (forward-line 1))))))))
@@ -1803,7 +1827,7 @@ You can mark bookmarks with the \\<bookmark-bmenu-mode-map>\\[bookmark-bmenu-mar
           (setq tem (bookmark-bmenu-bookmark))
           (let ((inhibit-read-only t))
             (delete-char -1)
-            (insert ?\ ))
+            (insert ?\s))
           (or (string-equal tem bmrk)
               (member tem others)
               (setq others (cons tem others))))
@@ -2049,7 +2073,7 @@ To carry out the deletions that you've marked, use \\<bookmark-bmenu-mode-map>\\
   (interactive)
   (if (bookmark-bmenu-check-position)
       (let ((bmrk (bookmark-bmenu-bookmark)))
-        (message (bookmark-location bmrk)))))
+        (message "%s" (bookmark-location bmrk)))))
 
 (defun bookmark-bmenu-relocate ()
   "Change the file path of the bookmark on the current line,
@@ -2092,7 +2116,7 @@ strings returned are not."
 	       (format "-*- %s (%d) -*-" name iter)
 	       (nreverse lst))
 	      pane-list)))
-    
+
     ;; Popup the menu and return the string.
     (x-popup-menu event (cons (concat "-*- " name " -*-")
 			      (nreverse pane-list)))))
@@ -2140,12 +2164,14 @@ strings returned are not."
 
 ;;; Exit Hook, called from kill-emacs-hook
 (defvar bookmark-exit-hook nil
-  "Hook run when emacs exits.")
+  "Hook run when Emacs exits.")
+
+(define-obsolete-variable-alias 'bookmark-exit-hooks 'bookmark-exit-hook "22.1")
 
 (defun bookmark-exit-hook-internal ()
   "Save bookmark state, if necessary, at Emacs exit time.
-This also runs `bookmark-exit-hooks'."
-  (run-hooks 'bookmark-exit-hooks)
+This also runs `bookmark-exit-hook'."
+  (run-hooks 'bookmark-exit-hook)
   (and bookmark-alist
        (bookmark-time-to-save-p t)
        (bookmark-save)))

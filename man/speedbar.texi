@@ -5,11 +5,12 @@
 @syncodeindex fn cp
 
 @copying
-Copyright @copyright{} 1999, 2000, 2002, 2004 Free Software Foundation, Inc.
+Copyright @copyright{} 1999, 2000, 2002, 2003, 2004,
+   2005 Free Software Foundation, Inc.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with the
 Invariant Sections being ``The GNU Manifesto'', ``Distribution'' and
 ``GNU GENERAL PUBLIC LICENSE'', with the Front-Cover texts being ``A GNU
@@ -68,7 +69,7 @@ authors of other packages to provide speedbar summaries customized to
 the needs of that mode.
 
 Throughout this manual, activities are defined as `clicking on', or
-`expanding' items.  Clicking means using using @kbd{Mouse-2} on a
+`expanding' items.  Clicking means using @kbd{Mouse-2} on a
 button.  Expanding refers to clicking on an expansion button to display
 an expanded summary of the entry the expansion button is
 on.  @xref{Basic Navigation}.
@@ -89,13 +90,13 @@ on.  @xref{Basic Navigation}.
 @chapter Introduction
 @cindex introduction
 
-To start using speedbar use the command @kbd{M-x speedbar RET} or select
-it from the Tools menu in versions of Emacs with speedbar installed by
-default.  This command will open a new frame to summarize the local
-files.  On X Window systems or on MS-Windows, speedbar's frame is twenty
-characters wide, and will mimic the height of the frame from which it
-was started.  It positions itself to the left or right of the frame you
-started it from.
+To start using speedbar use the command @kbd{M-x speedbar RET} or
+select it from the @samp{Options->Show/Hide} sub-menu.  This command
+will open a new frame to summarize the local files.  On X Window
+systems or on MS-Windows, speedbar's frame is twenty characters wide,
+and will mimic the height of the frame from which it was started.  It
+positions itself to the left or right of the frame you started it
+from.
 
 To use speedbar effectively, it is important to understand its
 relationship with the frame you started it from.  This frame is the
@@ -140,9 +141,6 @@ to use.
 These key bindings are common across all modes:
 
 @table @kbd
-@item delete, SPC
-@cindex scrolling in speedbar
-Scroll up and down one page.
 @item Q
 @cindex quitting speedbar
 Quit speedbar, and kill the frame.
@@ -590,9 +588,10 @@ will follow the general rules of their major counterparts in terms of
 key bindings and visuals, but will have specialized behaviors.
 
 @menu
-* RMAIL::  Managing folders in speedbar
-* Info::   Browsing topics in speedbar
-* GDB::    Managing the current stack trace in speedbar
+* RMAIL::  Managing folders.
+* Info::   Browsing topics.
+* GDB::    Watching expressions or managing the current
+            stack trace.
 @end menu
 
 @node RMAIL, Info, Minor Modes, Minor Modes
@@ -638,7 +637,15 @@ a @samp{[+]}, indicating that there are no sub-topics.
 @cindex gdb
 @cindex gud
 
-If you are debugging an application with GDB in Emacs, speedbar can show
+You can debug an application with GDB in Emacs using graphical mode or
+text command mode (@pxref{GDB Graphical Interface,,, emacs, The
+extensible self-documenting text editor}).
+
+If you are using graphical mode you can see how selected variables
+change each time your program stops (@pxref{Watch Expressions,,,
+emacs, The extensible self-documenting text editor}).
+
+If you are using text command mode, speedbar can show
 you the current stack when the current buffer is the @file{*gdb*}
 buffer.  Usually, it will just report that there is no stack, but when
 the application is stopped, the current stack will be shown.
@@ -1175,11 +1182,11 @@ the next line.
 Create a tag line with @var{exp-button-type} for the small expansion
 button.  This is the button that expands or contracts a node (if
 applicable), and @var{exp-button-char} the character in it (@samp{+},
-@samp{-}, @samp{?},
-etc).  @var{exp-button-function} is the function to call if it's clicked
-on.  Button types are @code{'bracket}, @code{'angle}, @code{'curly},
-@code{'expandtag}, @code{'statictag}, or nil.  @var{exp-button-data} is
-extra data attached to the text forming the expansion button.
+@samp{-}, @samp{?}, etc).  @var{exp-button-function} is the function
+to call if it's clicked on.  Button types are @code{bracket},
+@code{angle}, @code{curly}, @code{expandtag}, @code{statictag}, and
+@code{nil}.  @var{exp-button-data} is extra data attached to the text
+forming the expansion button.
 
 Next, @var{tag-button} is the text of the tag.
 @var{tag-button-function} is the function to call if clicked on, and
@@ -1221,15 +1228,15 @@ obvious is @code{speedbar-tag-hierarchy-method}.
 @defvar speedbar-generic-list-group-expand-button-type
 This is the button type used for groups of tags, whether expanded
 or added in via a hierarchy method.  Two good values are
-@code{'curly} and @code{'expandtag}.  Curly is the default button, and
-@code{'expandtag} is useful if the groups also has a position.
+@code{curly} and @code{expandtag}.  Curly is the default button, and
+@code{expandtag} is useful if the groups also has a position.
 @end defvar
 
 @defvar speedbar-generic-list-tag-button-type
 This is the button type used for a single tag.
-Two good values are @code{nil} and @code{'statictag}.
-@code{nil} is the default, and @code{'statictag} has the same width as
-@code{'expandtag}.
+Two good values are @code{nil} and @code{statictag}.
+@code{nil} is the default, and @code{statictag} has the same width as
+@code{expandtag}.
 @end defvar
 
 @end defun

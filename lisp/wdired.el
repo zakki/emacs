@@ -1,6 +1,6 @@
 ;;; wdired.el --- Rename files editing their names in dired buffers
 
-;; Copyright (C) 2001, 2004, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 2004, 2005 Free Software Foundation, Inc.
 
 ;; Filename: wdired.el
 ;; Author: Juan León Lahoz García <juanleon1@gmail.com>
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -211,6 +211,7 @@ program `dired-chmod-program', which must exist."
 ;; Local variables (put here to avoid compilation gripes)
 (defvar wdired-col-perm) ;; Column where the permission bits start
 (defvar wdired-old-content)
+(defvar wdired-old-point)
 
 
 (defun wdired-mode ()
@@ -242,6 +243,7 @@ See `wdired-mode'."
   (interactive)
   (set (make-local-variable 'wdired-old-content)
        (buffer-substring (point-min) (point-max)))
+  (set (make-local-variable 'wdired-old-point) (point))
   (set (make-local-variable 'query-replace-skip-read-only) t)
   (use-local-map wdired-mode-map)
   (force-mode-line-update)
@@ -264,7 +266,8 @@ See `wdired-mode'."
   (set-buffer-modified-p nil)
   (setq buffer-undo-list nil)
   (run-mode-hooks 'wdired-mode-hook)
-  (message (substitute-command-keys "Press \\[wdired-finish-edit] when finished \
+  (message "%s" (substitute-command-keys
+		 "Press \\[wdired-finish-edit] when finished \
 or \\[wdired-abort-changes] to abort changes")))
 
 
@@ -348,7 +351,8 @@ non-nil means return old filename."
   (interactive)
   (let ((inhibit-read-only t))
     (erase-buffer)
-    (insert wdired-old-content))
+    (insert wdired-old-content)
+    (goto-char wdired-old-point))
   (wdired-change-to-dired-mode)
   (set-buffer-modified-p nil)
   (setq buffer-undo-list nil)

@@ -1,7 +1,7 @@
 ;;; font-lock.el --- Electric font lock mode
 
 ;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-;;   2000, 2001, 2002, 2003, 2004 2005  Free Software Foundation, Inc.
+;;   2000, 2001, 2002, 2003, 2004, 2005, 2006  Free Software Foundation, Inc.
 
 ;; Author: jwz, then rms, then sm
 ;; Maintainer: FSF
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -153,8 +153,8 @@
 ;;
 ;;  (add-hook 'foo-mode-hook
 ;;   (lambda ()
-;;     (make-local-variable 'font-lock-defaults)
-;;     (setq font-lock-defaults '(foo-font-lock-keywords t))))
+;;     (set (make-local-variable 'font-lock-defaults)
+;;          '(foo-font-lock-keywords t))))
 
 ;;; Adding Font Lock support for modes:
 
@@ -174,8 +174,8 @@
 ;;
 ;; and within `bar-mode' there could be:
 ;;
-;;  (make-local-variable 'font-lock-defaults)
-;;  (setq font-lock-defaults '(bar-font-lock-keywords nil t))
+;;  (set (make-local-variable 'font-lock-defaults)
+;;       '(bar-font-lock-keywords nil t))
 
 ;; What is fontification for?  You might say, "It's to make my code look nice."
 ;; I think it should be for adding information in the form of cues.  These cues
@@ -212,28 +212,17 @@
 ;; Define core `font-lock' group.
 (defgroup font-lock '((jit-lock custom-group))
   "Font Lock mode text highlighting package."
-  :link '(custom-manual "(emacs)Font Lock")
-  :link '(custom-manual "(elisp)Font Lock Mode")
+  :link '(custom-manual :tag "Emacs Manual" "(emacs)Font Lock")
+  :link '(custom-manual :tag "Elisp Manual" "(elisp)Font Lock Mode")
   :group 'faces)
 
-(defgroup font-lock-highlighting-faces nil
+(defgroup font-lock-faces nil
   "Faces for highlighting text."
   :prefix "font-lock-"
   :group 'font-lock)
 
 (defgroup font-lock-extra-types nil
   "Extra mode-specific type names for highlighting declarations."
-  :group 'font-lock)
-
-;; Define support mode groups here to impose `font-lock' group order.
-(defgroup fast-lock nil
-  "Font Lock support mode to cache fontification."
-  :load 'fast-lock
-  :group 'font-lock)
-
-(defgroup lazy-lock nil
-  "Font Lock support mode to fontify lazily."
-  :load 'lazy-lock
   :group 'font-lock)
 
 ;; User variables.
@@ -293,7 +282,7 @@ If a number, only buffers greater than this size have fontification messages."
 		 (integer :tag "size"))
   :group 'font-lock)
 
-(defcustom font-lock-lines-before 1
+(defcustom font-lock-lines-before 0
   "*Number of lines before the changed text to include in refontification."
   :type 'integer
   :group 'font-lock
@@ -364,7 +353,7 @@ contained expressions.  You can also alter it by calling
 Each element in a user-level keywords list should have one of these forms:
 
  MATCHER
- (MATCHER . MATCH)
+ (MATCHER . SUBEXP)
  (MATCHER . FACENAME)
  (MATCHER . HIGHLIGHT)
  (MATCHER HIGHLIGHT ...)
@@ -390,12 +379,13 @@ word \"bar\" following the word \"anchor\" then MATCH-ANCHORED may be required.
 
 MATCH-HIGHLIGHT should be of the form:
 
- (MATCH FACENAME [OVERRIDE [LAXMATCH]])
+ (SUBEXP FACENAME [OVERRIDE [LAXMATCH]])
 
-MATCH is the subexpression of MATCHER to be highlighted.  FACENAME is an
-expression whose value is the face name to use.  Face default attributes
-can be modified via \\[customize].  Instead of a face, FACENAME can
-evaluate to a property list of the form (face FACE PROP1 VAL1 PROP2 VAL2 ...)
+SUBEXP is the number of the subexpression of MATCHER to be highlighted.
+
+FACENAME is an expression whose value is the face name to use.
+Instead of a face, FACENAME can evaluate to a property list
+of the form (face FACE PROP1 VAL1 PROP2 VAL2 ...)
 in which case all the listed text-properties will be set rather than
 just FACE.  In such a case, you will most likely want to put those
 properties in `font-lock-extra-managed-props' or to override
@@ -405,7 +395,8 @@ OVERRIDE and LAXMATCH are flags.  If OVERRIDE is t, existing fontification can
 be overwritten.  If `keep', only parts not already fontified are highlighted.
 If `prepend' or `append', existing fontification is merged with the new, in
 which the new or existing fontification, respectively, takes precedence.
-If LAXMATCH is non-nil, no error is signaled if there is no MATCH in MATCHER.
+If LAXMATCH is non-nil, that means don't signal an error if there is
+no match for SUBEXP in MATCHER.
 
 For example, an element of the form highlights (if not already highlighted):
 
@@ -430,7 +421,7 @@ where MATCHER is a regexp to search for or the function name to call to make
 the search, as for MATCH-HIGHLIGHT above, but with one exception; see below.
 PRE-MATCH-FORM and POST-MATCH-FORM are evaluated before the first, and after
 the last, instance MATCH-ANCHORED's MATCHER is used.  Therefore they can be
-used to initialise before, and cleanup after, MATCHER is used.  Typically,
+used to initialize before, and cleanup after, MATCHER is used.  Typically,
 PRE-MATCH-FORM is used to move to some position relative to the original
 MATCHER, before starting with MATCH-ANCHORED's MATCHER.  POST-MATCH-FORM might
 be used to move back, before resuming with MATCH-ANCHORED's parent's MATCHER.
@@ -472,13 +463,13 @@ optimized.")
 (defvar font-lock-keywords-alist nil
   "Alist of additional `font-lock-keywords' elements for major modes.
 
-Each element has the form (MODE KEYWORDS . APPEND).
+Each element has the form (MODE KEYWORDS . HOW).
 `font-lock-set-defaults' adds the elements in the list KEYWORDS to
 `font-lock-keywords' when Font Lock is turned on in major mode MODE.
 
-If APPEND is nil, KEYWORDS are added at the beginning of
+If HOW is nil, KEYWORDS are added at the beginning of
 `font-lock-keywords'.  If it is `set', they are used to replace the
-value of `font-lock-keywords'.  If APPEND is any other non-nil value,
+value of `font-lock-keywords'.  If HOW is any other non-nil value,
 they are added at the end.
 
 This is normally set via `font-lock-add-keywords' and
@@ -518,36 +509,35 @@ The function is called with a single parameter (the state as returned by
 should return a face.  This is normally set via `font-lock-defaults'.")
 
 (defvar font-lock-syntactic-keywords nil
-  "A list of the syntactic keywords to highlight.
-Can be the list or the name of a function or variable whose value is the list.
-See `font-lock-keywords' for a description of the form of this list;
-the differences are listed below.  MATCH-HIGHLIGHT should be of the form:
+  "A list of the syntactic keywords to put syntax properties on.
+The value can be the list itself, or the name of a function or variable
+whose value is the list.
 
- (MATCH SYNTAX OVERRIDE LAXMATCH)
+See `font-lock-keywords' for a description of the form of this list;
+only the differences are stated here.  MATCH-HIGHLIGHT should be of the form:
+
+ (SUBEXP SYNTAX OVERRIDE LAXMATCH)
 
 where SYNTAX can be a string (as taken by `modify-syntax-entry'), a syntax
 table, a cons cell (as returned by `string-to-syntax') or an expression whose
 value is such a form.  OVERRIDE cannot be `prepend' or `append'.
 
-For example, an element of the form highlights syntactically:
+Here are two examples of elements of `font-lock-syntactic-keywords'
+and what they do:
 
  (\"\\\\$\\\\(#\\\\)\" 1 \".\")
 
- a hash character when following a dollar character, with a SYNTAX of
- \".\" (meaning punctuation syntax).  Assuming that the buffer syntax table does
- specify hash characters to have comment start syntax, the element will only
- highlight hash characters that do not follow dollar characters as comments
- syntactically.
+ gives a hash character punctuation syntax (\".\") when following a
+ dollar-sign character.  Hash characters in other contexts will still
+ follow whatever the syntax table says about the hash character.
 
  (\"\\\\('\\\\).\\\\('\\\\)\"
   (1 \"\\\"\")
   (2 \"\\\"\"))
 
- both single quotes which surround a single character, with a SYNTAX of
- \"\\\"\" (meaning string quote syntax).  Assuming that the buffer syntax table
- does not specify single quotes to have quote syntax, the element will only
- highlight single quotes of the form 'c' as strings syntactically.
- Other forms, such as foo'bar or 'fubar', will not be highlighted as strings.
+ gives a pair single-quotes, which surround a single character, a SYNTAX of
+ \"\\\"\" (meaning string quote syntax).  Single-quote characters in other
+ contexts will not be affected.
 
 This is normally set via `font-lock-defaults'.")
 
@@ -620,6 +610,7 @@ Major/minor modes can set this variable if they know which option applies.")
   ;; We use this to preserve or protect things when modifying text properties.
   (defmacro save-buffer-state (varlist &rest body)
     "Bind variables according to VARLIST and eval BODY restoring buffer state."
+    (declare (indent 1) (debug let))
     (let ((modified (make-symbol "modified")))
       `(let* ,(append varlist
 		      `((,modified (buffer-modified-p))
@@ -634,13 +625,10 @@ Major/minor modes can set this variable if they know which option applies.")
 	   ,@body)
 	 (unless ,modified
 	   (restore-buffer-modified-p nil)))))
-  (put 'save-buffer-state 'lisp-indent-function 1)
-  (def-edebug-spec save-buffer-state let)
   ;;
   ;; Shut up the byte compiler.
   (defvar font-lock-face-attributes))	; Obsolete but respected if set.
 
-;;;###autoload
 (defun font-lock-mode-internal (arg)
   ;; Turn on Font Lock mode.
   (when arg
@@ -662,16 +650,15 @@ Major/minor modes can set this variable if they know which option applies.")
     (font-lock-unfontify-buffer)
     (font-lock-turn-off-thing-lock)))
 
-;;;###autoload
-(defun font-lock-add-keywords (mode keywords &optional append)
+(defun font-lock-add-keywords (mode keywords &optional how)
   "Add highlighting KEYWORDS for MODE.
 
 MODE should be a symbol, the major mode command name, such as `c-mode'
 or nil.  If nil, highlighting keywords are added for the current buffer.
 KEYWORDS should be a list; see the variable `font-lock-keywords'.
 By default they are added at the beginning of the current highlighting list.
-If optional argument APPEND is `set', they are used to replace the current
-highlighting list.  If APPEND is any other non-nil value, they are added at the
+If optional argument HOW is `set', they are used to replace the current
+highlighting list.  If HOW is any other non-nil value, they are added at the
 end of the current highlighting list.
 
 For example:
@@ -691,7 +678,7 @@ For example:
 
  (add-hook 'c-mode-hook
   (lambda ()
-   (font-lock-add-keywords 'c-mode
+   (font-lock-add-keywords nil
     '((\"\\\\\\=<\\\\(FIXME\\\\):\" 1 font-lock-warning-face prepend)
       (\"\\\\\\=<\\\\(and\\\\|or\\\\|not\\\\)\\\\\\=>\" .
        font-lock-keyword-face)))))
@@ -704,17 +691,17 @@ Note that some modes have specialized support for additional patterns, e.g.,
 see the variables `c-font-lock-extra-types', `c++-font-lock-extra-types',
 `objc-font-lock-extra-types' and `java-font-lock-extra-types'."
   (cond (mode
-	 ;; If MODE is non-nil, add the KEYWORDS and APPEND spec to
+	 ;; If MODE is non-nil, add the KEYWORDS and HOW spec to
 	 ;; `font-lock-keywords-alist' so `font-lock-set-defaults' uses them.
-	 (let ((spec (cons keywords append)) cell)
+	 (let ((spec (cons keywords how)) cell)
 	   (if (setq cell (assq mode font-lock-keywords-alist))
-	       (if (eq append 'set)
+	       (if (eq how 'set)
 		   (setcdr cell (list spec))
 		 (setcdr cell (append (cdr cell) (list spec))))
 	     (push (list mode spec) font-lock-keywords-alist)))
 	 ;; Make sure that `font-lock-removed-keywords-alist' does not
 	 ;; contain the new keywords.
-	 (font-lock-update-removed-keyword-alist mode keywords append))
+	 (font-lock-update-removed-keyword-alist mode keywords how))
 	(t
 	 ;; Otherwise set or add the keywords now.
 	 ;; This is a no-op if it has been done already in this buffer
@@ -725,21 +712,21 @@ see the variables `c-font-lock-extra-types', `c++-font-lock-extra-types',
 	   (if was-compiled
 	       (setq font-lock-keywords (cadr font-lock-keywords)))
 	   ;; Now modify or replace them.
-	   (if (eq append 'set)
+	   (if (eq how 'set)
 	       (setq font-lock-keywords keywords)
 	     (font-lock-remove-keywords nil keywords) ;to avoid duplicates
 	     (let ((old (if (eq (car-safe font-lock-keywords) t)
 			    (cdr font-lock-keywords)
 			  font-lock-keywords)))
-	       (setq font-lock-keywords (if append
+	       (setq font-lock-keywords (if how
 					    (append old keywords)
 					  (append keywords old)))))
 	   ;; If the keywords were compiled before, compile them again.
 	   (if was-compiled
-	       (set (make-local-variable 'font-lock-keywords)
-		    (font-lock-compile-keywords font-lock-keywords t)))))))
+	       (setq font-lock-keywords
+                     (font-lock-compile-keywords font-lock-keywords t)))))))
 
-(defun font-lock-update-removed-keyword-alist (mode keywords append)
+(defun font-lock-update-removed-keyword-alist (mode keywords how)
   "Update `font-lock-removed-keywords-alist' when adding new KEYWORDS to MODE."
   ;; When font-lock is enabled first all keywords in the list
   ;; `font-lock-keywords-alist' are added, then all keywords in the
@@ -749,7 +736,7 @@ see the variables `c-font-lock-extra-types', `c++-font-lock-extra-types',
   ;; will not take effect.
   (let ((cell (assq mode font-lock-removed-keywords-alist)))
     (if cell
-	(if (eq append 'set)
+	(if (eq how 'set)
 	    ;; A new set of keywords is defined.  Forget all about
 	    ;; our old keywords that should be removed.
 	    (setq font-lock-removed-keywords-alist
@@ -781,7 +768,6 @@ see the variables `c-font-lock-extra-types', `c++-font-lock-extra-types',
 ;;      is added and removed several times.
 ;;
 ;; (II) The keywords are removed from the current buffer.
-;;;###autoload
 (defun font-lock-remove-keywords (mode keywords)
   "Remove highlighting KEYWORDS for MODE.
 
@@ -800,14 +786,14 @@ happens, so the major mode can be corrected."
 	     ;; If MODE is non-nil, remove the KEYWORD from
 	     ;; `font-lock-keywords-alist'.
 	     (when top-cell
-	       (dolist (keyword-list-append-pair (cdr top-cell))
-		 ;; `keywords-list-append-pair' is a cons with a list of
-		 ;; keywords in the car top-cell and the original append
+	       (dolist (keyword-list-how-pair (cdr top-cell))
+		 ;; `keywords-list-how-pair' is a cons with a list of
+		 ;; keywords in the car top-cell and the original how
 		 ;; argument in the cdr top-cell.
-		 (setcar keyword-list-append-pair
-			 (delete keyword (car keyword-list-append-pair))))
-	       ;; Remove keyword list/append pair when the keyword list
-	       ;; is empty and append doesn't specify `set'.  (If it
+		 (setcar keyword-list-how-pair
+			 (delete keyword (car keyword-list-how-pair))))
+	       ;; Remove keyword list/how pair when the keyword list
+	       ;; is empty and how doesn't specify `set'.  (If it
 	       ;; should be deleted then previously deleted keywords
 	       ;; would appear again.)
 	       (let ((cell top-cell))
@@ -844,8 +830,8 @@ happens, so the major mode can be corrected."
 
 	   ;; If the keywords were compiled before, compile them again.
 	   (if was-compiled
-	       (set (make-local-variable 'font-lock-keywords)
-		    (font-lock-compile-keywords font-lock-keywords t)))))))
+	       (setq font-lock-keywords
+                     (font-lock-compile-keywords font-lock-keywords t)))))))
 
 ;;; Font Lock Support mode.
 
@@ -858,9 +844,13 @@ happens, so the major mode can be corrected."
 (defcustom font-lock-support-mode 'jit-lock-mode
   "*Support mode for Font Lock mode.
 Support modes speed up Font Lock mode by being choosy about when fontification
-occurs.  Known support modes are Fast Lock mode (symbol `fast-lock-mode'),
-Lazy Lock mode (symbol `lazy-lock-mode'), and Just-in-time Lock mode (symbol
-`jit-lock-mode'.  See those modes for more info.
+occurs.  The default support mode, Just-in-time Lock mode (symbol
+`jit-lock-mode'), is recommended.
+
+Other, older support modes are Fast Lock mode (symbol `fast-lock-mode') and
+Lazy Lock mode (symbol `lazy-lock-mode').  See those modes for more info.
+However, they are no longer recommended, as Just-in-time Lock mode is better.
+
 If nil, means support for Font Lock mode is never performed.
 If a symbol, use that support mode.
 If a list, each element should be of the form (MAJOR-MODE . SUPPORT-MODE),
@@ -905,7 +895,7 @@ The value of this variable is used when Font Lock mode is turned on."
 			'font-lock-after-change-function t)
 	   (set (make-local-variable 'font-lock-fontify-buffer-function)
 		'jit-lock-refontify)
-	   ;; Don't fontify eagerly (and don't abort is the buffer is large).
+	   ;; Don't fontify eagerly (and don't abort if the buffer is large).
 	   (set (make-local-variable 'font-lock-fontified) t)
 	   ;; Use jit-lock.
 	   (jit-lock-register 'font-lock-fontify-region
@@ -987,10 +977,10 @@ The value of this variable is used when Font Lock mode is turned on."
 ;; directives correctly and cleanly.  (It is the same problem as fontifying
 ;; multi-line strings and comments; regexps are not appropriate for the job.)
 
-;;;###autoload
 (defun font-lock-fontify-buffer ()
   "Fontify the current buffer the way the function `font-lock-mode' would."
   (interactive)
+  (font-lock-set-defaults)
   (let ((font-lock-verbose (or font-lock-verbose (interactive-p))))
     (funcall font-lock-fontify-buffer-function)))
 
@@ -998,6 +988,7 @@ The value of this variable is used when Font Lock mode is turned on."
   (funcall font-lock-unfontify-buffer-function))
 
 (defun font-lock-fontify-region (beg end &optional loudly)
+  (font-lock-set-defaults)
   (funcall font-lock-fontify-region-function beg end loudly))
 
 (defun font-lock-unfontify-region (beg end)
@@ -1011,9 +1002,6 @@ The value of this variable is used when Font Lock mode is turned on."
     (with-temp-message
 	(when verbose
 	  (format "Fontifying %s..." (buffer-name)))
-      ;; Make sure we have the right `font-lock-keywords' etc.
-      (unless font-lock-mode
-	(font-lock-set-defaults))
       ;; Make sure we fontify etc. in the whole buffer.
       (save-restriction
 	(widen)
@@ -1050,10 +1038,11 @@ a very meaningful entity to highlight.")
 	  ;; Use the fontification syntax table, if any.
 	  (when font-lock-syntax-table
 	    (set-syntax-table font-lock-syntax-table))
+          (goto-char beg)
+          (setq beg (line-beginning-position (- 1 font-lock-lines-before)))
 	  ;; check to see if we should expand the beg/end area for
 	  ;; proper multiline matches
-	  (when (and font-lock-multiline
-		     (> beg (point-min))
+	  (when (and (> beg (point-min))
 		     (get-text-property (1- beg) 'font-lock-multiline))
 	    ;; We are just after or in a multiline match.
 	    (setq beg (or (previous-single-property-change
@@ -1061,12 +1050,12 @@ a very meaningful entity to highlight.")
 			  (point-min)))
 	    (goto-char beg)
 	    (setq beg (line-beginning-position)))
-	  (when font-lock-multiline
-	    (setq end (or (text-property-any end (point-max)
-					     'font-lock-multiline nil)
-			  (point-max))))
+          (setq end (or (text-property-any end (point-max)
+                                           'font-lock-multiline nil)
+                        (point-max)))
 	  (goto-char end)
-	  (setq end (line-beginning-position 2))
+	  ;; Round up to a whole line.
+          (unless (bolp) (setq end (line-beginning-position 2)))
 	  ;; Now do the fontification.
 	  (font-lock-unfontify-region beg end)
 	  (when font-lock-syntactic-keywords
@@ -1078,12 +1067,12 @@ a very meaningful entity to highlight.")
       (set-syntax-table old-syntax-table))))
 
 ;; The following must be rethought, since keywords can override fontification.
-;      ;; Now scan for keywords, but not if we are inside a comment now.
-;      (or (and (not font-lock-keywords-only)
-;	       (let ((state (parse-partial-sexp beg end nil nil
-;						font-lock-cache-state)))
-;		 (or (nth 4 state) (nth 7 state))))
-;	  (font-lock-fontify-keywords-region beg end))
+;;    ;; Now scan for keywords, but not if we are inside a comment now.
+;;    (or (and (not font-lock-keywords-only)
+;;             (let ((state (parse-partial-sexp beg end nil nil
+;;                                              font-lock-cache-state)))
+;;               (or (nth 4 state) (nth 7 state))))
+;;        (font-lock-fontify-keywords-region beg end))
 
 (defvar font-lock-extra-managed-props nil
   "Additional text properties managed by font-lock.
@@ -1106,8 +1095,7 @@ what properties to clear before refontifying a region.")
       (save-match-data
 	;; Rescan between start of lines enclosing the region.
 	(font-lock-fontify-region
-	 (progn (goto-char beg)
-		(forward-line (- font-lock-lines-before)) (point))
+	 (progn (goto-char beg) (forward-line 0) (point))
 	 (progn (goto-char end) (forward-line 1) (point)))))))
 
 (defun font-lock-fontify-block (&optional arg)
@@ -1134,8 +1122,9 @@ delimit the region to fontify."
 	      (font-lock-fontify-region (point) (mark)))
 	  ((error quit) (message "Fontifying block...%s" error-data)))))))
 
-(if (boundp 'facemenu-keymap)
-    (define-key facemenu-keymap "\M-o" 'font-lock-fontify-block))
+(unless (featurep 'facemenu)
+  (error "facemenu must be loaded before font-lock"))
+(define-key facemenu-keymap "\M-o" 'font-lock-fontify-block)
 
 ;;; End of Fontification functions.
 
@@ -1188,35 +1177,35 @@ Optional argument OBJECT is the string or buffer containing the text."
 
 ;; For completeness: this is to `remove-text-properties' as `put-text-property'
 ;; is to `add-text-properties', etc.
-;(defun remove-text-property (start end property &optional object)
-;  "Remove a property from text from START to END.
-;Argument PROPERTY is the property to remove.
-;Optional argument OBJECT is the string or buffer containing the text.
-;Return t if the property was actually removed, nil otherwise."
-;  (remove-text-properties start end (list property) object))
+;;(defun remove-text-property (start end property &optional object)
+;;  "Remove a property from text from START to END.
+;;Argument PROPERTY is the property to remove.
+;;Optional argument OBJECT is the string or buffer containing the text.
+;;Return t if the property was actually removed, nil otherwise."
+;;  (remove-text-properties start end (list property) object))
 
 ;; For consistency: maybe this should be called `remove-single-property' like
 ;; `next-single-property-change' (not `next-single-text-property-change'), etc.
-;(defun remove-single-text-property (start end prop value &optional object)
-;  "Remove a specific property value from text from START to END.
-;Arguments PROP and VALUE specify the property and value to remove.  The
-;resulting property values are not equal to VALUE nor lists containing VALUE.
-;Optional argument OBJECT is the string or buffer containing the text."
-;  (let ((start (text-property-not-all start end prop nil object)) next prev)
-;    (while start
-;      (setq next (next-single-property-change start prop object end)
-;	    prev (get-text-property start prop object))
-;      (cond ((and (symbolp prev) (eq value prev))
-;	     (remove-text-property start next prop object))
-;	    ((and (listp prev) (memq value prev))
-;	     (let ((new (delq value prev)))
-;	       (cond ((null new)
-;		      (remove-text-property start next prop object))
-;		     ((= (length new) 1)
-;		      (put-text-property start next prop (car new) object))
-;		     (t
-;		      (put-text-property start next prop new object))))))
-;      (setq start (text-property-not-all next end prop nil object)))))
+;;(defun remove-single-text-property (start end prop value &optional object)
+;;  "Remove a specific property value from text from START to END.
+;;Arguments PROP and VALUE specify the property and value to remove.  The
+;;resulting property values are not equal to VALUE nor lists containing VALUE.
+;;Optional argument OBJECT is the string or buffer containing the text."
+;;  (let ((start (text-property-not-all start end prop nil object)) next prev)
+;;    (while start
+;;      (setq next (next-single-property-change start prop object end)
+;;	    prev (get-text-property start prop object))
+;;      (cond ((and (symbolp prev) (eq value prev))
+;;	     (remove-text-property start next prop object))
+;;	    ((and (listp prev) (memq value prev))
+;;	     (let ((new (delq value prev)))
+;;	       (cond ((null new)
+;;		      (remove-text-property start next prop object))
+;;		     ((= (length new) 1)
+;;		      (put-text-property start next prop (car new) object))
+;;		     (t
+;;		      (put-text-property start next prop new object))))))
+;;      (setq start (text-property-not-all next end prop nil object)))))
 
 ;;; End of Additional text property functions.
 
@@ -1474,7 +1463,11 @@ LOUDLY, if non-nil, allows progress-meter bar."
       (while (and (< (point) end)
 		  (if (stringp matcher)
 		      (re-search-forward matcher end t)
-		    (funcall matcher end)))
+		    (funcall matcher end))
+                  ;; Beware empty string matches since they will
+                  ;; loop indefinitely.
+                  (or (> (point) (match-beginning 0))
+                      (progn (forward-char 1) t)))
 	(when (and font-lock-multiline
 		   (>= (point)
 		       (save-excursion (goto-char (match-beginning 0))
@@ -1514,6 +1507,13 @@ Here each COMPILED is of the form (MATCHER HIGHLIGHT ...) as shown in the
 `font-lock-keywords' doc string.
 If REGEXP is non-nil, it means these keywords are used for
 `font-lock-keywords' rather than for `font-lock-syntactic-keywords'."
+  (if (not font-lock-set-defaults)
+      ;; This should never happen.  But some external packages sometimes
+      ;; call font-lock in unexpected and incorrect ways.  It's important to
+      ;; stop processing at this point, otherwise we may end up changing the
+      ;; global value of font-lock-keywords and break highlighting in many
+      ;; other buffers.
+      (error "Font-lock trying to use keywords before setting them up"))
   (if (eq (car-safe keywords) t)
       keywords
     (setq keywords
@@ -1534,7 +1534,8 @@ If REGEXP is non-nil, it means these keywords are used for
 		   (if (memq (get-text-property (match-beginning 0) 'face)
 			     '(font-lock-string-face font-lock-doc-face
 			       font-lock-comment-face))
-		       font-lock-warning-face)
+		       (list 'face font-lock-warning-face
+                             'help-echo "Looks like a toplevel defun: escape the parenthesis"))
 		   prepend)))))
     keywords))
 
@@ -1579,9 +1580,9 @@ A LEVEL of nil is equal to a LEVEL of 0, a LEVEL of t is equal to
   (cond ((not (and (listp keywords) (symbolp (car keywords))))
 	 keywords)
 	((numberp level)
-	 (or (nth level keywords) (car (reverse keywords))))
+	 (or (nth level keywords) (car (last keywords))))
 	((eq level t)
-	 (car (reverse keywords)))
+	 (car (last keywords)))
 	(t
 	 (car keywords))))
 
@@ -1602,7 +1603,7 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (let* ((defaults (or font-lock-defaults
 			 (cdr (assq major-mode
 				    (with-no-warnings
-				     font-lock-defaults-alist)))))
+                                      font-lock-defaults-alist)))))
 	   (keywords
 	    (font-lock-choose-keywords (nth 0 defaults)
 				       (font-lock-value-in-major-mode font-lock-maximum-decoration)))
@@ -1647,42 +1648,13 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
 	(font-lock-remove-keywords nil removed-keywords))
       ;; Now compile the keywords.
       (unless (eq (car font-lock-keywords) t)
-	(set (make-local-variable 'font-lock-keywords)
-	     (font-lock-compile-keywords font-lock-keywords t))))))
+	(setq font-lock-keywords
+              (font-lock-compile-keywords font-lock-keywords t))))))
 
 ;;; Colour etc. support.
 
-;; Originally face attributes were specified via `font-lock-face-attributes'.
-;; Users then changed the default face attributes by setting that variable.
-;; However, we try and be back-compatible and respect its value if set except
-;; for faces where M-x customize has been used to save changes for the face.
-(when (boundp 'font-lock-face-attributes)
-  (let ((face-attributes font-lock-face-attributes))
-    (while face-attributes
-      (let* ((face-attribute (pop face-attributes))
-	     (face (car face-attribute)))
-	;; Rustle up a `defface' SPEC from a `font-lock-face-attributes' entry.
-	(unless (get face 'saved-face)
-	  (let ((foreground (nth 1 face-attribute))
-		(background (nth 2 face-attribute))
-		(bold-p (nth 3 face-attribute))
-		(italic-p (nth 4 face-attribute))
-		(underline-p (nth 5 face-attribute))
-		face-spec)
-	    (when foreground
-	      (setq face-spec (cons ':foreground (cons foreground face-spec))))
-	    (when background
-	      (setq face-spec (cons ':background (cons background face-spec))))
-	    (when bold-p
-	      (setq face-spec (append '(:weight bold) face-spec)))
-	    (when italic-p
-	      (setq face-spec (append '(:slant italic) face-spec)))
-	    (when underline-p
-	      (setq face-spec (append '(:underline t) face-spec)))
-	    (custom-declare-face face (list (list t face-spec)) nil)))))))
-
-;; But now we do it the custom way.  Note that `defface' will not overwrite any
-;; faces declared above via `custom-declare-face'.
+;; Note that `defface' will not overwrite any faces declared above via
+;; `custom-declare-face'.
 (defface font-lock-comment-face
   '((((class grayscale) (background light))
      (:foreground "DimGray" :weight bold :slant italic))
@@ -1702,7 +1674,7 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
      )
     (t (:weight bold :slant italic)))
   "Font Lock mode face used to highlight comments."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-comment-delimiter-face
   '((default :inherit font-lock-comment-face)
@@ -1713,7 +1685,7 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (((class color) (min-colors 8) (background dark))
      :foreground "red1"))
   "Font Lock mode face used to highlight comment delimiters."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-string-face
   '((((class grayscale) (background light)) (:foreground "DimGray" :slant italic))
@@ -1725,12 +1697,12 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (((class color) (min-colors 8)) (:foreground "green"))
     (t (:slant italic)))
   "Font Lock mode face used to highlight strings."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-doc-face
   '((t :inherit font-lock-string-face))
   "Font Lock mode face used to highlight documentation."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-keyword-face
   '((((class grayscale) (background light)) (:foreground "LightGray" :weight bold))
@@ -1742,7 +1714,7 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (((class color) (min-colors 8)) (:foreground "cyan" :weight bold))
     (t (:weight bold)))
   "Font Lock mode face used to highlight keywords."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-builtin-face
   '((((class grayscale) (background light)) (:foreground "LightGray" :weight bold))
@@ -1754,7 +1726,7 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (((class color) (min-colors 8)) (:foreground "blue" :weight bold))
     (t (:weight bold)))
   "Font Lock mode face used to highlight builtins."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-function-name-face
   '((((class color) (min-colors 88) (background light)) (:foreground "Blue1"))
@@ -1764,7 +1736,7 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (((class color) (min-colors 8)) (:foreground "blue" :weight bold))
     (t (:inverse-video t :weight bold)))
   "Font Lock mode face used to highlight function names."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-variable-name-face
   '((((class grayscale) (background light))
@@ -1778,7 +1750,7 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (((class color) (min-colors 8)) (:foreground "yellow" :weight light))
     (t (:weight bold :slant italic)))
   "Font Lock mode face used to highlight variable names."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-type-face
   '((((class grayscale) (background light)) (:foreground "Gray90" :weight bold))
@@ -1790,7 +1762,7 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (((class color) (min-colors 8)) (:foreground "green"))
     (t (:weight bold :underline t)))
   "Font Lock mode face used to highlight type and classes."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-constant-face
   '((((class grayscale) (background light))
@@ -1804,27 +1776,37 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
     (((class color) (min-colors 8)) (:foreground "magenta"))
     (t (:weight bold :underline t)))
   "Font Lock mode face used to highlight constants and labels."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-warning-face
   '((((class color) (min-colors 88) (background light)) (:foreground "Red1" :weight bold))
     (((class color) (min-colors 88) (background dark)) (:foreground "Pink" :weight bold))
-    (((class color) (min-colors 16) (background light)) (:foreground "Red" :weight bold))
+    (((class color) (min-colors 16) (background light)) (:foreground "Red1" :weight bold))
     (((class color) (min-colors 16) (background dark)) (:foreground "Pink" :weight bold))
     (((class color) (min-colors 8)) (:foreground "red"))
     (t (:inverse-video t :weight bold)))
   "Font Lock mode face used to highlight warnings."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-negation-char-face
   '((t nil))
   "Font Lock mode face used to highlight easy to overlook negation."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
 
 (defface font-lock-preprocessor-face
   '((t :inherit font-lock-builtin-face))
   "Font Lock mode face used to highlight preprocessor directives."
-  :group 'font-lock-highlighting-faces)
+  :group 'font-lock-faces)
+
+(defface font-lock-regexp-grouping-backslash
+  '((t :inherit bold))
+  "Font Lock mode face for backslashes in Lisp regexp grouping constructs."
+  :group 'font-lock-faces)
+
+(defface font-lock-regexp-grouping-construct
+  '((t :inherit bold))
+  "Font Lock mode face used to highlight grouping constructs in Lisp regexps."
+  :group 'font-lock-faces)
 
 ;;; End of Colour etc. support.
 
@@ -1844,95 +1826,95 @@ Sets various variables using `font-lock-defaults' (or, if nil, using
 ;; buttons and when they are on or off needs tweaking.  I have assumed that the
 ;; mechanism is via `menu-toggle' and `menu-selected' symbol properties.  sm.
 
-;;;;###autoload
-;(progn
-;  ;; Make the Font Lock menu.
-;  (defvar font-lock-menu (make-sparse-keymap "Syntax Highlighting"))
-;  ;; Add the menu items in reverse order.
-;  (define-key font-lock-menu [fontify-less]
-;    '("Less In Current Buffer" . font-lock-fontify-less))
-;  (define-key font-lock-menu [fontify-more]
-;    '("More In Current Buffer" . font-lock-fontify-more))
-;  (define-key font-lock-menu [font-lock-sep]
-;    '("--"))
-;  (define-key font-lock-menu [font-lock-mode]
-;    '("In Current Buffer" . font-lock-mode))
-;  (define-key font-lock-menu [global-font-lock-mode]
-;    '("In All Buffers" . global-font-lock-mode)))
-;
-;;;;###autoload
-;(progn
-;  ;; We put the appropriate `menu-enable' etc. symbol property values on when
-;  ;; font-lock.el is loaded, so we don't need to autoload the three variables.
-;  (put 'global-font-lock-mode 'menu-toggle t)
-;  (put 'font-lock-mode 'menu-toggle t)
-;  (put 'font-lock-fontify-more 'menu-enable '(identity))
-;  (put 'font-lock-fontify-less 'menu-enable '(identity)))
-;
-; ;; Put the appropriate symbol property values on now.  See above.
-;(put 'global-font-lock-mode 'menu-selected 'global-font-lock-mode)
-;(put 'font-lock-mode 'menu-selected 'font-lock-mode)
-;(put 'font-lock-fontify-more 'menu-enable '(nth 2 font-lock-fontify-level))
-;(put 'font-lock-fontify-less 'menu-enable '(nth 1 font-lock-fontify-level))
-;
-;(defvar font-lock-fontify-level nil)	; For less/more fontification.
-;
-;(defun font-lock-fontify-level (level)
-;  (let ((font-lock-maximum-decoration level))
-;    (when font-lock-mode
-;      (font-lock-mode))
-;    (font-lock-mode)
-;    (when font-lock-verbose
-;      (message "Fontifying %s... level %d" (buffer-name) level))))
-;
-;(defun font-lock-fontify-less ()
-;  "Fontify the current buffer with less decoration.
-;See `font-lock-maximum-decoration'."
-;  (interactive)
-;  ;; Check in case we get called interactively.
-;  (if (nth 1 font-lock-fontify-level)
-;      (font-lock-fontify-level (1- (car font-lock-fontify-level)))
-;    (error "No less decoration")))
-;
-;(defun font-lock-fontify-more ()
-;  "Fontify the current buffer with more decoration.
-;See `font-lock-maximum-decoration'."
-;  (interactive)
-;  ;; Check in case we get called interactively.
-;  (if (nth 2 font-lock-fontify-level)
-;      (font-lock-fontify-level (1+ (car font-lock-fontify-level)))
-;    (error "No more decoration")))
-;
-; ;; This should be called by `font-lock-set-defaults'.
-;(defun font-lock-set-menu ()
-;  ;; Activate less/more fontification entries if there are multiple levels for
-;  ;; the current buffer.  Sets `font-lock-fontify-level' to be of the form
-;  ;; (CURRENT-LEVEL IS-LOWER-LEVEL-P IS-HIGHER-LEVEL-P) for menu activation.
-;  (let ((keywords (or (nth 0 font-lock-defaults)
-;		      (nth 1 (assq major-mode font-lock-defaults-alist))))
-;	(level (font-lock-value-in-major-mode font-lock-maximum-decoration)))
-;    (make-local-variable 'font-lock-fontify-level)
-;    (if (or (symbolp keywords) (= (length keywords) 1))
-;	(font-lock-unset-menu)
-;      (cond ((eq level t)
-;	     (setq level (1- (length keywords))))
-;	    ((or (null level) (zerop level))
-;	     ;; The default level is usually, but not necessarily, level 1.
-;	     (setq level (- (length keywords)
-;			    (length (member (eval (car keywords))
-;					    (mapcar 'eval (cdr keywords))))))))
-;      (setq font-lock-fontify-level (list level (> level 1)
-;					  (< level (1- (length keywords))))))))
-;
-; ;; This should be called by `font-lock-unset-defaults'.
-;(defun font-lock-unset-menu ()
-;  ;; Deactivate less/more fontification entries.
-;  (setq font-lock-fontify-level nil))
+;;;;;###autoload
+;;(progn
+;;  ;; Make the Font Lock menu.
+;;  (defvar font-lock-menu (make-sparse-keymap "Syntax Highlighting"))
+;;  ;; Add the menu items in reverse order.
+;;  (define-key font-lock-menu [fontify-less]
+;;    '("Less In Current Buffer" . font-lock-fontify-less))
+;;  (define-key font-lock-menu [fontify-more]
+;;    '("More In Current Buffer" . font-lock-fontify-more))
+;;  (define-key font-lock-menu [font-lock-sep]
+;;    '("--"))
+;;  (define-key font-lock-menu [font-lock-mode]
+;;    '("In Current Buffer" . font-lock-mode))
+;;  (define-key font-lock-menu [global-font-lock-mode]
+;;    '("In All Buffers" . global-font-lock-mode)))
+;;
+;;;;;###autoload
+;;(progn
+;;  ;; We put the appropriate `menu-enable' etc. symbol property values on when
+;;  ;; font-lock.el is loaded, so we don't need to autoload the three variables.
+;;  (put 'global-font-lock-mode 'menu-toggle t)
+;;  (put 'font-lock-mode 'menu-toggle t)
+;;  (put 'font-lock-fontify-more 'menu-enable '(identity))
+;;  (put 'font-lock-fontify-less 'menu-enable '(identity)))
+;;
+;; ;; Put the appropriate symbol property values on now.  See above.
+;;(put 'global-font-lock-mode 'menu-selected 'global-font-lock-mode)
+;;(put 'font-lock-mode 'menu-selected 'font-lock-mode)
+;;(put 'font-lock-fontify-more 'menu-enable '(nth 2 font-lock-fontify-level))
+;;(put 'font-lock-fontify-less 'menu-enable '(nth 1 font-lock-fontify-level))
+;;
+;;(defvar font-lock-fontify-level nil)	; For less/more fontification.
+;;
+;;(defun font-lock-fontify-level (level)
+;;  (let ((font-lock-maximum-decoration level))
+;;    (when font-lock-mode
+;;      (font-lock-mode))
+;;    (font-lock-mode)
+;;    (when font-lock-verbose
+;;      (message "Fontifying %s... level %d" (buffer-name) level))))
+;;
+;;(defun font-lock-fontify-less ()
+;;  "Fontify the current buffer with less decoration.
+;;See `font-lock-maximum-decoration'."
+;;  (interactive)
+;;  ;; Check in case we get called interactively.
+;;  (if (nth 1 font-lock-fontify-level)
+;;      (font-lock-fontify-level (1- (car font-lock-fontify-level)))
+;;    (error "No less decoration")))
+;;
+;;(defun font-lock-fontify-more ()
+;;  "Fontify the current buffer with more decoration.
+;;See `font-lock-maximum-decoration'."
+;;  (interactive)
+;;  ;; Check in case we get called interactively.
+;;  (if (nth 2 font-lock-fontify-level)
+;;      (font-lock-fontify-level (1+ (car font-lock-fontify-level)))
+;;    (error "No more decoration")))
+;;
+;; ;; This should be called by `font-lock-set-defaults'.
+;;(defun font-lock-set-menu ()
+;;  ;; Activate less/more fontification entries if there are multiple levels for
+;;  ;; the current buffer.  Sets `font-lock-fontify-level' to be of the form
+;;  ;; (CURRENT-LEVEL IS-LOWER-LEVEL-P IS-HIGHER-LEVEL-P) for menu activation.
+;;  (let ((keywords (or (nth 0 font-lock-defaults)
+;;		      (nth 1 (assq major-mode font-lock-defaults-alist))))
+;;	(level (font-lock-value-in-major-mode font-lock-maximum-decoration)))
+;;    (make-local-variable 'font-lock-fontify-level)
+;;    (if (or (symbolp keywords) (= (length keywords) 1))
+;;	(font-lock-unset-menu)
+;;      (cond ((eq level t)
+;;	     (setq level (1- (length keywords))))
+;;	    ((or (null level) (zerop level))
+;;	     ;; The default level is usually, but not necessarily, level 1.
+;;	     (setq level (- (length keywords)
+;;			    (length (member (eval (car keywords))
+;;					    (mapcar 'eval (cdr keywords))))))))
+;;      (setq font-lock-fontify-level (list level (> level 1)
+;;					  (< level (1- (length keywords))))))))
+;;
+;; ;; This should be called by `font-lock-unset-defaults'.
+;;(defun font-lock-unset-menu ()
+;;  ;; Deactivate less/more fontification entries.
+;;  (setq font-lock-fontify-level nil))
 
 ;;; End of Menu support.
 
 ;;; Various regexp information shared by several modes.
-; ;; Information specific to a single mode should go in its load library.
+;; ;; Information specific to a single mode should go in its load library.
 
 ;; Font Lock support for C, C++, Objective-C and Java modes is now in
 ;; cc-fonts.el (and required by cc-mode.el).  However, the below function
@@ -1981,6 +1963,78 @@ This function could be MATCHER in a MATCH-ANCHORED `font-lock-keywords' item."
 	      (goto-char (or (scan-sexps (point) 1) (point-max))))
 	    (goto-char (match-end 2)))
 	(error t)))))
+
+;; C preprocessor(cpp) is used outside of C, C++ and Objective-C source file.
+;; e.g. assembler code and GNU linker script in Linux kernel.
+;; `cpp-font-lock-keywords' is handy for modes for the files.
+;;
+;; Here we cannot use `regexp-opt' because because regex-opt is not preloaded
+;; while font-lock.el is preloaded to emacs. So values pre-calculated with 
+;; regexp-opt are used here.
+
+;; `cpp-font-lock-keywords-source-directives' is calculated from:
+;;
+;;	    (regexp-opt
+;;	     '("define"  "elif" "else" "endif" "error" "file" "if" "ifdef"
+;;	       "ifndef" "include" "line" "pragma" "undef"))
+;;
+(defconst cpp-font-lock-keywords-source-directives
+  "define\\|e\\(?:l\\(?:if\\|se\\)\\|ndif\\|rror\\)\\|file\\|i\\(?:f\\(?:n?def\\)?\\|nclude\\)\\|line\\|pragma\\|undef"
+  "Regular expressoin used in `cpp-font-lock-keywords'.")
+
+;; `cpp-font-lock-keywords-source-depth' is calculated from:
+;;
+;;          (regexp-opt-depth (regexp-opt
+;;		       '("define"  "elif" "else" "endif" "error" "file" "if" "ifdef"
+;;			 "ifndef" "include" "line" "pragma" "undef")))
+;;
+(defconst cpp-font-lock-keywords-source-depth 0
+  "An integer representing regular expression depth of `cpp-font-lock-keywords-source-directives'.
+Used in `cpp-font-lock-keywords'.")
+
+(defconst cpp-font-lock-keywords
+  (let* ((directives cpp-font-lock-keywords-source-directives)
+	 (directives-depth cpp-font-lock-keywords-source-depth))
+    (list
+     ;;
+     ;; Fontify error directives.
+     '("^#[ \t]*error[ \t]+\\(.+\\)" 1 font-lock-warning-face prepend)
+     ;;
+     ;; Fontify filenames in #include <...> preprocessor directives as strings.
+     '("^#[ \t]*\\(?:import\\|include\\)[ \t]*\\(<[^>\"\n]*>?\\)"
+       1 font-lock-string-face prepend)
+     ;;
+     ;; Fontify function macro names.
+     '("^#[ \t]*define[ \t]+\\([[:alpha:]_][[:alnum:]_$]*\\)(" 
+       (1 font-lock-function-name-face prepend)
+       ;;
+       ;; Macro arguments.
+       ((lambda (limit)
+	  (re-search-forward
+	   "\\(?:\\([[:alpha:]_][[:alnum:]_]*\\)[,]?\\)" 
+	   (or (save-excursion (re-search-forward ")" limit t)) 
+	       limit)
+	   t)) 
+	nil nil (1 font-lock-variable-name-face prepend)))
+     ;;
+     ;; Fontify symbol names in #elif or #if ... defined preprocessor directives.
+     '("^#[ \t]*\\(?:elif\\|if\\)\\>"
+       ("\\<\\(defined\\)\\>[ \t]*(?\\([[:alpha:]_][[:alnum:]_]*\\)?" nil nil
+	(1 font-lock-builtin-face prepend) (2 font-lock-variable-name-face prepend t)))
+     ;;
+     ;; Fontify otherwise as symbol names, and the preprocessor directive names.
+     (list
+      (concat "^\\(#[ \t]*\\(?:" directives
+	      "\\)\\)\\>[ \t!]*\\([[:alpha:]_][[:alnum:]_]*\\)?")
+      '(1 font-lock-preprocessor-face prepend)
+      (list (+ 2 directives-depth)
+	    'font-lock-variable-name-face nil t))))
+    "Font lock keyords for C preprocessor directives.
+`c-mode', `c++-mode' and `objc-mode' have their own 
+font lock keyords for C preprocessor directives. This definition is for the
+other modes in which C preprocessor directives are used. e.g. `asm-mode' and
+`ld-script-mode'.")
+
 
 ;; Lisp.
 
@@ -1991,7 +2045,8 @@ This function could be MATCHER in a MATCH-ANCHORED `font-lock-keywords' item."
 		;; Function declarations.
 		"\\(advice\\|varalias\\|alias\\|generic\\|macro\\*?\\|method\\|"
 		"setf\\|subst\\*?\\|un\\*?\\|"
-		"ine-\\(condition\\|\\(?:derived\\|minor\\|generic\\)-mode\\|"
+		"ine-\\(condition\\|"
+		"\\(?:derived\\|\\(?:global-\\)?minor\\|generic\\)-mode\\|"
 		"method-combination\\|setf-expander\\|skeleton\\|widget\\|"
 		"function\\|\\(compiler\\|modify\\|symbol\\)-macro\\)\\)\\|"
 		;; Variable declarations.
@@ -2019,14 +2074,14 @@ This function could be MATCHER in a MATCH-ANCHORED `font-lock-keywords' item."
      `(;; Control structures.  Emacs Lisp forms.
        (,(concat
 	  "(" (regexp-opt
-	       '("cond" "if" "while" "let" "let*"
+	       '("cond" "if" "while" "while-no-input" "let" "let*"
 		 "prog" "progn" "progv" "prog1" "prog2" "prog*"
 		 "inline" "lambda" "save-restriction" "save-excursion"
 		 "save-window-excursion" "save-selected-window"
 		 "save-match-data" "save-current-buffer" "unwind-protect"
 		 "condition-case" "track-mouse"
 		 "eval-after-load" "eval-and-compile" "eval-when-compile"
-		 "eval-when"
+		 "eval-when" "eval-at-startup" "eval-next-after-load"
 		 "with-category-table"
 		 "with-current-buffer" "with-electric-help"
 		 "with-local-quit" "with-no-warnings"
@@ -2072,24 +2127,22 @@ This function could be MATCHER in a MATCH-ANCHORED `font-lock-keywords' item."
        ("\\<:\\sw+\\>" 0 font-lock-builtin-face)
        ;; ELisp and CLisp `&' keywords as types.
        ("\\&\\sw+\\>" . font-lock-type-face)
-       ;; Make regexp grouping constructs bold, so they stand out, but only
-       ;; in strings.
+       ;; ELisp regexp grouping constructs
        ((lambda (bound)
-	  (if (re-search-forward "\\(\\\\\\\\\\)\\([(|)]\\)\\(\\?:\\)?" bound t)
-	       (let ((face (get-text-property (1- (point)) 'face)))
-		 (if (listp face)
-		     (memq 'font-lock-string-face face)
-		   (eq 'font-lock-string-face face)))))
-        ;; Should we introduce a lowlight face for this?
-        ;; Ideally that would retain the color, dimmed.
-	(1 font-lock-comment-face prepend)
-	(2 'bold prepend)
-	(3 font-lock-type-face prepend t))
-       ;; Underline innermost grouping, so that you can more easily see what
-       ;; belongs together.  2005-05-12: Font-lock can go into an
-       ;; unbreakable endless loop on this -- something's broken.
-       ;;("[\\][\\][(]\\(?:\\?:\\)?\\(\\(?:[^\\\"]+\\|[\\]\\(?:[^\\]\\|[\\][^(]\\)\\)+?\\)[\\][\\][)]"
-	 ;;1 'underline prepend)
+          (catch 'found
+            ;; The following loop is needed to continue searching after matches
+            ;; that do not occur in strings.  The associated regexp matches one
+            ;; of `\\\\' `\\(' `\\(?:' `\\|' `\\)'.  `\\\\' has been included to
+            ;; avoid highlighting, for example, `\\(' in `\\\\('.
+            (while (re-search-forward "\\(\\\\\\\\\\)\\(?:\\(\\\\\\\\\\)\\|\\((\\(?:\\?:\\)?\\|[|)]\\)\\)" bound t)
+              (unless (match-beginning 2)
+                (let ((face (get-text-property (1- (point)) 'face)))
+                  (when (or (and (listp face)
+                                 (memq 'font-lock-string-face face))
+                            (eq 'font-lock-string-face face))
+                    (throw 'found t)))))))
+        (1 'font-lock-regexp-grouping-backslash prepend)
+        (3 'font-lock-regexp-grouping-construct prepend))
 ;;;  This is too general -- rms.
 ;;;  A user complained that he has functions whose names start with `do'
 ;;;  and that they get the wrong color.

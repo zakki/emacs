@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -41,7 +41,7 @@
 ;; You don't need to know about annotations to use this mode as a debugger,
 ;; but if you are interested developing the mode itself, then see the
 ;; Annotations section in the GDB info manual.
-;;
+
 ;; GDB developers plan to make the annotation interface obsolete.  A new
 ;; interface called GDB/MI (machine interface) has been designed to replace
 ;; it.  Some GDB/MI commands are used in this file through the CLI command
@@ -49,24 +49,54 @@
 ;; GDB (6.2 onwards) that uses GDB/MI as the primary interface to GDB.  It is
 ;; still under development and is part of a process to migrate Emacs from
 ;; annotations to GDB/MI.
-;;
-;; Known Bugs:
-;;
-;; TODO:
+
+;; This mode SHOULD WORK WITH GDB 5.0 onwards but you will NEED GDB 6.0
+;; onwards to use watch expressions.  It works best with GDB 6.4 where
+;; watch expressions will update more quickly.
+
+;;; Windows Platforms:
+
+;; If you are using Emacs and GDB on Windows you will need to flush the buffer
+;; explicitly in your program if you want timely display of I/O in Emacs.
+;; Alternatively you can make the output stream unbuffered, for example, by
+;; using a macro:
+
+;;           #ifdef UNBUFFERED
+;;	     setvbuf (stdout, (char *) NULL, _IONBF, 0);
+;;	     #endif
+
+;; and compiling with -DUNBUFFERED while debugging.
+
+;;; Known Bugs:
+
+;; 1) Strings that are watched don't update in the speedbar when their
+;; contents change.
+;; 2) Watch expressions go out of scope when the inferior is re-run.
+;; 3) Cannot handle multiple debug sessions.
+
+;;; TODO:
+
 ;; 1) Use MI command -data-read-memory for memory window.
 ;; 2) Highlight changed register values (use MI commands
 ;;    -data-list-register-values and -data-list-changed-registers instead
-;;    of 'info registers'.
+;;    of 'info registers' after release of 22.1.
 ;; 3) Use tree-widget.el instead of the speedbar for watch-expressions?
 ;; 4) Mark breakpoint locations on scroll-bar of source buffer?
-;; 5) After release of 22.1 use '-var-list-children --all-values'
-;;    and '-stack-list-locals 2' which need GDB 6.1 onwards.
+;; 5) After release of 22.1, use "-var-list-children --all-values"
+;;    and "-stack-list-locals --simple-values" which need GDB 6.1 onwards.
+;; 6) After release of 22.1, use "-var-update --all-values" which needs
+;;    GDB 6.4 onwards.
+;; 7) With gud-print and gud-pstar, print the variable name in the GUD
+;;    buffer instead of the value's history number.
 
 ;;; Code:
 
 (require 'gud)
 
-(defvar gdb-frame-address "main" "Initialisation for Assembler buffer.")
+(defvar tool-bar-map)
+(defvar speedbar-initial-expansion-list-name)
+
+(defvar gdb-frame-address "main" "Initialization for Assembler buffer.")
 (defvar gdb-previous-frame-address nil)
 (defvar gdb-memory-address "main")
 (defvar gdb-previous-frame nil)
@@ -74,22 +104,23 @@
 (defvar gdb-frame-number nil)
 (defvar gdb-current-language nil)
 (defvar gdb-var-list nil "List of variables in watch window.")
-(defvar gdb-var-changed nil "Non-nil means that gdb-var-list has changed.")
+(defvar gdb-var-changed nil "Non-nil means that `gdb-var-list' has changed.")
 (defvar gdb-main-file nil "Source file from which program execution begins.")
-(defvar gdb-buffer-type nil)
 (defvar gdb-overlay-arrow-position nil)
 (defvar gdb-server-prefix nil)
 (defvar gdb-flush-pending-output nil)
 (defvar gdb-location-alist nil
   "Alist of breakpoint numbers and full filenames.")
-(defvar gdb-find-file-unhook nil)
 (defvar gdb-active-process nil "GUD tooltips display variable values when t, \
 and #define directives otherwise.")
+(defvar gdb-error "Non-nil when GDB is reporting an error.")
 (defvar gdb-macro-info nil
   "Non-nil if GDB knows that the inferior includes preprocessor macro info.")
+(defvar gdb-buffer-fringe-width nil)
 
 (defvar gdb-buffer-type nil
   "One of the symbols bound in `gdb-buffer-rules'.")
+(make-variable-buffer-local 'gdb-buffer-type)
 
 (defvar gdb-input-queue ()
   "A list of gdb command objects.")
@@ -104,7 +135,7 @@ Possible values are these symbols:
     `user' -- gdb output should be copied to the GUD buffer
               for the user to see.
 
-    `inferior' -- gdb output should be copied to the inferior-io buffer
+    `inferior' -- gdb output should be copied to the inferior-io buffer.
 
     `pre-emacs' -- output should be ignored util the post-prompt
                    annotation is received.  Then the output-sink
@@ -116,7 +147,7 @@ Possible values are these symbols:
     `post-emacs' -- ignore output until the prompt annotation is
 		    received, then go to USER disposition.
 
-gdba (gdb-ui.el) uses all five values,  gdbmi (gdb-mi.el) only two
+gdba (gdb-ui.el) uses all five values, gdbmi (gdb-mi.el) only two
 \(`user' and `emacs').")
 
 (defvar gdb-current-item nil
@@ -126,7 +157,44 @@ gdba (gdb-ui.el) uses all five values,  gdbmi (gdb-mi.el) only two
   "A list of trigger functions that have run later than their output
 handlers.")
 
-;; end of gdb variables
+(defvar gdb-first-post-prompt nil)
+(defvar gdb-version nil)
+(defvar gdb-locals-font-lock-keywords nil)
+(defvar gdb-source-file-list nil
+  "List of source files for the current executable")
+(defconst gdb-error-regexp "\\^error,msg=\"\\(.+\\)\"")
+
+(defvar gdb-locals-font-lock-keywords-1
+  '(
+    ;; var = (struct struct_tag) value
+    ( "\\(^\\(\\sw\\|[_.]\\)+\\) += +(\\(struct\\) \\(\\(\\sw\\|[_.]\\)+\\)"
+      (1 font-lock-variable-name-face)
+      (3 font-lock-keyword-face)
+      (4 font-lock-type-face))
+    ;; var = (type) value
+    ( "\\(^\\(\\sw\\|[_.]\\)+\\) += +(\\(\\(\\sw\\|[_.]\\)+\\)"
+      (1 font-lock-variable-name-face)
+      (3 font-lock-type-face))
+    ;; var = val
+    ( "\\(^\\(\\sw\\|[_.]\\)+\\) += +[^(]"
+      (1 font-lock-variable-name-face))
+    )
+  "Font lock keywords used in `gdb-local-mode'.")
+
+(defvar gdb-locals-font-lock-keywords-2
+  '(
+    ;; var = type value
+    ( "\\(^\\(\\sw\\|[_.]\\)+\\)\t+\\(\\(\\sw\\|[_.]\\)+\\)"
+      (1 font-lock-variable-name-face)
+      (3 font-lock-type-face))
+    )
+  "Font lock keywords used in `gdb-local-mode'.")
+
+;; Variables for GDB 6.4+
+
+(defvar gdb-register-names nil "List of register names.")
+(defvar gdb-changed-registers nil
+  "List of changed register numbers (strings).")
 
 ;;;###autoload
 (defun gdba (command-line)
@@ -135,7 +203,7 @@ The directory containing FILE becomes the initial working directory
 and source-file directory for your debugger.
 
 If `gdb-many-windows' is nil (the default value) then gdb just
-pops up the GUD buffer unless `gdb-show-main' is t. In this case
+pops up the GUD buffer unless `gdb-show-main' is t.  In this case
 it starts with two windows: one displaying the GUD buffer and the
 other with the source file with the main routine of the inferior.
 
@@ -156,45 +224,40 @@ See Info node `(emacs)GDB Graphical Interface' for a more
 detailed description of this mode.
 
 
----------------------------------------------------------------------
-                               GDB Toolbar
----------------------------------------------------------------------
- GUD buffer (I/O of GDB)          | Locals buffer
-                                  |
-                                  |
-                                  |
----------------------------------------------------------------------
- Source buffer                    | Input/Output (of inferior) buffer
-                                  | (comint-mode)
-                                  |
-                                  |
-                                  |
-                                  |
-                                  |
-                                  |
----------------------------------------------------------------------
- Stack buffer                     | Breakpoints buffer
- RET      gdb-frames-select       | SPC    gdb-toggle-breakpoint
-                                  | RET    gdb-goto-breakpoint
-                                  |   d    gdb-delete-breakpoint
----------------------------------------------------------------------"
++--------------------------------------------------------------+
+|                           GDB Toolbar                        |
++-------------------------------+------------------------------+
+| GUD buffer (I/O of GDB)       | Locals buffer                |
+|                               |                              |
+|                               |                              |
+|                               |                              |
++-------------------------------+------------------------------+
+| Source buffer                 | I/O buffer (of inferior)     |
+|                               | (comint-mode)                |
+|                               |                              |
+|                               |                              |
+|                               |                              |
+|                               |                              |
+|                               |                              |
+|                               |                              |
++-------------------------------+------------------------------+
+| Stack buffer                  | Breakpoints buffer           |
+| RET      gdb-frames-select    | SPC    gdb-toggle-breakpoint |
+|                               | RET    gdb-goto-breakpoint   |
+|                               | d      gdb-delete-breakpoint |
++-------------------------------+------------------------------+"
   ;;
   (interactive (list (gud-query-cmdline 'gdba)))
   ;;
   ;; Let's start with a basic gud-gdb buffer and then modify it a bit.
   (gdb command-line)
-  (gdb-ann3))
+  (gdb-init-1))
 
 (defvar gdb-debug-log nil)
 
+;;;###autoload
 (defcustom gdb-enable-debug-log nil
   "Non-nil means record the process input and output in `gdb-debug-log'."
-  :type 'boolean
-  :group 'gud
-  :version "22.1")
-
-(defcustom gdb-use-inferior-io-buffer nil
-  "Non-nil means display output from the inferior in a separate buffer."
   :type 'boolean
   :group 'gud
   :version "22.1")
@@ -202,7 +265,7 @@ detailed description of this mode.
 (defcustom gdb-cpp-define-alist-program "gcc -E -dM -"
   "Shell command for generating a list of defined macros in a source file.
 This list is used to display the #define directive associated
-with an identifier as a tooltip. It works in a debug session with
+with an identifier as a tooltip.  It works in a debug session with
 GDB, when gud-tooltip-mode is t.
 
 Set `gdb-cpp-define-alist-flags' for any include paths or
@@ -224,6 +287,30 @@ Also display the main routine in the disassembly buffer if present."
   :group 'gud
   :version "22.1")
 
+(defcustom gdb-use-inferior-io-buffer nil
+  "Non-nil means display output from the inferior in a separate buffer."
+  :type 'boolean
+  :group 'gud
+  :version "22.1")
+
+(defun gdb-use-inferior-io-buffer (arg)
+  "Toggle separate IO for inferior.
+With arg, use separate IO iff arg is positive."
+  (interactive "P")
+  (setq gdb-use-inferior-io-buffer
+	(if (null arg)
+	    (not gdb-use-inferior-io-buffer)
+	  (> (prefix-numeric-value arg) 0)))
+  (message (format "Separate inferior IO %sabled"
+		   (if gdb-use-inferior-io-buffer "en" "dis")))
+  (if (and gud-comint-buffer
+	   (buffer-name gud-comint-buffer))
+      (condition-case nil
+	  (if gdb-use-inferior-io-buffer
+	      (gdb-restore-windows)
+	    (kill-buffer (gdb-inferior-io-name)))
+	(error nil))))
+
 (defvar gdb-define-alist nil "Alist of #define directives for GUD tooltips.")
 
 (defun gdb-create-define-alist ()
@@ -244,13 +331,17 @@ Also display the main routine in the disassembly buffer if present."
       (setq name (nth 1 (split-string define "[( ]")))
       (push (cons name define) gdb-define-alist))))
 
-(defun gdb-tooltip-print ()
+(defun gdb-tooltip-print (expr)
   (tooltip-show
    (with-current-buffer (gdb-get-buffer 'gdb-partial-output-buffer)
-     (let ((string (buffer-string)))
+     (goto-char (point-min))
+     (let ((string
+	    (if (search-forward "=" nil t)
+		(concat expr (buffer-substring (- (point) 2) (point-max)))
+	      (buffer-string))))
        ;; remove newline for gud-tooltip-echo-area
        (substring string 0 (- (length string) 1))))
-   gud-tooltip-echo-area))
+   (or gud-tooltip-echo-area tooltip-use-echo-area)))
 
 ;; If expr is a macro for a function don't print because of possible dangerous
 ;; side-effects. Also printing a function within a tooltip generates an
@@ -259,46 +350,41 @@ Also display the main routine in the disassembly buffer if present."
   (with-current-buffer (gdb-get-buffer 'gdb-partial-output-buffer)
     (goto-char (point-min))
     (if (search-forward "expands to: " nil t)
-	(unless (looking-at "\\S+.*(.*).*")
+	(unless (looking-at "\\S-+.*(.*).*")
 	  (gdb-enqueue-input
 	   (list  (concat gdb-server-prefix "print " expr "\n")
-		  'gdb-tooltip-print))))))
+		  `(lambda () (gdb-tooltip-print ,expr))))))))
 
-(defun gdb-set-gud-minor-mode (buffer)
-  "Set gud-minor-mode from find-file if appropriate."
-  (goto-char (point-min))
-  (unless (search-forward "No source file named " nil t)
-    (condition-case nil
-	(gdb-enqueue-input
-	 (list (concat gdb-server-prefix "info source\n")
-	       `(lambda () (gdb-set-gud-minor-mode-1 ,buffer))))
-      (error (setq gdb-find-file-unhook t)))))
-
-(defun gdb-set-gud-minor-mode-1 (buffer)
-  (goto-char (point-min))
-  (when (and (search-forward "Located in " nil t)
-	     (looking-at "\\S-+")
-	     (string-equal (buffer-file-name buffer)
-			   (match-string 0)))
-    (with-current-buffer buffer
-      (set (make-local-variable 'gud-minor-mode) 'gdba)
-      (set (make-local-variable 'tool-bar-map) gud-tool-bar-map)
-      (when gud-tooltip-mode
-	(make-local-variable 'gdb-define-alist)
-	(gdb-create-define-alist)
-	(add-hook 'after-save-hook 'gdb-create-define-alist nil t)))))
+(defconst gdb-source-file-regexp "\\(.+?\\), \\|\\([^, \n].*$\\)")
 
 (defun gdb-set-gud-minor-mode-existing-buffers ()
-  (dolist (buffer (buffer-list))
-    (let ((file (buffer-file-name buffer)))
-      (if file
-	(progn
-	  (gdb-enqueue-input
-	   (list (concat gdb-server-prefix "list "
-			 (file-name-nondirectory file) ":1\n")
-		 `(lambda () (gdb-set-gud-minor-mode ,buffer)))))))))
+  "Create list of source files for current GDB session."
+  (goto-char (point-min))
+  (when (search-forward "read in on demand:" nil t)
+    (while (re-search-forward gdb-source-file-regexp nil t)
+      (push (or (match-string 1) (match-string 2)) gdb-source-file-list))
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+	(when (and buffer-file-name
+		   (member (file-name-nondirectory buffer-file-name)
+			   gdb-source-file-list))
+	  (set (make-local-variable 'gud-minor-mode) 'gdba)
+	  (set (make-local-variable 'tool-bar-map) gud-tool-bar-map)
+	  (when gud-tooltip-mode
+	    (make-local-variable 'gdb-define-alist)
+	    (gdb-create-define-alist)
+	    (add-hook 'after-save-hook 'gdb-create-define-alist nil t)))))))
 
-(defun gdb-ann3 ()
+(defun gdb-find-watch-expression ()
+  (let* ((var (nth (- (line-number-at-pos (point)) 2) gdb-var-list))
+	 (varno (nth 1 var)) (expr))
+    (string-match "\\(var[0-9]+\\)\\.\\(.*\\)" varno)
+    (dolist (var1 gdb-var-list)
+      (if (string-equal (nth 1 var1) (match-string 1 varno))
+	  (setq expr (concat (car var1) "." (match-string 2 varno)))))
+    expr))
+
+(defun gdb-init-1 ()
   (setq gdb-debug-log nil)
   (set (make-local-variable 'gud-minor-mode) 'gdba)
   (set (make-local-variable 'gud-marker-filter) 'gud-gdba-marker-filter)
@@ -319,26 +405,43 @@ Also display the main routine in the disassembly buffer if present."
 			  (gud-call "clear *%a" arg)))
 	   "\C-d" "Remove breakpoint at current line or address.")
   ;;
-  (gud-def gud-until  (if (not (string-match "Machine" mode-name))
-			  (gud-call "until %f:%l" arg)
-			(save-excursion
-			  (beginning-of-line)
-			  (forward-char 2)
-			  (gud-call "until *%a" arg)))
+  (gud-def gud-until (if (not (string-match "Machine" mode-name))
+			 (gud-call "until %f:%l" arg)
+		       (save-excursion
+			 (beginning-of-line)
+			 (forward-char 2)
+			 (gud-call "until *%a" arg)))
 	   "\C-u" "Continue to current line or address.")
+  ;;
+  (gud-def gud-go (gud-call (if gdb-active-process "continue" "run") arg)
+	   nil "Start or continue execution.")
+
+  ;; For debugging Emacs only.
+  (gud-def gud-pp
+	   (gud-call
+	    (concat
+	     "pp1 " (if (eq (buffer-local-value
+			     'major-mode (window-buffer)) 'speedbar-mode)
+			(gdb-find-watch-expression) "%e")) arg)
+	   nil   "Print the emacs s-expression.")
 
   (define-key gud-minor-mode-map [left-margin mouse-1]
     'gdb-mouse-set-clear-breakpoint)
   (define-key gud-minor-mode-map [left-fringe mouse-1]
     'gdb-mouse-set-clear-breakpoint)
+  (define-key gud-minor-mode-map [left-fringe mouse-2]
+    'gdb-mouse-until)
+  (define-key gud-minor-mode-map [left-fringe drag-mouse-1]
+    'gdb-mouse-until)
+  (define-key gud-minor-mode-map [left-margin mouse-2]
+    'gdb-mouse-until)
   (define-key gud-minor-mode-map [left-margin mouse-3]
-    'gdb-mouse-toggle-breakpoint)
-;  Currently only works in margin.
-;  (define-key gud-minor-mode-map [left-fringe mouse-3]
-;    'gdb-mouse-toggle-breakpoint)
+    'gdb-mouse-toggle-breakpoint-margin)
+  (define-key gud-minor-mode-map [left-fringe mouse-3]
+    'gdb-mouse-toggle-breakpoint-fringe)
 
   (setq comint-input-sender 'gdb-send)
-  ;;
+
   ;; (re-)initialize
   (setq gdb-frame-address (if gdb-show-main "main" nil))
   (setq gdb-previous-frame-address nil
@@ -349,7 +452,7 @@ Also display the main routine in the disassembly buffer if present."
 	gdb-frame-number nil
 	gdb-var-list nil
 	gdb-var-changed nil
-	gdb-first-prompt nil
+	gdb-first-post-prompt t
 	gdb-prompting nil
 	gdb-input-queue nil
 	gdb-current-item nil
@@ -358,24 +461,99 @@ Also display the main routine in the disassembly buffer if present."
 	gdb-server-prefix "server "
 	gdb-flush-pending-output nil
 	gdb-location-alist nil
-	gdb-find-file-unhook nil
-	gdb-macro-info nil)
-  ;;
+	gdb-source-file-list nil
+	gdb-error nil
+	gdb-macro-info nil
+	gdb-buffer-fringe-width (car (window-fringes)))
+
   (setq gdb-buffer-type 'gdba)
-  ;;
+
   (if gdb-use-inferior-io-buffer (gdb-clear-inferior-io))
-  ;;
+
+  ;; Hack to see test for GDB 6.4+ (-stack-info-frame was implemented in 6.4)
+  (setq gdb-version nil)
+  (gdb-enqueue-input (list "server interpreter mi -stack-info-frame\n"
+			   'gdb-get-version)))
+
+(defun gdb-init-2 ()
   (if (eq window-system 'w32)
       (gdb-enqueue-input (list "set new-console off\n" 'ignore)))
   (gdb-enqueue-input (list "set height 0\n" 'ignore))
   (gdb-enqueue-input (list "set width 0\n" 'ignore))
+
+  (if (string-equal gdb-version "pre-6.4")
+      (progn
+	(gdb-enqueue-input (list (concat gdb-server-prefix "info sources\n")
+				 'gdb-set-gud-minor-mode-existing-buffers))
+	(setq gdb-locals-font-lock-keywords gdb-locals-font-lock-keywords-1))
+    (gdb-enqueue-input
+     (list "server interpreter mi -data-list-register-names\n"
+	 'gdb-get-register-names))
+    ; Needs GDB 6.2 onwards.
+    (gdb-enqueue-input
+     (list "server interpreter mi \"-file-list-exec-source-files\"\n"
+	   'gdb-set-gud-minor-mode-existing-buffers-1))
+    (setq gdb-locals-font-lock-keywords gdb-locals-font-lock-keywords-2))
+
   ;; find source file and compilation directory here
   (gdb-enqueue-input (list "server list main\n"   'ignore))   ; C program
   (gdb-enqueue-input (list "server list MAIN__\n" 'ignore))   ; Fortran program
   (gdb-enqueue-input (list "server info source\n" 'gdb-source-info))
-  ;;
-  (gdb-set-gud-minor-mode-existing-buffers)
+
   (run-hooks 'gdba-mode-hook))
+
+(defun gdb-get-version ()
+  (goto-char (point-min))
+  (if (and (re-search-forward gdb-error-regexp nil t)
+	   (string-match ".*(missing implementation)" (match-string 1)))
+      (setq gdb-version "pre-6.4")
+    (setq gdb-version "6.4+"))
+  (gdb-init-2))
+
+(defun gdb-mouse-until (event)
+  "Execute source lines by dragging the overlay arrow (fringe) with the mouse."
+  (interactive "e")
+  (if gud-overlay-arrow-position
+      (let ((start (event-start event))
+	    (end  (event-end event))
+	    (buffer (marker-buffer gud-overlay-arrow-position)) (line))
+	(if (not (string-match "Machine" mode-name))
+	    (if (equal buffer (window-buffer (posn-window end)))
+		(with-current-buffer buffer
+		  (when (or (equal start end)
+			    (equal (posn-point start)
+				   (marker-position
+				    gud-overlay-arrow-position)))
+		    (setq line (line-number-at-pos (posn-point end)))
+		    (gud-call (concat "until " (number-to-string line))))))
+	  (if (equal (marker-buffer gdb-overlay-arrow-position)
+		     (window-buffer (posn-window end)))
+	      (when (or (equal start end)
+			(equal (posn-point start)
+			       (marker-position
+				gdb-overlay-arrow-position)))
+		(save-excursion
+		  (goto-line (line-number-at-pos (posn-point end)))
+		  (forward-char 2)
+		  (gud-call (concat "until *%a")))))))))
+
+(defcustom gdb-speedbar-auto-raise t
+  "If non-nil raise speedbar every time display of watch expressions is\
+ updated."
+  :type 'boolean
+  :group 'gud
+  :version "22.1")
+
+(defun gdb-speedbar-auto-raise (arg)
+  "Toggle automatic raising of the speedbar for watch expressions.
+With arg, automatically raise speedbar iff arg is positive."
+  (interactive "P")
+  (setq gdb-speedbar-auto-raise
+	(if (null arg)
+	    (not gdb-speedbar-auto-raise)
+	  (> (prefix-numeric-value arg) 0)))
+  (message (format "Auto raising %sabled"
+		   (if gdb-speedbar-auto-raise "en" "dis"))))
 
 (defcustom gdb-use-colon-colon-notation nil
   "If non-nil use FUN::VAR format to display variables in the speedbar."
@@ -383,69 +561,70 @@ Also display the main routine in the disassembly buffer if present."
   :group 'gud
   :version "22.1")
 
-(defun gud-watch ()
+(defun gud-watch (&optional event)
   "Watch expression at point."
-  (interactive)
+  (interactive (list last-input-event))
+  (if event (posn-set-point (event-end event)))
   (require 'tooltip)
-  (let ((expr (tooltip-identifier-from-point (point))))
-    (if (and (string-equal gdb-current-language "c")
-	     gdb-use-colon-colon-notation gdb-selected-frame)
-	(setq expr (concat gdb-selected-frame "::" expr)))
-    (catch 'already-watched
-      (dolist (var gdb-var-list)
-	(if (string-equal expr (car var)) (throw 'already-watched nil)))
-      (set-text-properties 0 (length expr) nil expr)
-      (gdb-enqueue-input
-       (list
-	(if (eq gud-minor-mode 'gdba)
-	    (concat "server interpreter mi \"-var-create - * "  expr "\"\n")
-	  (concat"-var-create - * "  expr "\n"))
-	     `(lambda () (gdb-var-create-handler ,expr))))))
-  (select-window (get-buffer-window gud-comint-buffer 0)))
+  (save-selected-window
+    (let ((expr (tooltip-identifier-from-point (point))))
+      (if (and (string-equal gdb-current-language "c")
+	       gdb-use-colon-colon-notation gdb-selected-frame)
+	  (setq expr (concat gdb-selected-frame "::" expr)))
+      (catch 'already-watched
+	(dolist (var gdb-var-list)
+	  (if (string-equal expr (car var)) (throw 'already-watched nil)))
+	(set-text-properties 0 (length expr) nil expr)
+	(gdb-enqueue-input
+	 (list
+	  (if (eq gud-minor-mode 'gdba)
+	      (concat "server interpreter mi \"-var-create - * "  expr "\"\n")
+	    (concat"-var-create - * "  expr "\n"))
+	  `(lambda () (gdb-var-create-handler ,expr))))))))
 
 (defconst gdb-var-create-regexp
   "name=\"\\(.*?\\)\",numchild=\"\\(.*?\\)\",type=\"\\(.*?\\)\"")
 
 (defun gdb-var-create-handler (expr)
-  (with-current-buffer (gdb-get-create-buffer 'gdb-partial-output-buffer)
-    (goto-char (point-min))
-    (if (re-search-forward gdb-var-create-regexp nil t)
-	(let ((var (list expr
-			 (match-string 1)
-			 (match-string 2)
-			 (match-string 3)
-			 nil nil)))
-	  (push var gdb-var-list)
-	  (speedbar 1)
-	  (if (equal (nth 2 var) "0")
-	      (gdb-enqueue-input
-	       (list
-		(if (with-current-buffer
-			gud-comint-buffer (eq gud-minor-mode 'gdba))
-		    (concat "server interpreter mi \"-var-evaluate-expression "
-			    (nth 1 var) "\"\n")
-		  (concat "-var-evaluate-expression " (nth 1 var) "\n"))
-		     `(lambda () (gdb-var-evaluate-expression-handler
-				  ,(nth 1 var) nil))))
-	    (setq gdb-var-changed t)))
-      (if (re-search-forward "Undefined command" nil t)
-	  (message-box "Watching expressions requires gdb 6.0 onwards")
-	(message "No symbol %s in current context." expr)))))
+  (goto-char (point-min))
+  (if (re-search-forward gdb-var-create-regexp nil t)
+      (let ((var (list expr
+		       (match-string 1)
+		       (match-string 2)
+		       (match-string 3)
+		       nil nil)))
+	(push var gdb-var-list)
+	(speedbar 1)
+	(unless (string-equal
+		 speedbar-initial-expansion-list-name "GUD")
+	  (speedbar-change-initial-expansion-list "GUD"))
+	(gdb-enqueue-input
+	 (list
+	  (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer)
+		  'gdba)
+	      (concat "server interpreter mi \"-var-evaluate-expression "
+		      (nth 1 var) "\"\n")
+	    (concat "-var-evaluate-expression " (nth 1 var) "\n"))
+	  `(lambda () (gdb-var-evaluate-expression-handler
+		       ,(nth 1 var) nil))))
+	(setq gdb-var-changed t))
+    (if (search-forward "Undefined command" nil t)
+	(message-box "Watching expressions requires gdb 6.0 onwards")
+      (message "No symbol \"%s\" in current context." expr))))
 
 (defun gdb-var-evaluate-expression-handler (varnum changed)
-  (with-current-buffer (gdb-get-create-buffer 'gdb-partial-output-buffer)
-    (goto-char (point-min))
-    (re-search-forward ".*value=\"\\(.*?\\)\"" nil t)
-    (catch 'var-found
-      (let ((num 0))
-	(dolist (var gdb-var-list)
-	  (if (string-equal varnum (cadr var))
-	      (progn
-		(if changed (setcar (nthcdr 5 var) t))
-		(setcar (nthcdr 4 var) (match-string 1))
-		(setcar (nthcdr num gdb-var-list) var)
-		(throw 'var-found nil)))
-	  (setq num (+ num 1))))))
+  (goto-char (point-min))
+  (re-search-forward ".*value=\\(\".*\"\\)" nil t)
+  (catch 'var-found
+    (let ((num 0))
+      (dolist (var gdb-var-list)
+	(if (string-equal varnum (cadr var))
+	    (progn
+	      (if changed (setcar (nthcdr 5 var) t))
+	      (setcar (nthcdr 4 var) (read (match-string 1)))
+	      (setcar (nthcdr num gdb-var-list) var)
+	      (throw 'var-found nil)))
+	(setq num (+ num 1)))))
   (setq gdb-var-changed t))
 
 (defun gdb-var-list-children (varnum)
@@ -454,72 +633,64 @@ Also display the main routine in the disassembly buffer if present."
 	 `(lambda () (gdb-var-list-children-handler ,varnum)))))
 
 (defconst gdb-var-list-children-regexp
-  "name=\"\\(.*?\\)\",exp=\"\\(.*?\\)\",numchild=\"\\(.*?\\)\"")
+ "name=\"\\(.*?\\)\",exp=\"\\(.*?\\)\",numchild=\"\\(.*?\\)\",\
+type=\"\\(.*?\\)\"")
 
 (defun gdb-var-list-children-handler (varnum)
-  (with-current-buffer (gdb-get-create-buffer 'gdb-partial-output-buffer)
-    (goto-char (point-min))
-    (let ((var-list nil))
-     (catch 'child-already-watched
-       (dolist (var gdb-var-list)
-	 (if (string-equal varnum (cadr var))
-	     (progn
-	       (push var var-list)
-	       (while (re-search-forward gdb-var-list-children-regexp nil t)
-		 (let ((varchild (list (match-string 2)
-				       (match-string 1)
-				       (match-string 3)
-				       nil nil nil)))
-		   (if (looking-at ",type=\"\\(.*?\\)\"")
-		       (setcar (nthcdr 3 varchild) (match-string 1)))
-		   (dolist (var1 gdb-var-list)
-		     (if (string-equal (cadr var1) (cadr varchild))
-			 (throw 'child-already-watched nil)))
-		   (push varchild var-list)
-		   (if (equal (nth 2 varchild) "0")
-		       (gdb-enqueue-input
-			(list
-			 (concat
-			  "server interpreter mi \"-var-evaluate-expression "
-				 (nth 1 varchild) "\"\n")
-			 `(lambda () (gdb-var-evaluate-expression-handler
-				      ,(nth 1 varchild) nil))))))))
-	   (push var var-list)))
-       (setq gdb-var-list (nreverse var-list))))))
+  (goto-char (point-min))
+  (let ((var-list nil))
+    (catch 'child-already-watched
+      (dolist (var gdb-var-list)
+	(if (string-equal varnum (cadr var))
+	    (progn
+	      (push var var-list)
+	      (while (re-search-forward gdb-var-list-children-regexp nil t)
+		(let ((varchild (list (match-string 2)
+				      (match-string 1)
+				      (match-string 3)
+				      (match-string 4)
+				      nil nil)))
+		  (dolist (var1 gdb-var-list)
+		    (if (string-equal (cadr var1) (cadr varchild))
+			(throw 'child-already-watched nil)))
+		  (push varchild var-list)
+		  (gdb-enqueue-input
+		   (list
+		    (concat
+		     "server interpreter mi \"-var-evaluate-expression "
+		     (nth 1 varchild) "\"\n")
+		    `(lambda () (gdb-var-evaluate-expression-handler
+				 ,(nth 1 varchild) nil)))))))
+	  (push var var-list)))
+      (setq gdb-var-list (nreverse var-list)))))
 
 (defun gdb-var-update ()
-  (if (not (member 'gdb-var-update gdb-pending-triggers))
-      (progn
-	(gdb-enqueue-input
-	 (list
-	  (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
-	      "server interpreter mi \"-var-update *\"\n"
-	    "-var-update *\n")
-				 'gdb-var-update-handler))
-	(push 'gdb-var-update gdb-pending-triggers))))
+  (when (not (member 'gdb-var-update gdb-pending-triggers))
+    (gdb-enqueue-input
+     (list "server interpreter mi \"-var-update *\"\n"
+	   'gdb-var-update-handler))
+    (push 'gdb-var-update gdb-pending-triggers)))
 
 (defconst gdb-var-update-regexp "name=\"\\(.*?\\)\"")
 
 (defun gdb-var-update-handler ()
-  (with-current-buffer (gdb-get-create-buffer 'gdb-partial-output-buffer)
-    (goto-char (point-min))
-    (while (re-search-forward gdb-var-update-regexp nil t)
-	(let ((varnum (match-string 1)))
+  (goto-char (point-min))
+  (while (re-search-forward gdb-var-update-regexp nil t)
+    (catch 'var-found-1
+      (let ((varnum (match-string 1)))
+	(dolist (var gdb-var-list)
 	  (gdb-enqueue-input
 	   (list
-	    (if (with-current-buffer gud-comint-buffer
-		  (eq gud-minor-mode 'gdba))
-		(concat "server interpreter mi \"-var-evaluate-expression "
-			varnum "\"\n")
-	      (concat "-var-evaluate-expression " varnum "\n"))
-		     `(lambda () (gdb-var-evaluate-expression-handler
-				  ,varnum t)))))))
+	    (concat "server interpreter mi \"-var-evaluate-expression "
+		    varnum "\"\n")
+	    `(lambda () (gdb-var-evaluate-expression-handler ,varnum t))))
+	  (throw 'var-found-1 nil)))))
   (setq gdb-pending-triggers
-   (delq 'gdb-var-update gdb-pending-triggers))
+	(delq 'gdb-var-update gdb-pending-triggers))
   (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame))
-    ;; dummy command to update speedbar at right time
+    ;; Dummy command to update speedbar at right time.
     (gdb-enqueue-input (list "server pwd\n" 'gdb-speedbar-timer-fn))
-    ;; keep gdb-pending-triggers non-nil till end
+    ;; Keep gdb-pending-triggers non-nil till end.
     (push 'gdb-speedbar-timer gdb-pending-triggers)))
 
 (defun gdb-speedbar-timer-fn ()
@@ -529,9 +700,10 @@ Also display the main routine in the disassembly buffer if present."
     (speedbar-timer-fn)))
 
 (defun gdb-var-delete ()
-  "Delete watched expression from the speedbar."
+  "Delete watch expression at point from the speedbar."
   (interactive)
-  (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
+  (if (memq (buffer-local-value 'gud-minor-mode gud-comint-buffer)
+	    '(gdbmi gdba))
       (let ((text (speedbar-line-text)))
 	(string-match "\\(\\S-+\\)" text)
 	(let* ((expr (match-string 1 text))
@@ -540,8 +712,8 @@ Also display the main routine in the disassembly buffer if present."
 	  (unless (string-match "\\." varnum)
 	    (gdb-enqueue-input
 	     (list
-	      (if (with-current-buffer gud-comint-buffer
-		    (eq gud-minor-mode 'gdba))
+	      (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer)
+		      'gdba)
 		  (concat "server interpreter mi \"-var-delete " varnum "\"\n")
 		(concat "-var-delete " varnum "\n"))
 		   'ignore))
@@ -558,8 +730,7 @@ Also display the main routine in the disassembly buffer if present."
     (setq value (read-string "New value: "))
     (gdb-enqueue-input
      (list
-      (if (with-current-buffer gud-comint-buffer
-	    (eq gud-minor-mode 'gdba))
+      (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
 	  (concat "server interpreter mi \"-var-assign "
 		  varnum " " value "\"\n")
 	(concat "-var-assign " varnum " " value "\n"))
@@ -578,14 +749,20 @@ TEXT is the text of the button we clicked on, a + or - item.
 TOKEN is data related to this node.
 INDENT is the current indentation depth."
   (cond ((string-match "+" text)        ;expand this node
-	 (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
-	     (gdb-var-list-children token)
-	   (gdbmi-var-list-children token)))
+	 (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
+	     (if (string-equal gdb-version "pre-6.4")
+		 (gdb-var-list-children token)
+	       (gdb-var-list-children-1 token))
+	   (progn
+	     (gdbmi-var-update)
+	     (gdbmi-var-list-children token))))
 	((string-match "-" text)	;contract this node
 	 (dolist (var gdb-var-list)
 	   (if (string-match (concat token "\\.") (nth 1 var))
 	       (setq gdb-var-list (delq var gdb-var-list))))
-	 (setq gdb-var-changed t))))
+	 (setq gdb-var-changed t)
+	 (with-current-buffer gud-comint-buffer
+	   (speedbar-timer-fn)))))
 
 (defun gdb-get-target-string ()
   (with-current-buffer gud-comint-buffer
@@ -623,9 +800,9 @@ The key should be one of the cars in `gdb-buffer-rules-assoc'."
 	  (let ((trigger))
 	    (if (cdr (cdr rules))
 		(setq trigger (funcall (car (cdr (cdr rules))))))
-	    (set (make-local-variable 'gdb-buffer-type) key)
+	    (setq gdb-buffer-type key)
 	    (set (make-local-variable 'gud-minor-mode)
-		 (with-current-buffer gud-comint-buffer gud-minor-mode))
+		 (buffer-local-value 'gud-minor-mode gud-comint-buffer))
 	    (set (make-local-variable 'tool-bar-map) gud-tool-bar-map)
 	    (if trigger (funcall trigger)))
 	  new))))
@@ -664,7 +841,6 @@ The key should be one of the cars in `gdb-buffer-rules-assoc'."
 ;; GUD buffers are an exception to the rules
 (gdb-set-buffer-rules 'gdba 'error)
 
-;;
 ;; Partial-output buffer : This accumulates output from a command executed on
 ;; behalf of emacs (rather than the user).
 ;;
@@ -692,6 +868,13 @@ The key should be one of the cars in `gdb-buffer-rules-assoc'."
   (if gdb-use-inferior-io-buffer
       (gdb-display-buffer
        (gdb-get-create-buffer 'gdb-inferior-io))))
+
+(defconst gdb-frame-parameters
+  '((height . 14) (width . 80)
+    (unsplittable . t)
+    (tool-bar-lines . nil)
+    (menu-bar-lines . nil)
+    (minibuffer . nil)))
 
 (defun gdb-frame-inferior-io-buffer ()
   "Display IO of inferior in a new frame."
@@ -753,7 +936,6 @@ The key should be one of the cars in `gdb-buffer-rules-assoc'."
    (get-buffer-process gud-comint-buffer)))
 
 
-;;
 ;; gdb communications
 ;;
 
@@ -774,6 +956,9 @@ The key should be one of the cars in `gdb-buffer-rules-assoc'."
 (defun gdb-send (proc string)
   "A comint send filter for gdb.
 This filter may simply queue input for a later time."
+  (with-current-buffer gud-comint-buffer
+    (let ((inhibit-read-only t))
+      (remove-text-properties (point-min) (point-max) '(face))))
   (let ((item (concat string "\n")))
     (if gud-running
       (progn
@@ -802,22 +987,21 @@ This filter may simply queue input for a later time."
   (setq gdb-flush-pending-output nil)
   (if gdb-enable-debug-log (push (cons 'send-item item) gdb-debug-log))
   (setq gdb-current-item item)
-  (with-current-buffer gud-comint-buffer
-    (if (eq gud-minor-mode 'gdba)
+  (let ((process (get-buffer-process gud-comint-buffer)))
+    (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
 	(if (stringp item)
 	    (progn
 	      (setq gdb-output-sink 'user)
-	      (process-send-string (get-buffer-process gud-comint-buffer) item))
+	      (process-send-string process item))
 	  (progn
 	    (gdb-clear-partial-output)
 	    (setq gdb-output-sink 'pre-emacs)
-	    (process-send-string (get-buffer-process gud-comint-buffer)
+	    (process-send-string process
 				 (car item))))
       ;; case: eq gud-minor-mode 'gdbmi
       (gdb-clear-partial-output)
       (setq gdb-output-sink 'emacs)
-      (process-send-string (get-buffer-process gud-comint-buffer)
-			   (car item)))))
+      (process-send-string process (car item)))))
 
 ;;
 ;; output -- things gdb prints to emacs
@@ -860,6 +1044,8 @@ This filter may simply queue input for a later time."
     ("watchpoint" gdb-stopping)
     ("frame-begin" gdb-frame-begin)
     ("stopped" gdb-stopped)
+    ("error-begin" gdb-error)
+    ("error" gdb-error)
     ) "An assoc mapping annotation tags to functions which process them.")
 
 (defun gdb-resync()
@@ -890,6 +1076,7 @@ This filter may simply queue input for a later time."
   "An annotation handler for `pre-prompt'.
 This terminates the collection of output from a previous command if that
 happens to be in effect."
+  (setq gdb-error nil)
   (let ((sink gdb-output-sink))
     (cond
      ((eq sink 'user) t)
@@ -902,7 +1089,9 @@ happens to be in effect."
 (defun gdb-prompt (ignored)
   "An annotation handler for `prompt'.
 This sends the next command (if any) to gdb."
-  (when gdb-first-prompt (gdb-ann3))
+  (when gdb-first-prompt
+    (gdb-init-1)
+    (setq gdb-first-prompt nil))
   (let ((sink gdb-output-sink))
     (cond
      ((eq sink 'user) t)
@@ -958,10 +1147,12 @@ being debugged."
 (defun gdb-exited (ignored)
   "An annotation handler for `exited' and `signalled'.
 They say that I/O for the subprocess is now GDB, not the program
-being debugged and that the program is no longer running. This
+being debugged and that the program is no longer running.  This
 function is used to change the focus of GUD tooltips to #define
 directives."
   (setq gdb-active-process nil)
+  (setq gud-overlay-arrow-position nil)
+  (setq gdb-overlay-arrow-position nil)
   (gdb-stopping ignored))
 
 (defun gdb-frame-begin (ignored)
@@ -980,6 +1171,7 @@ directives."
 It is just like `gdb-stopping', except that if we already set the output
 sink to `user' in `gdb-stopping', that is fine."
   (setq gud-running nil)
+  (setq gdb-active-process t)
   (let ((sink gdb-output-sink))
     (cond
      ((eq sink 'inferior)
@@ -989,29 +1181,44 @@ sink to `user' in `gdb-stopping', that is fine."
       (gdb-resync)
       (error "Unexpected stopped annotation")))))
 
+(defun gdb-error (ignored)
+  (setq gdb-error (not gdb-error)))
+
 (defun gdb-post-prompt (ignored)
   "An annotation handler for `post-prompt'.
 This begins the collection of output from the current command if that
 happens to be appropriate."
-  (unless gdb-pending-triggers
-	(gdb-get-selected-frame)
-	(gdb-invalidate-frames)
-	(gdb-invalidate-breakpoints)
-	;; Do this through gdb-get-selected-frame -> gdb-frame-handler
-	;; so gdb-frame-address is updated.
-	;; (gdb-invalidate-assembler)
+  ;; Don't add to queue if there outstanding items or GDB is not known yet.
+  (unless (or gdb-pending-triggers gdb-first-post-prompt)
+    (gdb-get-selected-frame)
+    (gdb-invalidate-frames)
+    (gdb-invalidate-breakpoints)
+    ;; Do this through gdb-get-selected-frame -> gdb-frame-handler
+    ;; so gdb-frame-address is updated.
+    ;; (gdb-invalidate-assembler)
+
+    (if (string-equal gdb-version "pre-6.4")
 	(gdb-invalidate-registers)
-	(gdb-invalidate-memory)
+      (if (gdb-get-buffer 'gdb-registers-buffer) (gdb-get-changed-registers))
+      (gdb-invalidate-registers-1))
+
+    (gdb-invalidate-memory)
+    (if (string-equal gdb-version "pre-6.4")
 	(gdb-invalidate-locals)
-	(gdb-invalidate-threads)
-	(unless (eq system-type 'darwin) ;Breaks on Darwin's GDB-5.3.
-	  ;; FIXME: with GDB-6 on Darwin, this might very well work.
-	  ;; only needed/used with speedbar/watch expressions
-	  (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame))
-	    (setq gdb-var-changed t)    ; force update
-	    (dolist (var gdb-var-list)
-	      (setcar (nthcdr 5 var) nil))
-	    (gdb-var-update))))
+      (gdb-invalidate-locals-1))
+
+    (gdb-invalidate-threads)
+    (unless (eq system-type 'darwin) ;Breaks on Darwin's GDB-5.3.
+      ;; FIXME: with GDB-6 on Darwin, this might very well work.
+      ;; Only needed/used with speedbar/watch expressions.
+      (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame))
+	(setq gdb-var-changed t)    ; force update
+	(dolist (var gdb-var-list)
+	  (setcar (nthcdr 5 var) nil))
+	(if (string-equal gdb-version "pre-6.4")
+	    (gdb-var-update)
+	  (gdb-var-update-1)))))
+  (setq gdb-first-post-prompt nil)
   (let ((sink gdb-output-sink))
     (cond
      ((eq sink 'user) t)
@@ -1026,9 +1233,9 @@ happens to be appropriate."
   (if gdb-flush-pending-output
       nil
     (if gdb-enable-debug-log (push (cons 'recv string) gdb-debug-log))
-    ;; Recall the left over gud-marker-acc from last time
+    ;; Recall the left over gud-marker-acc from last time.
     (setq gud-marker-acc (concat gud-marker-acc string))
-    ;; Start accumulating output for the GUD buffer
+    ;; Start accumulating output for the GUD buffer.
     (let ((output ""))
       ;;
       ;; Process all the complete markers in this chunk.
@@ -1083,6 +1290,8 @@ happens to be appropriate."
       output)))
 
 (defun gdb-concat-output (so-far new)
+  (if gdb-error
+      (put-text-property 0 (length new) 'face font-lock-warning-face new))
   (let ((sink gdb-output-sink))
     (cond
      ((eq sink 'user) (concat so-far new))
@@ -1145,7 +1354,7 @@ happens to be appropriate."
 (defmacro def-gdb-auto-update-trigger (name demand-predicate gdb-command
 					    output-handler)
   `(defun ,name (&optional ignored)
-     (if (and (,demand-predicate)
+     (if (and ,demand-predicate
 	      (not (member ',name
 			   gdb-pending-triggers)))
 	 (progn
@@ -1161,12 +1370,13 @@ happens to be appropriate."
      (let ((buf (gdb-get-buffer ',buf-key)))
        (and buf
 	    (with-current-buffer buf
-	      (let ((p (window-point (get-buffer-window buf 0)))
+	      (let* ((window (get-buffer-window buf 0))
+		     (p (window-point window))
 		    (buffer-read-only nil))
 		(erase-buffer)
 		(insert-buffer-substring (gdb-get-create-buffer
 					  'gdb-partial-output-buffer))
-		(set-window-point (get-buffer-window buf 0) p)))))
+		(set-window-point window p)))))
      ;; put customisation here
      (,custom-defun)))
 
@@ -1176,7 +1386,7 @@ happens to be appropriate."
   `(progn
      (def-gdb-auto-update-trigger ,trigger-name
        ;; The demand predicate:
-       (lambda () (gdb-get-buffer ',buffer-key))
+       (gdb-get-buffer ',buffer-key)
        ,gdb-command
        ,output-handler-name)
      (def-gdb-auto-update-handler ,output-handler-name
@@ -1276,8 +1486,6 @@ static char *magick[] = {
      :weight bold))
   "Face for enabled breakpoint icon in fringe."
   :group 'gud)
-;; compatibility alias for old name
-(put 'breakpoint-enabled-bitmap-face 'face-alias 'breakpoint-enabled)
 
 (defface breakpoint-disabled
   ;; We use different values of grey for different background types,
@@ -1287,13 +1495,11 @@ static char *magick[] = {
     (((background light)) :foreground "grey40"))
   "Face for disabled breakpoint icon in fringe."
   :group 'gud)
-;; compatibility alias for old name
-(put 'breakpoint-disabled-bitmap-face 'face-alias 'breakpoint-disabled)
 
-;;-put breakpoint icons in relevant margins (even those set in the GUD buffer)
+;; Put breakpoint icons in relevant margins (even those set in the GUD buffer).
 (defun gdb-info-breakpoints-custom ()
   (let ((flag) (bptno))
-    ;; remove all breakpoint-icons in source buffers but not assembler buffer
+    ;; Remove all breakpoint-icons in source buffers but not assembler buffer.
     (dolist (buffer (buffer-list))
       (with-current-buffer buffer
 	(if (and (eq gud-minor-mode 'gdba)
@@ -1310,8 +1516,11 @@ static char *magick[] = {
 		(setq bptno (match-string 1))
 		(setq flag (char-after (match-beginning 2)))
 		(beginning-of-line)
-		(if (re-search-forward " in .* at\\s-+" nil t)
+		(if (re-search-forward " in \\(.*\\) at\\s-+" nil t)
 		    (progn
+		      (let ((buffer-read-only nil))
+			(add-text-properties (match-beginning 1) (match-end 1)
+					     '(face font-lock-function-name-face)))
 		      (looking-at "\\(\\S-+\\):\\([0-9]+\\)")
 		      (let ((line (match-string 2)) (buffer-read-only nil)
 			    (file (match-string 1)))
@@ -1323,23 +1532,24 @@ static char *magick[] = {
 			   (setq file (cdr (assoc bptno gdb-location-alist))))
 			(if (and file
 				 (not (string-equal file "File not found")))
-			    (with-current-buffer (find-file-noselect file)
+			    (with-current-buffer
+				(find-file-noselect file 'nowarn)
 			      (set (make-local-variable 'gud-minor-mode)
 				   'gdba)
 			      (set (make-local-variable 'tool-bar-map)
 				   gud-tool-bar-map)
-			      ;; only want one breakpoint icon at each
-			      ;; location
+			      ;; Only want one breakpoint icon at each
+			      ;; location.
 			      (save-excursion
 				(goto-line (string-to-number line))
 				(gdb-put-breakpoint-icon (eq flag ?y) bptno)))
 			  (gdb-enqueue-input
 			   (list
-			    (concat "list "
+			    (concat gdb-server-prefix "list "
 				    (match-string-no-properties 1) ":1\n")
 			    'ignore))
 			  (gdb-enqueue-input
-			   (list "info source\n"
+			   (list (concat gdb-server-prefix "info source\n")
 				 `(lambda () (gdb-get-location
 					      ,bptno ,line ,flag))))))))))
 	  (end-of-line)))))
@@ -1360,8 +1570,8 @@ static char *magick[] = {
 		(gud-remove nil)
 	      (gud-break nil)))))))
 
-(defun gdb-mouse-toggle-breakpoint (event)
-  "Enable/disable breakpoint in left fringe/margin with mouse click."
+(defun gdb-mouse-toggle-breakpoint-margin (event)
+  "Enable/disable breakpoint in left margin with mouse click."
   (interactive "e")
   (mouse-minibuffer-check event)
   (let ((posn (event-end event)))
@@ -1369,21 +1579,43 @@ static char *magick[] = {
 	(with-selected-window (posn-window posn)
 	  (save-excursion
 	    (goto-char (posn-point posn))
-	    (if
-;		(or
-		 (posn-object posn)
-;		 (eq (car (fringe-bitmaps-at-pos (posn-point posn)))
-;		     'breakpoint))
+	    (if	(posn-object posn)
 		(gdb-enqueue-input
 		 (list
 		  (let ((bptno (get-text-property
 				0 'gdb-bptno (car (posn-string posn)))))
-		    (concat
+		    (concat gdb-server-prefix
 			    (if (get-text-property
 				 0 'gdb-enabled (car (posn-string posn)))
 				"disable "
 			      "enable ")
-			    bptno "\n")) 'ignore))))))))
+			    bptno "\n"))
+		  'ignore))))))))
+
+(defun gdb-mouse-toggle-breakpoint-fringe (event)
+  "Enable/disable breakpoint in left fringe with mouse click."
+  (interactive "e")
+  (mouse-minibuffer-check event)
+  (let* ((posn (event-end event))
+	 (pos (posn-point posn))
+	 obj)
+    (when (numberp pos)
+      (with-selected-window (posn-window posn)
+	(save-excursion
+	  (set-buffer (window-buffer (selected-window)))
+	  (goto-char pos)
+	  (dolist (overlay (overlays-in pos pos))
+	    (when (overlay-get overlay 'put-break)
+	      (setq obj (overlay-get overlay 'before-string))))
+	  (when (stringp obj)
+	    (gdb-enqueue-input
+	     (list
+	      (concat gdb-server-prefix
+	       (if (get-text-property 0 'gdb-enabled obj)
+		   "disable "
+		 "enable ")
+	       (get-text-property 0 'gdb-bptno obj) "\n")
+	      'ignore))))))))
 
 (defun gdb-breakpoints-buffer-name ()
   (with-current-buffer gud-comint-buffer
@@ -1394,13 +1626,6 @@ static char *magick[] = {
   (interactive)
   (gdb-display-buffer
    (gdb-get-create-buffer 'gdb-breakpoints-buffer)))
-
-(defconst gdb-frame-parameters
-  '((height . 14) (width . 80)
-    (unsplittable . t)
-    (tool-bar-lines . nil)
-    (menu-bar-lines . nil)
-    (minibuffer . nil)))
 
 (defun gdb-frame-breakpoints-buffer ()
   "Display status of user-settable breakpoints in a new frame."
@@ -1419,7 +1644,7 @@ static char *magick[] = {
     (suppress-keymap map)
     (define-key map [menu-bar breakpoints] (cons "Breakpoints" menu))
     (define-key map " " 'gdb-toggle-breakpoint)
-    (define-key map "d" 'gdb-delete-breakpoint)
+    (define-key map "D" 'gdb-delete-breakpoint)
     (define-key map "q" 'kill-this-buffer)
     (define-key map "\r" 'gdb-goto-breakpoint)
     (define-key map [mouse-2] 'gdb-goto-breakpoint)
@@ -1436,7 +1661,7 @@ static char *magick[] = {
   (use-local-map gdb-breakpoints-mode-map)
   (setq buffer-read-only t)
   (run-mode-hooks 'gdb-breakpoints-mode-hook)
-  (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
+  (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
       'gdb-invalidate-breakpoints
     'gdbmi-invalidate-breakpoints))
 
@@ -1445,7 +1670,7 @@ static char *magick[] = {
   (interactive)
   (save-excursion
     (beginning-of-line 1)
-    (if (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
+    (if (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
 	    (looking-at "\\([0-9]+\\).*?point\\s-+\\S-+\\s-+\\(.\\)\\s-+")
 	  (looking-at
      "\\([0-9]+\\)\\s-+\\S-+\\s-+\\S-+\\s-+\\(.\\)\\s-+\\S-+\\s-+\\S-+:[0-9]+"))
@@ -1462,7 +1687,7 @@ static char *magick[] = {
   "Delete the breakpoint at current line."
   (interactive)
   (beginning-of-line 1)
-  (if (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
+  (if (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
 	  (looking-at "\\([0-9]+\\).*?point\\s-+\\S-+\\s-+\\(.\\)")
 	(looking-at
 	 "\\([0-9]+\\)\\s-+\\S-+\\s-+\\S-+\\s-+\\s-+\\S-+\\s-+\\S-+:[0-9]+"))
@@ -1474,10 +1699,13 @@ static char *magick[] = {
 (defun gdb-goto-breakpoint (&optional event)
   "Display the breakpoint location specified at current line."
   (interactive (list last-input-event))
-  (if event (mouse-set-point event))
+  (if event (posn-set-point (event-end event)))
+  ;; Hack to stop gdb-goto-breakpoint displaying in GUD buffer.
+  (let ((window (get-buffer-window gud-comint-buffer)))
+    (if window (save-selected-window  (select-window window))))
   (save-excursion
     (beginning-of-line 1)
-    (if (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
+    (if (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
 	    (looking-at "\\([0-9]+\\) .+ in .+ at\\s-+\\(\\S-+\\):\\([0-9]+\\)")
 	  (looking-at
 	   "\\([0-9]+\\)\\s-+\\S-+\\s-+\\S-+\\s-+.\\s-+\\S-+\\s-+\
@@ -1514,17 +1742,35 @@ static char *magick[] = {
 (defun gdb-info-frames-custom ()
   (with-current-buffer (gdb-get-buffer 'gdb-stack-buffer)
     (save-excursion
-      (let ((buffer-read-only nil))
+      (let ((buffer-read-only nil)
+	    bl el)
 	(goto-char (point-min))
 	(while (< (point) (point-max))
-	  (add-text-properties (line-beginning-position) (line-end-position)
-			     '(mouse-face highlight
-			       help-echo "mouse-2, RET: Select frame"))
-	  (beginning-of-line)
-	  (when (and (looking-at "^#\\([0-9]+\\)")
-		     (equal (match-string 1) gdb-frame-number))
-	    (put-text-property (line-beginning-position) (line-end-position)
-			       'face '(:inverse-video t)))
+	  (setq bl (line-beginning-position)
+		el (line-end-position))
+	  (when (looking-at "#")
+	    (add-text-properties bl el
+				 '(mouse-face highlight
+			           help-echo "mouse-2, RET: Select frame")))
+	  (goto-char bl)
+	  (when (looking-at "^#\\([0-9]+\\)")
+	    (when (string-equal (match-string 1) gdb-frame-number)
+		(put-text-property bl (+ bl 4)
+				   'face '(:inverse-video t)))
+	    (when (re-search-forward
+		   (concat
+		    (if (string-equal (match-string 1) "0") "" " in ")
+		    "\\([^ ]+\\) (") el t)
+	      (put-text-property (match-beginning 1) (match-end 1)
+				 'face font-lock-function-name-face)
+	      (setq bl (match-end 0))
+	      (while (re-search-forward "<\\([^>]+\\)>" el t)
+		(put-text-property (match-beginning 1) (match-end 1)
+				     'face font-lock-function-name-face))
+	      (goto-char bl)
+	      (while (re-search-forward "\\(\\(\\sw\\|[_.]\\)+\\)=" el t)
+		(put-text-property (match-beginning 1) (match-end 1)
+				   'face font-lock-variable-name-face))))
 	  (forward-line 1))))))
 
 (defun gdb-stack-buffer-name ()
@@ -1562,22 +1808,23 @@ static char *magick[] = {
   (setq mode-name "Frames")
   (setq buffer-read-only t)
   (use-local-map gdb-frames-mode-map)
-  (font-lock-mode -1)
   (run-mode-hooks 'gdb-frames-mode-hook)
-  (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
+  (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
       'gdb-invalidate-frames
     'gdbmi-invalidate-frames))
 
 (defun gdb-get-frame-number ()
   (save-excursion
-    (let* ((pos (re-search-backward "^#*\\([0-9]*\\)" nil t))
+    (end-of-line)
+    (let* ((start (line-beginning-position))
+	   (pos (re-search-backward "^#*\\([0-9]+\\)" start t))
 	   (n (or (and pos (match-string-no-properties 1)) "0")))
       n)))
 
 (defun gdb-frames-select (&optional event)
   "Select the frame and display the relevant source."
   (interactive (list last-input-event))
-  (if event (mouse-set-point event))
+  (if event (posn-set-point (event-end event)))
   (gdb-enqueue-input
    (list (concat gdb-server-prefix "frame "
 		 (gdb-get-frame-number) "\n") 'ignore))
@@ -1601,9 +1848,10 @@ static char *magick[] = {
     (let ((buffer-read-only nil))
       (goto-char (point-min))
       (while (< (point) (point-max))
-	(add-text-properties (line-beginning-position) (line-end-position)
-			     '(mouse-face highlight
-			       help-echo "mouse-2, RET: select thread"))
+	(unless (looking-at "No ")
+	  (add-text-properties (line-beginning-position) (line-end-position)
+			       '(mouse-face highlight
+			         help-echo "mouse-2, RET: select thread")))
 	(forward-line 1)))))
 
 (defun gdb-threads-buffer-name ()
@@ -1629,7 +1877,16 @@ static char *magick[] = {
     (define-key map "q" 'kill-this-buffer)
     (define-key map "\r" 'gdb-threads-select)
     (define-key map [mouse-2] 'gdb-threads-select)
+    (define-key map [follow-link] 'mouse-face)
     map))
+
+(defvar gdb-threads-font-lock-keywords
+  '(
+    (") +\\([^ ]+\\) ("  (1 font-lock-function-name-face))
+    ("in \\([^ ]+\\) ("  (1 font-lock-function-name-face))
+    ("\\(\\(\\sw\\|[_.]\\)+\\)="  (1 font-lock-variable-name-face))
+    )
+  "Font lock keywords used in `gdb-threads-mode'.")
 
 (defun gdb-threads-mode ()
   "Major mode for gdb frames.
@@ -1640,6 +1897,8 @@ static char *magick[] = {
   (setq mode-name "Threads")
   (setq buffer-read-only t)
   (use-local-map gdb-threads-mode-map)
+  (set (make-local-variable 'font-lock-defaults)
+       '(gdb-threads-font-lock-keywords))
   (run-mode-hooks 'gdb-threads-mode-hook)
   'gdb-invalidate-threads)
 
@@ -1651,9 +1910,10 @@ static char *magick[] = {
 (defun gdb-threads-select (&optional event)
   "Select the thread and display the relevant source."
   (interactive (list last-input-event))
-  (if event (mouse-set-point event))
+  (if event (posn-set-point (event-end event)))
   (gdb-enqueue-input
-   (list (concat "thread " (gdb-get-thread-number) "\n") 'ignore))
+   (list (concat gdb-server-prefix "thread "
+		 (gdb-get-thread-number) "\n") 'ignore))
   (gud-display-frame))
 
 
@@ -1676,12 +1936,41 @@ static char *magick[] = {
   gdb-info-registers-handler
   gdb-info-registers-custom)
 
-(defun gdb-info-registers-custom ())
+(defun gdb-info-registers-custom ()
+  (with-current-buffer (gdb-get-buffer 'gdb-registers-buffer)
+    (save-excursion
+      (let ((buffer-read-only nil)
+	    start end)
+	(goto-char (point-min))
+	(while (< (point) (point-max))
+	  (setq start (line-beginning-position))
+	  (setq end (line-end-position))
+	  (when (looking-at "^[^ ]+")
+	    (unless (string-equal (match-string 0) "The")
+	      (put-text-property start (match-end 0)
+				 'face font-lock-variable-name-face)
+	      (add-text-properties start end 
+		                   '(help-echo "mouse-2: edit value"
+				     mouse-face highlight))))
+	  (forward-line 1))))))
+
+(defun gdb-edit-register-value (&optional event)
+  (interactive (list last-input-event))
+  (save-excursion
+    (if event (posn-set-point (event-end event)))
+    (beginning-of-line)
+    (let* ((register (current-word))
+	  (value (read-string (format "New value (%s): " register))))
+      (gdb-enqueue-input
+       (list (concat gdb-server-prefix "set $" register "=" value "\n")
+	     'ignore)))))
 
 (defvar gdb-registers-mode-map
   (let ((map (make-sparse-keymap)))
     (suppress-keymap map)
-    (define-key map " " 'toggle-gdb-all-registers)
+    (define-key map "\r" 'gdb-edit-register-value)
+    (define-key map [mouse-2] 'gdb-edit-register-value)
+    (define-key map " " 'gdb-all-registers)
     (define-key map "q" 'kill-this-buffer)
      map))
 
@@ -1691,11 +1980,15 @@ static char *magick[] = {
 \\{gdb-registers-mode-map}"
   (kill-all-local-variables)
   (setq major-mode 'gdb-registers-mode)
-  (setq mode-name "Registers:")
+  (setq mode-name "Registers")
   (setq buffer-read-only t)
   (use-local-map gdb-registers-mode-map)
   (run-mode-hooks 'gdb-registers-mode-hook)
-  'gdb-invalidate-registers)
+  (if (string-equal gdb-version "pre-6.4")
+      (progn
+	(if gdb-all-registers (setq mode-name "Registers:All"))
+	'gdb-invalidate-registers)
+    'gdb-invalidate-registers-1))
 
 (defun gdb-registers-buffer-name ()
   (with-current-buffer gud-comint-buffer
@@ -1714,18 +2007,21 @@ static char *magick[] = {
 	(special-display-frame-alist gdb-frame-parameters))
     (display-buffer (gdb-get-create-buffer 'gdb-registers-buffer))))
 
-(defun toggle-gdb-all-registers ()
-  "Toggle the display of floating-point registers."
+(defun gdb-all-registers ()
+  "Toggle the display of floating-point registers (pre GDB 6.4 only)."
   (interactive)
-  (if gdb-all-registers
-      (progn
-	(setq gdb-all-registers nil)
-	(with-current-buffer (gdb-get-buffer 'gdb-registers-buffer)
-	  (setq mode-name "Registers:")))
-	(setq gdb-all-registers t)
-	(with-current-buffer (gdb-get-buffer 'gdb-registers-buffer)
-	  (setq mode-name "Registers:All")))
-  (gdb-invalidate-registers))
+  (when (string-equal gdb-version "pre-6.4")
+    (if gdb-all-registers
+	(progn
+	  (setq gdb-all-registers nil)
+	  (with-current-buffer (gdb-get-create-buffer 'gdb-registers-buffer)
+	    (setq mode-name "Registers")))
+      (setq gdb-all-registers t)
+      (with-current-buffer (gdb-get-create-buffer 'gdb-registers-buffer)
+	(setq mode-name "Registers:All")))
+    (message (format "Display of floating-point registers %sabled"
+		     (if gdb-all-registers "en" "dis")))
+    (gdb-invalidate-registers)))
 
 
 ;; Memory buffer.
@@ -1829,7 +2125,7 @@ static char *magick[] = {
   (customize-set-variable 'gdb-memory-format "x")
   (gdb-invalidate-memory))
 
-(defvar gdb-memory-format-keymap
+(defvar gdb-memory-format-map
   (let ((map (make-sparse-keymap)))
     (define-key map [header-line down-mouse-3] 'gdb-memory-format-menu-1)
     map)
@@ -1891,7 +2187,7 @@ static char *magick[] = {
   (customize-set-variable 'gdb-memory-unit "b")
   (gdb-invalidate-memory))
 
-(defvar gdb-memory-unit-keymap
+(defvar gdb-memory-unit-map
   (let ((map (make-sparse-keymap)))
     (define-key map [header-line down-mouse-3] 'gdb-memory-unit-menu-1)
     map)
@@ -1936,6 +2232,12 @@ corresponding to the mode line clicked."
     (define-key map (vector 'header-line 'down-mouse-1) 'ignore)
     map))
 
+(defvar gdb-memory-font-lock-keywords
+  '(;; <__function.name+n>
+    ("<\\(\\(\\sw\\|[_.]\\)+\\)\\(\\+[0-9]+\\)?>" (1 font-lock-function-name-face))
+    )
+  "Font lock keywords used in `gdb-memory-mode'.")
+
 (defun gdb-memory-mode ()
   "Major mode for examining memory.
 
@@ -1959,7 +2261,7 @@ corresponding to the mode line clicked."
 	     'mouse-1
 	     #'(lambda () (interactive)
 		 (let ((gdb-memory-address
-			;; let GDB do the arithmetic
+			;; Let GDB do the arithmetic.
 			(concat
 			 gdb-memory-address " - "
 			 (number-to-string
@@ -2000,13 +2302,15 @@ corresponding to the mode line clicked."
 		       'face font-lock-warning-face
 		       'help-echo "mouse-3: Select display format"
 		       'mouse-face 'mode-line-highlight
-		       'local-map gdb-memory-format-keymap)
+		       'local-map gdb-memory-format-map)
 	   "  Unit Size: "
 	   (propertize gdb-memory-unit
 		       'face font-lock-warning-face
 		       'help-echo "mouse-3: Select unit size"
 		       'mouse-face 'mode-line-highlight
-		       'local-map gdb-memory-unit-keymap))))
+		       'local-map gdb-memory-unit-map))))
+  (set (make-local-variable 'font-lock-defaults)
+       '(gdb-memory-font-lock-keywords))
   (run-mode-hooks 'gdb-memory-mode-hook)
   'gdb-invalidate-memory)
 
@@ -2034,15 +2338,38 @@ corresponding to the mode line clicked."
 		      'gdb-locals-buffer-name
 		      'gdb-locals-mode)
 
-(def-gdb-auto-updated-buffer gdb-locals-buffer
-  gdb-invalidate-locals
+(def-gdb-auto-update-trigger gdb-invalidate-locals
+  (gdb-get-buffer 'gdb-locals-buffer)
   "server info locals\n"
-  gdb-info-locals-handler
-  gdb-info-locals-custom)
+  gdb-info-locals-handler)
+
+(defvar gdb-locals-watch-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\r" '(lambda () (interactive)
+			    (beginning-of-line)
+			    (gud-watch)))
+    (define-key map [mouse-2] '(lambda (event) (interactive "e")
+				 (mouse-set-point event)
+				 (beginning-of-line)
+				 (gud-watch)))
+    map)
+ "Keymap to create watch expression of a complex data type local variable.")
+
+(defconst gdb-struct-string
+  (concat (propertize "[struct/union]"
+		      'mouse-face 'highlight
+		      'help-echo "mouse-2: create watch expression"
+		      'local-map gdb-locals-watch-map) "\n"))
+
+(defconst gdb-array-string
+  (concat " " (propertize "[array]"
+			  'mouse-face 'highlight
+			  'help-echo "mouse-2: create watch expression"
+			  'local-map gdb-locals-watch-map) "\n"))
 
 ;; Abbreviate for arrays and structures.
 ;; These can be expanded using gud-display.
-(defun gdb-info-locals-handler nil
+(defun gdb-info-locals-handler ()
   (setq gdb-pending-triggers (delq 'gdb-invalidate-locals
 				  gdb-pending-triggers))
   (let ((buf (gdb-get-buffer 'gdb-partial-output-buffer)))
@@ -2052,22 +2379,21 @@ corresponding to the mode line clicked."
 	(replace-match "" nil nil))
       (goto-char (point-min))
       (while (re-search-forward "{\\(.*=.*\n\\|\n\\)" nil t)
-	(replace-match "(structure);\n" nil nil))
+	(replace-match gdb-struct-string nil nil))
       (goto-char (point-min))
       (while (re-search-forward "\\s-*{.*\n" nil t)
-	(replace-match " (array);\n" nil nil))))
+	(replace-match gdb-array-string nil nil))))
   (let ((buf (gdb-get-buffer 'gdb-locals-buffer)))
-    (and buf (with-current-buffer buf
-	       (let ((p (window-point (get-buffer-window buf 0)))
+    (and buf
+	 (with-current-buffer buf
+	      (let* ((window (get-buffer-window buf 0))
+		     (p (window-point window))
 		     (buffer-read-only nil))
 		 (erase-buffer)
 		 (insert-buffer-substring (gdb-get-create-buffer
 					   'gdb-partial-output-buffer))
-		(set-window-point (get-buffer-window buf 0) p)))))
+		(set-window-point window p)))))
   (run-hooks 'gdb-info-locals-hook))
-
-(defun gdb-info-locals-custom ()
-  nil)
 
 (defvar gdb-locals-mode-map
   (let ((map (make-sparse-keymap)))
@@ -2084,9 +2410,13 @@ corresponding to the mode line clicked."
   (setq mode-name (concat "Locals:" gdb-selected-frame))
   (setq buffer-read-only t)
   (use-local-map gdb-locals-mode-map)
+  (set (make-local-variable 'font-lock-defaults)
+       '(gdb-locals-font-lock-keywords))
   (run-mode-hooks 'gdb-locals-mode-hook)
-  (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
-      'gdb-invalidate-locals
+  (if (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer) 'gdba)
+      (if (string-equal gdb-version "pre-6.4")
+	  'gdb-invalidate-locals
+	'gdb-invalidate-locals-1)
     'gdbmi-invalidate-locals))
 
 (defun gdb-locals-buffer-name ()
@@ -2169,45 +2499,43 @@ corresponding to the mode line clicked."
   (define-key menu [breakpoints]
     '("Breakpoints" . gdb-frame-breakpoints-buffer)))
 
-(let ((menu (make-sparse-keymap "GDB-UI")))
+(let ((menu (make-sparse-keymap "GDB-UI/MI")))
   (define-key gud-menu-map [ui]
-    `(menu-item "GDB-UI" ,menu :visible (eq gud-minor-mode 'gdba)))
-  (define-key menu [gdb-restore-windows]
-  '(menu-item "Restore Window Layout" gdb-restore-windows
-	      :help "Restore standard layout for debug session."))
+    `(menu-item (if (eq gud-minor-mode 'gdba) "GDB-UI" "GDB-MI")
+		,menu :visible (memq gud-minor-mode '(gdbmi gdba))))
+  (define-key menu [gdb-use-inferior-io]
+  '(menu-item "Separate inferior IO" gdb-use-inferior-io-buffer
+	      :visible (eq gud-minor-mode 'gdba)
+	      :help "Toggle separate IO for inferior."
+	      :button (:toggle . gdb-use-inferior-io-buffer)))
   (define-key menu [gdb-many-windows]
   '(menu-item "Display Other Windows" gdb-many-windows
 	      :help "Toggle display of locals, stack and breakpoint information"
 	      :button (:toggle . gdb-many-windows)))
-  (define-key menu [gdb-use-inferior-io]
-    (menu-bar-make-toggle toggle-gdb-use-inferior-io-buffer
-			  gdb-use-inferior-io-buffer
-     "Separate inferior IO" "Use separate IO %s"
-     "Toggle separate IO for inferior.")))
-
-(defadvice toggle-gdb-use-inferior-io-buffer (after gdb-kill-io-buffer activate)
-  (unless gdb-use-inferior-io-buffer
-    (kill-buffer (gdb-inferior-io-name))))
+  (define-key menu [gdb-restore-windows]
+  '(menu-item "Restore Window Layout" gdb-restore-windows
+	      :help "Restore standard layout for debug session.")))
 
 (defun gdb-frame-gdb-buffer ()
   "Display GUD buffer in a new frame."
   (interactive)
-  (select-frame (make-frame gdb-frame-parameters))
-  (switch-to-buffer (gdb-get-create-buffer 'gdba))
-  (set-window-dedicated-p (selected-window) t))
+  (let ((special-display-regexps (append special-display-regexps '(".*")))
+	(special-display-frame-alist gdb-frame-parameters)
+	(same-window-regexps nil))
+    (display-buffer gud-comint-buffer)))
 
 (defun gdb-display-gdb-buffer ()
   "Display GUD buffer."
   (interactive)
-  (gdb-display-buffer
-   (gdb-get-create-buffer 'gdba)))
+  (let ((same-window-regexps nil))
+    (pop-to-buffer gud-comint-buffer)))
 
 (defun gdb-set-window-buffer (name)
   (set-window-buffer (selected-window) (get-buffer name))
   (set-window-dedicated-p (selected-window) t))
 
 (defun gdb-setup-windows ()
-  "Layout the window pattern for gdb-many-windows."
+  "Layout the window pattern for `gdb-many-windows'."
   (gdb-display-locals-buffer)
   (gdb-display-stack-buffer)
   (delete-other-windows)
@@ -2248,15 +2576,20 @@ of the inferior.  Non-nil means display the layout shown for
   :version "22.1")
 
 (defun gdb-many-windows (arg)
-  "Toggle the number of windows in the basic arrangement."
+  "Toggle the number of windows in the basic arrangement.
+With arg, display additional buffers iff arg is positive."
   (interactive "P")
   (setq gdb-many-windows
 	(if (null arg)
 	    (not gdb-many-windows)
 	  (> (prefix-numeric-value arg) 0)))
-  (condition-case nil
-      (gdb-restore-windows)
-    (error nil)))
+  (message (format "Display of other windows %sabled"
+		   (if gdb-many-windows "en" "dis")))
+  (if (and gud-comint-buffer
+	   (buffer-name gud-comint-buffer))
+      (condition-case nil
+	  (gdb-restore-windows)
+	(error nil))))
 
 (defun gdb-restore-windows ()
   "Restore the basic arrangement of windows used by gdba.
@@ -2266,13 +2599,14 @@ This arrangement depends on the value of `gdb-many-windows'."
     (delete-other-windows)
   (if gdb-many-windows
       (gdb-setup-windows)
-    (split-window)
-    (other-window 1)
-    (switch-to-buffer
-	 (if gud-last-last-frame
-	     (gud-find-file (car gud-last-last-frame))
-	   (gud-find-file gdb-main-file)))
-    (other-window 1)))
+    (when (or gud-last-last-frame gdb-show-main)
+      (split-window)
+      (other-window 1)
+      (switch-to-buffer
+       (if gud-last-last-frame
+	   (gud-find-file (car gud-last-last-frame))
+	 (gud-find-file gdb-main-file)))
+      (other-window 1))))
 
 (defun gdb-reset ()
   "Exit a debugging session cleanly.
@@ -2294,6 +2628,7 @@ Kills the gdb buffers and resets the source buffers."
 	(delq 'gdb-overlay-arrow-position overlay-arrow-variable-list))
   (setq gud-running nil)
   (setq gdb-active-process nil)
+  (setq gdb-var-list nil)
   (remove-hook 'after-save-hook 'gdb-create-define-alist t))
 
 (defun gdb-source-info ()
@@ -2341,27 +2676,23 @@ Add directory to search path for source files using the GDB command, dir."))
 (add-hook 'find-file-hook 'gdb-find-file-hook)
 
 (defun gdb-find-file-hook ()
-"Set up buffer for debugging if file is part of the source code
+  "Set up buffer for debugging if file is part of the source code
 of the current session."
-  (if (and (not gdb-find-file-unhook)
+  (if (and (buffer-name gud-comint-buffer)
 	   ;; in case gud or gdb-ui is just loaded
 	   gud-comint-buffer
-	   (buffer-name gud-comint-buffer)
-	   (with-current-buffer gud-comint-buffer
-	     (eq gud-minor-mode 'gdba)))
-      (condition-case nil
-	(gdb-enqueue-input
-	 (list (concat gdb-server-prefix "list "
-		       (file-name-nondirectory buffer-file-name)
-		       ":1\n")
-	       `(lambda () (gdb-set-gud-minor-mode ,(current-buffer)))))
-	(error (setq gdb-find-file-unhook t)))))
+	   (eq (buffer-local-value 'gud-minor-mode gud-comint-buffer)
+	       'gdba))
+      (if (member buffer-file-name gdb-source-file-list)
+	  (with-current-buffer (find-buffer-visiting buffer-file-name)
+	    (set (make-local-variable 'gud-minor-mode) 'gdba)
+	    (set (make-local-variable 'tool-bar-map) gud-tool-bar-map)))))
 
 ;;from put-image
-(defun gdb-put-string (putstring pos &optional dprop)
+(defun gdb-put-string (putstring pos &optional dprop &rest sprops)
   "Put string PUTSTRING in front of POS in the current buffer.
 PUTSTRING is displayed by putting an overlay into the current buffer with a
-`before-string' STRING that has a `display' property whose value is
+`before-string' string that has a `display' property whose value is
 PUTSTRING."
   (let ((string (make-string 1 ?x))
 	(buffer (current-buffer)))
@@ -2369,7 +2700,9 @@ PUTSTRING."
     (let ((overlay (make-overlay pos pos buffer))
 	  (prop (or dprop
 		    (list (list 'margin 'left-margin) putstring))))
-      (put-text-property 0 (length string) 'display prop string)
+      (put-text-property 0 1 'display prop string)
+      (if sprops
+	  (add-text-properties 0 1 sprops string))
       (overlay-put overlay 'put-break t)
       (overlay-put overlay 'before-string string))))
 
@@ -2387,29 +2720,35 @@ BUFFER nil or omitted means use the current buffer."
 (defun gdb-put-breakpoint-icon (enabled bptno)
   (let ((start (- (line-beginning-position) 1))
 	(end (+ (line-end-position) 1))
-	(putstring (if enabled "B" "b")))
+	(putstring (if enabled "B" "b"))
+	(source-window (get-buffer-window (current-buffer) 0)))
     (add-text-properties
-     0 1 '(help-echo "mouse-1: set/clear bkpt, mouse-3: enable/disable bkpt")
+     0 1 '(help-echo "mouse-1: clear bkpt, mouse-3: enable/disable bkpt")
      putstring)
-    (if enabled (add-text-properties
-		 0 1 `(gdb-bptno ,bptno gdb-enabled t) putstring)
+    (if enabled
+	(add-text-properties
+	 0 1 `(gdb-bptno ,bptno gdb-enabled t) putstring)
       (add-text-properties
        0 1 `(gdb-bptno ,bptno gdb-enabled nil) putstring))
     (gdb-remove-breakpoint-icons start end)
     (if (display-images-p)
-	(if (>= (car (window-fringes)) 8)
+	(if (>= (or left-fringe-width
+		    (if source-window (car (window-fringes source-window)))
+		    gdb-buffer-fringe-width) 8)
 	    (gdb-put-string
 	     nil (1+ start)
 	     `(left-fringe breakpoint
 			   ,(if enabled
 				'breakpoint-enabled
-			      'breakpoint-disabled)))
+			      'breakpoint-disabled))
+	     'gdb-bptno bptno
+	     'gdb-enabled enabled)
 	  (when (< left-margin-width 2)
 	    (save-current-buffer
 	      (setq left-margin-width 2)
-	      (if (get-buffer-window (current-buffer) 0)
+	      (if source-window
 		  (set-window-margins
-		   (get-buffer-window (current-buffer) 0)
+		   source-window
 		   left-margin-width right-margin-width))))
 	  (put-image
 	   (if enabled
@@ -2426,20 +2765,20 @@ BUFFER nil or omitted means use the current buffer."
 		       (find-image `((:type xpm :data
 					    ,breakpoint-xpm-data
 					    :conversion disabled
-					    :ascent 100)
+					    :ascent 100 :pointer hand)
 				     (:type pbm :data
 					    ,breakpoint-disabled-pbm-data
-					    :ascent 100))))))
+					    :ascent 100 :pointer hand))))))
 	   (+ start 1)
 	   putstring
 	   'left-margin))
       (when (< left-margin-width 2)
 	(save-current-buffer
 	  (setq left-margin-width 2)
-	  (if (get-buffer-window (current-buffer) 0)
+	  (let ((window (get-buffer-window (current-buffer) 0)))
+	    (if window
 	      (set-window-margins
-	       (get-buffer-window (current-buffer) 0)
-	       left-margin-width right-margin-width))))
+	       window left-margin-width right-margin-width)))))
       (gdb-put-string
        (propertize putstring
 		   'face (if enabled 'breakpoint-enabled 'breakpoint-disabled))
@@ -2451,10 +2790,10 @@ BUFFER nil or omitted means use the current buffer."
       (remove-images start end))
   (when remove-margin
     (setq left-margin-width 0)
-    (if (get-buffer-window (current-buffer) 0)
-	(set-window-margins
-	 (get-buffer-window (current-buffer) 0)
-	 left-margin-width right-margin-width))))
+    (let ((window (get-buffer-window (current-buffer) 0)))
+      (if window
+	  (set-window-margins
+	   window left-margin-width right-margin-width)))))
 
 
 ;;
@@ -2464,12 +2803,9 @@ BUFFER nil or omitted means use the current buffer."
 		      'gdb-assembler-buffer-name
 		      'gdb-assembler-mode)
 
-(def-gdb-auto-updated-buffer gdb-assembler-buffer
+(def-gdb-auto-update-handler gdb-assembler-handler
   gdb-invalidate-assembler
-  (concat gdb-server-prefix "disassemble " 
-	  (if (member gdb-frame-address '(nil "main")) nil "0x")
-	  gdb-frame-address "\n")
-  gdb-assembler-handler
+  gdb-assembler-buffer
   gdb-assembler-custom)
 
 (defun gdb-assembler-custom ()
@@ -2481,7 +2817,7 @@ BUFFER nil or omitted means use the current buffer."
 	    (progn
 	      (goto-char (point-min))
 	      (if (and gdb-frame-address
-		       (re-search-forward gdb-frame-address nil t))
+		       (search-forward gdb-frame-address nil t))
 		  (progn
 		    (setq pos (point))
 		    (beginning-of-line)
@@ -2505,10 +2841,11 @@ BUFFER nil or omitted means use the current buffer."
 	      (with-current-buffer buffer
 		(save-excursion
 		  (goto-char (point-min))
-		  (if (re-search-forward address nil t)
+		  (if (search-forward address nil t)
 		      (gdb-put-breakpoint-icon (eq flag ?y) bptno))))))))
     (if (not (equal gdb-frame-address "main"))
-	(set-window-point (get-buffer-window buffer 0) pos))))
+	(with-current-buffer buffer
+	  (set-window-point (get-buffer-window buffer 0) pos)))))
 
 (defvar gdb-assembler-mode-map
   (let ((map (make-sparse-keymap)))
@@ -2551,7 +2888,7 @@ BUFFER nil or omitted means use the current buffer."
 
 (defun gdb-assembler-buffer-name ()
   (with-current-buffer gud-comint-buffer
-    (concat "*Disassembly of " (gdb-get-target-string) "*")))
+    (concat "*disassembly of " (gdb-get-target-string) "*")))
 
 (defun gdb-display-assembler-buffer ()
   "Display disassembly view."
@@ -2608,26 +2945,268 @@ BUFFER nil or omitted means use the current buffer."
 (defun gdb-frame-handler ()
   (setq gdb-pending-triggers
 	(delq 'gdb-get-selected-frame gdb-pending-triggers))
-  (with-current-buffer (gdb-get-create-buffer 'gdb-partial-output-buffer)
+  (goto-char (point-min))
+  (if (re-search-forward  "Stack level \\([0-9]+\\)" nil t)
+      (setq gdb-frame-number (match-string 1)))
+  (goto-char (point-min))
+  (if (re-search-forward
+       ".*=\\s-+0x0*\\(\\S-*\\)\\s-+in\\s-+\\(\\S-*?\\);? " nil t)
+      (progn
+	(setq gdb-selected-frame (match-string 2))
+	(if (gdb-get-buffer 'gdb-locals-buffer)
+	    (with-current-buffer (gdb-get-buffer 'gdb-locals-buffer)
+	      (setq mode-name (concat "Locals:" gdb-selected-frame))))
+	(if (gdb-get-buffer 'gdb-assembler-buffer)
+	    (with-current-buffer (gdb-get-buffer 'gdb-assembler-buffer)
+	      (setq mode-name (concat "Machine:" gdb-selected-frame))))
+	(setq gdb-frame-address (match-string 1))))
+  (goto-char (point-min))
+  (if (re-search-forward " source language \\(\\S-*\\)\." nil t)
+      (setq gdb-current-language (match-string 1)))
+  (gdb-invalidate-assembler))
+
+
+;; Code specific to GDB 6.4
+(defconst gdb-source-file-regexp-1 "fullname=\"\\(.*?\\)\"")
+
+(defun gdb-set-gud-minor-mode-existing-buffers-1 ()
+  "Create list of source files for current GDB session."
+  (goto-char (point-min))
+  (while (re-search-forward gdb-source-file-regexp-1 nil t)
+    (push (match-string 1) gdb-source-file-list))
+  (dolist (buffer (buffer-list))
+    (with-current-buffer buffer
+      (when (member buffer-file-name gdb-source-file-list)
+	(set (make-local-variable 'gud-minor-mode) 'gdba)
+	(set (make-local-variable 'tool-bar-map) gud-tool-bar-map)
+	(when gud-tooltip-mode
+	  (make-local-variable 'gdb-define-alist)
+	  (gdb-create-define-alist)
+	  (add-hook 'after-save-hook 'gdb-create-define-alist nil t))))))
+
+; Uses "-var-list-children --all-values".  Needs GDB 6.1 onwards.
+(defun gdb-var-list-children-1 (varnum)
+  (gdb-enqueue-input
+   (list (concat "server interpreter mi \"-var-update " varnum "\"\n")
+	 'ignore))
+  (gdb-enqueue-input
+   (list (concat "server interpreter mi \"-var-list-children --all-values "  
+		 varnum "\"\n")
+	     `(lambda () (gdb-var-list-children-handler-1 ,varnum)))))
+
+(defconst gdb-var-list-children-regexp-1
+  "name=\"\\(.+?\\)\",exp=\"\\(.+?\\)\",numchild=\"\\(.+?\\)\",\
+value=\\(\".*?\"\\),type=\"\\(.+?\\)\"}")
+
+(defun gdb-var-list-children-handler-1 (varnum)
+  (goto-char (point-min))
+  (let ((var-list nil))
+    (catch 'child-already-watched
+      (dolist (var gdb-var-list)
+	(if (string-equal varnum (cadr var))
+	    (progn
+	      (push var var-list)
+	      (while (re-search-forward gdb-var-list-children-regexp-1 nil t)
+		(let ((varchild (list (match-string 2)
+				      (match-string 1)
+				      (match-string 3)
+				      (match-string 5)
+				      (read (match-string 4))
+				      nil)))
+		  (dolist (var1 gdb-var-list)
+		    (if (string-equal (cadr var1) (cadr varchild))
+			(throw 'child-already-watched nil)))
+		  (push varchild var-list))))
+	  (push var var-list)))
+      (setq gdb-var-changed t)
+      (setq gdb-var-list (nreverse var-list)))))
+
+; Uses "-var-update --all-values".  Needs GDB 6.4 onwards.
+(defun gdb-var-update-1 ()
+  (if (not (member 'gdb-var-update gdb-pending-triggers))
+      (progn
+	(gdb-enqueue-input
+	 (list
+	  (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
+	      "server interpreter mi \"-var-update --all-values *\"\n"
+	    "-var-update --all-values *\n")
+				 'gdb-var-update-handler-1))
+	(push 'gdb-var-update gdb-pending-triggers))))
+
+(defconst gdb-var-update-regexp-1 "name=\"\\(.*?\\)\",value=\\(\".*?\"\\),")
+
+(defun gdb-var-update-handler-1 ()
+  (goto-char (point-min))
+  (while (re-search-forward gdb-var-update-regexp-1 nil t)
+    (let ((varnum (match-string 1)))
+      (catch 'var-found1
+	(let ((num 0))
+	  (dolist (var gdb-var-list)
+	    (if (string-equal varnum (cadr var))
+		(progn
+		  (setcar (nthcdr 5 var) t)
+		  (setcar (nthcdr 4 var) (read (match-string 2)))
+		  (setcar (nthcdr num gdb-var-list) var)
+		  (throw 'var-found1 nil)))
+	    (setq num (+ num 1))))))
+    (setq gdb-var-changed t))
+  (setq gdb-pending-triggers
+   (delq 'gdb-var-update gdb-pending-triggers))
+  (when (and (boundp 'speedbar-frame) (frame-live-p speedbar-frame))
+    ;; dummy command to update speedbar at right time
+    (gdb-enqueue-input (list "server pwd\n" 'gdb-speedbar-timer-fn))
+    ;; keep gdb-pending-triggers non-nil till end
+    (push 'gdb-speedbar-timer gdb-pending-triggers)))
+
+;; Registers buffer.
+;;
+(gdb-set-buffer-rules 'gdb-registers-buffer
+		      'gdb-registers-buffer-name
+		      'gdb-registers-mode)
+
+(def-gdb-auto-update-trigger gdb-invalidate-registers-1
+  (gdb-get-buffer 'gdb-registers-buffer)
+  (if (eq gud-minor-mode 'gdba)
+      "server interpreter mi \"-data-list-register-values x\"\n"
+    "-data-list-register-values x\n")
+    gdb-data-list-register-values-handler)
+
+(defconst gdb-data-list-register-values-regexp
+  "number=\"\\(.*?\\)\",value=\"\\(.*?\\)\"")
+
+(defun gdb-data-list-register-values-handler ()
+  (setq gdb-pending-triggers (delq 'gdb-invalidate-registers-1
+				   gdb-pending-triggers))
+  (goto-char (point-min))
+  (if (re-search-forward gdb-error-regexp nil t)
+      (with-current-buffer (gdb-get-buffer 'gdb-registers-buffer)
+	(let ((buffer-read-only nil))
+	  (erase-buffer)
+	  (insert (match-string 1))
+	  (goto-char (point-min))))
+    (let ((register-list (reverse gdb-register-names))
+	  (register nil) (register-string nil) (register-values nil))
+      (goto-char (point-min))
+      (while (re-search-forward gdb-data-list-register-values-regexp nil t)
+	(setq register (pop register-list))
+	(setq register-string (concat register "\t" (match-string 2) "\n"))
+	(if (member (match-string 1) gdb-changed-registers)
+	    (put-text-property 0 (length register-string)
+			       'face 'font-lock-warning-face
+			       register-string))
+	(setq register-values
+	      (concat register-values register-string)))
+      (let ((buf (gdb-get-buffer 'gdb-registers-buffer)))
+	(with-current-buffer buf
+	  (let ((p (window-point (get-buffer-window buf 0)))
+		(buffer-read-only nil))
+	    (erase-buffer)
+	    (insert register-values)
+	    (set-window-point (get-buffer-window buf 0) p))))))
+  (gdb-data-list-register-values-custom))
+
+(defun gdb-data-list-register-values-custom ()
+  (with-current-buffer (gdb-get-buffer 'gdb-registers-buffer)
+    (save-excursion
+      (let ((buffer-read-only nil)
+	    start end)
+	(goto-char (point-min))
+	(while (< (point) (point-max))
+	  (setq start (line-beginning-position))
+	  (setq end (line-end-position))
+	  (when (looking-at "^[^\t]+")
+	    (unless (string-equal (match-string 0) "No registers.")
+	      (put-text-property start (match-end 0)
+				 'face font-lock-variable-name-face)
+	      (add-text-properties start end 
+		                   '(help-echo "mouse-2: edit value"
+				     mouse-face highlight))))
+	  (forward-line 1))))))
+
+;; Needs GDB 6.4 onwards (used to fail with no stack).
+(defun gdb-get-changed-registers ()
+  (if (not (member 'gdb-get-changed-registers gdb-pending-triggers))
+      (progn
+	(gdb-enqueue-input
+	 (list
+	  (if (eq gud-minor-mode 'gdba)
+	      "server interpreter mi -data-list-changed-registers\n"
+	    "-data-list-changed-registers\n")
+	       'gdb-get-changed-registers-handler))
+	(push 'gdb-get-changed-registers gdb-pending-triggers))))
+
+(defconst gdb-data-list-register-names-regexp "\"\\(.*?\\)\"")
+
+(defun gdb-get-changed-registers-handler ()
+  (setq gdb-pending-triggers
+	(delq 'gdb-get-changed-registers gdb-pending-triggers))
+  (setq gdb-changed-registers nil)
+  (goto-char (point-min))
+  (while (re-search-forward gdb-data-list-register-names-regexp nil t)
+    (push (match-string 1) gdb-changed-registers)))
+
+
+;; Locals buffer.
+;;
+;; uses "-stack-list-locals --simple-values". Needs GDB 6.1 onwards.
+(gdb-set-buffer-rules 'gdb-locals-buffer
+		      'gdb-locals-buffer-name
+		      'gdb-locals-mode)
+
+(def-gdb-auto-update-trigger gdb-invalidate-locals-1
+  (gdb-get-buffer 'gdb-locals-buffer)
+  "server interpreter mi -\"stack-list-locals --simple-values\"\n"
+  gdb-stack-list-locals-handler)
+
+(defconst gdb-stack-list-locals-regexp
+  "name=\"\\(.*?\\)\",type=\"\\(.*?\\)\"")
+
+(defvar gdb-locals-watch-map-1
+  (let ((map (make-sparse-keymap)))
+    (define-key map [mouse-2] 'gud-watch)
+    map)
+ "Keymap to create watch expression of a complex data type local variable.")
+
+;; Dont display values of arrays or structures.
+;; These can be expanded using gud-watch.
+(defun gdb-stack-list-locals-handler ()
+  (setq gdb-pending-triggers (delq 'gdb-invalidate-locals-1
+				  gdb-pending-triggers))
+  (let (local locals-list)
     (goto-char (point-min))
-    (if (re-search-forward  "Stack level \\([0-9]+\\)" nil t)
-	(setq gdb-frame-number (match-string 1)))
-    (goto-char (point-min))
-    (if (re-search-forward
-	 ".*=\\s-+0x0*\\(\\S-*\\)\\s-+in\\s-+\\(\\S-*?\\);? " nil t)
-	(progn
-	  (setq gdb-selected-frame (match-string 2))
-	  (if (gdb-get-buffer 'gdb-locals-buffer)
-	      (with-current-buffer (gdb-get-buffer 'gdb-locals-buffer)
-		(setq mode-name (concat "Locals:" gdb-selected-frame))))
-	  (if (gdb-get-buffer 'gdb-assembler-buffer)
-	      (with-current-buffer (gdb-get-buffer 'gdb-assembler-buffer)
-		(setq mode-name (concat "Machine:" gdb-selected-frame))))
-	  (setq gdb-frame-address (match-string 1))))
-    (goto-char (point-min))
-    (if (re-search-forward " source language \\(\\S-*\\)\." nil t)
-	(setq gdb-current-language (match-string 1))))
-    (gdb-invalidate-assembler))
+    (while (re-search-forward gdb-stack-list-locals-regexp nil t)
+      (let ((local (list (match-string 1)
+			 (match-string 2)
+			 nil)))
+	(if (looking-at ",value=\\(\".*\"\\)}")
+	    (setcar (nthcdr 2 local) (read (match-string 1))))
+	(push local locals-list)))
+    (let ((buf (gdb-get-buffer 'gdb-locals-buffer)))
+      (and buf (with-current-buffer buf
+		 (let* ((window (get-buffer-window buf 0))
+			(p (window-point window))
+			(buffer-read-only nil))
+		   (erase-buffer)
+		   (dolist (local locals-list)
+		     (setq name (car local))
+		     (if (or (not (nth 2 local))
+			     (string-match "\\*$" (nth 1 local)))
+		       (add-text-properties 0 (length name)
+			    `(mouse-face highlight
+			      help-echo "mouse-2: create watch expression"
+			      local-map ,gdb-locals-watch-map-1)
+			    name))
+		       (insert 
+			(concat name "\t" (nth 1 local)
+				"\t" (nth 2 local) "\n")))
+		   (set-window-point window p)))))))
+
+(defun gdb-get-register-names ()
+  "Create a list of register names."
+  (goto-char (point-min))
+  (setq gdb-register-names nil)
+  (while (re-search-forward gdb-data-list-register-names-regexp nil t)
+    (push (match-string 1) gdb-register-names)))
 
 (provide 'gdb-ui)
 

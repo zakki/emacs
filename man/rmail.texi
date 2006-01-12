@@ -1,5 +1,6 @@
 @c This is part of the Emacs manual.
-@c Copyright (C) 1985,86,87,93,94,95,1997,2001 Free Software Foundation, Inc.
+@c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 2001, 2002,
+@c   2003, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @node Rmail, Dired, Sending Mail, Top
 @chapter Reading Mail with Rmail
@@ -91,7 +92,7 @@ need to ``exit'' formally.  If you switch from Rmail to editing in
 other buffers, and never happen to switch back, you have exited.  Just
 make sure to save the Rmail file eventually (like any other file you
 have changed).  @kbd{C-x s} is a good enough way to do this
-(@pxref{Saving}).  The Rmail command @kbd{b}, @code{rmail-bury},
+(@pxref{Save Commands}).  The Rmail command @kbd{b}, @code{rmail-bury},
 buries the Rmail buffer and its summary buffer without expunging and
 saving the Rmail file.
 

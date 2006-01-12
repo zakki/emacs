@@ -1,6 +1,7 @@
 ;;; sha1.el --- SHA1 Secure Hash Algorithm in Emacs-Lisp
 
-;; Copyright (C) 1999, 2001, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1999, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Shuhei KOBAYASHI <shuhei@aqua.ocn.ne.jp>
 ;; Keywords: SHA1, FIPS 180-1
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 

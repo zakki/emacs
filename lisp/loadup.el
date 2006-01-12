@@ -1,6 +1,7 @@
 ;;; loadup.el --- load up standardly loaded Lisp files for Emacs
 
-;; Copyright (C) 1985, 1986, 1992, 1994, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1992, 1994, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: internal
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -131,10 +132,13 @@
 (load "frame")
 (load "term/tty-colors")
 (load "font-core")
+;; facemenu must be loaded before font-lock, because `facemenu-keymap'
+;; needs to be defined when font-lock is loaded.
+(load "facemenu")
+(load "emacs-lisp/syntax")
+(load "font-lock")
+(load "jit-lock")
 
-(if (fboundp 'frame-face-alist)
-    (progn
-      (load "facemenu")))
 (if (fboundp 'track-mouse)
     (progn
       (load "mouse")
@@ -143,6 +147,7 @@
       (load "select")))
 (load "emacs-lisp/timer")
 (load "isearch")
+(load "rfn-eshadow")
 
 (message "%s" (garbage-collect))
 (load "menu-bar")
@@ -163,6 +168,18 @@
       (load "vmsproc")))
 (load "abbrev")
 (load "buff-menu")
+
+(if (fboundp 'x-create-frame)
+    (progn
+      (load "image")
+      (load "international/fontset")
+      (load "dnd")
+      (load "mwheel")
+      (load "tool-bar")))
+(if (featurep 'x)
+    (load "x-dnd"))
+(message "%s" (garbage-collect))
+
 (if (eq system-type 'vax-vms)
     (progn
       (load "vms-patch")))
@@ -194,6 +211,7 @@
 (load "jka-cmpr-hook")
 (load "ediff-hook")
 (if (fboundp 'x-show-tip) (load "tooltip"))
+
 (message "%s" (garbage-collect))
 
 ;If you want additional libraries to be preloaded and their
@@ -320,7 +338,7 @@
 	  (setq name (concat (downcase (substring name 0 (match-beginning 0)))
 			     "-"
 			     (substring name (match-end 0)))))
-	(if (eq system-type 'ms-dos)
+	(if (memq system-type '(ms-dos windows-nt cygwin))
 	    (message "Dumping under the name emacs")
 	  (message "Dumping under names emacs and %s" name)))
       (condition-case ()

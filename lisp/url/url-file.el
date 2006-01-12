@@ -1,6 +1,7 @@
 ;;; url-file.el --- File retrieval code
 
-;; Copyright (c) 1996 - 1999,2004  Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Keywords: comm, data, processes
 
@@ -18,8 +19,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -73,8 +74,7 @@ to them."
 	    func args
 	    args efs))
   (let ((size (nth 7 (file-attributes name))))
-    (save-excursion
-      (set-buffer buff)
+    (with-current-buffer buff
       (goto-char (point-max))
       (if (/= -1 size)
 	  (insert (format "Content-length: %d\n" size)))
@@ -177,9 +177,8 @@ to them."
     (if (file-directory-p filename)
 	;; A directory is done the same whether we are local or remote
 	(url-find-file-dired filename)
-      (save-excursion
-	(setq buffer (generate-new-buffer " *url-file*"))
-	(set-buffer buffer)
+      (with-current-buffer
+	  (setq buffer (generate-new-buffer " *url-file*"))
 	(mm-disable-multibyte)
 	(setq url-current-object url)
 	(insert "Content-type: " (or content-type "application/octet-stream") "\n")
@@ -231,12 +230,8 @@ to them."
 (url-file-create-wrapper file-readable-p (url))
 (url-file-create-wrapper file-writable-p (url))
 (url-file-create-wrapper file-executable-p (url))
-(if (featurep 'xemacs)
-    (progn
-      (url-file-create-wrapper directory-files (url &optional full match nosort files-only))
-      (url-file-create-wrapper file-truename (url &optional default)))
-  (url-file-create-wrapper directory-files (url &optional full match nosort))
-  (url-file-create-wrapper file-truename (url &optional counter prev-dirs)))
+(url-file-create-wrapper directory-files (url &optional full match nosort))
+(url-file-create-wrapper file-truename (url &optional counter prev-dirs))
 
 (provide 'url-file)
 

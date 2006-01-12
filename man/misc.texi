@@ -1,6 +1,6 @@
 @c This is part of the Emacs manual.
 @c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 2000, 2001,
-@c   2004, 2005  Free Software Foundation, Inc.
+@c   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @iftex
 @chapter Miscellaneous Commands
@@ -645,12 +645,13 @@ Send @var{text} as input to the shell, after reading it without
 echoing.  This is useful when a shell command runs a program that asks
 for a password.
 
-Alternatively, you can arrange for Emacs to notice password prompts
-and turn off echoing for them, as follows:
+Please note that Emacs will not echo passwords by default.  If you
+really want them to be echoed, evaluate the following Lisp
+expression:
 
 @example
-(add-hook 'comint-output-filter-functions
-          'comint-watch-for-password-prompt)
+(remove-hook 'comint-output-filter-functions
+             'comint-watch-for-password-prompt)
 @end example
 
 @item M-x comint-continue-subjob
@@ -1609,15 +1610,16 @@ used.
 
 @findex pr-interface
   To use the Printing package, add @code{(require 'printing)} to your
-init file (@pxref{Init File}).  The usual printing options in the menu
-bar will be replaced with a @samp{Printing} submenu, containing
-various printing options.  You can also type @kbd{M-x pr-interface
-RET}; this creates a @samp{*Printing Interface*} buffer, similar to a
-customization buffer , where you can set the printing options.  After
-selecting what and how to print, start the print job using the
-@samp{Print} button (click @kbd{mouse-2} on it, or move point over it
-and type @kbd{RET}).  For further information on the various options,
-use the @samp{Interface Help} button.
+init file (@pxref{Init File}), followed by @code{(pr-update-menus)}.
+This function replaces the usual printing commands in the menu bar
+with a @samp{Printing} submenu that contains various printing options.
+You can also type @kbd{M-x pr-interface RET}; this creates a
+@samp{*Printing Interface*} buffer, similar to a customization buffer,
+where you can set the printing options.  After selecting what and how
+to print, you start the print job using the @samp{Print} button (click
+@kbd{mouse-2} on it, or move point over it and type @kbd{RET}).  For
+further information on the various options, use the @samp{Interface
+Help} button.
 
 @node Sorting, Narrowing, Printing, Top
 @section Sorting Text
@@ -2021,6 +2023,9 @@ preserve certain buffers, customize the variable
 @code{desktop-clear-preserve-buffers-regexp}, whose value is a regular
 expression matching the names of buffers not to kill.
 
+  If you want to save minibuffer history from one session to
+another, use the @code{savehist} library.
+
 @node Recursive Edit, Emulation, Saving Emacs Sessions, Top
 @section Recursive Editing Levels
 @cindex recursive editing level
@@ -2130,29 +2135,6 @@ Most of the EDT emulation commands are keypad keys, and most standard
 Emacs key bindings are still available.  The EDT emulation rebindings
 are done in the global keymap, so there is no problem switching
 buffers or major modes while in EDT emulation.
-
-@item CUA bindings
-@findex cua-mode
-@vindex cua-mode
-@cindex CUA key bindings
-@vindex cua-enable-cua-keys
-The command @kbd{M-x cua-mode} sets up key bindings that are
-compatible with the Common User Access (CUA) system used in many other
-applications.  @kbd{C-x} means cut (kill), @kbd{C-c} copy, @kbd{C-v}
-paste (yank), and @kbd{C-z} undo.  Standard Emacs commands like
-@kbd{C-x C-c} still work, because @kbd{C-x} and @kbd{C-c} only take
-effect when the mark is active.  However, if you don't want these
-bindings at all, set @code{cua-enable-cua-keys} to @code{nil}.
-
-In CUA mode, using @kbd{Shift} together with the movement keys
-activates the region over which they move.  The standard (unshifted)
-movement keys deactivate the mark, and typed text replaces the active
-region as in Delete-Selection mode (@pxref{Graphical Kill}).
-
-CUA mode also provides enhanced rectangle support with visible
-rectangle highlighting.  Use @kbd{Shift-RET} to start a rectangle,
-extend it using the movement commands, and cut or copy it using
-@kbd{C-x} or @kbd{C-c}.
 
 @item TPU (DEC VMS editor)
 @findex tpu-edt-on

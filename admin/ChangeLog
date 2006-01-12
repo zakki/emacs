@@ -1,3 +1,68 @@
+2005-12-13  Bill Wohler  <wohler@newt.com>
+
+	* FOR-RELEASE: Ensure MH-E 8.0 has been released.
+
+2005-12-09  Reiner Steib  <Reiner.Steib@gmx.de>
+
+	* FOR-RELEASE (DOCUMENTATION): Remove message-mail, gnus-*
+	completing-read-multiple, mail-extract-address-components,
+	mail-mode, quail-define-package, save-buffer and
+	ucs-set-table-for-input from doc strings item (Done).
+
+2005-11-28  Chong Yidong  <cyd@stupidchicken.com>
+
+	* FOR-RELEASE: Icons installed.  Partial completion bug fixed.
+
+2005-11-11  Kim F. Storm  <storm@cua.dk>
+
+	* FOR-RELEASE (FATAL ERRORS): Fix infinite loop in redisplay
+	when displaying a non-breaking space in an overlay string.
+
+2005-10-30  Chong Yidong  <cyd@stupidchicken.com>
+
+	* FOR-RELEASE: Init file change implemented.
+
+2005-10-27  Chong Yidong  <cyd@stupidchicken.com>
+
+	* FOR-RELEASE: Fringe angle bitmap at eob fixed.
+
+2005-10-19  Chong Yidong  <cyd@stupidchicken.com>
+
+	* FOR-RELEASE (New features): max-image-size implemented.
+	(Bugs): split-window done, by Kim F. Storm.
+
+2005-10-17  Bill Wohler  <wohler@newt.com>
+
+	* FOR-RELEASE (DOCUMENTATION): Removed lisp/toolbar from list
+	since it's gone. Also marked mh-e as done.
+
+2005-10-11  Juanma Barranquero  <lekktu@gmail.com>
+
+	* FOR-RELEASE (FATAL ERRORS): Remove item about JPEG
+	libraries on Windows (Done).
+
+2005-10-01  Jason Rumney  <jasonr@gnu.org>
+
+	* admin.el (set-version): Set version numbers in nt/emacs.rc.
+
+2005-08-31  Romain Francoise  <romain@orebokech.com>
+
+	* FOR-RELEASE: (New features): Remove vhdl-mode.el update
+	item (Done).
+
+2005-08-27  Romain Francoise  <romain@orebokech.com>
+
+	* FOR-RELEASE (Bugs): Remove compile-internal item (Done).
+
+2005-07-04  Lute Kamstra  <lute@gnu.org>
+
+	Update FSF's address in GPL notices.
+
+2005-06-10  Lute Kamstra  <lute@gnu.org>
+
+	* admin.el (set-version): Set version in lisp manual too.
+	* make-tarball.txt: Commit lispref/elisp.texi too.
+
 2005-06-04  Richard M. Stallman  <rms@gnu.org>
 
 	* emacs-pretesters: Refer to etc/DEBUG instead of duplicating it.

@@ -1,6 +1,6 @@
-;;; mh-inc.el --- MH-E `inc' and separate mail spool handling
+;;; mh-inc.el --- MH-E "inc" and separate mail spool handling
 ;;
-;; Copyright (C) 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 2003, 2004, 2006 Free Software Foundation, Inc.
 
 ;; Author: Peter S. Galbraith <psg@debian.org>
 ;; Maintainer: Bill Wohler <wohler@newt.com>
@@ -21,14 +21,14 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
 ;;  Support for inc. In addition to reading from the system mailbox, inc can
 ;;  also be used to incorporate mail from multiple spool files into separate
-;;  folders. See `C-h v mh-inc-spool-list'.
+;;  folders. See "C-h v mh-inc-spool-list".
 
 ;;; Change Log:
 
@@ -73,8 +73,8 @@
                                         (char-to-string key)
                                         "] inc " folder " folder\n"))))
 
-;; Avoid compiler warning
-(defvar mh-inc-spool-list)
+;; Shush compiler.
+(eval-when-compile (defvar mh-inc-spool-list))
 
 (defun mh-inc-spool-make ()
   "Make all commands and defines keys for contents of `mh-inc-spool-list'."

@@ -1,10 +1,10 @@
 ;;; holidays.el --- holiday functions for the calendar package
 
-;; Copyright (C) 1989, 1990, 1992, 1993, 1994, 1997, 2004 Free
-;;   Software Foundation, Inc.
+;; Copyright (C) 1989, 1990, 1992, 1993, 1994, 1997, 2001, 2002, 2003,
+;;   2004, 2005  Free Software Foundation, Inc.
 
 ;; Author: Edward M. Reingold <reingold@cs.uiuc.edu>
-;; Maintainer: Glenn Morris <gmorris@ast.cam.ac.uk>
+;; Maintainer: Glenn Morris <rgm@gnu.org>
 ;; Keywords: holidays, calendar
 
 ;; This file is part of GNU Emacs.
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 

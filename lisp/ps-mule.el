@@ -1,7 +1,7 @@
 ;;; ps-mule.el --- provide multi-byte character facility to ps-print
 
-;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003
-;; Free Software Foundation, Inc.
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Vinicius Jose Latorre <vinicius@cpqd.com.br>
 ;;	Kenichi Handa <handa@etl.go.jp> (multi-byte characters)
@@ -24,8 +24,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -1039,9 +1039,12 @@ the sequence."
 	    /BOTTOM LLY def
 	    currentfont /RelativeCompose known {
 		/relative currentfont /RelativeCompose get def
+		relative false eq {
+		    %% Disable relative composition by setting sufficiently low
+		    %% and high positions.
+		    /relative [ -100000 100000 ] def
+		} if
 	    } {
-		%% Disable relative composition by setting sufficiently low
-		%% and high positions.
 		/relative [ -100000 100000 ] def
 	    } ifelse
 	    [ elt 0 0 ]
@@ -1236,7 +1239,7 @@ NewBitmapDict
 	} ifelse
 	/FirstCode -1 store
 
-	bmp 0 get SpaceWidthRatio ratio div mul size div 0	% wx wy
+	bmp 0 get size div 0		% wx wy
 	setcharwidth			% We can't use setcachedevice here.
 
 	bmp 1 get 0 gt bmp 2 get 0 gt and {
@@ -1412,7 +1415,8 @@ FONTTAG should be a string \"/h0\" or \"/h1\"."
 	(goto-char from)
 	(while (and (<= (length char-pos-list) max-unprintable-chars)
 		    (re-search-forward "\\cu" to t))
-	  (push (cons (preceding-char) (1- (point))) char-pos-list))))
+	  (or (aref ps-print-translation-table (preceding-char))
+	      (push (cons (preceding-char) (1- (point))) char-pos-list)))))
     (with-output-to-temp-buffer "*Warning*"
       (with-current-buffer standard-output
 	(when char-pos-list

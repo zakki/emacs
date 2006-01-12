@@ -1,6 +1,7 @@
 ;;; rmailedit.el --- "RMAIL edit mode"  Edit the current message
 
-;; Copyright (C) 1985, 1994, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1994, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: mail
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -57,7 +58,7 @@ to return to regular RMAIL:
   *  \\[rmail-cease-edit] makes them permanent.
 This functions runs the normal hook `rmail-edit-mode-hook'.
 \\{rmail-edit-map}"
-  (text-mode)
+  (delay-mode-hooks (text-mode))
   (use-local-map rmail-edit-map)
   (setq major-mode 'rmail-edit-mode)
   (setq mode-name "RMAIL Edit")

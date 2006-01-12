@@ -1,7 +1,7 @@
 ;;; mac-win.el --- parse switches controlling interface with Mac window system -*-coding: iso-2022-7bit;-*-
 
-;; Copyright (C) 1999, 2000, 2002, 2003, 2005
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Andrew Choi <akochoi@mac.com>
 ;; Keywords: terminals
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -54,8 +54,6 @@
 ;; -font		*font
 ;; -foreground		*foreground
 ;; -geometry		.geometry
-;; -i			.iconType
-;; -itype		.iconType
 ;; -iconic		.iconic
 ;; -name		.name
 ;; -reverse		*reverseVideo
@@ -78,7 +76,12 @@
 (require 'menu-bar)
 (require 'fontset)
 (require 'dnd)
+(eval-when-compile (require 'url))
 
+(defvar mac-charset-info-alist)
+(defvar mac-services-selection)
+(defvar mac-system-script-code)
+(defvar mac-apple-event-map)
 (defvar x-invocation-args)
 
 (defvar x-command-line-resources nil)
@@ -1084,6 +1087,9 @@ XConsortium: rgb.txt,v 10.41 94/02/20 18:39:36 rws Exp")
 (put 'return 'ascii-character ?\C-m)
 (put 'escape 'ascii-character ?\e)
 
+;; Modifier name `ctrl' is an alias of `control'.
+(put 'ctrl 'modifier-value (get 'control 'modifier-value))
+
 
 ;;;; Script codes and coding systems
 (defconst mac-script-code-coding-systems
@@ -1107,8 +1113,8 @@ XConsortium: rgb.txt,v 10.41 94/02/20 18:39:36 rws Exp")
   "Coding system derived from the system script code.")
 
 (defun mac-add-charset-info (xlfd-charset mac-text-encoding)
-  "Function to add character sets to display with Mac fonts.
-Creates entries in `mac-charset-info-alist'.
+  "Add a character set to display with Mac fonts.
+Create an entry in `mac-charset-info-alist'.
 XLFD-CHARSET is a string which will appear in the XLFD font name
 to identify the character set.  MAC-TEXT-ENCODING is the
 correspoinding TextEncodingBase value."
@@ -1129,10 +1135,12 @@ correspoinding TextEncodingBase value."
 (mac-add-charset-info "mac-symbol" 33)
 (mac-add-charset-info "adobe-fontspecific" 33) ; for X-Symbol
 (mac-add-charset-info "mac-dingbats" 34)
+(mac-add-charset-info "iso10646-1" 126) ; for ATSUI
 
 
 ;;;; Keyboard layout/language change events
 (defun mac-handle-language-change (event)
+  "Set keyboard coding system to what is specified in EVENT."
   (interactive "e")
   (let ((coding-system
 	 (cdr (assq (car (cadr event)) mac-script-code-coding-systems))))
@@ -1143,7 +1151,7 @@ correspoinding TextEncodingBase value."
 
 (define-key special-event-map [language-change] 'mac-handle-language-change)
 
-;;;; Selections and Services menu
+;;;; Selections
 
 ;; Setup to use the Mac clipboard.
 (set-selection-coding-system mac-system-coding-system)
@@ -1195,14 +1203,13 @@ in `selection-converter-alist', which see."
 	       (setq data-type (get-text-property 0 'foreign-selection data)))
       (cond ((eq data-type 'public.utf16-plain-text)
 	     (let ((encoded (and (fboundp 'mac-code-convert-string)
-				 (mac-code-convert-string data
-							  'utf-16 coding))))
+				 (mac-code-convert-string data nil coding))))
 	       (if encoded
-		   (let ((coding-save last-coding-system-used))
-		     (setq data (decode-coding-string encoded coding))
-		     (setq last-coding-system-used coding-save))
+		   (setq data (decode-coding-string encoded coding))
 		 (setq data
-		       (decode-coding-string data 'utf-16)))))
+		       (decode-coding-string data
+					     (if (eq (byteorder) ?B)
+						 'utf-16be 'utf-16le))))))
 	    ((eq data-type 'com.apple.traditional-mac-plain-text)
 	     (setq data (decode-coding-string data coding)))
 	    ((eq data-type 'public.file-url)
@@ -1325,8 +1332,11 @@ in `selection-converter-alist', which see."
 		(setq coding (coding-system-change-eol-conversion coding 'mac))
 		(setq s (mac-code-convert-string
 			 (encode-coding-string str coding)
-			 coding 'utf-16)))
-	      (setq str (or s (encode-coding-string str 'utf-16-mac)))))
+			 coding nil)))
+	      (setq str (or s
+			    (encode-coding-string str
+						  (if (eq (byteorder) ?B)
+						      'utf-16be 'utf-16le))))))
 	   ((eq type 'com.apple.traditional-mac-plain-text)
 	    (let ((encodables (find-coding-systems-string str))
 		  (rest mac-script-code-coding-systems))
@@ -1364,12 +1374,168 @@ in `selection-converter-alist', which see."
 	 (public.file-url . mac-select-convert-to-file-url)
 	 )
        selection-converter-alist))
+
+;;;; Apple events, HICommand events, and Services menu
+
+;;; Event classes
+(put 'core-event     'mac-apple-event-class "aevt") ; kCoreEventClass
+(put 'internet-event 'mac-apple-event-class "GURL") ; kAEInternetEventClass
+
+;;; Event IDs
+;; kCoreEventClass
+(put 'open-application   'mac-apple-event-id "oapp") ; kAEOpenApplication
+(put 'reopen-application 'mac-apple-event-id "rapp") ; kAEReopenApplication
+(put 'open-documents     'mac-apple-event-id "odoc") ; kAEOpenDocuments
+(put 'print-documents    'mac-apple-event-id "pdoc") ; kAEPrintDocuments
+(put 'open-contents      'mac-apple-event-id "ocon") ; kAEOpenContents
+(put 'quit-application   'mac-apple-event-id "quit") ; kAEQuitApplication
+(put 'application-died   'mac-apple-event-id "obit") ; kAEApplicationDied
+(put 'show-preferences   'mac-apple-event-id "pref") ; kAEShowPreferences
+(put 'autosave-now       'mac-apple-event-id "asav") ; kAEAutosaveNow
+;; kAEInternetEventClass
+(put 'get-url            'mac-apple-event-id "GURL") ; kAEGetURL
+;; Converted HICommand events
+(put 'about              'mac-apple-event-id "abou") ; kHICommandAbout
+
+(defmacro mac-event-spec (event)
+  `(nth 1 ,event))
+
+(defmacro mac-event-ae (event)
+  `(nth 2 ,event))
+
+(defun mac-ae-parameter (ae &optional keyword type)
+  (or keyword (setq keyword "----")) ;; Direct object.
+  (if (not (and (consp ae) (equal (car ae) "aevt")))
+      (error "Not an Apple event: %S" ae)
+    (let ((type-data (cdr (assoc keyword (cdr ae))))
+	  data)
+      (when (and type type-data (not (equal type (car type-data))))
+	(setq data (mac-coerce-ae-data (car type-data) (cdr type-data) type))
+	(setq type-data (if data (cons type data) nil)))
+      type-data)))
+
+(defun mac-ae-list (ae &optional keyword type)
+  (or keyword (setq keyword "----")) ;; Direct object.
+  (let ((desc (mac-ae-parameter ae keyword "list")))
+    (cond ((null desc)
+	   nil)
+	  ((not (equal (car desc) "list"))
+	   (error "Parameter for \"%s\" is not a list" keyword))
+	  (t
+	   (if (null type)
+	       (cdr desc)
+	     (mapcar
+	      (lambda (type-data)
+		(mac-coerce-ae-data (car type-data) (cdr type-data) type))
+	      (cdr desc)))))))
+
+(defun mac-bytes-to-integer (bytes &optional from to)
+  (or from (setq from 0))
+  (or to (setq to (length bytes)))
+  (let* ((len (- to from))
+	 (extended-sign-len (- (1+ (ceiling (log most-positive-fixnum 2)))
+			       (* 8 len)))
+	 (result 0))
+    (dotimes (i len)
+      (setq result (logior (lsh result 8)
+			   (aref bytes (+ from (if (eq (byteorder) ?B) i
+						 (- len i 1)))))))
+    (if (> extended-sign-len 0)
+	(ash (lsh result extended-sign-len) (- extended-sign-len))
+      result)))
+
+(defun mac-ae-selection-range (ae)
+;; #pragma options align=mac68k
+;; typedef struct SelectionRange {
+;;   short unused1; // 0 (not used)
+;;   short lineNum; // line to select (<0 to specify range)
+;;   long startRange; // start of selection range (if line < 0)
+;;   long endRange; // end of selection range (if line < 0)
+;;   long unused2; // 0 (not used)
+;;   long theDate; // modification date/time
+;; } SelectionRange;
+;; #pragma options align=reset
+  (let ((range-bytes (cdr (mac-ae-parameter ae "kpos" "TEXT"))))
+    (and range-bytes
+	 (list (mac-bytes-to-integer range-bytes 2 4)
+	       (mac-bytes-to-integer range-bytes 4 8)
+	       (mac-bytes-to-integer range-bytes 8 12)
+	       (mac-bytes-to-integer range-bytes 16 20)))))
+
+;; On Mac OS X 10.4 and later, the `open-document' event contains an
+;; optional parameter keyAESearchText from the Spotlight search.
+(defun mac-ae-text-for-search (ae)
+  (let ((utf8-text (cdr (mac-ae-parameter ae "stxt" "utf8"))))
+    (and utf8-text
+	 (decode-coding-string utf8-text 'utf-8))))
+
+(defun mac-ae-open-documents (event)
+  "Open the documents specified by the Apple event EVENT."
+  (interactive "e")
+  (let ((ae (mac-event-ae event)))
+    (dolist (file-name (mac-ae-list ae nil 'undecoded-file-name))
+      (if file-name
+	  (dnd-open-local-file (concat "file:" file-name) nil)))
+    (let ((selection-range (mac-ae-selection-range ae))
+	  (search-text (mac-ae-text-for-search ae)))
+      (cond (selection-range
+	     (let ((line (car selection-range))
+		   (start (cadr selection-range))
+		   (end (nth 2 selection-range)))
+	       (if (> line 0)
+		   (goto-line line)
+		 (if (and (> start 0) (> end 0))
+		     (progn (set-mark start)
+			    (goto-char end))))))
+	    ((stringp search-text)
+	     (re-search-forward
+	      (mapconcat 'regexp-quote (split-string search-text) "\\|")
+	      nil t)))))
+  (raise-frame))
+
+(defun mac-ae-text (ae)
+  (or (cdr (mac-ae-parameter ae nil "TEXT"))
+      (error "No text in Apple event.")))
+
+(defun mac-ae-get-url (event)
+  "Open the URL specified by the Apple event EVENT.
+Currently the `mailto' scheme is supported."
+  (interactive "e")
+  (let* ((ae (mac-event-ae event))
+	 (parsed-url (url-generic-parse-url (mac-ae-text ae))))
+    (if (string= (url-type parsed-url) "mailto")
+	(url-mailto parsed-url)
+      (error "Unsupported URL scheme: %s" (url-type parsed-url)))))
+
+(setq mac-apple-event-map (make-sparse-keymap))
+
+;; Received when Emacs is launched without associated documents.
+;; Accept it as an Apple event, but no Emacs event is generated so as
+;; not to erase the splash screen.
+(define-key mac-apple-event-map [core-event open-application] 0)
+
+;; Received when a dock or application icon is clicked and Emacs is
+;; already running.  Simply ignored.  Another idea is to make a new
+;; frame if all frames are invisible.
+(define-key mac-apple-event-map [core-event reopen-application] 'ignore)
+
+(define-key mac-apple-event-map [core-event open-documents]
+  'mac-ae-open-documents)
+(define-key mac-apple-event-map [core-event show-preferences] 'customize)
+(define-key mac-apple-event-map [core-event quit-application]
+  'save-buffers-kill-emacs)
+
+(define-key mac-apple-event-map [internet-event get-url] 'mac-ae-get-url)
+
+(define-key mac-apple-event-map [hicommand about] 'display-splash-screen)
 
 (defun mac-services-open-file ()
+  "Open the file specified by the selection value for Services."
   (interactive)
   (find-file-existing (x-selection-value mac-services-selection)))
 
 (defun mac-services-open-selection ()
+  "Create a new buffer containing the selection value for Services."
   (interactive)
   (switch-to-buffer (generate-new-buffer "*untitled*"))
   (insert (x-selection-value mac-services-selection))
@@ -1377,7 +1543,21 @@ in `selection-converter-alist', which see."
   (save-buffer) ; It pops up the save dialog.
   )
 
+(defun mac-services-mail-selection ()
+  "Prepare a mail buffer containing the selection value for Services."
+  (interactive)
+  (compose-mail)
+  (rfc822-goto-eoh)
+  (forward-line 1)
+  (insert (x-selection-value mac-services-selection) "\n"))
+
+(defun mac-services-mail-to ()
+  "Prepare a mail buffer to be sent to the selection value for Services."
+  (interactive)
+  (compose-mail (x-selection-value mac-services-selection)))
+
 (defun mac-services-insert-text ()
+  "Insert the selection value for Services."
   (interactive)
   (let ((text (x-selection-value mac-services-selection)))
     (if (not buffer-read-only)
@@ -1387,17 +1567,39 @@ in `selection-converter-alist', which see."
        (substitute-command-keys
 	"The text from the Services menu can be accessed with \\[yank]")))))
 
-(defvar mac-application-menu-map (make-sparse-keymap))
-(define-key mac-application-menu-map [quit] 'save-buffers-kill-emacs)
-(define-key mac-application-menu-map [services perform open-file]
+(define-key mac-apple-event-map [services paste] 'mac-services-insert-text)
+(define-key mac-apple-event-map [services perform open-file]
   'mac-services-open-file)
-(define-key mac-application-menu-map [services perform open-selection]
+(define-key mac-apple-event-map [services perform open-selection]
   'mac-services-open-selection)
-(define-key mac-application-menu-map [services paste]
-  'mac-services-insert-text)
-(define-key mac-application-menu-map [preferences] 'customize)
-(define-key mac-application-menu-map [about] 'display-splash-screen)
-(global-set-key [menu-bar application] mac-application-menu-map)
+(define-key mac-apple-event-map [services perform mail-selection]
+  'mac-services-mail-selection)
+(define-key mac-apple-event-map [services perform mail-to]
+  'mac-services-mail-to)
+
+(defun mac-dispatch-apple-event (event)
+  "Dispatch EVENT according to the keymap `mac-apple-event-map'."
+  (interactive "e")
+  (let* ((binding (lookup-key mac-apple-event-map (mac-event-spec event)))
+	 (service-message
+	  (and (keymapp binding)
+	       (cdr (mac-ae-parameter (mac-event-ae event) "svmg")))))
+    (when service-message
+      (setq service-message
+	    (intern (decode-coding-string service-message 'utf-8)))
+      (setq binding (lookup-key binding (vector service-message))))
+    ;; Replace (cadr event) with a dummy position so that event-start
+    ;; returns it.
+    (setcar (cdr event) (list (selected-window) (point) '(0 . 0) 0))
+    (call-interactively binding)))
+
+(global-set-key [mac-apple-event] 'mac-dispatch-apple-event)
+
+;; Processing of Apple events are deferred at the startup time.  For
+;; example, files dropped onto the Emacs application icon can only be
+;; processed when the initial frame has been created: this is where
+;; the files should be opened.
+(add-hook 'after-init-hook 'mac-process-deferred-apple-events)
 
 ;;; Do the actual Windows setup here; the above code just defines
 ;;; functions and variables that we use now.
@@ -1486,7 +1688,7 @@ in `selection-converter-alist', which see."
     (char-table-extra-slot translation-table 0)))
 
 (let
-    ((encoding-vector 
+    ((encoding-vector
       (vconcat
        (make-vector 32 nil)
        ;; mac-dingbats (32..126) -> emacs-mule mapping
@@ -1546,54 +1748,52 @@ in `selection-converter-alist', which see."
 	    (if mac-encoded
 		(aset table c mac-encoded))))))))
 
+;; We assume none of official dim2 charsets (0x90..0x99) are encoded
+;; to these fonts.
+
 (define-ccl-program ccl-encode-mac-roman-font
   `(0
-    (if (r0 != ,(charset-id 'ascii))
-	(if (r0 <= ?\x8f)
-	    (translate-character mac-roman-encoder r0 r1)
-	  ((r1 <<= 7)
-	   (r1 |= r2)
-	   (translate-character mac-roman-encoder r0 r1)))))
+    (if (r0 <= ?\xef)
+	(translate-character mac-roman-encoder r0 r1)
+      ((r1 <<= 7)
+       (r1 |= r2)
+       (translate-character mac-roman-encoder r0 r1))))
   "CCL program for Mac Roman font")
 
 (define-ccl-program ccl-encode-mac-centraleurroman-font
   `(0
-    (if (r0 != ,(charset-id 'ascii))
-	(if (r0 <= ?\x8f)
-	    (translate-character encode-mac-centraleurroman r0 r1)
-	  ((r1 <<= 7)
-	   (r1 |= r2)
-	   (translate-character encode-mac-centraleurroman r0 r1)))))
+    (if (r0 <= ?\xef)
+	(translate-character encode-mac-centraleurroman r0 r1)
+      ((r1 <<= 7)
+       (r1 |= r2)
+       (translate-character encode-mac-centraleurroman r0 r1))))
   "CCL program for Mac Central European Roman font")
 
 (define-ccl-program ccl-encode-mac-cyrillic-font
   `(0
-    (if (r0 != ,(charset-id 'ascii))
-	(if (r0 <= ?\x8f)
-	    (translate-character encode-mac-cyrillic r0 r1)
-	  ((r1 <<= 7)
-	   (r1 |= r2)
-	   (translate-character encode-mac-cyrillic r0 r1)))))
+    (if (r0 <= ?\xef)
+	(translate-character encode-mac-cyrillic r0 r1)
+      ((r1 <<= 7)
+       (r1 |= r2)
+       (translate-character encode-mac-cyrillic r0 r1))))
   "CCL program for Mac Cyrillic font")
 
 (define-ccl-program ccl-encode-mac-symbol-font
   `(0
-    (if (r0 != ,(charset-id 'ascii))
-	(if (r0 <= ?\x8f)
-	    (translate-character mac-symbol-encoder r0 r1)
-	  ((r1 <<= 7)
-	   (r1 |= r2)
-	   (translate-character mac-symbol-encoder r0 r1)))))
+    (if (r0 <= ?\xef)
+	(translate-character mac-symbol-encoder r0 r1)
+      ((r1 <<= 7)
+       (r1 |= r2)
+       (translate-character mac-symbol-encoder r0 r1))))
   "CCL program for Mac Symbol font")
 
 (define-ccl-program ccl-encode-mac-dingbats-font
   `(0
-    (if (r0 != ,(charset-id 'ascii))
-	(if (r0 <= ?\x8f)
-	    (translate-character mac-dingbats-encoder r0 r1)
-	  ((r1 <<= 7)
-	   (r1 |= r2)
-	   (translate-character mac-dingbats-encoder r0 r1)))))
+    (if (r0 <= ?\xef)
+	(translate-character mac-dingbats-encoder r0 r1)
+      ((r1 <<= 7)
+       (r1 |= r2)
+       (translate-character mac-dingbats-encoder r0 r1))))
   "CCL program for Mac Dingbats font")
 
 
@@ -1603,35 +1803,80 @@ in `selection-converter-alist', which see."
 	       mac-font-encoder-list)
        font-ccl-encoder-alist))
 
-(defun fontset-add-mac-fonts (fontset &optional base-family)
-  (if base-family
-      (setq base-family (downcase base-family))
-    (let ((ascii-font
-	   (downcase (x-resolve-font-name
-		      (fontset-font fontset (charset-id 'ascii))))))
-      (setq base-family (aref (x-decompose-font-name ascii-font)
-			      xlfd-regexp-family-subnum))))
-;;  (if (not (string-match "^fontset-" fontset))
-;;      (setq fontset
-;;	    (concat "fontset-" (aref (x-decompose-font-name fontset)
-;;				     xlfd-regexp-encoding-subnum))))
-  (dolist
-      (font-encoder
-       (nreverse
-	(mapcar (lambda (lst)
-		  (cons (cons (format (nth 3 lst) base-family) (nth 0 lst))
-			(nth 1 lst)))
-		mac-font-encoder-list)))
-    (let ((font (car font-encoder))
-	  (encoder (cdr font-encoder)))
+(defconst mac-char-fontspec-list
+  ;; Directly operate on a char-table instead of a fontset so that it
+  ;; may not create a dummy fontset.
+  (let ((template (make-char-table 'fontset)))
+    (dolist
+	(font-encoder
+	 (nreverse
+	  (mapcar (lambda (lst)
+		    (cons (cons (nth 3 lst) (nth 0 lst)) (nth 1 lst)))
+		  mac-font-encoder-list)))
+      (let ((font (car font-encoder))
+	    (encoder (cdr font-encoder)))
+	(map-char-table
+	 (lambda (key val)
+	   (or (null val)
+	       (generic-char-p key)
+	       (memq (char-charset key)
+		     '(ascii eight-bit-control eight-bit-graphic))
+	       (aset template key font)))
+	 (get encoder 'translation-table))))
+
+    ;; Like fontset-info, but extend a range only if its "to" part is
+    ;; the predecessor of the current char.
+    (let* ((last '((0 nil)))
+	   (accumulator last)
+	   last-char-or-range last-char last-elt)
       (map-char-table
-       (lambda (key val)
-	 (or (null val)
-	     (generic-char-p key)
-	     (memq (char-charset key)
-		   '(ascii eight-bit-control eight-bit-graphic))
-	     (set-fontset-font fontset key font)))
-       (get encoder 'translation-table)))))
+       (lambda (char elt)
+	 (when elt
+	   (setq last-char-or-range (car (car last))
+		 last-char (if (consp last-char-or-range)
+			       (cdr last-char-or-range)
+			     last-char-or-range)
+		 last-elt (cdr (car last)))
+	   (if (and (eq elt last-elt)
+		    (= char (1+ last-char))
+		    (eq (char-charset char) (char-charset last-char)))
+	       (if (consp last-char-or-range)
+		   (setcdr last-char-or-range char)
+		 (setcar (car last) (cons last-char char)))
+	     (setcdr last (list (cons char elt)))
+	     (setq last (cdr last)))))
+       template)
+      (cdr accumulator))))
+
+(defun fontset-add-mac-fonts (fontset &optional base-family)
+  "Add font-specs for Mac fonts to FONTSET.
+The added font-specs are determined by BASE-FAMILY and the value
+of `mac-char-fontspec-list', which is a list
+of (CHARACTER-OR-RANGE . (FAMILY-FORMAT . REGISTRY)).  If
+BASE-FAMILY is nil, the font family in the added font-specs is
+also nil.  If BASE-FAMILY is a string, `%s' in FAMILY-FORMAT is
+replaced with the string.  Otherwise, `%s' in FAMILY-FORMAT is
+replaced with the ASCII font family name in FONTSET."
+  (if base-family
+      (if (stringp base-family)
+	  (setq base-family (downcase base-family))
+	(let ((ascii-font (fontset-font fontset (charset-id 'ascii))))
+	  (if ascii-font
+	      (setq base-family
+		    (aref (x-decompose-font-name
+			   (downcase (x-resolve-font-name ascii-font)))
+			  xlfd-regexp-family-subnum))))))
+  (let (fontspec-cache fontspec)
+    (dolist (char-fontspec mac-char-fontspec-list)
+      (setq fontspec (cdr (assq (cdr char-fontspec) fontspec-cache)))
+      (when (null fontspec)
+	(setq fontspec
+	      (cons (and base-family
+			 (format (car (cdr char-fontspec)) base-family))
+		    (cdr (cdr char-fontspec))))
+	(setq fontspec-cache (cons (cons (cdr char-fontspec) fontspec)
+				   fontspec-cache)))
+      (set-fontset-font fontset (car char-fontspec) fontspec))))
 
 (defun create-fontset-from-mac-roman-font (font &optional resolved-font
 						fontset-name)
@@ -1648,11 +1893,26 @@ an appropriate name is generated automatically.
 It returns a name of the created fontset."
   (let ((fontset
 	 (create-fontset-from-ascii-font font resolved-font fontset-name)))
-    (fontset-add-mac-fonts fontset)
+    (fontset-add-mac-fonts fontset t)
     fontset))
 
 ;; Setup the default fontset.
 (setup-default-fontset)
+(cond ((x-list-fonts "*-iso10646-1")
+       ;; Use ATSUI (if available) for the following charsets.
+       (dolist
+	   (charset '(latin-iso8859-1
+		      latin-iso8859-2 latin-iso8859-3 latin-iso8859-4
+		      thai-tis620 greek-iso8859-7 arabic-iso8859-6
+		      hebrew-iso8859-8 cyrillic-iso8859-5
+		      latin-iso8859-9 latin-iso8859-15 latin-iso8859-14
+		      japanese-jisx0212 chinese-sisheng ipa
+		      vietnamese-viscii-lower vietnamese-viscii-upper
+		      lao ethiopic tibetan))
+	 (set-fontset-font nil charset '(nil . "iso10646-1"))))
+      ((null (x-list-fonts "*-iso8859-1"))
+       ;; Add Mac-encoding fonts unless ETL fonts are installed.
+       (fontset-add-mac-fonts "fontset-default")))
 
 ;; Create a fontset that uses mac-roman font.  With this fontset,
 ;; characters decoded from mac-roman encoding (ascii, latin-iso8859-1,
@@ -1660,7 +1920,7 @@ It returns a name of the created fontset."
 (create-fontset-from-fontset-spec
  "-etl-fixed-medium-r-normal-*-16-*-*-*-*-*-fontset-mac,
 ascii:-*-Monaco-*-*-*-*-12-*-*-*-*-*-mac-roman")
-(fontset-add-mac-fonts "fontset-mac")
+(fontset-add-mac-fonts "fontset-mac" t)
 
 ;; Create fontset specified in X resources "Fontset-N" (N is 0, 1, ...).
 (create-fontset-from-x-resource)
@@ -1760,31 +2020,12 @@ Switch to a buffer editing the last file dropped."
 	 (y (cdr coords)))
     (if (and (> x 0) (> y 0))
 	(set-frame-selected-window nil window))
-    (mapcar (lambda (file-name)
-	      (if (listp file-name)
-		  (let ((line (car file-name))
-			(start (car (cdr file-name)))
-			(end (car (cdr (cdr file-name)))))
-		    (if (> line 0)
-			(goto-line line)
-		      (if (and (> start 0) (> end 0))
-			  (progn (set-mark start)
-				 (goto-char end)))))
-		(dnd-handle-one-url window 'private
-				    (concat "file:" file-name))))
-	    (car (cdr (cdr event)))))
+    (dolist (file-name (nth 2 event))
+      (dnd-handle-one-url window 'private
+			  (concat "file:" file-name))))
   (raise-frame))
 
 (global-set-key [drag-n-drop] 'mac-drag-n-drop)
-
-;; By checking whether the variable mac-ready-for-drag-n-drop has been
-;; defined, the event loop in macterm.c can be informed that it can
-;; now receive Finder drag and drop events.  Files dropped onto the
-;; Emacs application icon can only be processed when the initial frame
-;; has been created: this is where the files should be opened.
-(add-hook 'after-init-hook
-	  '(lambda ()
-	     (defvar mac-ready-for-drag-n-drop t)))
 
 ;;;; Non-toolkit Scroll bars
 
@@ -1870,10 +2111,10 @@ Switch to a buffer editing the last file dropped."
 	       user-login-name user-real-login-name user-full-name))
     (set v (decode-coding-string (symbol-value v) mac-system-coding-system))))
 
-;; If Emacs is started from the Finder, change the default directory
-;; to the user's home directory.
-(if (string= default-directory "/")
-    (cd "~"))
+;; Now the default directory is changed to the user's home directory
+;; in emacs.c if invoked from the WindowServer (with -psn_* option).
+;; (if (string= default-directory "/")
+;;     (cd "~"))
 
 ;; Darwin 6- pty breakage is now controlled from the C code so that
 ;; it applies to all builds on darwin.  See s/darwin.h PTY_ITERATION.

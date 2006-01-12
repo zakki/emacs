@@ -1,6 +1,7 @@
 ;;; term.el --- general command interpreter in a window stuff
 
-;;; Copyright (C) 1988, 1990, 1992, 1994, 1995, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1988, 1990, 1992, 1994, 1995, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Per Bothner <per@bothner.com>
 ;; Maintainer: Dan Nicolaescu <dann@ics.uci.edu>, Per Bothner <per@bothner.com>
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Marck 13 2001
 ;;; Fixes for CJK support by Yong Lu <lyongu@yahoo.com>.
@@ -405,7 +406,7 @@
 (require 'ehelp)
 
 (defgroup term nil
-  "General command interpreter in a window"
+  "General command interpreter in a window."
   :group 'processes
   :group 'unix)
 
@@ -485,7 +486,7 @@
   :group 'term)
 
 (defvar term-prompt-regexp "^"
-  "Regexp to recognise prompts in the inferior process.
+  "Regexp to recognize prompts in the inferior process.
 Defaults to \"^\", the null string at BOL.
 
 Good choices:
@@ -499,7 +500,7 @@ Good choices:
 This is a good thing to set in mode hooks.")
 
 (defvar term-delimiter-argument-list ()
-  "List of characters to recognise as separate arguments in input.
+  "List of characters to recognize as separate arguments in input.
 Strings comprising a character in this list will separate the arguments
 surrounding them, and also be regarded as arguments in their own right (unlike
 whitespace).  See `term-arguments'.
@@ -570,8 +571,8 @@ This variable is buffer-local."
   "Function that submits old text in term mode.
 This function is called when return is typed while the point is in old text.
 It returns the text to be submitted as process input.  The default is
-term-get-old-input-default, which grabs the current line, and strips off
-leading text matching term-prompt-regexp")
+`term-get-old-input-default', which grabs the current line, and strips off
+leading text matching `term-prompt-regexp'.")
 
 (defvar term-dynamic-complete-functions
   '(term-replace-by-expanded-history term-dynamic-complete-filename)
@@ -585,7 +586,7 @@ This is a good thing to set in mode hooks.")
   (function (lambda (str) (not (string-match "\\`\\s *\\'" str))))
   "Predicate for filtering additions to input history.
 Only inputs answering true to this function are saved on the input
-history list.  Default is to save anything that isn't all whitespace")
+history list.  Default is to save anything that isn't all whitespace.")
 
 (defvar term-input-filter-functions '()
   "Functions to call before input is sent to the process.
@@ -595,9 +596,9 @@ This variable is buffer-local.")
 
 (defvar term-input-sender (function term-simple-send)
   "Function to actually send to PROCESS the STRING submitted by user.
-Usually this is just 'term-simple-send, but if your mode needs to
+Usually this is just `term-simple-send', but if your mode needs to
 massage the input string, this is your hook.  This is called from
-the user command term-send-input.  term-simple-send just sends
+the user command `term-send-input'.  `term-simple-send' just sends
 the string plus a newline.")
 
 (defcustom term-eol-on-send t
@@ -607,16 +608,16 @@ See `term-send-input'."
   :group 'term)
 
 (defcustom term-mode-hook '()
-  "Called upon entry into term-mode
+  "Called upon entry into term mode.
 This is run before the process is cranked up."
   :type 'hook
   :group 'term)
 
 (defcustom term-exec-hook '()
-  "Called each time a process is exec'd by term-exec.
+  "Called each time a process is exec'd by `term-exec'.
 This is called after the process is cranked up.  It is useful for things that
-must be done each time a process is executed in a term-mode buffer (e.g.,
-\(process-kill-without-query)).  In contrast, the term-mode-hook is only
+must be done each time a process is executed in a term mode buffer (e.g.,
+`process-kill-without-query').  In contrast, `term-mode-hook' is only
 executed once when the buffer is created."
   :type 'hook
   :group 'term)
@@ -625,7 +626,7 @@ executed once when the buffer is created."
 (defvar term-raw-map nil
   "Keyboard map for sending characters directly to the inferior process.")
 (defvar term-escape-char nil
-  "Escape character for char-sub-mode of term mode.
+  "Escape character for char sub-mode of term mode.
 Do not change it directly;  use `term-set-escape-char' instead.")
 (defvar term-raw-escape-map nil)
 
@@ -888,7 +889,7 @@ is buffer-local.")
   (while (< i 128)
     (define-key map (make-string 1 i) 'term-send-raw)
     ;; Avoid O and [. They are used in escape sequences for various keys.
-    (unless (or (eq i ?O) (eq i 91)) 
+    (unless (or (eq i ?O) (eq i 91))
 		(define-key esc-map (make-string 1 i) 'term-send-raw-meta))
     (setq i (1+ i)))
   (dolist (elm (generic-character-list))
@@ -941,11 +942,11 @@ is buffer-local.")
 		(make-display-table)))
         i)
     ;; avoid changing the display table for ^J
-    (setq i 0) 
+    (setq i 0)
     (while (< i 10)
       (aset dt i (vector i))
       (setq i (1+ i)))
-    (setq i 11) 
+    (setq i 11)
     (while (< i 32)
       (aset dt i (vector i))
       (setq i (1+ i)))
@@ -983,7 +984,7 @@ and `term-scroll-to-bottom-on-output'.
 If you accidentally suspend your process, use \\[term-continue-subjob]
 to continue it.
 
-This mode can be customised to create specific modes for running
+This mode can be customized to create specific modes for running
 particular subprocesses.  This can be done by setting the hooks
 `term-input-filter-functions', `term-input-filter',
 `term-input-sender' and `term-get-old-input' to appropriate functions,
@@ -1102,6 +1103,8 @@ Entry to this mode runs the hooks on `term-mode-hook'."
   (make-local-variable 'term-current-face)
   (make-local-variable 'term-pending-frame)
   (setq term-pending-frame nil)
+  ;; Cua-mode's keybindings interfere with the term keybindings, disable it. 
+  (set (make-local-variable 'cua-mode) nil)
   (run-mode-hooks 'term-mode-hook)
   (term-if-xemacs
    (set-buffer-menubar
@@ -1218,6 +1221,7 @@ without any interpretation."
 ;; Which would be better:  "\e[A" or "\eOA"? readline accepts either.
 ;; For my configuration it's definitely better \eOA but YMMV. -mm
 ;; For example: vi works with \eOA while elm wants \e[A ...
+;;; (terminfo: kcuu1, kcud1, kcuf1, kcub1, khome, kend, kpp, knp, kdch1, kbs)
 (defun term-send-up    () (interactive) (term-send-raw-string "\eOA"))
 (defun term-send-down  () (interactive) (term-send-raw-string "\eOB"))
 (defun term-send-right () (interactive) (term-send-raw-string "\eOC"))
@@ -1273,7 +1277,7 @@ you type \\[term-send-input] which sends the current line to the inferior."
 (defun term-check-proc (buffer)
   "True if there is a process associated w/buffer BUFFER, and
 it is alive (status RUN or STOP).  BUFFER can be either a buffer or the
-name of one"
+name of one."
   (let ((proc (get-buffer-process buffer)))
     (and proc (memq (process-status proc) '(run stop)))))
 
@@ -1390,7 +1394,7 @@ The main purpose is to get rid of the local keymap."
 
 ;;; Name to use for TERM.
 ;;; Using "emacs" loses, because bash disables editing if TERM == emacs.
-(defvar term-term-name "eterm")
+(defvar term-term-name "eterm-color")
 ; Format string, usage:
 ; (format term-termcap-string emacs-term-name "TERMCAP=" 24 80)
 (defvar term-termcap-format
@@ -1402,8 +1406,8 @@ The main purpose is to get rid of the local keymap."
 :UP=\\E[%%dA:DO=\\E[%%dB:LE=\\E[%%dD:RI=\\E[%%dC\
 :kl=\\EOD:kd=\\EOB:kr=\\EOC:ku=\\EOA:kN=\\E[6~:kP=\\E[5~:@7=\\E[4~:kh=\\E[1~\
 :mk=\\E[8m:cb=\\E[1K:op=\\E[39;49m:Co#8:pa#64:AB=\\E[4%%dm:AF=\\E[3%%dm:cr=^M\
-:bl=^G:do=^J:le=^H:ta=^I:se=\E[27m:ue=\E24m\
-:kb=^?:kD=^[[3~:sc=\E7:rc=\E8:r1=\Ec:"
+:bl=^G:do=^J:le=^H:ta=^I:se=\\E[27m:ue=\\E24m\
+:kb=^?:kD=^[[3~:sc=\\E7:rc=\\E8:r1=\\Ec:"
 ;;; : -undefine ic
 ;;; don't define :te=\\E[2J\\E[?47l\\E8:ti=\\E7\\E[?47h\
   "termcap capabilities supported")
@@ -1574,7 +1578,7 @@ See also `term-read-input-ring'."
       (sit-for 0)
       (message "Hit space to flush")
       (let ((ch (read-event)))
-	(if (eq ch ?\ )
+	(if (eq ch ?\s)
 	    (set-window-configuration conf)
 	  (setq unread-command-events (list ch)))))))
 
@@ -2088,7 +2092,7 @@ If this takes us past the end of the current line, don't skip at all."
 (defun term-simple-send (proc string)
   "Default function for sending to PROC input STRING.
 This just sends STRING plus a newline.  To override this,
-set the hook TERM-INPUT-SENDER."
+set the hook `term-input-sender'."
   (term-send-string proc string)
   (term-send-string proc "\n"))
 
@@ -2180,7 +2184,7 @@ Security bug: your string can still be temporarily recovered with
 If your process is choking on big inputs, try lowering the value.")
 
 (defun term-send-string (proc str)
-  "Send PROCESS the contents of STRING as input.
+  "Send to PROC the contents of STR as input.
 This is equivalent to process-send-string, except that long input strings
 are broken up into chunks of size term-input-chunk-size.  Processes
 are given a chance to output between chunks.  This can help prevent processes
@@ -2195,9 +2199,9 @@ from hanging when you send them long inputs on some OS's."
 	(setq i next-i)))))
 
 (defun term-send-region (proc start end)
-  "Sends to PROC the region delimited by START and END.
+  "Send to PROC the region delimited by START and END.
 This is a replacement for process-send-region that tries to keep
-your process from hanging on long inputs.  See term-send-string."
+your process from hanging on long inputs.  See `term-send-string'."
   (term-send-string proc (buffer-substring start end)))
 
 
@@ -2427,7 +2431,7 @@ See `term-prompt-regexp'."
 ;;; This is pretty stupid about strings.  It decides we're in a string
 ;;; if there's a quote on both sides of point on the current line.
 (defun term-extract-string ()
-  "Returns string around POINT that starts the current line or nil."
+  "Return string around `point' that starts the current line or nil."
   (save-excursion
     (let* ((point (point))
 	   (bol (progn (beginning-of-line) (point)))
@@ -2601,7 +2605,7 @@ See `term-prompt-regexp'."
 
 (defun term-adjust-current-row-cache (delta)
   (when term-current-row
-    (setq term-current-row 
+    (setq term-current-row
 	  (max 0 (+ term-current-row delta)))))
 
 (defun term-terminal-pos ()
@@ -2683,13 +2687,17 @@ See `term-prompt-regexp'."
 	   (buffer-undo-list t)
 	   (selected (selected-window))
 	   last-win
+           handled-ansi-message
 	   (str-length (length str)))
       (save-selected-window
 
 	;; Let's handle the messages. -mm
 
-	(setq str (term-handle-ansi-terminal-messages str))
-	(setq str-length (length str))
+        (let* ((newstr (term-handle-ansi-terminal-messages str)))
+          (if (not (eq str newstr))
+              (setq handled-ansi-message t
+                    str newstr)))
+        (setq str-length (length str))
 
 	(if (marker-buffer term-pending-delete-marker)
 	    (progn
@@ -2781,11 +2789,11 @@ See `term-prompt-regexp'."
 			    ;; In insert if the if the current line
 			    ;; has become too long it needs to be
 			    ;; chopped off.
-			    (when term-insert-mode 
+			    (when term-insert-mode
 			      (setq pos (point))
 			      (end-of-line)
 			      (when (> (current-column) term-width)
-				(delete-region (- (point) (- (current-column) term-width)) 
+				(delete-region (- (point) (- (current-column) term-width))
 					       (point)))
 			      (goto-char pos)))
 			  (setq term-current-column nil)
@@ -2804,19 +2812,19 @@ See `term-prompt-regexp'."
 			  (setq count (term-current-column))
 			  ;; The line cannot exceed term-width. TAB at
 			  ;; the end of a line should not cause wrapping.
-			  (setq count (min term-width 
+			  (setq count (min term-width
 					   (+ count 8 (- (mod count 8)))))
 			  (if (> term-width count)
 			    (progn
-			      (term-move-columns 
+			      (term-move-columns
 			       (- count (term-current-column)))
 			      (setq term-current-column count))
 			    (when (> term-width (term-current-column))
-			      (term-move-columns 
+			      (term-move-columns
 			       (1- (- term-width (term-current-column)))))
 			    (when (= term-width (term-current-column))
 			      (term-move-columns -1))))
-			 ((eq char ?\r)
+			 ((eq char ?\r)  ;; (terminfo: cr)
 			  ;; Optimize CRLF at end of buffer:
 			  (cond ((and (< (setq temp (1+ i)) str-length)
 				      (eq (aref str temp) ?\n)
@@ -2832,7 +2840,7 @@ See `term-prompt-regexp'."
 				(t ;; Not followed by LF or can't optimize:
 				 (term-vertical-motion 0)
 				 (setq term-current-column term-start-line-column))))
-			 ((eq char ?\n)
+			 ((eq char ?\n)  ;; (terminfo: cud1, ind)
 			  (if (not (and term-kill-echo-list
 					(term-check-kill-echo-list)))
 			      (term-down 1 t)))
@@ -2843,16 +2851,16 @@ See `term-prompt-regexp'."
 			 ((eq char 0))	       ; NUL: Do nothing
 			 ((eq char ?\016))     ; Shift Out - ignored
 			 ((eq char ?\017))     ; Shift In - ignored
-			 ((eq char ?\^G)
-			  (beep t))	; Bell
-			 ((eq char ?\032)
+			 ((eq char ?\^G) ;; (terminfo: bel)
+			  (beep t))
+			 ((and (eq char ?\032)
+                               (not handled-ansi-message))
 			  (let ((end (string-match "\r?$" str i)))
 			    (if end
 				(funcall term-command-hook
 					 (prog1 (substring str (1+ i) end)
 					   (setq i (match-end 0))))
-			      (setq term-terminal-parameter
-				    (substring str i))
+			      (setq term-terminal-parameter (substring str i))
 			      (setq term-terminal-state 4)
 			      (setq i str-length))))
 			 (t   ; insert char FIXME: Should never happen
@@ -2903,7 +2911,7 @@ See `term-prompt-regexp'."
 			      (term-goto (car term-saved-cursor)
 					 (cdr term-saved-cursor)))
 			  (setq term-terminal-state 0))
-			 ((eq char ?c) ;; \Ec - Reset (terminfo: rs1) 
+			 ((eq char ?c) ;; \Ec - Reset (terminfo: rs1)
 			  ;; This is used by the "clear" program.
 			  (setq term-terminal-state 0)
 			  (term-reset-terminal))
@@ -3035,7 +3043,7 @@ See `term-prompt-regexp'."
 	  (setq term-current-row (1- term-height))))))
 
 ;;; Reset the terminal, delete all the content and set the face to the
-;;; default one. 
+;;; default one.
 (defun term-reset-terminal ()
   (erase-buffer)
   (setq term-current-row 0)
@@ -3069,7 +3077,7 @@ See `term-prompt-regexp'."
    ((eq parameter 5)
     (setq term-ansi-current-bold t))
 
-;;; Reverse
+;;; Reverse (terminfo: smso)
    ((eq parameter 7)
     (setq term-ansi-current-reverse t))
 
@@ -3077,11 +3085,11 @@ See `term-prompt-regexp'."
    ((eq parameter 8)
     (setq term-ansi-current-invisible t))
 
-;;; Reset underline (i.e. terminfo rmul)
+;;; Reset underline (terminfo: rmul)
    ((eq parameter 24)
     (setq term-ansi-current-underline nil))
 
-;;; Reset reverse (i.e. terminfo rmso)
+;;; Reset reverse (terminfo: rmso)
    ((eq parameter 27)
     (setq term-ansi-current-reverse nil))
 
@@ -3186,10 +3194,10 @@ See `term-prompt-regexp'."
 
 (defun term-handle-ansi-escape (proc char)
   (cond
-   ((or (eq char ?H)  ; cursor motion (terminfo: cup)
+   ((or (eq char ?H)  ; cursor motion (terminfo: cup,home)
 	;; (eq char ?f) ; xterm seems to handle this sequence too, not
 	;; needed for now
-	) 
+	)
     (if (<= term-terminal-parameter 0)
 	(setq term-terminal-parameter 1))
     (if (<= term-terminal-previous-parameter 0)
@@ -3208,10 +3216,10 @@ See `term-prompt-regexp'."
    ;; \E[B - cursor down (terminfo: cud)
    ((eq char ?B)
     (term-down (max 1 term-terminal-parameter) t))
-   ;; \E[C - cursor right (terminfo: cuf)
+   ;; \E[C - cursor right (terminfo: cuf, cuf1)
    ((eq char ?C)
-    (term-move-columns 
-     (max 1 
+    (term-move-columns
+     (max 1
 	  (if (>= (+ term-terminal-parameter (term-current-column)) term-width)
 	      (- term-width (term-current-column)  1)
 	    term-terminal-parameter))))
@@ -3227,14 +3235,14 @@ See `term-prompt-regexp'."
    ;; \E[L - insert lines (terminfo: il, il1)
    ((eq char ?L)
     (term-insert-lines (max 1 term-terminal-parameter)))
-   ;; \E[M - delete lines
+   ;; \E[M - delete lines (terminfo: dl, dl1)
    ((eq char ?M)
     (term-delete-lines (max 1 term-terminal-parameter)))
-   ;; \E[P - delete chars
+   ;; \E[P - delete chars (terminfo: dch, dch1)
    ((eq char ?P)
     (term-delete-chars (max 1 term-terminal-parameter)))
-   ;; \E[@ - insert spaces
-   ((eq char ?@) ;; (terminfo: ich)
+   ;; \E[@ - insert spaces (terminfo: ich)
+   ((eq char ?@)
     (term-insert-spaces (max 1 term-terminal-parameter)))
    ;; \E[?h - DEC Private Mode Set
    ((eq char ?h)
@@ -3252,7 +3260,7 @@ See `term-prompt-regexp'."
 	  ))
 
 ;;; Modified to allow ansi coloring -mm
-   ;; \E[m - Set/reset modes, set bg/fg 
+   ;; \E[m - Set/reset modes, set bg/fg
    ;;(terminfo: smso,rmso,smul,rmul,rev,bold,sgr0,invis,op,setab,setaf)
    ((eq char ?m)
     (when (= term-terminal-more-parameters 1)
@@ -3297,7 +3305,7 @@ The top-most line is line 0."
 	    (not (and (= term-scroll-start 0)
 		      (= term-scroll-end term-height)))))
   (term-move-columns (- (term-current-column)))
-  (term-goto 
+  (term-goto
    term-scroll-start (term-current-column)))
 
 ;; (defun term-switch-to-alternate-sub-buffer (set)
@@ -3612,21 +3620,32 @@ all pending output has been dealt with."))
 (defun term-down (down &optional check-for-scroll)
   "Move down DOWN screen lines vertically."
   (let ((start-column (term-horizontal-column)))
-    (if (and check-for-scroll (or term-scroll-with-delete term-pager-count))
-	(setq down (term-handle-scroll down)))
-    (term-adjust-current-row-cache down)
-    (if (or (/= (point) (point-max)) (< down 0))
-	(setq down (- down (term-vertical-motion down))))
-    ;; Extend buffer with extra blank lines if needed.
+    (when (and check-for-scroll (or term-scroll-with-delete term-pager-count))
+      (setq down (term-handle-scroll down)))
+    (unless (and (= term-current-row 0) (< down 0))
+      (term-adjust-current-row-cache down)
+      (when (or (/= (point) (point-max)) (< down 0))
+	(setq down (- down (term-vertical-motion down)))))
     (cond ((> down 0)
+	   ;; Extend buffer with extra blank lines if needed.
 	   (term-insert-char ?\n down)
 	   (setq term-current-column 0)
 	   (setq term-start-line-column 0))
 	  (t
-	   (setq term-current-column nil)
+	   (when (= term-current-row 0)
+	     ;; Insert lines if at the beginning.
+	     (save-excursion (term-insert-char ?\n (- down)))
+	     (save-excursion
+	       (let (p)
+		 ;; Delete lines from the end.
+		 (forward-line term-height)
+		 (setq p (point))
+		 (forward-line (- down))
+		 (delete-region p (point)))))
+	   (setq term-current-column 0)
 	   (setq term-start-line-column (current-column))))
-    (if start-column
-	(term-move-columns start-column))))
+    (when start-column
+      (term-move-columns start-column))))
 
 ;; Assuming point is at the beginning of a screen line,
 ;; if the line above point wraps around, add a ?\n to undo the wrapping.
@@ -3692,7 +3711,7 @@ Should only be called when point is at the start of a screen line."
 
 ;;; Insert COUNT spaces after point, but do not change any of
 ;;; following screen lines.  Hence we may have to delete characters
-;;; at teh end of this screen line to make room.
+;;; at the end of this screen line to make room.
 
 (defun term-insert-spaces (count)
   (let ((save-point (point)) (save-eol) (point-at-eol))
@@ -3846,7 +3865,7 @@ directory tracking functions.")
 
 
 (defun term-word (word-chars)
-  "Return the word of WORD-CHARS at point, or nil if non is found.
+  "Return the word of WORD-CHARS at point, or nil if none is found.
 Word constituents are considered to be those in WORD-CHARS, which is like the
 inside of a \"[...]\" (see `skip-chars-forward')."
   (save-excursion
@@ -3863,7 +3882,7 @@ inside of a \"[...]\" (see `skip-chars-forward')."
 
 
 (defun term-match-partial-filename ()
-  "Return the filename at point, or nil if non is found.
+  "Return the filename at point, or nil if none is found.
 Environment variables are substituted.  See `term-word'."
   (let ((filename (term-word "~/A-Za-z0-9+@:_.$#,={}-")))
     (and filename (substitute-in-file-name filename))))
@@ -3951,9 +3970,9 @@ See `term-dynamic-complete-filename'.  Returns t if successful."
 
 (defun term-replace-by-expanded-filename ()
   "Dynamically expand and complete the filename at point.
-Replace the filename with an expanded, canonicalised and completed replacement.
+Replace the filename with an expanded, canonicalized and completed replacement.
 \"Expanded\" means environment variables (e.g., $HOME) and `~'s are replaced
-with the corresponding directories.  \"Canonicalised\" means `..'  and `.' are
+with the corresponding directories.  \"Canonicalized\" means `..'  and `.' are
 removed, and the filename is made absolute instead of relative.  For expansion
 see `expand-file-name' and `substitute-in-file-name'.  For completion see
 `term-dynamic-complete-filename'."
@@ -4045,7 +4064,7 @@ Typing SPC flushes the help buffer."
 	  (progn
 	    (mouse-choose-completion first)
 	    (set-window-configuration conf))
-	(if (eq first ?\ )
+	(if (eq first ?\s)
 	    (set-window-configuration conf)
 	  (setq unread-command-events (listify-key-sequence key)))))))
 

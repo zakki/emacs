@@ -1,6 +1,6 @@
 ;;; ring.el --- handle rings of items
 
-;; Copyright (C) 1992 Free Software Foundation, Inc.
+;; Copyright (C) 1992, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: extensions
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -155,8 +155,13 @@ will be performed."
       (aref vec (ring-index index hd ln (length vec))))))
 
 (defun ring-elements (ring)
-  "Return a list of the elements of RING."
-  (mapcar #'identity (cddr ring)))
+  "Return a list of the elements of RING, in order, newest first."
+  (let ((start (car ring))
+	(size (ring-size ring))
+	(vect (cddr ring))
+	lst)
+    (dotimes (var (cadr ring) lst)
+      (push (aref vect (mod (+ start var) size)) lst))))
 
 ;;; provide ourself:
 

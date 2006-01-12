@@ -1,6 +1,7 @@
 ;;; url-nfs.el --- NFS URL interface
 
-;; Copyright (c) 1996,1997,1998,1999,2004  Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Keywords: comm, data, processes
 
@@ -18,8 +19,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -86,12 +87,8 @@ Each can be used any number of times.")
 (url-nfs-create-wrapper file-readable-p (url))
 (url-nfs-create-wrapper file-writable-p (url))
 (url-nfs-create-wrapper file-executable-p (url))
-(if (featurep 'xemacs)
-    (progn
-      (url-nfs-create-wrapper directory-files (url &optional full match nosort files-only))
-      (url-nfs-create-wrapper file-truename (url &optional default)))
-  (url-nfs-create-wrapper directory-files (url &optional full match nosort))
-  (url-nfs-create-wrapper file-truename (url &optional counter prev-dirs)))
+(url-nfs-create-wrapper directory-files (url &optional full match nosort))
+(url-nfs-create-wrapper file-truename (url &optional counter prev-dirs))
 
 (provide 'url-nfs)
 

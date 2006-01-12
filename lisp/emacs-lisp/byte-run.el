@@ -1,6 +1,6 @@
 ;;; byte-run.el --- byte-compiler support for inlining
 
-;; Copyright (C) 1992, 2004, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1992, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Jamie Zawinski <jwz@lucid.com>
 ;;	Hallvard Furuseth <hbf@ulrik.uio.no>
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -50,6 +50,8 @@ The return value of this function is not used."
 	     (put macro 'lisp-indent-function (car (cdr d))))
 	    ((and (consp d) (eq (car d) 'debug))
 	     (put macro 'edebug-form-spec (car (cdr d))))
+	    ((and (consp d) (eq (car d) 'doc-string))
+	     (put macro 'doc-string-elt (car (cdr d))))
 	    (t
 	     (message "Unknown declaration %s" d))))))
 
@@ -100,23 +102,23 @@ The return value of this function is not used."
      (eval-and-compile
        (put ',name 'byte-optimizer 'byte-compile-inline-expand))))
 
-(defun make-obsolete (function new &optional when)
-  "Make the byte-compiler warn that FUNCTION is obsolete.
-The warning will say that NEW should be used instead.
-If NEW is a string, that is the `use instead' message.
+(defun make-obsolete (obsolete-name current-name &optional when)
+  "Make the byte-compiler warn that OBSOLETE-NAME is obsolete.
+The warning will say that CURRENT-NAME should be used instead.
+If CURRENT-NAME is a string, that is the `use instead' message.
 If provided, WHEN should be a string indicating when the function
 was first made obsolete, for example a date or a release number."
   (interactive "aMake function obsolete: \nxObsoletion replacement: ")
-  (let ((handler (get function 'byte-compile)))
+  (let ((handler (get obsolete-name 'byte-compile)))
     (if (eq 'byte-compile-obsolete handler)
-	(setq handler (nth 1 (get function 'byte-obsolete-info)))
-      (put function 'byte-compile 'byte-compile-obsolete))
-    (put function 'byte-obsolete-info (list new handler when)))
-  function)
+	(setq handler (nth 1 (get obsolete-name 'byte-obsolete-info)))
+      (put obsolete-name 'byte-compile 'byte-compile-obsolete))
+    (put obsolete-name 'byte-obsolete-info (list current-name handler when)))
+  obsolete-name)
 
-(defmacro define-obsolete-function-alias (function new
+(defmacro define-obsolete-function-alias (obsolete-name current-name
 						   &optional when docstring)
-  "Set FUNCTION's function definition to NEW and mark it obsolete.
+  "Set OBSOLETE-NAME's function definition to CURRENT-NAME and mark it obsolete.
 
 \(define-obsolete-function-alias 'old-fun 'new-fun \"22.1\" \"old-fun's doc.\")
 
@@ -126,14 +128,15 @@ is equivalent to the following two lines of code:
 \(make-obsolete 'old-fun 'new-fun \"22.1\")
 
 See the docstrings of `defalias' and `make-obsolete' for more details."
+  (declare (doc-string 4))
   `(progn
-     (defalias ,function ,new ,docstring)
-     (make-obsolete ,function ,new ,when)))
+     (defalias ,obsolete-name ,current-name ,docstring)
+     (make-obsolete ,obsolete-name ,current-name ,when)))
 
-(defun make-obsolete-variable (variable new &optional when)
-  "Make the byte-compiler warn that VARIABLE is obsolete.
-The warning will say that NEW should be used instead.
-If NEW is a string, that is the `use instead' message.
+(defun make-obsolete-variable (obsolete-name current-name &optional when)
+  "Make the byte-compiler warn that OBSOLETE-NAME is obsolete.
+The warning will say that CURRENT-NAME should be used instead.
+If CURRENT-NAME is a string, that is the `use instead' message.
 If provided, WHEN should be a string indicating when the variable
 was first made obsolete, for example a date or a release number."
   (interactive
@@ -142,12 +145,12 @@ was first made obsolete, for example a date or a release number."
       (if (equal str "") (error ""))
       (intern str))
     (car (read-from-string (read-string "Obsoletion replacement: ")))))
-  (put variable 'byte-obsolete-variable (cons new when))
-  variable)
+  (put obsolete-name 'byte-obsolete-variable (cons current-name when))
+  obsolete-name)
 
-(defmacro define-obsolete-variable-alias (variable new
+(defmacro define-obsolete-variable-alias (obsolete-name current-name
 						 &optional when docstring)
-  "Make VARIABLE a variable alias for NEW and mark it obsolete.
+  "Make OBSOLETE-NAME a variable alias for CURRENT-NAME and mark it obsolete.
 
 \(define-obsolete-variable-alias 'old-var 'new-var \"22.1\" \"old-var's doc.\")
 
@@ -158,9 +161,10 @@ is equivalent to the following two lines of code:
 
 See the docstrings of `defvaralias' and `make-obsolete-variable' or
 Info node `(elisp)Variable Aliases' for more details."
+  (declare (doc-string 4))
   `(progn
-     (defvaralias ,variable ,new ,docstring)
-      (make-obsolete-variable ,variable ,new ,when)))
+     (defvaralias ,obsolete-name ,current-name ,docstring)
+     (make-obsolete-variable ,obsolete-name ,current-name ,when)))
 
 (defmacro dont-compile (&rest body)
   "Like `progn', but the body always runs interpreted (not compiled).
@@ -169,10 +173,10 @@ If you think you need this, you're probably making a mistake somewhere."
   (list 'eval (list 'quote (if (cdr body) (cons 'progn body) (car body)))))
 
 
-;;; interface to evaluating things at compile time and/or load time
-;;; these macro must come after any uses of them in this file, as their
-;;; definition in the file overrides the magic definitions on the
-;;; byte-compile-macro-environment.
+;; interface to evaluating things at compile time and/or load time
+;; these macro must come after any uses of them in this file, as their
+;; definition in the file overrides the magic definitions on the
+;; byte-compile-macro-environment.
 
 (defmacro eval-when-compile (&rest body)
   "Like `progn', but evaluates the body at compile time if you're compiling.
@@ -196,12 +200,12 @@ In interpreted code, this is entirely equivalent to `progn'."
   (car (last body)))
 
 
-;;; I nuked this because it's not a good idea for users to think of using it.
-;;; These options are a matter of installation preference, and have nothing to
-;;; with particular source files; it's a mistake to suggest to users
-;;; they should associate these with particular source files.
-;;; There is hardly any reason to change these parameters, anyway.
-;;; --rms.
+;; I nuked this because it's not a good idea for users to think of using it.
+;; These options are a matter of installation preference, and have nothing to
+;; with particular source files; it's a mistake to suggest to users
+;; they should associate these with particular source files.
+;; There is hardly any reason to change these parameters, anyway.
+;; --rms.
 
 ;; (put 'byte-compiler-options 'lisp-indent-function 0)
 ;; (defmacro byte-compiler-options (&rest args)
@@ -227,5 +231,5 @@ In interpreted code, this is entirely equivalent to `progn'."
 ;;       (file-format emacs19))"
 ;;   nil)
 
-;;; arch-tag: 76f8328a-1f66-4df2-9b6d-5c3666dc05e9
+;; arch-tag: 76f8328a-1f66-4df2-9b6d-5c3666dc05e9
 ;;; byte-run.el ends here

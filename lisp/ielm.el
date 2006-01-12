@@ -1,6 +1,6 @@
 ;;; ielm.el --- interaction mode for Emacs Lisp
 
-;; Copyright (C) 1994, 2002, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1994, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: David Smith <maa036@lancaster.ac.uk>
 ;; Maintainer: FSF
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -102,7 +102,7 @@ prevent a running IELM process from being messed up when the user
 customizes `ielm-prompt'.")
 
 (defcustom ielm-dynamic-return t
-  "*Controls whether \\<ielm-map>\\[ielm-return] has intelligent behaviour in IELM.
+  "*Controls whether \\<ielm-map>\\[ielm-return] has intelligent behavior in IELM.
 If non-nil, \\[ielm-return] evaluates input for complete sexps, or inserts a newline
 and indents for incomplete sexps.  If nil, always inserts newlines."
   :type 'boolean
@@ -468,7 +468,7 @@ buffer, then the values in the working buffer are used.  The variables
 Expressions evaluated by IELM are not subject to `debug-on-quit' or
 `debug-on-error'.
 
-The behaviour of IELM may be customized with the following variables:
+The behavior of IELM may be customized with the following variables:
 * To stop beeping on error, set `ielm-noisy' to nil.
 * If you don't like the prompt, you can change it by setting `ielm-prompt'.
 * If you do not like that the prompt is (by default) read-only, set

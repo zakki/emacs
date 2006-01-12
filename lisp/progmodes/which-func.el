@@ -1,6 +1,6 @@
 ;;; which-func.el --- print current function in mode line
 
-;; Copyright (C) 1994, 1997, 1998, 2001, 2003, 2005
+;; Copyright (C) 1994, 1997, 1998, 2001, 2002, 2003, 2004, 2005
 ;;           Free Software Foundation, Inc.
 
 ;; Author:   Alex Rezinsky <alexr@msil.sps.mot.com>
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -113,17 +113,38 @@ Zero means compute the Imenu menu regardless of size."
     map)
   "Keymap to display on mode line which-func.")
 
-(defface which-func-face
-  '((t (:inherit font-lock-function-name-face)))
-  "Face used to highlight mode line function names.
-Defaults to `font-lock-function-name-face' if font-lock is loaded."
+(defface which-func
+  ;; Whether `font-lock-function-name-face' is an appropriate face to
+  ;; inherit depends on the mode-line face; define several variants based
+  ;; on the default mode-line face.
+  '(;; The default mode-line face on a high-color display is a relatively
+    ;; light color ("grey75"), and only the light-background variant of
+    ;; `font-lock-function-name-face' is visible against it.
+    (((class color) (min-colors 88) (background light))
+     :inherit font-lock-function-name-face)
+    ;; The default mode-line face on other display types is inverse-video;
+    ;; it seems that only in the dark-background case is
+    ;; `font-lock-function-name-face' visible against it.
+    (((class grayscale mono) (background dark))
+     :inherit font-lock-function-name-face)
+    (((class color) (background light))
+     :inherit font-lock-function-name-face)
+    ;; If none of the above cases, use an explicit color chosen to contrast
+    ;; well with the default mode-line face.
+    (((class color) (min-colors 88) (background dark))
+     :foreground "Blue1")
+    (((background dark))
+     :foreground "Blue1")
+    (t
+     :foreground "LightSkyBlue"))
+  "Face used to highlight mode line function names."
   :group 'which-func)
 
 (defcustom which-func-format
   `("["
     (:propertize which-func-current
 		 local-map ,which-func-keymap
-		 face which-func-face
+		 face which-func
 		 ;;mouse-face highlight	; currently not evaluated :-(
 		 help-echo "mouse-1: go to beginning, mouse-2: toggle rest visibility, mouse-3: go to end")
     "]")

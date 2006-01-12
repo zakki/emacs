@@ -1,6 +1,7 @@
 ;;; viper-ex.el --- functions implementing the Ex commands for Viper
 
-;; Copyright (C) 1994, 95, 96, 97, 98, 2000, 01, 02, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Michael Kifer <kifer@cs.stonybrook.edu>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -58,7 +59,7 @@
 (require 'viper-util)
 
 (defgroup viper-ex nil
-  "Viper support for Ex commands"
+  "Viper support for Ex commands."
   :prefix "ex-"
   :group 'viper)
 
@@ -1589,7 +1590,7 @@ reversed."
 
 ;; Ex print working directory
 (defun ex-pwd ()
-  (message default-directory))
+  (message "%s" default-directory))
 
 ;; Ex quit command
 (defun ex-quit ()
@@ -2229,7 +2230,7 @@ Type 'mak ' (including the space) to run make with no args."
 		       (if (buffer-modified-p) "[Modified]" "[Unchanged]")))
     (if (< (+ 1 (length info) (length file))
 	   (window-width (minibuffer-window)))
-	(message (concat file " " info))
+	(message "%s" (concat file " " info))
       (save-window-excursion
 	(with-output-to-temp-buffer " *viper-info*"
 	  (princ (concat "\n" file "\n\n\t" info "\n\n")))

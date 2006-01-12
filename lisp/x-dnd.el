@@ -1,7 +1,6 @@
 ;;; x-dnd.el --- drag and drop support for X.
 
-;; Copyright (C) 2004
-;;  Free Software Foundation, Inc.
+;; Copyright (C) 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Jan Dj,Ad(Brv <jan.h.d@swipnet.se>
 ;; Maintainer: FSF
@@ -21,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -308,13 +307,17 @@ nil if not."
 	 (action (aref state 5))
 	 (w (posn-window (event-start event))))
     (when handler
-      (if (and (windowp w) (window-live-p w))
-	  ;; If dropping in a window, open files in that window rather
-	  ;; than in a new widow.
-	  (let ((dnd-open-file-other-window nil))
+      (if (and (windowp w) (window-live-p w)
+	       (not (window-minibuffer-p w))
+	       (not (window-dedicated-p w)))
+	  ;; If dropping in an ordinary window which we could use,
+	  ;; let dnd-open-file-other-window specify what to do.
+	  (progn
 	    (goto-char (posn-point (event-start event)))
 	    (funcall handler window action data))
-	(let ((dnd-open-file-other-window t))  ;; Dropping on non-window.
+	;; If we can't display the file here,
+	;; make a new window for it.
+	(let ((dnd-open-file-other-window t))
 	  (select-frame frame)
 	  (funcall handler window action data))))))
 

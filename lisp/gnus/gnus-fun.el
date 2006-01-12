@@ -1,5 +1,6 @@
 ;;; gnus-fun.el --- various frivolous extension functions to Gnus
-;; Copyright (C) 2002, 2003 Free Software Foundation, Inc.
+
+;; Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: news
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -53,7 +54,7 @@ on stdout."
   :type 'string)
 
 (defcustom gnus-convert-image-to-face-command "djpeg %s | ppmnorm | pnmscale -width 48 -height 48 | ppmquant %d | pnmtopng"
-  "Command for converting an image to an Face.
+  "Command for converting an image to a Face.
 By default it takes a JPEG filename and output the Face header data
 on stdout."
   :version "22.1"
@@ -109,7 +110,7 @@ Output to the current buffer, replace text, and don't mingle error."
 
 ;;;###autoload
 (defun gnus-face-from-file (file)
-  "Return an Face header based on an image file."
+  "Return a Face header based on an image file."
   (interactive "fImage file name (by default JPEG): ")
   (when (file-exists-p file)
     (let ((done nil)

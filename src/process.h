@@ -1,5 +1,6 @@
 /* Definitions for asynchronous process control in GNU Emacs.
-   Copyright (C) 1985, 1994 Free Software Foundation, Inc.
+   Copyright (C) 1985, 1994, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 /* This structure records information about a subprocess
@@ -52,8 +53,6 @@ struct Lisp_Process
     Lisp_Object buffer;
     /* Number of this process */
     Lisp_Object pid;
-    /* Non-nil if this is really a command channel */
-    Lisp_Object command_channel_p;
     /* t if this is a real child process.
        For a net connection, it is a plist based on the arguments to make-network-process.  */
     Lisp_Object childp;
@@ -105,7 +104,7 @@ struct Lisp_Process
        Initialized from `Vprocess_adaptive_read_buffering'.  */
     Lisp_Object adaptive_read_buffering;
     /* Hysteresis to try to read process output in larger blocks.
-       On some systems, e.g. the Linux kernel, emacs is seen as 
+       On some systems, e.g. GNU/Linux, Emacs is seen as 
        an interactive app also when reading process output, meaning
        that process output can be read in as little as 1 byte at a
        time.  Value is micro-seconds to delay reading output from

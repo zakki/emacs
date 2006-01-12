@@ -1,6 +1,6 @@
 /* String search routines for GNU Emacs.
-   Copyright (C) 1985, 86,87,93,94,97,98, 1999, 2004
-             Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1997, 1998, 1999, 2002, 2003,
+                 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -429,7 +429,7 @@ string_match_1 (regexp, string, start, posix)
 
 DEFUN ("string-match", Fstring_match, Sstring_match, 2, 3, 0,
        doc: /* Return index of start of first match for REGEXP in STRING, or nil.
-Case is ignored if `case-fold-search' is non-nil in the current buffer.
+Matching ignores case if `case-fold-search' is non-nil.
 If third arg START is non-nil, start search at that index in STRING.
 For index of first char beyond the match, do (match-end 0).
 `match-end' and `match-beginning' also give indices of substrings
@@ -1174,10 +1174,10 @@ search_buffer (string, pos, pos_byte, lim, lim_byte, n,
       int raw_pattern_size_byte;
       unsigned char *patbuf;
       int multibyte = !NILP (current_buffer->enable_multibyte_characters);
-      unsigned char *base_pat = SDATA (string);
-      /* Set to nozero if we find a non-ASCII char that need
-	 translation.  */
-      int charset_base = 0;
+      unsigned char *base_pat;
+      /* Set to positive if we find a non-ASCII char that need
+	 translation.  Otherwise set to zero later.  */
+      int charset_base = -1;
       int boyer_moore_ok = 1;
 
       /* MULTIBYTE says whether the text to be searched is multibyte.
@@ -1275,24 +1275,30 @@ search_buffer (string, pos, pos_byte, lim, lim_byte, n,
 			 always handle their translation.  */
 		      while (1)
 			{
-			  if (! ASCII_BYTE_P (inverse))
+			  if (ASCII_BYTE_P (inverse))
 			    {
-			      if (SINGLE_BYTE_CHAR_P (inverse))
-				{
-				  /* Boyer-moore search can't handle a
-				     translation of an eight-bit
-				     character.  */
-				  boyer_moore_ok = 0;
-				  break;
-				}
-			      else if (charset_base == 0)
-				charset_base = inverse & ~CHAR_FIELD3_MASK;
-			      else if ((inverse & ~CHAR_FIELD3_MASK)
-				       != charset_base)
+			      if (charset_base > 0)
 				{
 				  boyer_moore_ok = 0;
 				  break;
 				}
+			      charset_base = 0;
+			    }
+			  else if (SINGLE_BYTE_CHAR_P (inverse))
+			    {
+			      /* Boyer-moore search can't handle a
+				 translation of an eight-bit
+				 character.  */
+			      boyer_moore_ok = 0;
+			      break;
+			    }
+			  else if (charset_base < 0)
+			    charset_base = inverse & ~CHAR_FIELD3_MASK;
+			  else if ((inverse & ~CHAR_FIELD3_MASK)
+				   != charset_base)
+			    {
+			      boyer_moore_ok = 0;
+			      break;
 			    }
 			  if (c == inverse)
 			    break;
@@ -1300,6 +1306,8 @@ search_buffer (string, pos, pos_byte, lim, lim_byte, n,
 			}
 		    }
 		}
+	      if (charset_base < 0)
+		charset_base = 0;
 
 	      /* Store this character into the translated pattern.  */
 	      bcopy (str, pat, charlen);
@@ -1701,7 +1709,7 @@ boyer_moore (n, base_pat, len, len_byte, trt, inverse_trt,
 	  if (ASCII_BYTE_P (*ptr) || ! multibyte)
 	    ch = *ptr;
 	  else if (charset_base
-		   && (pat_end - ptr) == 1 || CHAR_HEAD_P (ptr[1]))
+		   && ((pat_end - ptr) == 1 || CHAR_HEAD_P (ptr[1])))
 	    {
 	      unsigned char *charstart = ptr - 1;
 
@@ -2296,7 +2304,7 @@ since only regular expressions have distinguished subexpressions.  */)
 				/* but some C compilers blew it */
 
   if (search_regs.num_regs <= 0)
-    error ("replace-match called before any match found");
+    error ("`replace-match' called before any match found");
 
   if (NILP (subexp))
     sub = 0;
@@ -2739,7 +2747,7 @@ Zero means the entire text matched by the whole regexp or whole string.  */)
   return match_limit (subexp, 0);
 }
 
-DEFUN ("match-data", Fmatch_data, Smatch_data, 0, 2, 0,
+DEFUN ("match-data", Fmatch_data, Smatch_data, 0, 3, 0,
        doc: /* Return a list containing all info on what the last search matched.
 Element 2N is `(match-beginning N)'; element 2N + 1 is `(match-end N)'.
 All the elements are markers or nil (nil if the Nth pair didn't match)
@@ -2751,16 +2759,28 @@ integers \(rather than markers) to represent buffer positions.  In
 this case, and if the last match was in a buffer, the buffer will get
 stored as one additional element at the end of the list.
 
-If REUSE is a list, reuse it as part of the value.  If REUSE is long enough
-to hold all the values, and if INTEGERS is non-nil, no consing is done.
+If REUSE is a list, reuse it as part of the value.  If REUSE is long
+enough to hold all the values, and if INTEGERS is non-nil, no consing
+is done.
+
+If optional third arg RESEAT is non-nil, any previous markers on the
+REUSE list will be modified to point to nowhere.
 
 Return value is undefined if the last search failed.  */)
-     (integers, reuse)
-     Lisp_Object integers, reuse;
+  (integers, reuse, reseat)
+     Lisp_Object integers, reuse, reseat;
 {
   Lisp_Object tail, prev;
   Lisp_Object *data;
   int i, len;
+
+  if (!NILP (reseat))
+    for (tail = reuse; CONSP (tail); tail = XCDR (tail))
+      if (MARKERP (XCAR (tail)))
+	{
+	  unchain_marker (XMARKER (XCAR (tail)));
+	  XSETCAR (tail, Qnil);
+	}
 
   if (NILP (last_thing_searched))
     return Qnil;
@@ -2797,10 +2817,10 @@ Return value is undefined if the last search failed.  */)
 	    /* last_thing_searched must always be Qt, a buffer, or Qnil.  */
 	    abort ();
 
-	  len = 2*(i+1);
+	  len = 2 * i + 2;
 	}
       else
-	data[2 * i] = data [2 * i + 1] = Qnil;
+	data[2 * i] = data[2 * i + 1] = Qnil;
     }
 
   if (BUFFERP (last_thing_searched) && !NILP (integers))
@@ -2833,12 +2853,19 @@ Return value is undefined if the last search failed.  */)
   return reuse;
 }
 
+/* Internal usage only:
+   If RESEAT is `evaporate', put the markers back on the free list
+   immediately.  No other references to the markers must exist in this case,
+   so it is used only internally on the unwind stack and save-match-data from
+   Lisp.  */
 
-DEFUN ("set-match-data", Fset_match_data, Sset_match_data, 1, 1, 0,
+DEFUN ("set-match-data", Fset_match_data, Sset_match_data, 1, 2, 0,
        doc: /* Set internal data on last search match from elements of LIST.
-LIST should have been created by calling `match-data' previously.  */)
-     (list)
-     register Lisp_Object list;
+LIST should have been created by calling `match-data' previously.
+
+If optional arg RESEAT is non-nil, make markers on LIST point nowhere.  */)
+    (list, reseat)
+     register Lisp_Object list, reseat;
 {
   register int i;
   register Lisp_Object marker;
@@ -2882,9 +2909,9 @@ LIST should have been created by calling `match-data' previously.  */)
 	search_regs.num_regs = length;
       }
 
-    for (i = 0;; i++)
+    for (i = 0; CONSP (list); i++)
       {
-	marker = Fcar (list);
+	marker = XCAR (list);
 	if (BUFFERP (marker))
 	  {
 	    last_thing_searched = marker;
@@ -2895,12 +2922,14 @@ LIST should have been created by calling `match-data' previously.  */)
 	if (NILP (marker))
 	  {
 	    search_regs.start[i] = -1;
-	    list = Fcdr (list);
+	    list = XCDR (list);
 	  }
 	else
 	  {
 	    int from;
+	    Lisp_Object m;
 
+	    m = marker;
 	    if (MARKERP (marker))
 	      {
 		if (XMARKER (marker)->buffer == 0)
@@ -2911,17 +2940,38 @@ LIST should have been created by calling `match-data' previously.  */)
 
 	    CHECK_NUMBER_COERCE_MARKER (marker);
 	    from = XINT (marker);
-	    list = Fcdr (list);
 
-	    marker = Fcar (list);
+	    if (!NILP (reseat) && MARKERP (m))
+	      {
+		if (EQ (reseat, Qevaporate))
+		  free_marker (m);
+		else
+		  unchain_marker (XMARKER (m));
+		XSETCAR (list, Qnil);
+	      }
+
+	    if ((list = XCDR (list), !CONSP (list)))
+	      break;
+
+	    m = marker = XCAR (list);
+
 	    if (MARKERP (marker) && XMARKER (marker)->buffer == 0)
 	      XSETFASTINT (marker, 0);
 
 	    CHECK_NUMBER_COERCE_MARKER (marker);
 	    search_regs.start[i] = from;
 	    search_regs.end[i] = XINT (marker);
+
+	    if (!NILP (reseat) && MARKERP (m))
+	      {
+		if (EQ (reseat, Qevaporate))
+		  free_marker (m);
+		else
+		  unchain_marker (XMARKER (m));
+		XSETCAR (list, Qnil);
+	      }
 	  }
-	list = Fcdr (list);
+	list = XCDR (list);
       }
 
     for (; i < search_regs.num_regs; i++)
@@ -2959,7 +3009,7 @@ save_search_regs ()
 
 /* Called upon exit from filters and sentinels. */
 void
-restore_match_data ()
+restore_search_regs ()
 {
   if (search_regs_saved)
     {
@@ -2975,6 +3025,22 @@ restore_match_data ()
       saved_last_thing_searched = Qnil;
       search_regs_saved = 0;
     }
+}
+
+static Lisp_Object
+unwind_set_match_data (list)
+     Lisp_Object list;
+{
+  /* It is safe to free (evaporate) the markers immediately.  */
+  return Fset_match_data (list, Qevaporate);
+}
+
+/* Called to unwind protect the match data.  */
+void
+record_unwind_save_match_data ()
+{
+  record_unwind_protect (unwind_set_match_data,
+			 Fmatch_data (Qnil, Qnil, Qnil));
 }
 
 /* Quote a string to inactivate reg-expr chars */
@@ -3027,6 +3093,7 @@ syms_of_search ()
       searchbufs[i].regexp = Qnil;
       searchbufs[i].whitespace_regexp = Qnil;
       staticpro (&searchbufs[i].regexp);
+      staticpro (&searchbufs[i].whitespace_regexp);
       searchbufs[i].next = (i == REGEXP_CACHE_SIZE-1 ? 0 : &searchbufs[i+1]);
     }
   searchbuf_head = &searchbufs[0];

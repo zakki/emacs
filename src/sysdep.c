@@ -1,6 +1,6 @@
 /* Interfaces to system-dependent kernel and library entries.
    Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995, 1999, 2000, 2001,
-     2003, 2004, 2005  Free Software Foundation, Inc.
+                 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -47,13 +47,9 @@ extern void srandom P_ ((unsigned int));
 #endif
 
 #include "blockinput.h"
-#undef NULL
 
 #ifdef MAC_OS8
-/* It is essential to include stdlib.h so that this file picks up
-   the correct definitions of rand, srand, and RAND_MAX.
-   Otherwise random numbers will not work correctly.  */
-#include <stdlib.h>
+#include <sys/param.h>
 
 #ifndef subprocesses
 /* Nonzero means delete a process right away if it exits (process.c).  */
@@ -187,6 +183,7 @@ extern int quit_char;
 #define _P_WAIT 0
 int _CRTAPI1 _spawnlp (int, const char *, const char *, ...);
 int _CRTAPI1 _getpid (void);
+extern char *getwd (char *);
 #endif
 
 #ifdef NONSYSTEM_DIR_LIBRARY
@@ -257,6 +254,81 @@ void hft_reset ();
 /* Temporary used by `sigblock' when defined in terms of signprocmask.  */
 
 SIGMASKTYPE sigprocmask_set;
+
+
+#if !defined (HAVE_GET_CURRENT_DIR_NAME) || defined (BROKEN_GET_CURRENT_DIR_NAME)
+
+/* Return the current working directory.  Returns NULL on errors.
+   Any other returned value must be freed with free. This is used
+   only when get_current_dir_name is not defined on the system.  */
+char*
+get_current_dir_name ()
+{
+  char *buf;
+  char *pwd;
+  struct stat dotstat, pwdstat;
+  /* If PWD is accurate, use it instead of calling getwd.  PWD is
+     sometimes a nicer name, and using it may avoid a fatal error if a
+     parent directory is searchable but not readable.  */
+    if ((pwd = getenv ("PWD")) != 0
+      && (IS_DIRECTORY_SEP (*pwd) || (*pwd && IS_DEVICE_SEP (pwd[1])))
+      && stat (pwd, &pwdstat) == 0
+      && stat (".", &dotstat) == 0
+      && dotstat.st_ino == pwdstat.st_ino
+      && dotstat.st_dev == pwdstat.st_dev
+#ifdef MAXPATHLEN
+      && strlen (pwd) < MAXPATHLEN
+#endif
+      )
+    {
+      buf = (char *) malloc (strlen (pwd) + 1);
+      if (!buf)
+        return NULL;
+      strcpy (buf, pwd);
+    }
+#ifdef HAVE_GETCWD
+  else
+    {
+      size_t buf_size = 1024;
+      buf = (char *) malloc (buf_size);
+      if (!buf)
+        return NULL;
+      for (;;)
+        {
+          if (getcwd (buf, buf_size) == buf)
+            break;
+          if (errno != ERANGE)
+            {
+              int tmp_errno = errno;
+              free (buf);
+              errno = tmp_errno;
+              return NULL;
+            }
+          buf_size *= 2;
+          buf = (char *) realloc (buf, buf_size);
+          if (!buf)
+            return NULL;
+        }
+    }
+#else
+  else
+    {
+      /* We need MAXPATHLEN here.  */
+      buf = (char *) malloc (MAXPATHLEN + 1);
+      if (!buf)
+        return NULL;
+      if (getwd (buf) == NULL)
+        {
+          int tmp_errno = errno;
+          free (buf);
+          errno = tmp_errno;
+          return NULL;
+        }
+    }
+#endif
+  return buf;
+}
+#endif
 
 
 /* Specify a different file descriptor for further input operations.  */
@@ -940,7 +1012,7 @@ reset_sigio ()
 void
 request_sigio ()
 {
-  if (read_socket_hook)
+  if (noninteractive || read_socket_hook)
     return;
 
 #ifdef SIGWINCH
@@ -954,7 +1026,7 @@ request_sigio ()
 void
 unrequest_sigio ()
 {
-  if (read_socket_hook)
+  if (noninteractive || read_socket_hook)
     return;
 
 #ifdef SIGWINCH
@@ -972,7 +1044,7 @@ request_sigio ()
 {
   int on = 1;
 
-  if (read_socket_hook)
+  if (noninteractive || read_socket_hook)
     return;
 
   ioctl (input_fd, FIOASYNC, &on);
@@ -984,7 +1056,7 @@ unrequest_sigio ()
 {
   int off = 0;
 
-  if (read_socket_hook)
+  if (noninteractive || read_socket_hook)
     return;
 
   ioctl (input_fd, FIOASYNC, &off);
@@ -1003,7 +1075,7 @@ request_sigio ()
   int on = 1;
   sigset_t st;
 
-  if (read_socket_hook)
+  if (noninteractive || read_socket_hook)
     return;
 
   sigemptyset (&st);
@@ -1018,7 +1090,7 @@ unrequest_sigio ()
 {
   int off = 0;
 
-  if (read_socket_hook)
+  if (noninteractive || read_socket_hook)
     return;
 
   ioctl (input_fd, FIOASYNC, &off);
@@ -1031,7 +1103,7 @@ unrequest_sigio ()
 void
 request_sigio ()
 {
-  if (read_socket_hook)
+  if (noninteractive || read_socket_hook)
     return;
 
   croak ("request_sigio");
@@ -1040,7 +1112,7 @@ request_sigio ()
 void
 unrequest_sigio ()
 {
-  if (read_socket_hook)
+  if (noninteractive || read_socket_hook)
     return;
 
   croak ("unrequest_sigio");
@@ -2163,12 +2235,16 @@ reset_sigio ()
 void
 request_sigio ()
 {
+  if (noninteractive)
+    return;
   croak ("request sigio");
 }
 
 void
 unrequest_sigio ()
 {
+  if (noninteractive)
+    return;
   croak ("unrequest sigio");
 }
 
@@ -2703,6 +2779,8 @@ reset_sigio ()
 void
 request_sigio ()
 {
+  if (noninteractive)
+    return;
   sigrelse (SIGTINT);
 
   interrupts_deferred = 0;
@@ -2711,6 +2789,8 @@ request_sigio ()
 void
 unrequest_sigio ()
 {
+  if (noninteractive)
+    return;
   sighold (SIGTINT);
 
   interrupts_deferred = 1;

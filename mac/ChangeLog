@@ -1,3 +1,59 @@
+2005-12-19  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
+
+	* makefile.MPW (macselect.c.x): Depend on keymap.h.
+
+2005-12-10  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
+
+	* Emacs.app/Contents/Info.plist: Add CFBundleURLTypes key and
+	data.  Make NSServices open-selection the first entry.
+
+2005-11-09  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
+
+	* makefile.MPW (shortlisp): Sync with src/Makefile.in.
+
+2005-10-24  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
+
+	* INSTALL: Replace `Mac OS 8/9' with `Mac OS Classic'.  Add
+	`FIXME' to descriptions about Metrowerks CodeWarrior.  Remove
+	obsolete description about 512MB limit and icon on Mac OS Classic.
+	Add description about flags for experimental features.
+
+	* README: Replace `Mac OS 8/9' with `Mac OS Classic'.  Add `FIXME'
+	to descriptions about Metrowerks CodeWarrior.  Remove obsolete
+	descriptions about C-g and supported image types.
+
+2005-10-20  Bryan D. O'Connor  <bryan@lunch.org>  (tiny change)
+
+	* make-package: Add a --compressed-dist option to compress info
+	files and .el files that have been byte-compiled. It defaults to "no".
+
+2005-09-24  Eli Zaretskii  <eliz@gnu.org>
+
+	* INSTALL (NOTES): Update the list of versions of MacOS on which
+	Emacs should build.
+
+	* README: Remove a link to ftp://ftp.gnu.org/gnu/mac/emacs/ (which
+	does not exist).
+
+2005-09-18  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
+
+	* inc/config.h: Sync with src/config.in.
+
+2005-07-12  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
+
+	* Emacs.app/Contents/Info.plist (mail-to, mail-selection): New
+	NSServices.
+
+2005-07-04  Lute Kamstra  <lute@gnu.org>
+
+	Update FSF's address in GPL notices.
+
+2005-06-08  Steven Tamm  <steventamm@mac.com>
+
+	* INSTALL: Explain that a universal binary cannot be created and
+	builds for on emachine cannot be targeted to the other.
+	* README: Add Universal Binary to the Todo List.
+
 2005-05-13  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
 
 	* makefile.MPW (buildobj.lst): New target.
@@ -103,13 +159,13 @@
 	* inc/m-mac.h (HAVE_ALLOCA) [__MRC__]: Define.
 	(C_ALLOCA) [__MRC__]: Don't define.
 	* inc/s-mac.h (X_OK): New define.
-	(DECL_ALIGN) [USE_LSB_TAG && __MRC__]: New macro. 
+	(DECL_ALIGN) [USE_LSB_TAG && __MRC__]: New macro.
 	(GC_MARK_STACK): Define to GC_MAKE_GCPROS_NOOPS.
 
 2004-05-29  Steven Tamm  <steventamm@mac.com>
 
 	* INSTALL: Fixing typos
-	* README: Updating list of TODOs to remove image support and 
+	* README: Updating list of TODOs to remove image support and
 	environment variable problem.
 
 2004-01-14  Stefan Monnier  <monnier@iro.umontreal.ca>
@@ -749,7 +805,7 @@
 ;; coding: iso-2022-7bit-unix
 ;; End:
 
-    Copyright (C) 2001 Free Software Foundation, Inc.
+    Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
   Copying and distribution of this file, with or without modification,
   are permitted provided the copyright notice and this notice are preserved.
 

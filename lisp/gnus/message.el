@@ -1,6 +1,7 @@
 ;;; message.el --- composing mail and news messages
-;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: mail, news
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -62,46 +63,46 @@
 (put 'user-full-name 'custom-type 'string)
 
 (defgroup message-various nil
-  "Various Message Variables"
+  "Various Message Variables."
   :link '(custom-manual "(message)Various Message Variables")
   :group 'message)
 
 (defgroup message-buffers nil
-  "Message Buffers"
+  "Message Buffers."
   :link '(custom-manual "(message)Message Buffers")
   :group 'message)
 
 (defgroup message-sending nil
-  "Message Sending"
+  "Message Sending."
   :link '(custom-manual "(message)Sending Variables")
   :group 'message)
 
 (defgroup message-interface nil
-  "Message Interface"
+  "Message Interface."
   :link '(custom-manual "(message)Interface")
   :group 'message)
 
 (defgroup message-forwarding nil
-  "Message Forwarding"
+  "Message Forwarding."
   :link '(custom-manual "(message)Forwarding")
   :group 'message-interface)
 
 (defgroup message-insertion nil
-  "Message Insertion"
+  "Message Insertion."
   :link '(custom-manual "(message)Insertion")
   :group 'message)
 
 (defgroup message-headers nil
-  "Message Headers"
+  "Message Headers."
   :link '(custom-manual "(message)Message Headers")
   :group 'message)
 
 (defgroup message-news nil
-  "Composing News Messages"
+  "Composing News Messages."
   :group 'message)
 
 (defgroup message-mail nil
-  "Composing Mail Messages"
+  "Composing Mail Messages."
   :group 'message)
 
 (defgroup message-faces nil
@@ -1124,7 +1125,7 @@ starting with `not' and followed by regexps."
     table)
   "Syntax table used while in Message mode.")
 
-(defface message-header-to-face
+(defface message-header-to
   '((((class color)
       (background dark))
      (:foreground "green2" :bold t))
@@ -1135,8 +1136,10 @@ starting with `not' and followed by regexps."
      (:bold t :italic t)))
   "Face used for displaying From headers."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-header-to-face 'face-alias 'message-header-to)
 
-(defface message-header-cc-face
+(defface message-header-cc
   '((((class color)
       (background dark))
      (:foreground "green4" :bold t))
@@ -1147,8 +1150,10 @@ starting with `not' and followed by regexps."
      (:bold t)))
   "Face used for displaying Cc headers."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-header-cc-face 'face-alias 'message-header-cc)
 
-(defface message-header-subject-face
+(defface message-header-subject
   '((((class color)
       (background dark))
      (:foreground "green3"))
@@ -1159,8 +1164,10 @@ starting with `not' and followed by regexps."
      (:bold t)))
   "Face used for displaying subject headers."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-header-subject-face 'face-alias 'message-header-subject)
 
-(defface message-header-newsgroups-face
+(defface message-header-newsgroups
   '((((class color)
       (background dark))
      (:foreground "yellow" :bold t :italic t))
@@ -1171,8 +1178,10 @@ starting with `not' and followed by regexps."
      (:bold t :italic t)))
   "Face used for displaying newsgroups headers."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-header-newsgroups-face 'face-alias 'message-header-newsgroups)
 
-(defface message-header-other-face
+(defface message-header-other
   '((((class color)
       (background dark))
      (:foreground "#b00000"))
@@ -1183,8 +1192,10 @@ starting with `not' and followed by regexps."
      (:bold t :italic t)))
   "Face used for displaying newsgroups headers."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-header-other-face 'face-alias 'message-header-other)
 
-(defface message-header-name-face
+(defface message-header-name
   '((((class color)
       (background dark))
      (:foreground "DarkGreen"))
@@ -1195,8 +1206,10 @@ starting with `not' and followed by regexps."
      (:bold t)))
   "Face used for displaying header names."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-header-name-face 'face-alias 'message-header-name)
 
-(defface message-header-xheader-face
+(defface message-header-xheader
   '((((class color)
       (background dark))
      (:foreground "blue"))
@@ -1207,8 +1220,10 @@ starting with `not' and followed by regexps."
      (:bold t)))
   "Face used for displaying X-Header headers."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-header-xheader-face 'face-alias 'message-header-xheader)
 
-(defface message-separator-face
+(defface message-separator
   '((((class color)
       (background dark))
      (:foreground "blue3"))
@@ -1219,8 +1234,10 @@ starting with `not' and followed by regexps."
      (:bold t)))
   "Face used for displaying the separator."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-separator-face 'face-alias 'message-separator)
 
-(defface message-cited-text-face
+(defface message-cited-text
   '((((class color)
       (background dark))
      (:foreground "red"))
@@ -1231,8 +1248,10 @@ starting with `not' and followed by regexps."
      (:bold t)))
   "Face used for displaying cited text names."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-cited-text-face 'face-alias 'message-cited-text)
 
-(defface message-mml-face
+(defface message-mml
   '((((class color)
       (background dark))
      (:foreground "ForestGreen"))
@@ -1243,6 +1262,8 @@ starting with `not' and followed by regexps."
      (:bold t)))
   "Face used for displaying MML."
   :group 'message-faces)
+;; backward-compatibility alias
+(put 'message-mml-face 'face-alias 'message-mml)
 
 (defun message-font-lock-make-header-matcher (regexp)
   (let ((form
@@ -1266,41 +1287,41 @@ starting with `not' and followed by regexps."
   (let ((content "[ \t]*\\(.+\\(\n[ \t].*\\)*\\)\n?"))
     `((,(message-font-lock-make-header-matcher
 	 (concat "^\\([Tt]o:\\)" content))
-       (1 'message-header-name-face)
-       (2 'message-header-to-face nil t))
+       (1 'message-header-name)
+       (2 'message-header-to nil t))
       (,(message-font-lock-make-header-matcher
 	 (concat "^\\(^[GBF]?[Cc][Cc]:\\|^[Rr]eply-[Tt]o:\\)" content))
-       (1 'message-header-name-face)
-       (2 'message-header-cc-face nil t))
+       (1 'message-header-name)
+       (2 'message-header-cc nil t))
       (,(message-font-lock-make-header-matcher
 	 (concat "^\\([Ss]ubject:\\)" content))
-       (1 'message-header-name-face)
-       (2 'message-header-subject-face nil t))
+       (1 'message-header-name)
+       (2 'message-header-subject nil t))
       (,(message-font-lock-make-header-matcher
 	 (concat "^\\([Nn]ewsgroups:\\|Followup-[Tt]o:\\)" content))
-       (1 'message-header-name-face)
-       (2 'message-header-newsgroups-face nil t))
+       (1 'message-header-name)
+       (2 'message-header-newsgroups nil t))
       (,(message-font-lock-make-header-matcher
 	 (concat "^\\([A-Z][^: \n\t]+:\\)" content))
-       (1 'message-header-name-face)
-       (2 'message-header-other-face nil t))
+       (1 'message-header-name)
+       (2 'message-header-other nil t))
       (,(message-font-lock-make-header-matcher
 	 (concat "^\\(X-[A-Za-z0-9-]+:\\|In-Reply-To:\\)" content))
-       (1 'message-header-name-face)
-       (2 'message-header-name-face))
+       (1 'message-header-name)
+       (2 'message-header-name))
       ,@(if (and mail-header-separator
 		 (not (equal mail-header-separator "")))
 	    `((,(concat "^\\(" (regexp-quote mail-header-separator) "\\)$")
-	       1 'message-separator-face))
+	       1 'message-separator))
 	  nil)
       ((lambda (limit)
 	 (re-search-forward (concat "^\\("
 				    message-cite-prefix-regexp
 				    "\\).*")
 			    limit t))
-       (0 'message-cited-text-face))
+       (0 'message-cited-text))
       ("<#/?\\(multipart\\|part\\|external\\|mml\\|secure\\)[^>]*>"
-       (0 'message-mml-face))))
+       (0 'message-mml))))
   "Additional expressions to highlight in Message mode.")
 
 
@@ -1422,7 +1443,7 @@ no, only reply back to the author."
   :type 'boolean)
 
 (defcustom message-user-fqdn nil
-  "*Domain part of Messsage-Ids."
+  "*Domain part of Message-Ids."
   :version "22.1"
   :group 'message-headers
   :link '(custom-manual "(message)News Headers")
@@ -1433,8 +1454,13 @@ no, only reply back to the author."
 				   (file-error))
 				 (mm-coding-system-p 'utf-8)
 				 (executable-find idna-program)
-				 'ask)
-  "Whether to encode non-ASCII in domain names into ASCII according to IDNA."
+				 (string= (idna-to-ascii "räksmörgås")
+					  "xn--rksmrgs-5wao1o")
+				 t)
+  "Whether to encode non-ASCII in domain names into ASCII according to IDNA.
+GNU Libidn, and in particular the elisp package \"idna.el\" and
+the external program \"idn\", must be installed for this
+functionality to work."
   :version "22.1"
   :group 'message-headers
   :link '(custom-manual "(message)IDNA")
@@ -1786,7 +1812,6 @@ Leading \"Re: \" is not stripped by this function.  Use the function
 
 ;;; Suggested by Jonas Steverud  @  www.dtek.chalmers.se/~d4jonas/
 
-;;;###autoload
 (defun message-change-subject (new-subject)
   "Ask for NEW-SUBJECT header, append (was: <Old Subject>)."
   ;; <URL:http://www.landfield.com/usefor/drafts/draft-ietf-usefor-useage--1.02.unpaged>
@@ -1818,7 +1843,6 @@ Leading \"Re: \" is not stripped by this function.  Use the function
 				    " (was: "
 				    old-subject ")\n")))))))))
 
-;;;###autoload
 (defun message-mark-inserted-region (beg end)
   "Mark some region in the current article with enclosing tags.
 See `message-mark-insert-begin' and `message-mark-insert-end'."
@@ -1830,7 +1854,6 @@ See `message-mark-insert-begin' and `message-mark-insert-end'."
     (goto-char beg)
     (insert message-mark-insert-begin)))
 
-;;;###autoload
 (defun message-mark-insert-file (file)
   "Insert FILE at point, marking it with enclosing tags.
 See `message-mark-insert-begin' and `message-mark-insert-end'."
@@ -1843,7 +1866,6 @@ See `message-mark-insert-begin' and `message-mark-insert-end'."
     (goto-char p)
     (insert message-mark-insert-begin)))
 
-;;;###autoload
 (defun message-add-archive-header ()
   "Insert \"X-No-Archive: Yes\" in the header and a note in the body.
 The note can be customized using `message-archive-note'.  When called with a
@@ -1863,7 +1885,6 @@ body, set  `message-archive-note' to nil."
       (message-add-header message-archive-header)
       (message-sort-headers)))
 
-;;;###autoload
 (defun message-cross-post-followup-to-header (target-group)
   "Mangles FollowUp-To and Newsgroups header to point to TARGET-GROUP.
 With prefix-argument just set Follow-Up, don't cross-post."
@@ -1907,7 +1928,6 @@ With prefix-argument just set Follow-Up, don't cross-post."
       (insert (concat "\nFollowup-To: " target-group)))
   (setq message-cross-post-old-target target-group))
 
-;;;###autoload
 (defun message-cross-post-insert-note (target-group cross-post in-old
 						    old-groups)
   "Insert a in message body note about a set Followup or Crosspost.
@@ -1940,7 +1960,6 @@ been made to before the user asked for a Crosspost."
 	(insert (concat message-followup-to-note target-group "\n"))
       (insert (concat message-cross-post-note target-group "\n")))))
 
-;;;###autoload
 (defun message-cross-post-followup-to (target-group)
   "Crossposts message and set Followup-To to TARGET-GROUP.
 With prefix-argument just set Follow-Up, don't cross-post."
@@ -1982,7 +2001,6 @@ With prefix-argument just set Follow-Up, don't cross-post."
 
 ;;; Reduce To: to Cc: or Bcc: header
 
-;;;###autoload
 (defun message-reduce-to-to-cc ()
  "Replace contents of To: header with contents of Cc: or Bcc: header."
  (interactive)
@@ -3186,7 +3204,9 @@ prefix, and don't delete any headers."
     (when (and message-reply-buffer
 	       message-cite-function)
       (delete-windows-on message-reply-buffer t)
-      (insert-buffer message-reply-buffer)
+      (push-mark (save-excursion
+		   (insert-buffer-substring message-reply-buffer)
+		   (point)))
       (unless arg
 	(funcall message-cite-function))
       (message-exchange-point-and-mark)
@@ -3297,7 +3317,9 @@ prefix, and don't delete any headers."
 (defun message-insert-citation-line ()
   "Insert a simple citation line."
   (when message-reply-headers
-    (insert (mail-header-from message-reply-headers) " writes:\n\n")))
+    (insert (mail-header-from message-reply-headers) " writes:")
+    (newline)
+    (newline)))
 
 (defun message-position-on-field (header &rest afters)
   (let ((case-fold-search t))
@@ -3396,8 +3418,15 @@ Instead, just auto-save the buffer and then bury it."
 			  (file-exists-p auto-save-file-name))
 		     (and file-name
 			  (file-exists-p file-name)))
-	       (yes-or-no-p (format "Remove the backup file%s? "
-				    (if modified " too" ""))))
+		 (progn
+		   ;; If the message buffer has lived in a dedicated window,
+		   ;; `kill-buffer' has killed the frame.  Thus the
+		   ;; `yes-or-no-p' may show up in a lowered frame.  Make sure
+		   ;; that the user can see the question by raising the
+		   ;; current frame:
+		   (raise-frame)
+		   (yes-or-no-p (format "Remove the backup file%s? "
+					(if modified " too" "")))))
 	(ignore-errors
 	  (delete-file auto-save-file-name))
 	(let ((message-draft-article draft-article))
@@ -3408,8 +3437,7 @@ Instead, just auto-save the buffer and then bury it."
   "Bury this mail BUFFER."
   (let ((newbuf (other-buffer buffer)))
     (bury-buffer buffer)
-    (if (and (fboundp 'frame-parameters)
-	     (cdr (assq 'dedicated (frame-parameters)))
+    (if (and (window-dedicated-p (selected-window))
 	     (not (null (delq (selected-frame) (visible-frame-list)))))
 	(delete-frame (selected-frame))
       (switch-to-buffer newbuf))))
@@ -4168,7 +4196,7 @@ Otherwise, generate and save a value for `canlock-password' first."
 		   (zerop
 		    (length
 		     (setq to (completing-read
-			       "Followups to (default: no Followup-To header) "
+			       "Followups to (default no Followup-To header): "
 			       (mapcar #'list
 				       (cons "poster"
 					     (message-tokenize-header
@@ -4928,13 +4956,17 @@ subscribed address (and not the additional To and Cc header contents)."
   (let ((field (message-fetch-field header))
 	rhs ace  address)
     (when field
-      (dolist (address (mail-header-parse-addresses field))
-	(setq address (car address)
-	      rhs (downcase (or (cadr (split-string address "@")) ""))
-	      ace (downcase (idna-to-ascii rhs)))
+      (dolist (rhs
+	       (mm-delete-duplicates
+		(mapcar (lambda (rhs) (or (cadr (split-string rhs "@")) ""))
+			(mapcar 'downcase
+				(mapcar
+				 'car (mail-header-parse-addresses field))))))
+	(setq ace (downcase (idna-to-ascii rhs)))
 	(when (and (not (equal rhs ace))
 		   (or (not (eq message-use-idna 'ask))
-		       (y-or-n-p (format "Replace %s with %s? " rhs ace))))
+		       (y-or-n-p (format "Replace %s with %s in %s:? "
+					 rhs ace header))))
 	  (goto-char (point-min))
 	  (while (re-search-forward (concat "^" header ":") nil t)
 	    (message-narrow-to-field)
@@ -4953,6 +4985,9 @@ See `message-idna-encode'."
 	(message-narrow-to-head)
 	(message-idna-to-ascii-rhs-1 "From")
 	(message-idna-to-ascii-rhs-1 "To")
+	(message-idna-to-ascii-rhs-1 "Reply-To")
+	(message-idna-to-ascii-rhs-1 "Mail-Reply-To")
+	(message-idna-to-ascii-rhs-1 "Mail-Followup-To")
 	(message-idna-to-ascii-rhs-1 "Cc")))))
 
 (defun message-generate-headers (headers)
@@ -5044,7 +5079,8 @@ Headers already prepared in the buffer are not modified."
 		  ;; The element is a symbol.  We insert the value
 		  ;; of this symbol, if any.
 		  (symbol-value header))
-		 ((not (message-check-element header))
+		 ((not (message-check-element
+			(intern (downcase (symbol-name header)))))
 		  ;; We couldn't generate a value for this header,
 		  ;; so we just ask the user.
 		  (read-from-minibuffer
@@ -5912,9 +5948,9 @@ want to get rid of this query permanently."))
 
 (defun message-is-yours-p ()
   "Non-nil means current article is yours.
-If you have added 'cancel-messages to 'message-shoot-gnksa-feet', all articles
+If you have added 'cancel-messages to `message-shoot-gnksa-feet', all articles
 are yours except those that have Cancel-Lock header not belonging to you.
-Instead of shooting GNKSA feet, you should modify 'message-alternative-emails'
+Instead of shooting GNKSA feet, you should modify `message-alternative-emails'
 regexp to match all of yours addresses."
   ;; Canlock-logic as suggested by Per Abrahamsen
   ;; <abraham@dina.kvl.dk>
@@ -6532,9 +6568,8 @@ which specify the range to operate on."
 
 (defun message-tool-bar-local-item-from-menu (command icon in-map &optional from-map &rest props)
   ;; We need to make tool bar entries in local keymaps with
-  ;; `tool-bar-local-item-from-menu' in Emacs > 21.3
+  ;; `tool-bar-local-item-from-menu' in Emacs >= 22
   (if (fboundp 'tool-bar-local-item-from-menu)
-      ;; This is for Emacs 21.3
       (tool-bar-local-item-from-menu command icon in-map from-map props)
     (tool-bar-add-item-from-menu command icon from-map props)))
 
@@ -6553,7 +6588,7 @@ which specify the range to operate on."
 					   write-file dired open-file))
 		 (define-key tool-bar-map (vector key) nil))
 	       (message-tool-bar-local-item-from-menu
-		'message-send-and-exit "mail_send" tool-bar-map message-mode-map)
+		'message-send-and-exit "mail/send" tool-bar-map message-mode-map)
 	       (message-tool-bar-local-item-from-menu
 		'message-kill-buffer "close" tool-bar-map message-mode-map)
 	       (message-tool-bar-local-item-from-menu
@@ -6602,7 +6637,8 @@ If nil, the function bound in `text-mode-map' or `global-map' is executed."
   :version "22.1"
   :group 'message
   :link '(custom-manual "(message)Various Commands")
-  :type 'function)
+  :type '(choice (const nil)
+		 function))
 
 (defun message-tab ()
   "Complete names according to `message-completion-alist'.
@@ -6618,6 +6654,17 @@ those headers."
 		 (lookup-key text-mode-map "\t")
 		 (lookup-key global-map "\t")
 		 'indent-relative))))
+
+(eval-and-compile
+  (condition-case nil
+      (with-temp-buffer
+	(let ((standard-output (current-buffer)))
+	  (eval '(display-completion-list nil "")))
+	(defalias 'message-display-completion-list 'display-completion-list))
+    (error ;; Don't use `wrong-number-of-arguments' here because of XEmacs.
+     (defun message-display-completion-list (completions &optional ignore)
+       "Display the list of completions, COMPLETIONS, using `standard-output'."
+       (display-completion-list completions)))))
 
 (defun message-expand-group ()
   "Expand the group name under point."
@@ -6657,7 +6704,9 @@ those headers."
 	  (let ((buffer-read-only nil))
 	    (erase-buffer)
 	    (let ((standard-output (current-buffer)))
-	      (display-completion-list (sort completions 'string<)))
+	      (message-display-completion-list (sort completions 'string<)
+					       string))
+	    (setq buffer-read-only nil)
 	    (goto-char (point-min))
 	    (delete-region (point) (progn (forward-line 3) (point))))))))))
 

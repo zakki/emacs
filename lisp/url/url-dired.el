@@ -1,6 +1,7 @@
 ;;; url-dired.el --- URL Dired minor mode
 
-;; Copyright (c) 1996 - 1999 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Keywords: comm, files
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
 
@@ -30,9 +31,7 @@
 (defvar url-dired-minor-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map "\C-m" 'url-dired-find-file)
-    (if (featurep 'xemacs)
-	(define-key map [button2] 'url-dired-find-file-mouse)
-      (define-key map [mouse-2] 'url-dired-find-file-mouse))
+    (define-key map [mouse-2] 'url-dired-find-file-mouse)
     map)
   "Keymap used when browsing directories.")
 

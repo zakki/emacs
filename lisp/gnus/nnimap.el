@@ -1,6 +1,7 @@
 ;;; nnimap.el --- imap backend for Gnus
-;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Simon Josefsson <jas@pdc.kth.se>
 ;;         Jim Radford <radford@robby.caltech.edu>
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -205,7 +206,7 @@ RFC2060 section 6.4.4."
   "Whether to download entire articles during splitting.
 This is generally not required, and will slow things down considerably.
 You may need it if you want to use an advanced splitting function that
-analyses the body before splitting the article.
+analyzes the body before splitting the article.
 If this variable is nil, bodies will not be downloaded; if this
 variable is the symbol `default' the default behaviour is
 used (which currently is nil, unless you use a statistical
@@ -315,6 +316,11 @@ some servers implement this command inefficiently by opening each and
 every message in the group, thus making it quite slow.
 Unlike other backends, you do not need to take special care if you
 flip this variable.")
+
+(defvoo nnimap-search-uids-not-since-is-evil nil
+  "If non-nil, avoid \"UID SEARCH UID ... NOT SINCE\" queries when expiring.
+Instead, use \"UID SEARCH SINCE\" to prune the list of expirable
+articles within Gnus.  This seems to be faster on Courier in some cases.")
 
 (defvoo nnimap-expunge-on-close 'always ; 'ask, 'never
   "Whether to expunge a group when it is closed.
@@ -1435,6 +1441,21 @@ function is generally only called when Gnus is shutting down."
 		     (when (imap-message-flags-add
 			    (imap-range-to-message-set
 			     (gnus-compress-sequence oldarts)) "\\Deleted")
+		       (setq articles (gnus-set-difference
+				       articles oldarts))))))
+		((and nnimap-search-uids-not-since-is-evil (numberp days))
+		 (let* ((all-new-articles
+			 (gnus-compress-sequence
+			  (imap-search (format "SINCE %s"
+					       (nnimap-date-days-ago days)))))
+			(oldartseq
+			 (gnus-range-difference artseq all-new-articles))
+			(oldarts (gnus-uncompress-range oldartseq)))
+		   (when oldarts
+		     (nnimap-expiry-target oldarts group server)
+		     (when (imap-message-flags-add
+			    (imap-range-to-message-set oldartseq)
+			    "\\Deleted")
 		       (setq articles (gnus-set-difference
 				       articles oldarts))))))
 		((numberp days)

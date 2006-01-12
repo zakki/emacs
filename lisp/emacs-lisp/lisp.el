@@ -1,7 +1,7 @@
 ;;; lisp.el --- Lisp editing commands for Emacs
 
-;; Copyright (C) 1985, 1986, 1994, 2000, 2004, 2005
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1994, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: lisp, languages
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -489,7 +489,7 @@ More accurately, check the narrowed part of the buffer for unbalanced
 expressions (\"sexps\") in general.  This is done according to the
 current syntax table and will find unbalanced brackets or quotes as
 appropriate.  (See Info node `(emacs)Parentheses'.)  If imbalance is
-found, an error is signalled and point is left at the first unbalanced
+found, an error is signaled and point is left at the first unbalanced
 character."
   (interactive)
   (condition-case data
@@ -571,23 +571,35 @@ considered."
 	       (ding))
 	      ((not (string= pattern completion))
 	       (delete-region beg end)
-	       (insert completion))
+	       (insert completion)
+	       ;; Don't leave around a completions buffer that's out of date.
+	       (let ((win (get-buffer-window "*Completions*" 0)))
+		 (if win (with-selected-window win (bury-buffer)))))
 	      (t
-	       (message "Making completion list...")
-	       (let ((list (all-completions pattern obarray predicate)))
-		 (setq list (sort list 'string<))
-		 (or (eq predicate 'fboundp)
-		     (let (new)
-		       (while list
-			 (setq new (cons (if (fboundp (intern (car list)))
-					     (list (car list) " <f>")
-					   (car list))
-					 new))
-			 (setq list (cdr list)))
-		       (setq list (nreverse new))))
-		 (with-output-to-temp-buffer "*Completions*"
-		   (display-completion-list list)))
-	       (message "Making completion list...%s" "done")))))))
+	       (let ((minibuf-is-in-use
+		      (eq (minibuffer-window) (selected-window))))
+		 (unless minibuf-is-in-use
+		   (message "Making completion list..."))
+		 (let ((list (all-completions pattern obarray predicate)))
+		   (setq list (sort list 'string<))
+		   (or (eq predicate 'fboundp)
+		       (let (new)
+			 (while list
+			   (setq new (cons (if (fboundp (intern (car list)))
+					       (list (car list) " <f>")
+					     (car list))
+					   new))
+			   (setq list (cdr list)))
+			 (setq list (nreverse new))))
+		   (if (> (length list) 1)
+		       (with-output-to-temp-buffer "*Completions*"
+			 (display-completion-list list pattern))
+		     ;; Don't leave around a completions buffer that's
+		     ;; out of date.
+		     (let ((win (get-buffer-window "*Completions*" 0)))
+		       (if win (with-selected-window win (bury-buffer))))))
+		 (unless minibuf-is-in-use
+		   (message "Making completion list...%s" "done")))))))))
 
-;;; arch-tag: aa7fa8a4-2e6f-4e9b-9cd9-fef06340e67e
+;; arch-tag: aa7fa8a4-2e6f-4e9b-9cd9-fef06340e67e
 ;;; lisp.el ends here

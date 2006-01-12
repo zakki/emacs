@@ -1,6 +1,6 @@
 /* Execution of byte code produced by bytecomp.el.
-   Copyright (C) 1985, 1986, 1987, 1988, 1993, 2000, 2001, 2002, 2003, 2004
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1988, 1993, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.
 
 hacked on by jwz@lucid.com 17-jun-91
   o  added a compile-time switch to turn on simple sanity checking;
@@ -355,13 +355,14 @@ unmark_byte_stack ()
 /* Garbage collect if we have consed enough since the last time.
    We do this at every branch, to avoid loops that never GC.  */
 
-#define MAYBE_GC()				\
-  if (consing_since_gc > gc_cons_threshold)	\
-    {						\
-      BEFORE_POTENTIAL_GC ();			\
-      Fgarbage_collect ();			\
-      AFTER_POTENTIAL_GC ();			\
-    }						\
+#define MAYBE_GC()					\
+  if (consing_since_gc > gc_cons_threshold		\
+      && consing_since_gc > gc_relative_threshold)	\
+    {							\
+      BEFORE_POTENTIAL_GC ();				\
+      Fgarbage_collect ();				\
+      AFTER_POTENTIAL_GC ();				\
+    }							\
   else
 
 /* Check for jumping out of range.  */
@@ -388,7 +389,7 @@ unmark_byte_stack ()
 	Vquit_flag = Qnil;				\
         BEFORE_POTENTIAL_GC ();				\
 	if (EQ (Vthrow_on_input, flag))			\
-	  Fthrow (Vthrow_on_input, Qnil);		\
+	  Fthrow (Vthrow_on_input, Qt);			\
 	Fsignal (Qquit, Qnil);				\
 	AFTER_POTENTIAL_GC ();				\
       }							\
@@ -523,15 +524,19 @@ If the third argument is incorrect, Emacs may crash.  */)
 	  }
 
 	case Bgotoifnil:
-	  MAYBE_GC ();
-	  op = FETCH2;
-	  if (NILP (POP))
-	    {
-	      BYTE_CODE_QUIT;
-	      CHECK_RANGE (op);
-	      stack.pc = stack.byte_string_start + op;
-	    }
-	  break;
+	  {
+	    Lisp_Object v1;
+	    MAYBE_GC ();
+	    op = FETCH2;
+	    v1 = POP;
+	    if (NILP (v1))
+	      {
+		BYTE_CODE_QUIT;
+		CHECK_RANGE (op);
+		stack.pc = stack.byte_string_start + op;
+	      }
+	    break;
+	  }
 
 	case Bcar:
 	  {
@@ -729,15 +734,19 @@ If the third argument is incorrect, Emacs may crash.  */)
 	  break;
 
 	case Bgotoifnonnil:
-	  MAYBE_GC ();
-	  op = FETCH2;
-	  if (!NILP (POP))
-	    {
-	      BYTE_CODE_QUIT;
-	      CHECK_RANGE (op);
-	      stack.pc = stack.byte_string_start + op;
-	    }
-	  break;
+	  {
+	    Lisp_Object v1;
+	    MAYBE_GC ();
+	    op = FETCH2;
+	    v1 = POP;
+	    if (!NILP (v1))
+	      {
+		BYTE_CODE_QUIT;
+		CHECK_RANGE (op);
+		stack.pc = stack.byte_string_start + op;
+	      }
+	    break;
+	  }
 
 	case Bgotoifnilelsepop:
 	  MAYBE_GC ();
@@ -770,24 +779,32 @@ If the third argument is incorrect, Emacs may crash.  */)
 	  break;
 
 	case BRgotoifnil:
-	  MAYBE_GC ();
-	  if (NILP (POP))
-	    {
-	      BYTE_CODE_QUIT;
-	      stack.pc += (int) *stack.pc - 128;
-	    }
-	  stack.pc++;
-	  break;
+	  {
+	    Lisp_Object v1;
+	    MAYBE_GC ();
+	    v1 = POP;
+	    if (NILP (v1))
+	      {
+		BYTE_CODE_QUIT;
+		stack.pc += (int) *stack.pc - 128;
+	      }
+	    stack.pc++;
+	    break;
+	  }
 
 	case BRgotoifnonnil:
-	  MAYBE_GC ();
-	  if (!NILP (POP))
-	    {
-	      BYTE_CODE_QUIT;
-	      stack.pc += (int) *stack.pc - 128;
-	    }
-	  stack.pc++;
-	  break;
+	  {
+	    Lisp_Object v1;
+	    MAYBE_GC ();
+	    v1 = POP;
+	    if (!NILP (v1))
+	      {
+		BYTE_CODE_QUIT;
+		stack.pc += (int) *stack.pc - 128;
+	      }
+	    stack.pc++;
+	    break;
+	  }
 
 	case BRgotoifnilelsepop:
 	  MAYBE_GC ();
@@ -860,11 +877,11 @@ If the third argument is incorrect, Emacs may crash.  */)
 
 	case Bcondition_case:
 	  {
-	    Lisp_Object v1;
-	    v1 = POP;
-	    v1 = Fcons (POP, v1);
+	    Lisp_Object handlers, body;
+	    handlers = POP;
+	    body = POP;
 	    BEFORE_POTENTIAL_GC ();
-	    TOP = Fcondition_case (Fcons (TOP, v1));
+	    TOP = internal_lisp_condition_case (TOP, body, handlers);
 	    AFTER_POTENTIAL_GC ();
 	    break;
 	  }

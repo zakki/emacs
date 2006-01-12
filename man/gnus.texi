@@ -7,13 +7,12 @@
 @syncodeindex pg cp
 
 @copying
-Copyright (c) 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-2002, 2003, 2004, 2005
-Free Software Foundation, Inc.
+Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001,
+   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, with the Front-Cover texts being ``A GNU
 Manual'', and with the Back-Cover Texts as in (a) below.  A copy of the
@@ -684,7 +683,7 @@ Browsing the Web
 * Ultimate::                    The Ultimate Bulletin Board systems.
 * Web Archive::                 Reading mailing list archived on web.
 * RSS::                         Reading RDF site summary.
-* Customizing w3::              Doing stuff to Emacs/w3 from Gnus.
+* Customizing W3::              Doing stuff to Emacs/W3 from Gnus.
 
 @acronym{IMAP}
 
@@ -832,21 +831,21 @@ Thwarting Email Spam
 
 Filtering Spam Using The Spam ELisp Package
 
-* Spam ELisp Package Sequence of Events::  
-* Spam ELisp Package Filtering of Incoming Mail::  
-* Spam ELisp Package Global Variables::  
-* Spam ELisp Package Configuration Examples::  
-* Blacklists and Whitelists::   
-* BBDB Whitelists::             
-* Gmane Spam Reporting::        
-* Anti-spam Hashcash Payments::  
-* Blackholes::                  
-* Regular Expressions Header Matching::  
-* Bogofilter::                  
-* ifile spam filtering::        
-* spam-stat spam filtering::    
-* SpamOracle::                  
-* Extending the Spam ELisp package::  
+* Spam ELisp Package Sequence of Events::
+* Spam ELisp Package Filtering of Incoming Mail::
+* Spam ELisp Package Global Variables::
+* Spam ELisp Package Configuration Examples::
+* Blacklists and Whitelists::
+* BBDB Whitelists::
+* Gmane Spam Reporting::
+* Anti-spam Hashcash Payments::
+* Blackholes::
+* Regular Expressions Header Matching::
+* Bogofilter::
+* ifile spam filtering::
+* spam-stat spam filtering::
+* SpamOracle::
+* Extending the Spam ELisp package::
 
 Filtering Spam Using Statistics with spam-stat
 
@@ -1393,7 +1392,7 @@ cache for all groups).
 Most common Unix news readers use a shared startup file called
 @file{.newsrc}.  This file contains all the information about what
 groups are subscribed, and which articles in these groups have been
-read. 
+read.
 
 Things got a bit more complicated with @sc{gnus}.  In addition to
 keeping the @file{.newsrc} file updated, it also used a file called
@@ -1468,15 +1467,17 @@ startup files.  If you want to turn backup creation off, say something like:
 @vindex gnus-init-file
 @vindex gnus-site-init-file
 When Gnus starts, it will read the @code{gnus-site-init-file}
-(@file{.../site-lisp/gnus} by default) and @code{gnus-init-file}
+(@file{.../site-lisp/gnus-init} by default) and @code{gnus-init-file}
 (@file{~/.gnus} by default) files.  These are normal Emacs Lisp files
 and can be used to avoid cluttering your @file{~/.emacs} and
 @file{site-init} files with Gnus stuff.  Gnus will also check for files
 with the same names as these, but with @file{.elc} and @file{.el}
 suffixes.  In other words, if you have set @code{gnus-init-file} to
 @file{~/.gnus}, it will look for @file{~/.gnus.elc}, @file{~/.gnus.el},
-and finally @file{~/.gnus} (in this order).
-
+and finally @file{~/.gnus} (in this order).  If Emacs was invoked with
+the @option{-q} or @option{--no-init-file} options (@pxref{Initial
+Options, ,Initial Options, emacs, The Emacs Manual}), Gnus doesn't read
+@code{gnus-init-file}.
 
 
 @node Auto Save
@@ -3008,7 +3009,7 @@ This can also be used as a group-specific hook function.  If you want to
 hear a beep when you enter a group, you could put something like
 @code{(dummy-variable (ding))} in the parameters of that group.
 @code{dummy-variable} will be set to the (meaningless) result of the
-@code{(ding)} form.  
+@code{(ding)} form.
 
 Alternatively, since the VARIABLE becomes local to the group, this
 pattern can be used to temporarily change a hook.  For example, if the
@@ -3058,6 +3059,19 @@ example:
 
 String value of parameters will be subjected to regexp substitution, as
 the @code{to-group} example shows.
+
+@vindex gnus-parameters-case-fold-search
+By default, whether comparing the group name and one of those regexps
+specified in @code{gnus-parameters} is done in a case-sensitive manner
+or a case-insensitive manner depends on the value of
+@code{case-fold-search} at the time when the comparison is done.  The
+value of @code{case-fold-search} is typically @code{t}; it means, for
+example, the element @code{("INBOX\\.FOO" (total-expire . t))} might be
+applied to both the @samp{INBOX.FOO} group and the @samp{INBOX.foo}
+group.  If you want to make those regexps always case-sensitive, set the
+value of the @code{gnus-parameters-case-fold-search} variable to
+@code{nil}.  Otherwise, set it to @code{t} if you want to compare them
+always in a case-insensitive manner.
 
 
 @node Listing Groups
@@ -3984,7 +3998,7 @@ Gnus
      8: comp.binaries.fractals
     13: comp.sources.unix
    452: alt.sex.emacs
-@end group   
+@end group
 @end example
 
 The @samp{Emacs} topic has the topic parameter @code{(score-file
@@ -5089,10 +5103,10 @@ the server and display it in the article buffer.
 
 @item gnus-select-article-hook
 @vindex gnus-select-article-hook
-This hook is called whenever an article is selected.  By default it
-exposes any threads hidden under the selected article.  If you would
-like each article to be saved in the Agent as you read it, putting
-@code{gnus-agent-fetch-selected-article} on this hook will do so.
+This hook is called whenever an article is selected.  The default is
+@code{nil}.  If you would like each article to be saved in the Agent as
+you read it, putting @code{gnus-agent-fetch-selected-article} on this
+hook will do so.
 
 @item gnus-mark-article-hook
 @vindex gnus-mark-article-hook
@@ -5102,8 +5116,8 @@ like each article to be saved in the Agent as you read it, putting
 This hook is called whenever an article is selected.  It is intended to
 be used for marking articles as read.  The default value is
 @code{gnus-summary-mark-read-and-unread-as-read}, and will change the
-mark of almost any article you read to @code{gnus-unread-mark}.  The
-only articles not affected by this function are ticked, dormant, and
+mark of almost any article you read to @code{gnus-read-mark}.  The only
+articles not affected by this function are ticked, dormant, and
 expirable articles.  If you'd instead like to just have unread articles
 marked as read, you can use @code{gnus-summary-mark-unread-as-read}
 instead.  It will leave marks like @code{gnus-low-score-mark},
@@ -5477,7 +5491,7 @@ default, the message is decoded and forwarded as an rfc822 @acronym{MIME} sectio
 @cindex digests
 @cindex making digests
 Digest the current series and forward the result to a newsgroup
-(@code{gnus-uu-digest-mail-forward}).  This command uses the
+(@code{gnus-uu-digest-post-forward}).  This command uses the
 process/prefix convention.
 
 @item S u
@@ -8568,8 +8582,8 @@ Customization, emacs-mime, The Emacs MIME Manual}) to convert the
 can use include:
 
 @table @code
-@item w3
-Use Emacs/w3.
+@item W3
+Use Emacs/W3.
 
 @item w3m
 Use @uref{http://emacs-w3m.namazu.org/, emacs-w3m}.
@@ -9305,6 +9319,12 @@ To see e.g. security buttons but no other buttons, you could set this
 variable to @code{("multipart/signed")} and leave
 @code{gnus-unbuttonized-mime-types} at the default value.
 
+You could also add @code{"multipart/alternative"} to this list to
+display radio buttons that allow you to choose one of two media types
+those mails include.  See also @code{mm-discouraged-alternatives}
+(@pxref{Display Customization, ,Display Customization, emacs-mime, The
+Emacs MIME Manual}).
+
 @item gnus-inhibit-mime-unbuttonizing
 @vindex gnus-inhibit-mime-unbuttonizing
 If this is non-@code{nil}, then all @acronym{MIME} parts get buttons.  The
@@ -9347,12 +9367,13 @@ If displaying "text/html" is discouraged, see
 @code{mm-discouraged-alternatives} in @ref{Display Customization,
 Display Customization, , emacs-mime, Emacs-Mime Manual}.  Images or
 other material inside a "multipart/related" part might be overlooked
-when this variable is nil.
+when this variable is @code{nil}.
 
 @vindex gnus-mime-display-multipart-as-mixed
 @item gnus-mime-display-multipart-as-mixed
-Display "multipart" parts as "multipart/mixed".  If t, it overrides nil
-values of @code{gnus-mime-display-multipart-alternative-as-mixed} and
+Display "multipart" parts as "multipart/mixed".  If @code{t}, it
+overrides @code{nil} values of
+@code{gnus-mime-display-multipart-alternative-as-mixed} and
 @code{gnus-mime-display-multipart-related-as-mixed}.
 
 @vindex mm-file-name-rewrite-functions
@@ -9404,7 +9425,7 @@ newsreaders and mailers that do not understand or use @acronym{MIME}, and
 just send out messages without saying what character sets they use.  To
 help a bit with this, some local news hierarchies have policies that say
 what character set is the default.  For instance, the @samp{fj}
-hierarchy uses @code{iso-2022-jp-2}.
+hierarchy uses @code{iso-2022-jp}.
 
 @vindex gnus-group-charset-alist
 This knowledge is encoded in the @code{gnus-group-charset-alist}
@@ -9622,17 +9643,16 @@ by giving the @kbd{A T} command a numerical prefix.
 @kindex M-^ (Summary)
 @cindex Message-ID
 @cindex fetching by Message-ID
-You can also ask the @acronym{NNTP} server for an arbitrary article, no
-matter what group it belongs to.  @kbd{M-^}
-(@code{gnus-summary-refer-article}) will ask you for a
-@code{Message-ID}, which is one of those long, hard-to-read thingies
-that look something like @samp{<38o6up$6f2@@hymir.ifi.uio.no>}.  You
-have to get it all exactly right.  No fuzzy searches, I'm afraid.
-@end table
+You can also ask Gnus for an arbitrary article, no matter what group it
+belongs to.  @kbd{M-^} (@code{gnus-summary-refer-article}) will ask you
+for a @code{Message-ID}, which is one of those long, hard-to-read
+thingies that look something like @samp{<38o6up$6f2@@hymir.ifi.uio.no>}.
+You have to get it all exactly right.  No fuzzy searches, I'm afraid.
 
-The current select method will be used when fetching by
-@code{Message-ID} from non-news select method, but you can override this
-by giving this command a prefix.
+Gnus looks for the @code{Message-ID} in the headers that have already
+been fetched, but also tries all the select methods specified by
+@code{gnus-refer-article-method} if it is not found.
+@end table
 
 @vindex gnus-refer-article-method
 If the group you are reading is located on a back end that does not
@@ -11430,13 +11450,15 @@ that have none when you do a @kbd{a}.
 
 @item gnus-confirm-mail-reply-to-news
 @vindex gnus-confirm-mail-reply-to-news
-This can also be a function receiving the group name as the only
-parameter which should return non-@code{nil} if a confirmation is
-needed, or a regular expression matching group names, where
-confirmation is should be asked for.
+If non-@code{nil}, Gnus will ask you for a confirmation when you are
+about to reply to news articles by mail.  If it is @code{nil}, nothing
+interferes in what you want to do.  This can also be a function
+receiving the group name as the only parameter which should return
+non-@code{nil} if a confirmation is needed, or a regular expression
+matching group names, where confirmation should be asked for.
 
 If you find yourself never wanting to reply to mail, but occasionally
-press R anyway, this variable might be for you.
+press @kbd{R} anyway, this variable might be for you.
 
 @item gnus-confirm-treat-mail-like-news
 @vindex gnus-confirm-treat-mail-like-news
@@ -12196,6 +12218,9 @@ Where the news is to be fetched from---the address.
 
 @item s
 The opened/closed/denied status of the server.
+
+@item a
+Whether this server is agentized.
 @end table
 
 @vindex gnus-server-mode-line-format
@@ -12674,35 +12699,6 @@ that says how many seconds the @code{nntp} back end should wait for a
 connection before giving up.  If it is @code{nil}, which is the default,
 no timeouts are done.
 
-@c @item nntp-command-timeout
-@c @vindex nntp-command-timeout
-@c @cindex PPP connections
-@c @cindex dynamic IP addresses
-@c If you're running Gnus on a machine that has a dynamically assigned
-@c address, Gnus may become confused.  If the address of your machine
-@c changes after connecting to the @acronym{NNTP} server, Gnus will simply sit
-@c waiting forever for replies from the server.  To help with this
-@c unfortunate problem, you can set this command to a number.  Gnus will
-@c then, if it sits waiting for a reply from the server longer than that
-@c number of seconds, shut down the connection, start a new one, and resend
-@c the command.  This should hopefully be transparent to the user.  A
-@c likely number is 30 seconds.
-@c
-@c @item nntp-retry-on-break
-@c @vindex nntp-retry-on-break
-@c If this variable is non-@code{nil}, you can also @kbd{C-g} if Gnus
-@c hangs.  This will have much the same effect as the command timeout
-@c described above.
-
-@item nntp-server-hook
-@vindex nntp-server-hook
-This hook is run as the last step when connecting to an @acronym{NNTP}
-server.
-
-@item nntp-buggy-select
-@vindex nntp-buggy-select
-Set this to non-@code{nil} if your select routine is buggy.
-
 @item nntp-nov-is-evil
 @vindex nntp-nov-is-evil
 If the @acronym{NNTP} server does not support @acronym{NOV}, you could set this
@@ -12734,11 +12730,6 @@ that fetching will probably be slower.  If this variable is @code{nil},
 @vindex nntp-prepare-server-hook
 A hook run before attempting to connect to an @acronym{NNTP} server.
 
-@item nntp-warn-about-losing-connection
-@vindex nntp-warn-about-losing-connection
-If this variable is non-@code{nil}, some noise will be made when a
-server closes connection.
-
 @item nntp-record-commands
 @vindex nntp-record-commands
 If non-@code{nil}, @code{nntp} will log all commands it sends to the
@@ -12751,8 +12742,8 @@ that doesn't seem to work.
 It is possible to customize how the connection to the nntp server will
 be opened.  If you specify an @code{nntp-open-connection-function}
 parameter, Gnus will use that function to establish the connection.
-Five pre-made functions are supplied.  These functions can be grouped in
-two categories: direct connection functions (three pre-made), and
+Six pre-made functions are supplied.  These functions can be grouped in
+two categories: direct connection functions (four pre-made), and
 indirect ones (two pre-made).
 
 @item nntp-prepare-post-hook
@@ -12769,14 +12760,6 @@ inhibit Gnus to add a @code{Message-ID} header, you could say:
 
 Note that not all servers support the recommended ID.  This works for
 INN versions 2.3.0 and later, for instance.
-
-@item nntp-read-timeout
-@vindex nntp-read-timeout
-How long nntp should wait between checking for the end of output.
-Shorter values mean quicker response, but is more CPU intensive.  The
-default is 0.1 seconds.  If you have a slow line to the server (and
-don't like to see Emacs eat your available CPU power), you might set
-this to, say, 1.
 
 @end table
 
@@ -12952,7 +12935,9 @@ Address of the intermediate host to connect to.
 
 The following variables affect the behavior of all, or several of the
 pre-made connection functions.  When not specified, all functions are
-affected.
+affected (the values of the following variables will be used as the
+default if each virtual @code{nntp} server doesn't specify those server
+variables individually).
 
 @table @code
 
@@ -12960,7 +12945,7 @@ affected.
 @vindex nntp-pre-command
 A command wrapper to use when connecting through a non native
 connection function (all except @code{nntp-open-network-stream},
-@code{nntp-open-tls-stream}, and @code{nntp-open-ssl-stream}.  This is
+@code{nntp-open-tls-stream}, and @code{nntp-open-ssl-stream}).  This is
 where you would put a @samp{SOCKS} wrapper for instance.
 
 @item nntp-address
@@ -12971,7 +12956,7 @@ The address of the @acronym{NNTP} server.
 @vindex nntp-port-number
 Port number to connect to the @acronym{NNTP} server.  The default is
 @samp{nntp}.  If you use @acronym{NNTP} over
-@acronym{tls}/@acronym{ssl}, you may want to use integer ports rather
+@acronym{TLS}/@acronym{SSL}, you may want to use integer ports rather
 than named ports (i.e, use @samp{563} instead of @samp{snews} or
 @samp{nntps}), because external @acronym{TLS}/@acronym{SSL} tools may
 not work with named ports.
@@ -13293,7 +13278,7 @@ function.
 By default the splitting codes @acronym{MIME} decodes headers so you
 can match on non-@acronym{ASCII} strings.  The
 @code{nnmail-mail-splitting-charset} variable specifies the default
-charset for decoding.  The behaviour can be turned off completely by
+charset for decoding.  The behavior can be turned off completely by
 binding @code{nnmail-mail-splitting-decodes} to @code{nil}, which is
 useful if you want to match articles based on the raw header data.
 
@@ -13831,7 +13816,8 @@ is to say where the incoming files will be stored if the variable
 Prefix for file name for storing incoming mail.  The default is
 @file{Incoming}, in which case files will end up with names like
 @file{Incoming30630D_} or @file{Incoming298602ZD}.  This is really only
-relevant if @code{mail-source-delete-incoming} is @code{nil}.
+relevant if @code{mail-source-delete-incoming} is @code{nil} or a
+number.
 
 @item mail-source-default-file-modes
 @vindex mail-source-default-file-modes
@@ -14011,7 +13997,7 @@ splits.  Here are the possible split syntaxes:
 
 @table @code
 
-@item group 
+@item group
 If the split is a string, that will be taken as a group name.  Normal
 regexp match expansion will be done.  See below for examples.
 
@@ -14142,9 +14128,9 @@ surrounded by anything.
 
 In this example, messages sent from @samp{joedavis@@foo.org} will
 normally not be filed in @samp{joemail}.  With
-@code{nnmail-split-fancy-match-partial-words} set to t, however, the
-match will happen.  In effect, the requirement of a word boundary is
-removed and instead the match becomes more like a grep.
+@code{nnmail-split-fancy-match-partial-words} set to @code{t},
+however, the match will happen.  In effect, the requirement of a word
+boundary is removed and instead the match becomes more like a grep.
 
 @findex nnmail-split-fancy-with-parent
 @code{nnmail-split-fancy-with-parent} is a function which allows you to
@@ -15126,8 +15112,9 @@ An integer specifying the minimum age, in seconds, of an article
 before it will be expired, or the symbol @code{never} to specify that
 articles should never be expired.  If this parameter is not set,
 @code{nnmaildir} falls back to the usual
-@code{nnmail-expiry-wait}(@code{-function}) variables (overrideable by
-the @code{expiry-wait}(@code{-function}) group parameters.  If you
+@code{nnmail-expiry-wait}(@code{-function}) variables (the
+@code{expiry-wait} group parameter overrides @code{nnmail-expiry-wait}
+and makes @code{nnmail-expiry-wait-function} ineffective).  If you
 wanted a value of 3 days, you could use something like @code{[(* 3 24
 60 60)]}; @code{nnmaildir} will evaluate the form and use the result.
 An article's age is measured starting from the article file's
@@ -15150,8 +15137,8 @@ the parameter belongs to, then the article is not expired at all.  If
 you use the vector form, the first element is evaluated once for each
 article.  So that form can refer to
 @code{nnmaildir-article-file-name}, etc., to decide where to put the
-article.  @emph{If this parameter is not set, @code{nnmaildir} does
-not fall back to the @code{expiry-target} group parameter or the
+article.  @emph{Even if this parameter is not set, @code{nnmaildir}
+does not fall back to the @code{expiry-target} group parameter or the
 @code{nnmail-expiry-target} variable.}
 
 @item read-only
@@ -15567,10 +15554,11 @@ interfaces to these sources.
 * Ultimate::                    The Ultimate Bulletin Board systems.
 * Web Archive::                 Reading mailing list archived on web.
 * RSS::                         Reading RDF site summary.
-* Customizing w3::              Doing stuff to Emacs/w3 from Gnus.
+* Customizing W3::              Doing stuff to Emacs/W3 from Gnus.
 @end menu
 
-All the web sources require Emacs/w3 and the url library to work.
+All the web sources require Emacs/W3 and the url library or those
+alternatives to work.
 
 The main caveat with all these web sources is that they probably won't
 work for a very long time.  Gleaning information from the @acronym{HTML} data
@@ -15657,8 +15645,9 @@ make money off of advertisements, not to provide services to the
 community.  Since @code{nnweb} washes the ads off all the articles, one
 might think that the providers might be somewhat miffed.  We'll see.
 
-You must have the @code{url} and @code{w3} package installed to be able
-to use @code{nnweb}.
+You must have the @code{url} and @code{W3} package or those alternatives
+(try @code{customize-group} on the @samp{mm-url} variable group)
+installed to be able to use @code{nnweb}.
 
 Virtual server variables:
 
@@ -15878,9 +15867,9 @@ system because @acronym{RSS} uses UTF-8 for encoding non-@acronym{ASCII}
 text by default.  It is also used by default for non-@acronym{ASCII}
 group names.
 
-@kindex G R (Summary)
-Use @kbd{G R} from the summary buffer to subscribe to a feed---you will
-be prompted for the location, the title and the description of the feed.
+@kindex G R (Group)
+Use @kbd{G R} from the group buffer to subscribe to a feed---you will be
+prompted for the location, the title and the description of the feed.
 The title, which allows any characters, will be used for the group name
 and the name of the group data file.  The description can be omitted.
 
@@ -15896,6 +15885,10 @@ variable.  If it is @code{nil}, in Emacs the coding system defaults to
 the value of @code{default-file-name-coding-system}.  If you are using
 XEmacs and want to use non-@acronym{ASCII} group names, you should set
 the value for the @code{nnmail-pathname-coding-system} variable properly.
+
+The @code{nnrss} back end generates @samp{multipart/alternative}
+@acronym{MIME} articles in which each contains a @samp{text/plain} part
+and a @samp{text/html} part.
 
 @cindex OPML
 You can also use the following commands to import and export your
@@ -15934,6 +15927,15 @@ If you set @code{nnrss-use-local} to @code{t}, @code{nnrss} will read
 the feeds from local files in @code{nnrss-directory}.  You can use
 the command @code{nnrss-generate-download-script} to generate a
 download script using @command{wget}.
+
+@item nnrss-wash-html-in-text-plain-parts
+Non-@code{nil} means that @code{nnrss} renders text in @samp{text/plain}
+parts as @acronym{HTML}.  The function specified by the
+@code{mm-text-html-renderer} variable (@pxref{Display Customization,
+,Display Customization, emacs-mime, The Emacs MIME Manual}) will be used
+to render text.  If it is @code{nil}, which is the default, text will
+simply be folded.  Leave it @code{nil} if you prefer to see
+@samp{text/html} parts.
 @end table
 
 The following code may be helpful, if you want to show the description in
@@ -15951,6 +15953,7 @@ the summary buffer.
 
 The following code may be useful to open an nnrss url directly from the
 summary buffer.
+
 @lisp
 (require 'browse-url)
 
@@ -15973,18 +15976,44 @@ summary buffer.
 (add-to-list 'nnmail-extra-headers nnrss-url-field)
 @end lisp
 
-@node Customizing w3
-@subsection Customizing w3
-@cindex w3
+Even if you have added @code{"text/html"} to the
+@code{mm-discouraged-alternatives} variable (@pxref{Display
+Customization, ,Display Customization, emacs-mime, The Emacs MIME
+Manual}) since you don't want to see @acronym{HTML} parts, it might be
+more useful especially in @code{nnrss} groups to display
+@samp{text/html} parts.  Here's an example of setting
+@code{mm-discouraged-alternatives} as a group parameter (@pxref{Group
+Parameters}) in order to display @samp{text/html} parts only in
+@code{nnrss} groups:
+
+@lisp
+;; @r{Set the default value of @code{mm-discouraged-alternatives}.}
+(eval-after-load "gnus-sum"
+  '(add-to-list
+    'gnus-newsgroup-variables
+    '(mm-discouraged-alternatives
+      . '("text/html" "image/.*"))))
+
+;; @r{Display @samp{text/html} parts in @code{nnrss} groups.}
+(add-to-list
+ 'gnus-parameters
+ '("\\`nnrss:" (mm-discouraged-alternatives nil)))
+@end lisp
+
+
+@node Customizing W3
+@subsection Customizing W3
+@cindex W3
 @cindex html
 @cindex url
 @cindex Netscape
 
-Gnus uses the url library to fetch web pages and Emacs/w3 to display web
-pages.  Emacs/w3 is documented in its own manual, but there are some
-things that may be more relevant for Gnus users.
+Gnus uses the url library to fetch web pages and Emacs/W3 (or those
+alternatives) to display web pages.  Emacs/W3 is documented in its own
+manual, but there are some things that may be more relevant for Gnus
+users.
 
-For instance, a common question is how to make Emacs/w3 follow links
+For instance, a common question is how to make Emacs/W3 follow links
 using the @code{browse-url} functions (which will call some external web
 browser like Netscape).  Here's one way:
 
@@ -15999,7 +16028,7 @@ browser like Netscape).  Here's one way:
         (w3-fetch-orig url target)))))
 @end lisp
 
-Put that in your @file{.emacs} file, and hitting links in w3-rendered
+Put that in your @file{.emacs} file, and hitting links in W3-rendered
 @acronym{HTML} in the Gnus article buffers will use @code{browse-url} to
 follow the link.
 
@@ -16297,7 +16326,7 @@ RFC 2060 for more information on valid strings.
 A file containing credentials used to log in on servers.  The format is
 (almost) the same as the @code{ftp} @file{~/.netrc} file.  See the
 variable @code{nntp-authinfo-file} for exact syntax; also see
-@ref{NNTP}.  An example of an .authinfo line for an IMAP server, is: 
+@ref{NNTP}.  An example of an .authinfo line for an IMAP server, is:
 
 @example
 machine students.uio.no login larsi password geheimnis port imap
@@ -16497,7 +16526,7 @@ Nnmail equivalent: @code{nnmail-split-fancy}.
 Set to non-@code{nil} to download entire articles during splitting.
 This is generally not required, and will slow things down
 considerably.  You may need it if you want to use an advanced
-splitting function that analyses the body to split the article.
+splitting function that analyzes the body to split the article.
 
 @end table
 
@@ -16592,7 +16621,7 @@ delete them.
 @cindex namespaces
 
 The @acronym{IMAP} protocol has a concept called namespaces, described
-by the following text in the RFC:
+by the following text in the RFC2060:
 
 @display
 5.1.2.  Mailbox Namespace Naming Convention
@@ -16635,7 +16664,7 @@ tool and should be used only if you are sure what the effects are.
 
 @acronym{IMAP} is a complex protocol, more so than @acronym{NNTP} or
 @acronym{POP3}.  Implementation bugs are not unlikely, and we do our
-best to fix them right away.  If you encounter odd behaviour, chances
+best to fix them right away.  If you encounter odd behavior, chances
 are that either the server or Gnus is buggy.
 
 If you are familiar with network protocols in general, you will
@@ -16650,7 +16679,7 @@ to include the protocol dump when reporting IMAP bugs in Gnus.
 @vindex imap-log
 Because the protocol dump, when enabled, generates lots of data, it is
 disabled by default.  You can enable it by setting @code{imap-log} as
-follows: 
+follows:
 
 @lisp
 (setq imap-log t)
@@ -16782,12 +16811,11 @@ as a newsgroup.  Several files types are supported:
 @table @code
 @cindex Babyl
 @cindex Rmail mbox
-
 @item babyl
 The Babyl (Rmail) mail box.
+
 @cindex mbox
 @cindex Unix mbox
-
 @item mbox
 The standard Unix mbox file.
 
@@ -16798,13 +16826,9 @@ The MMDF mail box format.
 @item news
 Several news articles appended into a file.
 
-@item rnews
 @cindex rnews batch files
+@item rnews
 The rnews batch transport format.
-@cindex forwarded messages
-
-@item forward
-Forwarded articles.
 
 @item nsmail
 Netscape mail boxes.
@@ -16821,6 +16845,7 @@ A @acronym{MIME} digest of messages.
 @item lanl-gov-announce
 Announcement messages from LANL Gov Announce.
 
+@cindex forwarded messages
 @item rfc822-forward
 A message forwarded according to RFC822.
 
@@ -16924,34 +16949,48 @@ totally ignored.
 
 @item article-begin
 This setting has to be present in all document type definitions.  It
-says what the beginning of each article looks like.
+says what the beginning of each article looks like.  To do more
+complicated things that cannot be dealt with a simple regexp, you can
+use @code{article-begin-function} instead of this.
+
+@item article-begin-function
+If present, this should be a function that moves point to the beginning
+of each article.  This setting overrides @code{article-begin}.
+
+@item head-begin
+If present, this should be a regexp that matches the head of the
+article.  To do more complicated things that cannot be dealt with a
+simple regexp, you can use @code{head-begin-function} instead of this.
 
 @item head-begin-function
 If present, this should be a function that moves point to the head of
-the article.
+the article.  This setting overrides @code{head-begin}.
 
-@item nndoc-head-begin
-If present, this should be a regexp that matches the head of the
-article.
-
-@item nndoc-head-end
+@item head-end
 This should match the end of the head of the article.  It defaults to
 @samp{^$}---the empty line.
 
-@item body-begin-function
-If present, this function should move point to the beginning of the body
-of the article.
-
 @item body-begin
 This should match the beginning of the body of the article.  It defaults
-to @samp{^\n}.
+to @samp{^\n}.  To do more complicated things that cannot be dealt with
+a simple regexp, you can use @code{body-begin-function} instead of this.
+
+@item body-begin-function
+If present, this function should move point to the beginning of the body
+of the article.  This setting overrides @code{body-begin}.
+
+@item body-end
+If present, this should match the end of the body of the article.  To do
+more complicated things that cannot be dealt with a simple regexp, you
+can use @code{body-end-function} instead of this.
 
 @item body-end-function
 If present, this function should move point to the end of the body of
-the article.
+the article.  This setting overrides @code{body-end}.
 
-@item body-end
-If present, this should match the end of the body of the article.
+@item file-begin
+If present, this should match the beginning of the file.  All text
+before this regexp will be totally ignored.
 
 @item file-end
 If present, this should match the end of the file.  All text after this
@@ -16981,6 +17020,19 @@ If present, this function is called to generate a head that Gnus can
 understand.  It is called with the article number as a parameter, and is
 expected to generate a nice head for the article in question.  It is
 called when requesting the headers of all articles.
+
+@item generate-article-function
+If present, this function is called to generate an entire article that
+Gnus can understand.  It is called with the article number as a
+parameter when requesting all articles.
+
+@item dissection-function
+If present, this function is called to dissect a document by itself,
+overriding @code{first-article}, @code{article-begin},
+@code{article-begin-function}, @code{head-begin},
+@code{head-begin-function}, @code{head-end}, @code{body-begin},
+@code{body-begin-function}, @code{body-end}, @code{body-end-function},
+@code{file-begin}, and @code{file-end}.
 
 @end table
 
@@ -18372,11 +18424,11 @@ faces will be obscured by the undownloaded faces.  If this is your
 situation, you have two choices available.  First, you can completely
 disable the undownload faces by customizing
 @code{gnus-summary-highlight} to delete the three cons-cells that
-refer to the @code{gnus-summary-*-undownloaded-face} faces.  Second, if
-you prefer to take a more fine-grained approach, you may set the
-@code{agent-disable-undownloaded-faces} group parameter to t.  This
-parameter, like all other agent parameters, may be set on an Agent
-Category (@pxref{Agent Categories}), a Group Topic (@pxref{Topic
+refer to the @code{gnus-summary-*-undownloaded-face} faces.  Second,
+if you prefer to take a more fine-grained approach, you may set the
+@code{agent-disable-undownloaded-faces} group parameter to @code{t}.
+This parameter, like all other agent parameters, may be set on an
+Agent Category (@pxref{Agent Categories}), a Group Topic (@pxref{Topic
 Parameters}), or an individual group (@pxref{Group Parameters}).
 
 @node Agent as Cache
@@ -18588,7 +18640,7 @@ online status.
 If @code{gnus-agent-mark-unread-after-downloaded} is non-@code{nil},
 mark articles as unread after downloading.  This is usually a safe
 thing to do as the newly downloaded article has obviously not been
-read.  The default is t.
+read.  The default is @code{t}.
 
 @item gnus-agent-consider-all-articles
 @vindex gnus-agent-consider-all-articles
@@ -18726,7 +18778,7 @@ may ask:
 @table @dfn
 @item If I read an article while plugged, do they get entered into the Agent?
 
-@strong{No}.  If you want this behaviour, add
+@strong{No}.  If you want this behavior, add
 @code{gnus-agent-fetch-selected-article} to
 @code{gnus-select-article-hook}.
 
@@ -19761,7 +19813,8 @@ group name, the @var{file-name} will be used as the home score file.
 
 @item
 A function.  If the function returns non-@code{nil}, the result will
-be used as the home score file.
+be used as the home score file.  The function will be called with the
+name of the group as the parameter.
 
 @item
 A string.  Use the string as the home score file.
@@ -20498,8 +20551,19 @@ very interesting:
  1000)
 @end example
 
-The possibilities are endless.
+Suppose you're reading a high volume group and you're only interested
+in replies. The plan is to score down all articles that don't have
+subject that begin with "Re:", "Fw:" or "Fwd:" and then score up all
+parents of articles that have subjects that begin with reply marks.
 
+@example
+((! ("subject" "re:\\|fwd?:" r))
+  -200)
+((1- ("subject" "re:\\|fwd?:" r))
+  200)
+@end example
+
+The possibilities are endless.
 
 @node Advanced Scoring Tips
 @subsection Advanced Scoring Tips
@@ -21012,7 +21076,7 @@ mode-line variables.
 
 Gnus usually moves point to a pre-defined place on each line in most
 buffers.  By default, point move to the first colon character on the
-line.  You can customize this behaviour in three different ways.
+line.  You can customize this behavior in three different ways.
 
 You can move the colon character to somewhere else on the line.
 
@@ -21749,27 +21813,18 @@ The specs are applied left-to-right.
 
 @item gnus-nocem-verifyer
 @vindex gnus-nocem-verifyer
-@findex mc-verify
+@findex pgg-verify
 This should be a function for verifying that the NoCeM issuer is who she
-says she is.  The default is @code{mc-verify}, which is a Mailcrypt
-function.  If this is too slow and you don't care for verification
-(which may be dangerous), you can set this variable to @code{nil}.
+says she is.  The default is @code{pgg-verify}, which returns
+non-@code{nil} if the verification is successful, otherwise (including
+the case the NoCeM message was not signed) returns @code{nil}.  If this
+is too slow and you don't care for verification (which may be dangerous),
+you can set this variable to @code{nil}.
 
-If you want signed NoCeM messages to be verified and unsigned messages
-not to be verified (but used anyway), you could do something like:
-
-@lisp
-(setq gnus-nocem-verifyer 'my-gnus-mc-verify)
-
-(defun my-gnus-mc-verify ()
-  (not (eq 'forged
-           (ignore-errors
-             (if (mc-verify)
-                 t
-               'forged)))))
-@end lisp
-
-This might be dangerous, though.
+Formerly the default was @code{mc-verify}, which is a Mailcrypt
+function.  While you can still use it, you can change it into
+@code{pgg-verify} running with GnuPG if you are willing to add the
+@acronym{PGP} public keys to GnuPG's keyring.
 
 @item gnus-nocem-directory
 @vindex gnus-nocem-directory
@@ -21971,11 +22026,11 @@ function, this function will be called with the face as the argument.
 If the @code{gnus-article-x-face-too-ugly} (which is a regexp) matches
 the @code{From} header, the face will not be shown.
 
-The default action under Emacs 20 is to fork off the @code{display}
-program@footnote{@code{display} is from the ImageMagick package.  For
-the @code{uncompface} and @code{icontopbm} programs look for a package
-like @code{compface} or @code{faces-xface} on a GNU/Linux system.}  to
-view the face.
+The default action under Emacs without image support is to fork off the
+@code{display} program@footnote{@code{display} is from the ImageMagick
+package.  For the @code{uncompface} and @code{icontopbm} programs look
+for a package like @code{compface} or @code{faces-xface} on a GNU/Linux
+system.} to view the face.
 
 Under XEmacs or Emacs 21+ with suitable image support, the default
 action is to display the face before the @code{From} header.  (It's
@@ -22221,18 +22276,6 @@ This is where Gnus will look for pictures.  Gnus will normally
 auto-detect this directory, but you may set it manually if you have an
 unusual directory structure.
 
-@item gnus-xmas-logo-color-alist
-@vindex gnus-xmas-logo-color-alist
-This is an alist where the key is a type symbol and the values are the
-foreground and background color of the splash page glyph.
-
-@item gnus-xmas-logo-color-style
-@vindex gnus-xmas-logo-color-style
-This is the key used to look up the color in the alist described above.
-Valid values include @code{flame}, @code{pine}, @code{moss},
-@code{irish}, @code{sky}, @code{tin}, @code{velvet}, @code{grape},
-@code{labia}, @code{berry}, @code{neutral}, and @code{september}.
-
 @item gnus-xmas-modeline-glyph
 @vindex gnus-xmas-modeline-glyph
 A glyph displayed in all Gnus mode lines.  It is a tiny gnu head by
@@ -22246,9 +22289,19 @@ default.
 
 @item gnus-use-toolbar
 @vindex gnus-use-toolbar
-If @code{nil}, don't display toolbars.  If non-@code{nil}, it should be
-one of @code{default-toolbar}, @code{top-toolbar}, @code{bottom-toolbar},
-@code{right-toolbar}, or @code{left-toolbar}.
+This variable specifies the position to display the toolbar.  If
+@code{nil}, don't display toolbars.  If it is non-nil, it should be one
+of the symbols @code{default}, @code{top}, @code{bottom}, @code{right},
+and @code{left}.  @code{default} means to use the default toolbar, the
+rest mean to display the toolbar on the place which those names show.
+The default is @code{default}.
+
+@item gnus-toolbar-thickness
+@vindex gnus-toolbar-thickness
+Cons of the height and the width specifying the thickness of a toolbar.
+The height is used for the toolbar displayed on the top or the bottom,
+the width is used for the toolbar displayed on the right or the left.
+The default is that of the default toolbar.
 
 @item gnus-group-toolbar
 @vindex gnus-group-toolbar
@@ -22361,7 +22414,7 @@ messages per day from @samp{random-address@@vmadmin.com}, you block
 @samp{vmadmin.com}.  If you get 200 messages about @samp{VIAGRA}, you
 discard all messages with @samp{VIAGRA} in the message.  If you get
 lots of spam from Bulgaria, for example, you try to filter all mail
-from Bulgarian IPs.  
+from Bulgarian IPs.
 
 This, unfortunately, is a great way to discard legitimate e-mail.  The
 risks of blocking a whole country (Bulgaria, Norway, Nigeria, China,
@@ -22704,22 +22757,22 @@ variables.  Try @code{customize-group} on the @samp{spam} variable
 group.
 
 @menu
-* Spam ELisp Package Sequence of Events::  
-* Spam ELisp Package Filtering of Incoming Mail::  
-* Spam ELisp Package Global Variables::  
-* Spam ELisp Package Configuration Examples::  
-* Blacklists and Whitelists::   
-* BBDB Whitelists::             
-* Gmane Spam Reporting::        
-* Anti-spam Hashcash Payments::  
-* Blackholes::                  
-* Regular Expressions Header Matching::  
-* Bogofilter::                  
-* ifile spam filtering::        
-* spam-stat spam filtering::    
-* SpamOracle::                  
-* Extending the Spam ELisp package::  
-@end menu 
+* Spam ELisp Package Sequence of Events::
+* Spam ELisp Package Filtering of Incoming Mail::
+* Spam ELisp Package Global Variables::
+* Spam ELisp Package Configuration Examples::
+* Blacklists and Whitelists::
+* BBDB Whitelists::
+* Gmane Spam Reporting::
+* Anti-spam Hashcash Payments::
+* Blackholes::
+* Regular Expressions Header Matching::
+* Bogofilter::
+* ifile spam filtering::
+* spam-stat spam filtering::
+* SpamOracle::
+* Extending the Spam ELisp package::
+@end menu
 
 @node Spam ELisp Package Sequence of Events
 @subsubsection Spam ELisp Package Sequence of Events
@@ -23174,7 +23227,7 @@ From Ted Zlatanov <tzz@@lifelogs.com>.
  ;; @r{any ham goes to my @samp{nnimap+mail.lifelogs.com:mail} folder, but}
  ;; @r{also to my @samp{nnimap+mail.lifelogs.com:trainham} folder for training}
 
- (ham-process-destination "nnimap+mail.lifelogs.com:mail" 
+ (ham-process-destination "nnimap+mail.lifelogs.com:mail"
                           "nnimap+mail.lifelogs.com:trainham")
  ;; @r{in this group, only @samp{!} marks are ham}
  (ham-marks
@@ -23215,7 +23268,7 @@ does most of the job for me:
     (spam-contents gnus-group-spam-classification-ham))
 @end lisp
 
-@itemize 
+@itemize
 
 @item @b{The Spam folder:}
 
@@ -23308,7 +23361,7 @@ customizing the group parameters or the
 added to a group's @code{spam-process} parameter, the senders of
 spam-marked articles will be added to the blacklist.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-spam-exit-processor-blacklist}, it is recommended
@@ -23327,7 +23380,7 @@ ham-marked articles in @emph{ham} groups will be added to the
 whitelist.  Note that this ham processor has no effect in @emph{spam}
 or @emph{unclassified} groups.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-ham-exit-processor-whitelist}, it is recommended
@@ -23393,7 +23446,7 @@ ham-marked articles in @emph{ham} groups will be added to the
 BBDB.  Note that this ham processor has no effect in @emph{spam}
 or @emph{unclassified} groups.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-ham-exit-processor-BBDB}, it is recommended
@@ -23420,7 +23473,7 @@ HTTP request.
 
 Gmane can be found at @uref{http://gmane.org}.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-spam-exit-processor-report-gmane}, it is recommended
@@ -23589,7 +23642,7 @@ customizing the group parameters or the
 added to a group's @code{spam-process} parameter, spam-marked articles
 will be added to the Bogofilter spam database.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-spam-exit-processor-bogofilter}, it is recommended
@@ -23606,7 +23659,7 @@ articles in @emph{ham} groups will be added to the Bogofilter database
 of non-spam messages.  Note that this ham processor has no effect in
 @emph{spam} or @emph{unclassified} groups.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-ham-exit-processor-bogofilter}, it is recommended
@@ -23693,7 +23746,7 @@ customizing the group parameters or the
 added to a group's @code{spam-process} parameter, the spam-marked
 articles will be added to the spam-stat database of spam messages.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-spam-exit-processor-stat}, it is recommended
@@ -23710,7 +23763,7 @@ articles in @emph{ham} groups will be added to the spam-stat database
 of non-spam messages.  Note that this ham processor has no effect in
 @emph{spam} or @emph{unclassified} groups.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-ham-exit-processor-stat}, it is recommended
@@ -23802,7 +23855,7 @@ customizing the group parameter or the
 to a group's @code{spam-process} parameter, spam-marked articles will be
 sent to SpamOracle as spam samples.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-spam-exit-processor-spamoracle}, it is recommended
@@ -23819,7 +23872,7 @@ to a group's @code{spam-process} parameter, the ham-marked articles in
 messages.  Note that this ham processor has no effect in @emph{spam} or
 @emph{unclassified} groups.
 
-@emph{WARNING} 
+@emph{WARNING}
 
 Instead of the obsolete
 @code{gnus-group-ham-exit-processor-spamoracle}, it is recommended
@@ -23914,7 +23967,7 @@ Note you don't have to provide a spam or a ham processor.  Only
 provide them if Blackbox supports spam or ham processing.
 
 Also, ham and spam processors are being phased out as single
-variables.  Instead the form @code{'(spam spam-use-blackbox)} or 
+variables.  Instead the form @code{'(spam spam-use-blackbox)} or
 @code{'(ham spam-use-blackbox)} is favored.  For now, spam/ham
 processor variables are still around but they won't be for long.
 
@@ -24302,7 +24355,7 @@ to the Gnus back ends instead of Gnus proper.
 @item nnheader-max-head-length
 @vindex nnheader-max-head-length
 When the back ends read straight heads of articles, they all try to read
-as little as possible.  This variable (default 4096) specifies
+as little as possible.  This variable (default 8192) specifies
 the absolute max length the back ends will try to read before giving up
 on finding a separator line between the head and the body.  If this
 variable is @code{nil}, there is no upper read bound.  If it is
@@ -24419,7 +24472,7 @@ XEmacs is distributed as a collection of packages.  You should install
 whatever packages the Gnus XEmacs package requires.  The current
 requirements are @samp{gnus}, @samp{mail-lib}, @samp{xemacs-base},
 @samp{eterm}, @samp{sh-script}, @samp{net-utils}, @samp{os-utils},
-@samp{dired}, @samp{mh-e}, @samp{sieve}, @samp{ps-print}, @samp{w3},
+@samp{dired}, @samp{mh-e}, @samp{sieve}, @samp{ps-print}, @samp{W3},
 @samp{pgg}, @samp{mailcrypt}, @samp{ecrypto}, and @samp{sasl}.
 
 
@@ -24483,7 +24536,7 @@ On July 28th 1996 work on Red Gnus was begun, and it was released on
 January 25th 1997 (after 84 releases) as ``Gnus 5.4'' (67 releases).
 
 On September 13th 1997, Quassia Gnus was started and lasted 37 releases.
-If was released as ``Gnus 5.6'' on March 8th 1998 (46 releases).
+It was released as ``Gnus 5.6'' on March 8th 1998 (46 releases).
 
 Gnus 5.6 begat Pterodactyl Gnus on August 29th 1998 and was released as
 ``Gnus 5.8'' (after 99 releases and a CVS repository) on December 3rd
@@ -26024,7 +26077,7 @@ The new variable @code{gnus-parameters} can be used to set group parameters.
 Earlier this was done only via @kbd{G p} (or @kbd{G c}), which stored
 the parameters in @file{~/.newsrc.eld}, but via this variable you can
 enjoy the powers of customize, and simplified backups since you set the
-variable in @file{~/.emacs} instead of @file{~/.newsrc.eld}.  The
+variable in @file{~/.gnus.el} instead of @file{~/.newsrc.eld}.  The
 variable maps regular expressions matching group names to group
 parameters, a'la:
 @lisp
@@ -26039,7 +26092,7 @@ parameters, a'la:
 @item
 Smileys (@samp{:-)}, @samp{;-)} etc) are now iconized for Emacs too.
 
-Put @code{(setq gnus-treat-display-smileys nil)} in @file{~/.emacs} to
+Put @code{(setq gnus-treat-display-smileys nil)} in @file{~/.gnus.el} to
 disable it.
 
 @item
@@ -26066,8 +26119,8 @@ appropriate headers and a note in the body for cross-postings and
 followups (see the variables @code{message-cross-post-@var{*}}).
 
 @item
-References and X-Draft-Headers are no longer generated when you start
-composing messages and @code{message-generate-headers-first} is
+References and X-Draft-From headers are no longer generated when you
+start composing messages and @code{message-generate-headers-first} is
 @code{nil}.
 
 @item
@@ -26140,7 +26193,7 @@ unplugged state.  You can enroll or remove servers with @kbd{J a} and
 @kbd{J r} in the server buffer.  Gnus will not download articles into
 the Agent cache, unless you instruct it to do so, though, by using
 @kbd{J u} or @kbd{J s} from the Group buffer.  You revert to the old
-behaviour of having the Agent disabled with @code{(setq gnus-agent
+behavior of having the Agent disabled with @code{(setq gnus-agent
 nil)}.  Note that putting @code{(gnus-agentize)} in @file{~/.gnus.el}
 is not needed any more.
 
@@ -26280,7 +26333,7 @@ you post a message, and saves it in your @file{~/.emacs} using the Custom
 system.  While the variable is called @code{canlock-password}, it is not
 security sensitive data.  Publishing your canlock string on the web
 will not allow anyone to be able to anything she could not already do.
-The behaviour can be changed by customizing @code{message-insert-canlock}.
+The behavior can be changed by customizing @code{message-insert-canlock}.
 
 @item
 Gnus supports server-side mail filtering using Sieve.
@@ -26308,7 +26361,8 @@ It was aliased to @kbd{Y c}
 (@code{gnus-summary-insert-cached-articles}).  The new function filters
 out other articles.
 
-@item Some limiting commands accept a @kbd{C-u} prefix to negate the match.
+@item
+Some limiting commands accept a @kbd{C-u} prefix to negate the match.
 
 If @kbd{C-u} is used on subject, author or extra headers, i.e., @kbd{/
 s}, @kbd{/ a}, and @kbd{/ x}
@@ -26380,7 +26434,7 @@ This change was made to avoid conflict with the standard binding of
 @item
 The default for @code{message-forward-show-mml} changed to symbol @code{best}.
 
-The behaviour for the @code{best} value is to show @acronym{MML} (i.e.,
+The behavior for the @code{best} value is to show @acronym{MML} (i.e.,
 convert to @acronym{MIME}) when appropriate.  @acronym{MML} will not be
 used when forwarding signed or encrypted messages, as the conversion
 invalidate the digital signature.
@@ -26759,7 +26813,7 @@ minimum.  You can, in fact, make do without them altogether---most of the
 useful data is in the summary buffer, anyway.  Set this variable to
 @samp{^NEVVVVER} or @samp{From:}, or whatever you feel you need.
 
-Set this hook to all the available hiding commands:
+Use the following to enable all the available hiding features:
 @lisp
 (setq gnus-treat-hide-headers 'head
       gnus-treat-hide-signature t
@@ -26905,7 +26959,7 @@ in order to solve the problem yourself and send a patch, you can use
 edebug.  Debugging Lisp code is documented in the Elisp manual
 (@pxref{Debugging, , Debugging Lisp Programs, elisp, The GNU Emacs
 Lisp Reference Manual}).  To get you started with edebug, consider if
-you discover some weird behaviour when pressing @kbd{c}, the first
+you discover some weird behavior when pressing @kbd{c}, the first
 step is to do @kbd{C-h k c} and click on the hyperlink (Emacs only) in
 the documentation buffer that leads you to the function definition,
 then press @kbd{M-x edebug-defun RET} with point inside that function,
@@ -28487,8 +28541,10 @@ interpreted.)  If you decide that you don't like the way Gnus does
 certain things, it's trivial to have it do something a different way.
 (Well, at least if you know how to write Lisp code.)  However, that's
 beyond the scope of this manual, so we are simply going to talk about
-some common constructs that you normally use in your @file{.emacs} file
-to customize Gnus.
+some common constructs that you normally use in your @file{~/.gnus.el}
+file to customize Gnus.  (You can also use the @file{~/.emacs} file, but
+in order to set things of Gnus up, it is much better to use the
+@file{~/.gnus.el} file, @xref{Startup Files}.)
 
 If you want to set the variable @code{gnus-florgbnize} to four (4), you
 write the following:
@@ -28499,12 +28555,12 @@ write the following:
 
 This function (really ``special form'') @code{setq} is the one that can
 set a variable to some value.  This is really all you need to know.  Now
-you can go and fill your @file{.emacs} file with lots of these to change
-how Gnus works.
+you can go and fill your @file{~/.gnus.el} file with lots of these to
+change how Gnus works.
 
-If you have put that thing in your @file{.emacs} file, it will be read
-and @code{eval}ed (which is lisp-ese for ``run'') the next time you
-start Emacs.  If you want to change the variable right away, simply say
+If you have put that thing in your @file{~/.gnus.el} file, it will be
+read and @code{eval}ed (which is Lisp-ese for ``run'') the next time you
+start Gnus.  If you want to change the variable right away, simply say
 @kbd{C-x C-e} after the closing parenthesis.  That will @code{eval} the
 previous ``form'', which is a simple @code{setq} statement here.
 

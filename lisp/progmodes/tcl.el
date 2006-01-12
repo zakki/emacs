@@ -1,6 +1,6 @@
 ;;; tcl.el --- Tcl code editing commands for Emacs
 
-;; Copyright (C) 1994, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
+;; Copyright (C) 1994, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006
 ;;           Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;; BEFORE USE:
 ;;
@@ -118,7 +118,8 @@
 ;;
 
 (defgroup tcl nil
-  "Major mode for editing Tcl source in Emacs"
+  "Major mode for editing Tcl source in Emacs."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'languages)
 
 (defcustom tcl-indent-level 4
@@ -681,16 +682,9 @@ from the following list to take place:
   5. Create an empty comment.
   6. Move backward to start of comment, indenting if necessary."
   (interactive "p")
-  (cond
-   ((not tcl-tab-always-indent)
-    ;; Indent if in indentation area, otherwise insert TAB.
-    (if (<= (current-column) (current-indentation))
-	(tcl-indent-line)
-      (insert-tab arg)))
-   ((eq tcl-tab-always-indent t)
-    ;; Always indent.
-    (tcl-indent-line))
-   (t
+  (if (memq tcl-tab-always-indent '(nil t))
+      (let ((tab-always-indent tcl-tab-always-indent))
+        (call-interactively 'indent-for-tab-command))
     ;; "Perl-mode" style TAB command.
     (let* ((ipoint (point))
 	   (eolpoint (progn
@@ -729,7 +723,7 @@ from the following list to take place:
 	;; Go to start of comment.  We don't leave point where it is
 	;; because we want to skip comment-start-skip.
 	(tcl-indent-line)
-	(indent-for-comment)))))))
+	(indent-for-comment))))))
 
 (defun tcl-indent-line ()
   "Indent current line as Tcl code.
@@ -738,29 +732,28 @@ Return the amount the indentation changed by."
 	beg shift-amt
 	(case-fold-search nil)
 	(pos (- (point-max) (point))))
-    (beginning-of-line)
-    (setq beg (point))
-    (cond ((eq indent nil)
-	   (setq indent (current-indentation)))
-	  (t
-	   (skip-chars-forward " \t")
-	   (if (listp indent) (setq indent (car indent)))
-	   (cond ((= (following-char) ?})
-		  (setq indent (- indent tcl-indent-level)))
-		 ((= (following-char) ?\])
-		  (setq indent (- indent 1))))))
-    (skip-chars-forward " \t")
-    (setq shift-amt (- indent (current-column)))
-    (if (zerop shift-amt)
-	(if (> (- (point-max) pos) (point))
-	    (goto-char (- (point-max) pos)))
-      (delete-region beg (point))
-      (indent-to indent)
-      ;; If initial point was within line's indentation,
-      ;; position after the indentation.  Else stay at same point in text.
-      (if (> (- (point-max) pos) (point))
-	  (goto-char (- (point-max) pos))))
-    shift-amt))
+    (if (null indent)
+        'noindent
+      (beginning-of-line)
+      (setq beg (point))
+      (skip-chars-forward " \t")
+      (if (listp indent) (setq indent (car indent)))
+      (cond ((= (following-char) ?})
+             (setq indent (- indent tcl-indent-level)))
+            ((= (following-char) ?\])
+             (setq indent (- indent 1))))
+      (skip-chars-forward " \t")
+      (setq shift-amt (- indent (current-column)))
+      (if (zerop shift-amt)
+          (if (> (- (point-max) pos) (point))
+              (goto-char (- (point-max) pos)))
+        (delete-region beg (point))
+        (indent-to indent)
+        ;; If initial point was within line's indentation,
+        ;; position after the indentation.  Else stay at same point in text.
+        (if (> (- (point-max) pos) (point))
+            (goto-char (- (point-max) pos))))
+      shift-amt)))
 
 (defun tcl-figure-type ()
   "Determine type of sexp at point.
@@ -1489,7 +1482,7 @@ styles."
     (unless (or (bolp) (tcl-real-command-p))
       (insert ";")
       ;; Try and erase a non-significant char to keep charpos identical.
-      (if (memq (char-after) '(?\t ?\ )) (delete-char 1))))
+      (if (memq (char-after) '(?\t ?\s)) (delete-char 1))))
   (funcall (default-value 'comment-indent-function)))
 
 ;; The following was inspired by the Tcl editing mode written by
@@ -1533,7 +1526,7 @@ The first line is assumed to look like \"#!.../program ...\"."
 (defun tcl-quote (string)
   "Quote STRING according to Tcl rules."
   (mapconcat (lambda (char)
-	       (if (memq char '(?[ ?] ?{ ?} ?\\ ?\" ?$ ?  ?\;))
+	       (if (memq char '(?[ ?] ?{ ?} ?\\ ?\" ?$ ?\s ?\;))
 		   (concat "\\" (char-to-string char))
 		 (char-to-string char)))
 	     string ""))

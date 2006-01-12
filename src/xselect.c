@@ -1,6 +1,6 @@
 /* X Selection processing for Emacs.
-   Copyright (C) 1993, 1994, 1995, 1996, 1997, 2000, 2001, 2003, 2004
-   Free Software Foundation.
+   Copyright (C) 1993, 1994, 1995, 1996, 1997, 2000, 2001, 2002, 2003,
+                 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 /* Rewritten by jwz */
@@ -2031,7 +2031,7 @@ lisp_data_to_selection_data (display, obj,
 
           /* Use sizeof(long) even if it is more than 32 bits.  See comment
              in x_get_window_property and x_fill_property_data.  */
-          
+
           if (*format_ret == 32) data_size = sizeof(long);
 	  *data_ret = (unsigned char *) xmalloc (*size_ret * data_size);
 	  for (i = 0; i < *size_ret; i++)
@@ -2045,7 +2045,7 @@ lisp_data_to_selection_data (display, obj,
     }
   else
     Fsignal (Qerror, /* Qselection_error */
-	     Fcons (build_string ("unrecognised selection data"),
+	     Fcons (build_string ("unrecognized selection data"),
 		    Fcons (obj, Qnil)));
 
   *type_ret = symbol_to_x_atom (dpyinfo, display, type);
@@ -2119,7 +2119,7 @@ anything that the functions on `selection-converter-alist' know about.  */)
 {
   check_x ();
   CHECK_SYMBOL (selection_name);
-  if (NILP (selection_value)) error ("selection-value may not be nil");
+  if (NILP (selection_value)) error ("SELECTION-VALUE may not be nil");
   x_own_selection (selection_name, selection_value);
   return selection_value;
 }
@@ -2727,11 +2727,11 @@ x_handle_dnd_message (f, event, dpyinfo, bufp)
 
   mouse_position_for_drop (f, &x, &y);
   bufp->kind = DRAG_N_DROP_EVENT;
-  bufp->frame_or_window = Fcons (frame, vec);
+  bufp->frame_or_window = frame;
   bufp->timestamp = CurrentTime;
   bufp->x = make_number (x);
   bufp->y = make_number (y);
-  bufp->arg = Qnil;
+  bufp->arg = vec;
   bufp->modifiers = 0;
 
   return 1;
@@ -2832,7 +2832,7 @@ are ignored.  */)
      when sending to the root window.  */
   event.xclient.window = to_root ? FRAME_OUTER_WINDOW (f) : wdest;
 
-  
+
   memset (event.xclient.data.b, 0, sizeof (event.xclient.data.b));
   x_fill_property_data (dpyinfo->display, values, event.xclient.data.b,
                         event.xclient.format);
@@ -2954,7 +2954,6 @@ A value of 0 means wait as long as necessary.  This is initialized from the
   QTEXT      = intern ("TEXT"); 	staticpro (&QTEXT);
   QCOMPOUND_TEXT = intern ("COMPOUND_TEXT"); staticpro (&QCOMPOUND_TEXT);
   QUTF8_STRING = intern ("UTF8_STRING"); staticpro (&QUTF8_STRING);
-  QTIMESTAMP = intern ("TIMESTAMP");	staticpro (&QTIMESTAMP);
   QDELETE    = intern ("DELETE");	staticpro (&QDELETE);
   QMULTIPLE  = intern ("MULTIPLE");	staticpro (&QMULTIPLE);
   QINCR      = intern ("INCR");		staticpro (&QINCR);

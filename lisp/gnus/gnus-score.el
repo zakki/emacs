@@ -1,6 +1,7 @@
 ;;; gnus-score.el --- scoring code for Gnus
-;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Per Abrahamsen <amanda@iesd.auc.dk>
 ;;	Lars Magne Ingebrigtsen <larsi@gnus.org>
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -141,7 +142,7 @@ If this variable is nil, no score file entries will be expired."
 		 number))
 
 (defcustom gnus-update-score-entry-dates t
-  "*In non-nil, update matching score entry dates.
+  "*If non-nil, update matching score entry dates.
 If this variable is nil, then score entries that provide matches
 will be expired along with non-matching score entries."
   :group 'gnus-score-expire
@@ -174,7 +175,7 @@ It is called with one parameter -- the score to be decayed."
 It can be:
 
  * A string
-   This file file will be used as the home score file.
+   This file will be used as the home score file.
 
  * A function
    The result of this function will be used as the home score file.
@@ -185,7 +186,7 @@ It can be:
    The elements in this list can be:
 
    * `(regexp file-name ...)'
-     If the `regexp' matches the group name, the first `file-name' will
+     If the `regexp' matches the group name, the first `file-name'
      will be used as the home score file.  (Multiple filenames are
      allowed so that one may use gnus-score-file-single-match-alist to
      set this variable.)
@@ -220,13 +221,22 @@ This variable allows the same syntax as `gnus-home-score-file'."
 		 (function :value fun)))
 
 (defcustom gnus-default-adaptive-score-alist
-  '((gnus-kill-file-mark)
+  `((gnus-kill-file-mark)
     (gnus-unread-mark)
-    (gnus-read-mark (from 3) (subject 30))
-    (gnus-catchup-mark (subject -10))
-    (gnus-killed-mark (from -1) (subject -20))
-    (gnus-del-mark (from -2) (subject -15)))
-  "*Alist of marks and scores."
+    (gnus-read-mark
+     (from , (+ 2 gnus-score-decay-constant))
+     (subject , (+ 27 gnus-score-decay-constant)))
+    (gnus-catchup-mark
+     (subject , (+ -7 (* -1 gnus-score-decay-constant))))
+    (gnus-killed-mark
+     (from , (- -1 gnus-score-decay-constant))
+     (subject , (+ -17 (* -1 gnus-score-decay-constant))))
+    (gnus-del-mark
+     (from , (- -1 gnus-score-decay-constant))
+     (subject , (+ -12 (* -1 gnus-score-decay-constant)))))
+  "Alist of marks and scores.
+If you use score decays, you might want to set values higher than
+`gnus-score-decay-constant'."
   :group 'gnus-score-adapt
   :type '(repeat (cons (symbol :tag "Mark")
 		       (repeat (list (choice :tag "Header"
@@ -651,7 +661,7 @@ file for the command instead of the current score file."
 	       (intern			; need symbol
 		(gnus-completing-read-with-default
 		 (symbol-name (car gnus-extra-headers))	; default response
-		 "Score extra header:"	; prompt
+		 "Score extra header"	; prompt
 		 (mapcar (lambda (x)	; completion list
 			   (cons (symbol-name x) x))
 			 gnus-extra-headers)

@@ -1,6 +1,7 @@
 ;;; shell.el --- specialized comint.el for running the shell
 
-;; Copyright (C) 1988, 93, 94, 95, 96, 1997, 2000 Free Software Foundation, Inc.
+;; Copyright (C) 1988, 1993, 1994, 1995, 1996, 1997, 2000,
+;;   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Olin Shivers <shivers@cs.cmu.edu>
 ;;	Simon Marshall <simon@gnu.org>
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -108,16 +109,16 @@
 ;;; Customization and Buffer Variables
 
 (defgroup shell nil
-  "Running shell from within Emacs buffers"
+  "Running shell from within Emacs buffers."
   :group 'processes
   :group 'unix)
 
 (defgroup shell-directories nil
-  "Directory support in shell mode"
+  "Directory support in shell mode."
   :group 'shell)
 
 (defgroup shell-faces nil
-  "Faces in shell buffers"
+  "Faces in shell buffers."
   :group 'shell)
 
 ;;;###autoload
@@ -133,7 +134,7 @@ arguments."
 (defcustom shell-prompt-pattern "^[^#$%>\n]*[#$%>] *"
   "Regexp to match prompts in the inferior shell.
 Defaults to \"^[^#$%>\\n]*[#$%>] *\", which works pretty well.
-This variable is used to initialise `comint-prompt-regexp' in the
+This variable is used to initialize `comint-prompt-regexp' in the
 shell buffer.
 
 If `comint-use-prompt-regexp' is nil, then this variable is only used
@@ -159,7 +160,7 @@ This is a fine thing to set in your `.emacs' file."
   :group 'shell)
 
 (defvar shell-delimiter-argument-list '(?\| ?& ?< ?> ?\( ?\) ?\;)
-  "List of characters to recognise as separate arguments.
+  "List of characters to recognize as separate arguments.
 This variable is used to initialize `comint-delimiter-argument-list' in the
 shell buffer.  The value may depend on the operating system or shell.
 
@@ -178,7 +179,7 @@ This is a fine thing to set in your `.emacs' file.")
 (defvar shell-file-name-quote-list
   (if (memq system-type '(ms-dos windows-nt))
       nil
-    (append shell-delimiter-argument-list '(?\  ?\* ?\! ?\" ?\' ?\` ?\# ?\\)))
+    (append shell-delimiter-argument-list '(?\s ?\* ?\! ?\" ?\' ?\` ?\# ?\\)))
   "List of characters to quote when in a file name.
 This variable is used to initialize `comint-file-name-quote-list' in the
 shell buffer.  The value may depend on the operating system or shell.
@@ -192,7 +193,7 @@ This is a fine thing to set in your `.emacs' file.")
     shell-replace-by-expanded-directory
     comint-dynamic-complete-filename)
   "List of functions called to perform completion.
-This variable is used to initialise `comint-dynamic-complete-functions' in the
+This variable is used to initialize `comint-dynamic-complete-functions' in the
 shell buffer.
 
 This is a fine thing to set in your `.emacs' file.")
@@ -407,11 +408,11 @@ Variables `comint-completion-autolist', `comint-completion-addsuffix',
 `comint-completion-recexact' and `comint-completion-fignore' control the
 behavior of file name, command name and variable name completion.  Variable
 `shell-completion-execonly' controls the behavior of command name completion.
-Variable `shell-completion-fignore' is used to initialise the value of
+Variable `shell-completion-fignore' is used to initialize the value of
 `comint-completion-fignore'.
 
 Variables `comint-input-ring-file-name' and `comint-input-autoexpand' control
-the initialisation of the input ring history, and history expansion.
+the initialization of the input ring history, and history expansion.
 
 Variables `comint-output-filter-functions', a hook, and
 `comint-scroll-to-bottom-on-input' and `comint-scroll-to-bottom-on-output'
@@ -790,25 +791,32 @@ line output and parses it to form the new directory stack.
 DON'T issue this command unless the buffer is at a shell prompt.
 Also, note that if some other subprocess decides to do output
 immediately after the query, its output will be taken as the
-new directory stack -- you lose. If this happens, just do the
+new directory stack -- you lose.  If this happens, just do the
 command again."
   (interactive)
   (let* ((proc (get-buffer-process (current-buffer)))
 	 (pmark (process-mark proc)))
     (goto-char pmark)
-    (insert shell-dirstack-query) (insert "\n")
+    ;; If the process echoes commands, don't insert a fake command in
+    ;; the buffer or it will appear twice.
+    (unless comint-process-echoes
+      (insert shell-dirstack-query) (insert "\n"))
     (sit-for 0) ; force redisplay
     (comint-send-string proc shell-dirstack-query)
     (comint-send-string proc "\n")
     (set-marker pmark (point))
-    (let ((pt (point))) ; wait for 1 line
+    (let ((pt (point))
+	  (regexp
+	   (concat
+	    (if comint-process-echoes
+		;; Skip command echo if the process echoes
+		(concat "\\(" (regexp-quote shell-dirstack-query) "\n\\)")
+	      "\\(\\)")
+	    "\\(.+\n\\)")))
       ;; This extra newline prevents the user's pending input from spoofing us.
       (insert "\n") (backward-char 1)
-      (while (not (looking-at
-		   (concat "\\(" ; skip literal echo in case of stty echo
-			   (regexp-quote shell-dirstack-query)
-			   "\n\\)?" ; skip if present
-			   "\\(" ".+\n" "\\)")) ) ; what to actually look for
+      ;; Wait for one line.
+      (while (not (looking-at regexp))
 	(accept-process-output proc)
 	(goto-char pt)))
     (goto-char pmark) (delete-char 1) ; remove the extra newline
@@ -950,7 +958,7 @@ See `shell-dynamic-complete-filename'.  Returns t if successful."
 	  (and comint-completion-fignore
 	       (mapconcat (function (lambda (x) (concat (regexp-quote x) "$")))
 			  comint-completion-fignore "\\|")))
-	 (dir "") (comps-in-dir ()) 
+	 (dir "") (comps-in-dir ())
 	 (file "") (abs-file-name "") (completions ()))
     ;; Go thru each dir in the search path, finding completions.
     (while path-dirs

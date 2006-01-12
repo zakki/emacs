@@ -338,7 +338,7 @@ The solution is to use gawk (GNU awk).
 *** Emacs fails to understand most Internet host names, even though
 the names work properly with other programs on the same system.
 *** Emacs won't work with X-windows if the value of DISPLAY is HOSTNAME:0.
-*** GNUs can't make contact with the specified host for nntp.
+*** Gnus can't make contact with the specified host for nntp.
 
 This typically happens on Suns and other systems that use shared
 libraries.  The cause is that the site has installed a version of the
@@ -841,9 +841,16 @@ mule-unicode-0100-24ff:-gnu-unifont-*-iso10646-1
 
 ** The UTF-8/16/7 coding systems don't encode CJK (Far Eastern) characters.
 
-Emacs by default only supports the parts of the Unicode BMP whose code
-points are in the ranges 0000-33ff and e000-ffff.  This excludes: most
-of CJK, Yi and Hangul, as well as everything outside the BMP.
+Emacs directly supports the Unicode BMP whose code points are in the
+ranges 0000-33ff and e000-ffff, and indirectly supports the parts of
+CJK characters belonging to these legacy charsets:
+
+    GB2312, Big5, JISX0208, JISX0212, JISX0213-1, JISX0213-2, KSC5601
+
+The latter support is done in Utf-Translate-Cjk mode (turned on by
+default).   Which Unicode CJK characters are decoded into which Emacs
+charset is decided by the current language environment.  For instance,
+in Chinese-GB, most of them are decoded into chinese-gb2312.
 
 If you read UTF-8 data with code points outside these ranges, the
 characters appear in the buffer as raw bytes of the original UTF-8
@@ -852,13 +859,6 @@ correctly as UTF-8, assuming you don't break the composed sequences.
 If you read such characters from UTF-16 or UTF-7 data, they are
 substituted with the Unicode `replacement character', and you lose
 information.
-
-To edit such UTF data, turn on Utf-Translate-Cjk mode, which makes
-many common CJK characters available for encoding and decoding and can
-be extended by updating the tables it uses.  This also allows you to
-save as UTF buffers containing characters decoded by the chinese-,
-japanese- and korean- coding systems, e.g. cut and pasted from
-elsewhere.
 
 ** Mule-UCS loads very slowly.
 
@@ -902,6 +902,36 @@ distributions, such as Debian, may already have applied such a patch.)
 
 Note that Emacs has native support for Unicode, roughly equivalent to
 Mule-UCS's, so you may not need it.
+
+** Mule-UCS compilation problem.
+
+Emacs of old versions and XEmacs byte-compile the form `(progn progn
+...)' the same way as `(progn ...)', but Emacs of version 21.3 and the
+later process that form just as interpreter does, that is, as `progn'
+variable reference.  Apply the following patch to Mule-UCS 0.84 to
+make it compiled by the latest Emacs.
+
+--- mucs-ccl.el	2 Sep 2005 00:42:23 -0000	1.1.1.1
++++ mucs-ccl.el	2 Sep 2005 01:31:51 -0000	1.3
+@@ -639,10 +639,14 @@
+       (mucs-notify-embedment 'mucs-ccl-required name)
+       (setq ccl-pgm-list (cdr ccl-pgm-list)))
+ ;   (message "MCCLREGFIN:%S" result)
+-    `(progn
+-       (setq mucs-ccl-facility-alist
+-	     (quote ,mucs-ccl-facility-alist))
+-       ,@result)))
++    ;; The only way the function is used in this package is included
++    ;; in `mucs-package-definition-end-hook' value, where it must
++    ;; return (possibly empty) *list* of forms.  Do this.  Do not rely
++    ;; on byte compiler to remove extra `progn's in `(progn ...)' 
++    ;; form.
++    `((setq mucs-ccl-facility-alist
++	    (quote ,mucs-ccl-facility-alist))
++      ,@result)))
+ 
+ ;;; Add hook for embedding translation informations to a package.
+ (add-hook 'mucs-package-definition-end-hook
 
 ** Accented ISO-8859-1 characters are displayed as | or _.
 
@@ -960,6 +990,20 @@ xmodmap command to the xdm setup script for that display.
 *** Using X Windows, control-shift-leftbutton makes Emacs hang.
 
 Use the shell command `xset bc' to make the old X Menu package work.
+
+*** C-SPC fails to work on Fedora GNU/Linux.
+
+Fedora Core 4 steals the C-SPC key by default for the `iiimx' program
+which is the input method for some languages.  It blocks Emacs users
+from using the C-SPC key for `set-mark-command'.
+
+One solutions is to remove the `<Ctrl>space' from the `Iiimx' file
+which can be found in the `/usr/lib/X11/app-defaults' directory.
+However, that requires root access.
+
+Another is to specify `Emacs*useXIM: false' in your X resources.
+
+Another is to build Emacs with the `--without-xim' configure option.
 
 *** M-SPC seems to be ignored as input.
 
@@ -1063,7 +1107,7 @@ present or commented out:
 
 This is caused by a bug in the KDE applet `klipper' which periodically
 requests the X clipboard contents from applications.  Early versions
-of klipper don't implement the ICCM protocol for large selections,
+of klipper don't implement the ICCCM protocol for large selections,
 which leads to Emacs being flooded with selection requests.  After a
 while, Emacs may print a message:
 
@@ -1579,6 +1623,24 @@ global-font-lock-mode RET" or by customizing the variable
 
 ** GNU/Linux
 
+*** GNU/Linux: Process output is corrupted.
+
+There is a bug in Linux kernel 2.6.10 PTYs that can cause emacs to
+read corrupted process output.
+
+*** GNU/Linux: Remote access to CVS with SSH causes file corruption.
+
+If you access a remote CVS repository via SSH, files may be corrupted
+due to bad interaction between CVS, SSH, and libc.
+
+To fix the problem, save the following script into a file, make it
+executable, and set CVS_RSH environment variable to the file name of
+the script:
+
+#!/bin/bash
+exec 2> >(exec cat >&2 2>/dev/null)
+exec ssh "$@"
+
 *** GNU/Linux: On Linux-based GNU systems using libc versions 5.4.19 through
 5.4.22, Emacs crashes at startup with a segmentation fault.
 
@@ -1945,7 +2007,13 @@ A certain X server for Windows had a bug which caused this.
 Supposedly the newer 32-bit version of this server doesn't have the
 problem.
 
-** Known problems with the MS-Windows port of Emacs 21.2.
+** Known problems with the MS-Windows port of Emacs 22.1
+
+Using create-fontset-from-ascii-font or the --font startup parameter
+with a Chinese, Japanese or Korean font leads to display problems.
+Use a Latin-only font as your default font. If you want control over
+which font is used to display Chinese, Japanese or Korean character,
+use create-fontset-from-fontset-spec to define a fontset.
 
 Frames are not refreshed while the File or Font dialog or a pop-up menu
 is displayed. This also means help text for pop-up menus is not
@@ -1965,13 +2033,10 @@ after moving back into it.
 Some minor flickering still persists during mouse-tracking, although
 not as severely as in 21.1.
 
-Emacs can sometimes abort when non-ASCII text, possibly with null
-characters, is copied and pasted into a buffer.
-
 An inactive cursor remains in an active window after the Windows
 Manager driven switch of the focus, until a key is pressed.
 
-Windows input methods are not recognized by Emacs (as of v21.2).  Some
+Windows input methods are not recognized by Emacs.  Some
 of these input methods cause the keyboard to send characters encoded
 in the appropriate coding system (e.g., ISO 8859-1 for Latin-1
 characters, ISO 8859-8 for Hebrew characters, etc.).  To make this
@@ -2344,8 +2409,12 @@ The fix is to install a newer version of ncurses, such as version 4.2.
 *** Linux: Segfault during `make bootstrap' under certain recent versions of the Linux kernel.
 
 With certain recent Linux kernels (like the one of Redhat Fedora Core
-1 and 2), the new "Exec-shield" functionality is enabled by default, which
-creates a different memory layout that breaks the emacs dumper.
+1 and newer), the new "Exec-shield" functionality is enabled by default, which
+creates a different memory layout that breaks the emacs dumper.  Emacs tries
+to handle this at build time, but if the workaround used fails, these
+instructions can be useful.
+The work-around explained here is not enough on Fedora Core 4 (and possible
+newer). Read the next item.
 
 Configure can overcome the problem of exec-shield if the architecture is
 x86 and the program setarch is present.  On other architectures no
@@ -2372,6 +2441,21 @@ command when running temacs like this:
 
     setarch i386 ./temacs --batch --load loadup [dump|bootstrap]
 
+ 
+*** Fedora Core 4 GNU/Linux: Segfault during dumping.
+
+In addition to exec-shield explained above "Linux: Segfault during
+`make bootstrap' under certain recent versions of the Linux kernel"
+item, Linux kernel shipped with Fedora Core 4 randomizes the virtual
+address space of a process. As the result dumping may fail even if
+you turn off exec-shield. In this case, use the -R option to the setarch
+command:
+
+   setarch i386 -R ./temacs --batch --load loadup [dump|bootstrap]
+
+or
+
+   setarch i386 -R make bootstrap      
 
 *** Fatal signal in the command  temacs -l loadup inc dump.
 
@@ -3510,8 +3594,8 @@ This problem will not happen if the m-...h file for your type
 of machine defines NO_UNION_TYPE.
 
 
-Copyright 1987,88,89,93,94,95,96,97,98,1999,2001,2002,2004
-  Free Software Foundation, Inc.
+Copyright 1987, 1988, 1989, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
+   2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 Copying and redistribution of this file with or without modification
 are permitted without royalty provided this notice is preserved.

@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -47,7 +47,7 @@
 ;; like this
 
 ;; (add-to-list 'file-coding-system-alist
-;; 	     '("\\.tex\\|\\.ltx\\|\\.dtx\\|\\.drv\\'" . latexenc-find-file-coding-system))
+;; 	     '("\\.\\(tex\\|ltx\\|dtx\\|drv\\)\\'" . latexenc-find-file-coding-system))
 
 ;;; Code:
 
@@ -78,7 +78,8 @@
     ("next" . next) ; The Next encoding
     ("utf8" . utf-8)
     ("utf8x" . utf-8)) ; used by the Unicode LaTeX package
-  "Mapping from encoding names used by LaTeX's \"inputenc.sty\" to Emacs coding systems.
+  "Mapping from LaTeX encodings in \"inputenc.sty\" to Emacs coding systems.
+LaTeX encodings are specified with \"\\usepackage[encoding]{inputenc}\".
 Used by the function `latexenc-find-file-coding-system'."
   :group 'files
   :group 'mule
@@ -159,10 +160,11 @@ coding system names is determined from `latex-inputenc-coding-alist'."
                         (setq latexenc-main-file (concat file ext)))))))
             ;; try tex-modes tex-guess-main-file
             (when (and (not latexenc-dont-use-tex-guess-main-file-flag)
-                       (not latexenc-main-file)
-                       (fboundp 'tex-guess-main-file))
-              (let ((tex-start-of-header "\\\\document\\(style\\|class\\)"))
-                (setq latexenc-main-file (tex-guess-main-file))))
+                       (not latexenc-main-file))
+              ;; Use a separate `when' so the byte-compiler sees the fboundp.
+              (when (fboundp 'tex-guess-main-file)
+                (let ((tex-start-of-header "\\\\document\\(style\\|class\\)"))
+                  (setq latexenc-main-file (tex-guess-main-file)))))
             ;; if we found a master/main file get the coding system from it
             (if (and latexenc-main-file
                      (file-readable-p latexenc-main-file))

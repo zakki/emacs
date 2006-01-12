@@ -1,6 +1,7 @@
 ;;; generic-x.el --- A collection of generic modes
 
-;; Copyright (C) 1997, 1998, 2003, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1998, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author:  Peter Breton <pbreton@cs.umb.edu>
 ;; Created: Tue Oct 08 1996
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 ;;
@@ -1733,17 +1734,17 @@ like an INI file.  You can add this hook to `find-file-hook'."
 
 (defconst show-tabs-generic-mode-font-lock-defaults-1
   '(;; trailing spaces must come before...
-    ("[ \t]+$" . 'show-tabs-space-face)
+    ("[ \t]+$" . 'show-tabs-space)
     ;; ...embedded tabs
-    ("[^\n\t]\\(\t+\\)" (1 'show-tabs-tab-face))))
+    ("[^\n\t]\\(\t+\\)" (1 'show-tabs-tab))))
 
 (defconst show-tabs-generic-mode-font-lock-defaults-2
   '(;; trailing spaces must come before...
-    ("[ \t]+$" . 'show-tabs-space-face)
+    ("[ \t]+$" . 'show-tabs-space)
     ;; ...tabs
-    ("\t+" . 'show-tabs-tab-face))))
+    ("\t+" . 'show-tabs-tab))))
 
-(defface show-tabs-tab-face
+(defface show-tabs-tab
   '((((class grayscale) (background light)) (:background "DimGray"   :weight bold))
     (((class grayscale) (background dark))  (:background "LightGray" :weight bold))
     (((class color)     (min-colors 88))    (:background "red1"))
@@ -1751,8 +1752,10 @@ like an INI file.  You can add this hook to `find-file-hook'."
     (t (:weight bold)))
   "Font Lock mode face used to highlight TABs."
   :group 'generic-x)
+;; backward-compatibility alias
+(put 'show-tabs-tab-face 'face-alias 'show-tabs-tab)
 
-(defface show-tabs-space-face
+(defface show-tabs-space
   '((((class grayscale) (background light)) (:background "DimGray"   :weight bold))
     (((class grayscale) (background dark))  (:background "LightGray" :weight bold))
     (((class color)     (min-colors 88))    (:background "yellow1"))
@@ -1760,6 +1763,8 @@ like an INI file.  You can add this hook to `find-file-hook'."
     (t (:weight bold)))
   "Font Lock mode face used to highlight spaces."
   :group 'generic-x)
+;; backward-compatibility alias
+(put 'show-tabs-space-face 'face-alias 'show-tabs-space)
 
 (define-generic-mode show-tabs-generic-mode
   nil ;; no comment char

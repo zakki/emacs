@@ -1,6 +1,6 @@
 /* X Communication module for terminals which understand the X protocol.
    Copyright (C) 1989, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-     2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+                 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* New display code by Gerd Moellmann <gerd@gnu.org>.  */
 /* Xt features made by Fred Pierresteguy.  */
@@ -249,6 +249,7 @@ static unsigned long ignore_next_mouse_click_timeout;
 /* Where the mouse was last time we reported a mouse event.  */
 
 static XRectangle last_mouse_glyph;
+static FRAME_PTR last_mouse_glyph_frame;
 static Lisp_Object last_mouse_press_frame;
 
 /* The scroll bar in which the last X motion event occurred.
@@ -535,6 +536,12 @@ x_draw_vertical_window_border (w, x, y0, y1)
      int x, y0, y1;
 {
   struct frame *f = XFRAME (WINDOW_FRAME (w));
+  struct face *face;
+
+  face = FACE_FROM_ID (f, VERTICAL_BORDER_FACE_ID);
+  if (face)
+    XSetForeground (FRAME_X_DISPLAY (f), f->output_data.x->normal_gc,
+		    face->foreground);
 
   XDrawLine (FRAME_X_DISPLAY (f), FRAME_X_WINDOW (f),
 	     f->output_data.x->normal_gc, x, y0, x, y1);
@@ -1546,7 +1553,7 @@ x_draw_glyph_string_foreground (s)
 #ifdef HAVE_XFT
       /* KOKO: Always clear background for now, there are some redraw problems
          otherwise.  */
-      if (1 || ! (s->for_overlaps_p
+      if (1 || ! (s->for_overlaps
                   || (s->background_filled_p && s->hl != DRAW_CURSOR)))
         XftDrawRect (s->face->xft_draw,
                      s->hl == DRAW_CURSOR ? &s->face->xft_fg : &s->face->xft_bg,
@@ -1578,7 +1585,7 @@ x_draw_glyph_string_foreground (s)
                         char1b,
                         s->nchars);
 #else
-      if (s->for_overlaps_p
+      if (s->for_overlaps
 	  || (s->background_filled_p && s->hl != DRAW_CURSOR))
 	{
 	  /* Draw characters with 16-bit or 8-bit functions.  */
@@ -2888,7 +2895,7 @@ x_draw_glyph_string (s)
   /* If S draws into the background of its successor, draw the
      background of the successor first so that S can draw into it.
      This makes S->next use XDrawString instead of XDrawImageString.  */
-  if (s->next && s->right_overhang && !s->for_overlaps_p)
+  if (s->next && s->right_overhang && !s->for_overlaps)
     {
       xassert (s->next->img == NULL);
       x_set_glyph_string_gc (s->next);
@@ -2901,7 +2908,7 @@ x_draw_glyph_string (s)
 
   /* Draw relief (if any) in advance for char/composition so that the
      glyph string can be drawn over it.  */
-  if (!s->for_overlaps_p
+  if (!s->for_overlaps
       && s->face->box != FACE_NO_BOX
       && (s->first_glyph->type == CHAR_GLYPH
 	  || s->first_glyph->type == COMPOSITE_GLYPH))
@@ -2927,7 +2934,7 @@ x_draw_glyph_string (s)
       break;
 
     case CHAR_GLYPH:
-      if (s->for_overlaps_p)
+      if (s->for_overlaps)
 	s->background_filled_p = 1;
       else
 	x_draw_glyph_string_background (s, 0);
@@ -2935,7 +2942,7 @@ x_draw_glyph_string (s)
       break;
 
     case COMPOSITE_GLYPH:
-      if (s->for_overlaps_p || s->gidx > 0)
+      if (s->for_overlaps || s->gidx > 0)
 	s->background_filled_p = 1;
       else
 	x_draw_glyph_string_background (s, 1);
@@ -2946,7 +2953,7 @@ x_draw_glyph_string (s)
       abort ();
     }
 
-  if (!s->for_overlaps_p)
+  if (!s->for_overlaps)
     {
       /* Draw underline.  */
       if (s->face->underline_p)
@@ -3880,7 +3887,7 @@ construct_mouse_click (result, event, f)
 static XMotionEvent last_mouse_motion_event;
 static Lisp_Object last_mouse_motion_frame;
 
-static void
+static int
 note_mouse_movement (frame, event)
      FRAME_PTR frame;
      XMotionEvent *event;
@@ -3894,18 +3901,28 @@ note_mouse_movement (frame, event)
       frame->mouse_moved = 1;
       last_mouse_scroll_bar = Qnil;
       note_mouse_highlight (frame, -1, -1);
+      last_mouse_glyph_frame = 0;
+      return 1;
     }
 
+
   /* Has the mouse moved off the glyph it was on at the last sighting?  */
-  else if (event->x < last_mouse_glyph.x
-	   || event->x >= last_mouse_glyph.x + last_mouse_glyph.width
-	   || event->y < last_mouse_glyph.y
-	   || event->y >= last_mouse_glyph.y + last_mouse_glyph.height)
+  if (frame != last_mouse_glyph_frame
+      || event->x < last_mouse_glyph.x
+      || event->x >= last_mouse_glyph.x + last_mouse_glyph.width
+      || event->y < last_mouse_glyph.y
+      || event->y >= last_mouse_glyph.y + last_mouse_glyph.height)
     {
       frame->mouse_moved = 1;
       last_mouse_scroll_bar = Qnil;
       note_mouse_highlight (frame, event->x, event->y);
+      /* Remember which glyph we're now on.  */
+      remember_mouse_glyph (frame, event->x, event->y, &last_mouse_glyph);
+      last_mouse_glyph_frame = frame;
+      return 1;
     }
+
+  return 0;
 }
 
 
@@ -3923,56 +3940,6 @@ redo_mouse_highlight ()
 			  last_mouse_motion_event.y);
 }
 
-
-static int glyph_rect P_ ((struct frame *f, int, int, XRectangle *));
-
-
-/* Try to determine frame pixel position and size of the glyph under
-   frame pixel coordinates X/Y on frame F .  Return the position and
-   size in *RECT.  Value is non-zero if we could compute these
-   values.  */
-
-static int
-glyph_rect (f, x, y, rect)
-     struct frame *f;
-     int x, y;
-     XRectangle *rect;
-{
-  Lisp_Object window;
-  struct window *w;
-  struct glyph_row *r, *end_row;
-
-  window = window_from_coordinates (f, x, y, 0, &x, &y, 0);
-  if (NILP (window))
-    return 0;
-
-  w = XWINDOW (window);
-  r = MATRIX_FIRST_TEXT_ROW (w->current_matrix);
-  end_row = r + w->current_matrix->nrows - 1;
-
-  for (; r < end_row && r->enabled_p; ++r)
-    {
-      if (r->y >= y)
-	{
-	  struct glyph *g = r->glyphs[TEXT_AREA];
-	  struct glyph *end = g + r->used[TEXT_AREA];
-	  int gx = r->x;
-	  while (g < end && gx < x)
-	    gx += g->pixel_width, ++g;
-	  if (g < end)
-	    {
-	      rect->width = g->pixel_width;
-	      rect->height = r->height;
-	      rect->x = WINDOW_TO_FRAME_PIXEL_X (w, gx);
-	      rect->y = WINDOW_TO_FRAME_PIXEL_Y (w, r->y);
-	      return 1;
-	    }
-	  break;
-	}
-    }
-
-  return 0;
-}
 
 
 /* Return the current position of the mouse.
@@ -4161,32 +4128,8 @@ XTmouse_position (fp, insist, bar_window, part, x, y, time)
 	       on it, i.e. into the same rectangles that matrices on
 	       the frame are divided into.  */
 
-	    int width, height, gx, gy;
-	    XRectangle rect;
-
-	    if (glyph_rect (f1, win_x, win_y, &rect))
-	      last_mouse_glyph = rect;
-	    else
-	      {
-		width = FRAME_SMALLEST_CHAR_WIDTH (f1);
-		height = FRAME_SMALLEST_FONT_HEIGHT (f1);
-		gx = win_x;
-		gy = win_y;
-
-		/* Arrange for the division in FRAME_PIXEL_X_TO_COL etc. to
-		   round down even for negative values.  */
-		if (gx < 0)
-		  gx -= width - 1;
-		if (gy < 0)
-		  gy -= height - 1;
-		gx = (gx + width - 1) / width * width;
-		gy = (gy + height - 1) / height * height;
-
-		last_mouse_glyph.width  = width;
-		last_mouse_glyph.height = height;
-		last_mouse_glyph.x = gx;
-		last_mouse_glyph.y = gy;
-	      }
+	    remember_mouse_glyph (f1, win_x, win_y, &last_mouse_glyph);
+	    last_mouse_glyph_frame = f1;
 
 	    *bar_window = Qnil;
 	    *part = 0;
@@ -4321,8 +4264,6 @@ static Boolean xaw3d_arrow_scroll;
    to avoid jerkyness.  */
 
 static Boolean xaw3d_pick_top;
-
-extern void set_vertical_scroll_bar P_ ((struct window *));
 
 /* Action hook installed via XtAppAddActionHook when toolkit scroll
    bars are used..  The hook is responsible for detecting when
@@ -4893,11 +4834,14 @@ x_create_toolkit_scroll_bar (f, bar)
     char *initial = "";
     char *val = initial;
     XtVaGetValues (widget, XtNscrollVCursor, (XtPointer) &val,
+#ifdef XtNarrowScrollbars
+		   XtNarrowScrollbars, (XtPointer) &xaw3d_arrow_scroll,
+#endif
 		   XtNpickTop, (XtPointer) &xaw3d_pick_top, NULL);
-    if (val == initial)
+    if (xaw3d_arrow_scroll || val == initial)
       {	/* ARROW_SCROLL */
 	xaw3d_arrow_scroll = True;
-	/* Isn't that just a personal preference ?   -sm */
+	/* Isn't that just a personal preference ?   --Stef */
 	XtVaSetValues (widget, XtNcursorName, "top_left_arrow", NULL);
       }
   }
@@ -6528,7 +6472,7 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
               if (status_return == XBufferOverflow)
                 {
                   copy_bufsiz = nbytes + 1;
-                  copy_bufptr = (char *) alloca (copy_bufsiz);
+                  copy_bufptr = (unsigned char *) alloca (copy_bufsiz);
                   nbytes = XmbLookupString (FRAME_XIC (f),
                                             &event.xkey, copy_bufptr,
                                             copy_bufsiz, &keysym,
@@ -6546,7 +6490,7 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
                   if (status_return == XBufferOverflow)
                     {
                       copy_bufsiz = nbytes + 1;
-                      copy_bufptr = (char *) alloca (copy_bufsiz);
+                      copy_bufptr = (unsigned char *) alloca (copy_bufsiz);
                       nbytes = Xutf8LookupString (FRAME_XIC (f),
                                                   &event.xkey,
                                                   copy_bufptr,
@@ -6582,6 +6526,7 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
           if (compose_status.chars_matched > 0 && nbytes == 0)
             break;
 
+          bzero (&compose_status, sizeof (compose_status));
           orig_keysym = keysym;
 
 	  /* Common for all keysym input events.  */
@@ -6597,6 +6542,27 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
 	    {
 	      inev.ie.kind = ASCII_KEYSTROKE_EVENT;
 	      inev.ie.code = keysym;
+	      goto done_keysym;
+	    }
+
+	  /* Keysyms directly mapped to supported Unicode characters.  */
+	  if ((keysym >= 0x01000100 && keysym <= 0x010033ff)
+	      || (keysym >= 0x0100e000 && keysym <= 0x0100ffff))
+	    {
+	      int code, charset_id, c1, c2;
+
+	      if (keysym < 0x01002500)
+		charset_id = charset_mule_unicode_0100_24ff,
+		  code = (keysym & 0xFFFF) - 0x100;
+	      else if (keysym < 0x0100e000)
+		charset_id = charset_mule_unicode_2500_33ff,
+		  code = (keysym & 0xFFFF) - 0x2500;
+	      else
+		charset_id = charset_mule_unicode_e000_ffff,
+		  code = (keysym & 0xFFFF) - 0xe000;
+	      c1 = (code / 96) + 32, c2 = (code % 96) + 32;
+	      inev.ie.kind = MULTIBYTE_CHAR_KEYSTROKE_EVENT;
+	      inev.ie.code = MAKE_CHAR (charset_id, c1, c2);
 	      goto done_keysym;
 	    }
 
@@ -6852,8 +6818,7 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
     case MotionNotify:
       {
         previous_help_echo_string = help_echo_string;
-        help_echo_string = help_echo_object = help_echo_window = Qnil;
-        help_echo_pos = -1;
+        help_echo_string = Qnil;
 
         if (dpyinfo->grabbed && last_mouse_frame
             && FRAME_LIVE_P (last_mouse_frame))
@@ -6892,7 +6857,8 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
 
                 last_window=window;
               }
-            note_mouse_movement (f, &event.xmotion);
+            if (!note_mouse_movement (f, &event.xmotion))
+	      help_echo_string = previous_help_echo_string;
           }
         else
           {
@@ -7001,6 +6967,7 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
         int tool_bar_p = 0;
 
         bzero (&compose_status, sizeof (compose_status));
+	last_mouse_glyph_frame = 0;
 
         if (dpyinfo->grabbed
             && last_mouse_frame
@@ -7046,13 +7013,13 @@ handle_one_xevent (dpyinfo, eventp, finish, hold_quit)
 			      && (int)(event.xbutton.time - ignore_next_mouse_click_timeout) > 0)
 			    {
 			      ignore_next_mouse_click_timeout = 0;
-			      construct_mouse_click (&inev.ie, &event, f);
+			      construct_mouse_click (&inev.ie, &event.xbutton, f);
 			    }
 			  if (event.type == ButtonRelease)
 			    ignore_next_mouse_click_timeout = 0;
 			}
 		      else
-			construct_mouse_click (&inev.ie, &event, f);
+			construct_mouse_click (&inev.ie, &event.xbutton, f);
 		    }
                 }
           }
@@ -7699,10 +7666,30 @@ x_bitmap_icon (f, file)
       /* Create the GNU bitmap and mask if necessary.  */
       if (FRAME_X_DISPLAY_INFO (f)->icon_bitmap_id < 0)
 	{
-	  FRAME_X_DISPLAY_INFO (f)->icon_bitmap_id
-	    = x_create_bitmap_from_data (f, gnu_bits,
-					 gnu_width, gnu_height);
-	  x_create_bitmap_mask (f, FRAME_X_DISPLAY_INFO (f)->icon_bitmap_id);
+	  int rc = -1;
+
+#if defined (HAVE_XPM) && defined (HAVE_X_WINDOWS)
+#ifdef USE_GTK
+	  if (xg_set_icon_from_xpm_data (f, gnu_xpm_bits))
+	    return 0;
+#else
+	  rc = x_create_bitmap_from_xpm_data (f, gnu_xpm_bits);
+	  if (rc != -1)
+	    FRAME_X_DISPLAY_INFO (f)->icon_bitmap_id = rc;
+#endif /* USE_GTK */
+#endif /* defined (HAVE_XPM) && defined (HAVE_X_WINDOWS) */
+
+	  /* If all else fails, use the (black and white) xbm image. */
+	  if (rc == -1)
+	    {
+	      rc = x_create_bitmap_from_data (f, gnu_xbm_bits,
+					      gnu_xbm_width, gnu_xbm_height);
+	      if (rc == -1)
+		return 1;
+
+	      FRAME_X_DISPLAY_INFO (f)->icon_bitmap_id = rc;
+	      x_create_bitmap_mask (f, FRAME_X_DISPLAY_INFO (f)->icon_bitmap_id);
+	    }
 	}
 
       /* The first time we create the GNU bitmap and mask,
@@ -8433,7 +8420,6 @@ void
 x_calc_absolute_position (f)
      struct frame *f;
 {
-  int win_x = 0, win_y = 0;
   int flags = f->size_hint_flags;
 
   /* We have nothing to do if the current position
@@ -9545,7 +9531,14 @@ x_wm_set_icon_pixmap (f, pixmap_id)
 #endif
     }
 
-#ifdef USE_X_TOOLKIT /* same as in x_wm_set_window_state.  */
+
+#ifdef USE_GTK
+  {
+    xg_set_frame_icon (f, icon_pixmap, icon_mask);
+    return;
+  }
+
+#elif defined (USE_X_TOOLKIT) /* same as in x_wm_set_window_state.  */
 
   {
     Arg al[1];
@@ -9555,12 +9548,12 @@ x_wm_set_icon_pixmap (f, pixmap_id)
     XtSetValues (f->output_data.x->widget, al, 1);
   }
 
-#else /* not USE_X_TOOLKIT */
+#else /* not USE_X_TOOLKIT && not USE_GTK */
 
   f->output_data.x->wm_hints.flags |= (IconPixmapHint | IconMaskHint);
   XSetWMHints (FRAME_X_DISPLAY (f), window, &f->output_data.x->wm_hints);
 
-#endif /* not USE_X_TOOLKIT */
+#endif /* not USE_X_TOOLKIT && not USE_GTK */
 }
 
 void

@@ -7,9 +7,9 @@
 @syncodeindex fn cp
 
 @c Version and Contact Info
-@set VERSION 4.28
-@set EDITION 4.28
-@set DATE May 2005
+@set VERSION 4.30
+@set EDITION 4.30
+@set DATE September 2005
 @set AUCTEXSITE @uref{http://www.nongnu.org/auctex/,AUCTeX distribution site}
 @set MAINTAINERSITE @uref{http://www.astro.uva.nl/~dominik/Tools/,maintainers webpage}
 @set MAINTAINER Carsten Dominik
@@ -29,7 +29,7 @@ Copyright (c) 1997, 1998, 1999, 2000, 2001, 2002, 2004, 2005 Free Software Found
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, with the Front-Cover texts being ``A GNU
 Manual'', and with the Back-Cover Texts as in (a) below.  A copy of the

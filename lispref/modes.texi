@@ -1,6 +1,6 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999,
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2002,
 @c   2003, 2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/modes
@@ -395,7 +395,7 @@ setting up a buffer-local value for the variable
 @item
 The mode should specify how Imenu should find the definitions or
 sections of a buffer, by setting up a buffer-local value for the
-variable @code{imenu-generic-expression}, for the pair of variables
+variable @code{imenu-generic-expression}, for the two variables
 @code{imenu-prev-index-position-function} and
 @code{imenu-extract-index-name-function}, or for the variable
 @code{imenu-create-index-function} (@pxref{Imenu}).
@@ -869,9 +869,7 @@ command interpreter in a @samp{#!} line.  Its value is an alist with
 elements of the form @code{(@var{interpreter} . @var{mode})}; for
 example, @code{("perl" . perl-mode)} is one element present by
 default.  The element says to use mode @var{mode} if the file
-specifies an interpreter which matches @var{interpreter}.  The value
-of @var{interpreter} is actually a regular expression. @xref{Regular
-Expressions}.
+specifies an interpreter which matches @var{interpreter}.
 @end defvar
 
 @defvar magic-mode-alist
@@ -963,11 +961,11 @@ displays the documentation string of the major mode function.
 @end deffn
 
 @defvar major-mode
-This variable holds the symbol for the current buffer's major mode.
-This symbol should have a function definition that is the command to
-switch to that major mode.  The @code{describe-mode} function uses the
-documentation string of the function as the documentation of the major
-mode.
+This buffer-local variable holds the symbol for the current buffer's
+major mode.  This symbol should have a function definition that is the
+command to switch to that major mode.  The @code{describe-mode}
+function uses the documentation string of the function as the
+documentation of the major mode.
 @end defvar
 
 @node Derived Modes
@@ -1156,7 +1154,7 @@ Instead, it arranges for the next call to @code{run-mode-hooks} to run
 @var{hookvars}.
 @end defun
 
-@defmac delay-mode-hooks body...
+@defmac delay-mode-hooks body@dots{}
 This macro executes @var{body} like @code{progn}, but all calls to
 @code{run-mode-hooks} inside @var{body} delay running their hooks.
 They will be run by the first call to @code{run-mode-hooks} after exit
@@ -1216,8 +1214,8 @@ The value of this variable is a list of all minor mode commands.
   There are conventions for writing minor modes just as there are for
 major modes.  Several of the major mode conventions apply to minor
 modes as well: those regarding the name of the mode initialization
-function, the names of global symbols, and the use of keymaps and
-other tables.
+function, the names of global symbols, the use of a hook at the end of
+the initialization function, and the use of keymaps and other tables.
 
   In addition, there are several conventions that are specific to
 minor modes.  (The easiest way to follow all the conventions is to use
@@ -1329,8 +1327,7 @@ enable the mode.  For example:
   "Toggle msb-mode.
 Setting this variable directly does not take effect;
 use either \\[customize] or the function `msb-mode'."
-  :set (lambda (symbol value)
-	 (msb-mode (or value 0)))
+  :set 'custom-set-minor-mode
   :initialize 'custom-initialize-default
   :version "20.4"
   :type    'boolean
@@ -1366,14 +1363,15 @@ characters are reserved for major modes.)
   The macro @code{define-minor-mode} offers a convenient way of
 implementing a mode in one self-contained definition.
 
-@defmac define-minor-mode mode doc [init-value [lighter [keymap]]] keyword-args... body...
+@defmac define-minor-mode mode doc [init-value [lighter [keymap]]] keyword-args@dots{} body@dots{}
 @tindex define-minor-mode
 This macro defines a new minor mode whose name is @var{mode} (a
 symbol).  It defines a command named @var{mode} to toggle the minor
 mode, with @var{doc} as its documentation string.  It also defines a
 variable named @var{mode}, which is set to @code{t} or @code{nil} by
 enabling or disabling the mode.  The variable is initialized to
-@var{init-value}.
+@var{init-value}.  Except in unusual circumstances (see below), this
+value must be @code{nil}.
 
 The string @var{lighter} says what to display in the mode line
 when the mode is enabled; if it is @code{nil}, the mode is not displayed
@@ -1415,7 +1413,7 @@ This is equivalent to specifying @var{lighter} positionally.
 This is equivalent to specifying @var{keymap} positionally.
 @end table
 
-Any other keyword arguments are passed passed directly to the
+Any other keyword arguments are passed directly to the
 @code{defcustom} generated for the variable @var{mode}.
 
 The command named @var{mode} first performs the standard actions such
@@ -1423,6 +1421,14 @@ as setting the variable named @var{mode} and then executes the
 @var{body} forms, if any.  It finishes by running the mode hook
 variable @code{@var{mode}-hook}.
 @end defmac
+
+  The initial value must be @code{nil} except in cases where (1) the
+mode is preloaded in Emacs, or (2) it is painless for loading to
+enable the mode even though the user did not request it.  For
+instance, if the mode has no effect unless something else is enabled,
+and will always be loaded by that time, enabling it by default is
+harmless.  But these are unusual circumstances.  Normally, the
+initial value must be @code{nil}.
 
 @findex easy-mmode-define-minor-mode
   The name @code{easy-mmode-define-minor-mode} is an alias
@@ -1472,7 +1478,7 @@ When Hungry mode is enabled, the control delete key
 gobbles all preceding whitespace except the last.
 See the command \\[hungry-electric-delete]."
  ;; The initial value.
- :initial-value nil
+ :init-value nil
  ;; The indicator for the mode line.
  :lighter " Hungry"
  ;; The minor mode bindings.
@@ -1485,7 +1491,7 @@ See the command \\[hungry-electric-delete]."
  :group 'hunger)
 @end smallexample
 
-@defmac define-global-minor-mode global-mode mode turn-on keyword-args...
+@defmac define-global-minor-mode global-mode mode turn-on keyword-args@dots{}
 This defines a global minor mode named @var{global-mode} whose meaning
 is to enable the buffer-local minor mode @var{mode} in every buffer.
 To turn on the minor mode in a buffer, it uses the function
@@ -1514,8 +1520,9 @@ information displayed in the mode line relates to the enabled major and
 minor modes.
 
 @menu
-* Mode Line Basics::
-* Mode Line Data::        The data structure that controls the mode line.
+* Base: Mode Line Basics. Basic ideas of mode line control.
+* Data: Mode Line Data.   The data structure that controls the mode line.
+* Top: Mode Line Top.     The top level variable, mode-line-format.
 * Mode Line Variables::   Variables used in that data structure.
 * %-Constructs::          Putting information into a mode line.
 * Properties in Mode::    Using text properties in the mode line.
@@ -1527,12 +1534,13 @@ minor modes.
 @subsection Mode Line Basics
 
   @code{mode-line-format} is a buffer-local variable that holds a
-template used to display the mode line of the current buffer.  All
-windows for the same buffer use the same @code{mode-line-format}, so
-their mode lines appear the same---except for scrolling percentages, and
-line and column numbers, since those depend on point and on how the
-window is scrolled.  @code{header-line-format} is used likewise for
-header lines.
+@dfn{mode line construct}, a kind of template, which controls the
+display the mode line of the current buffer.  All windows for the same
+buffer use the same @code{mode-line-format}, so their mode lines
+appear the same---except for scrolling percentages, and line and
+column numbers, since those depend on point and on how the window is
+scrolled.  The value of @code{header-line-format} specifies the
+buffer's header line in the same way, with a mode line construct.
 
   For efficiency, Emacs does not recompute the mode line and header
 line of a window in every redisplay.  It does so when circumstances
@@ -1561,61 +1569,36 @@ and the frame title.
 color using the face @code{mode-line}.  Other windows' mode lines
 appear in the face @code{mode-line-inactive} instead.  @xref{Faces}.
 
-  A window that is just one line tall does not display either a mode
-line or a header line, even if the variables call for one.  A window
-that is two lines tall cannot display both a mode line and a header
-line at once; if the variables call for both, only the mode line
-actually appears.
-
 @node Mode Line Data
 @subsection The Data Structure of the Mode Line
 @cindex mode-line construct
 
-  The mode-line contents are controlled by a data structure of lists,
-strings, symbols, and numbers kept in buffer-local variables.  The data
-structure is called a @dfn{mode-line construct}, and it is built in
-recursive fashion out of simpler mode-line constructs.  The same data
-structure is used for constructing frame titles (@pxref{Frame Titles})
-and header lines (@pxref{Header Lines}).
+  The mode-line contents are controlled by a data structure called a
+@dfn{mode-line construct}, made up of lists, strings, symbols, and
+numbers kept in buffer-local variables.  Each data type has a specific
+meaning for the mode-line appearance, as described below.  The same
+data structure is used for constructing frame titles (@pxref{Frame
+Titles}) and header lines (@pxref{Header Lines}).
 
-@defvar mode-line-format
-The value of this variable is a mode-line construct with overall
-responsibility for the mode-line format.  The value of this variable
-controls which other variables are used to form the mode-line text, and
-where they appear.
+  A mode-line construct may be as simple as a fixed string of text,
+but it usually specifies how to combine fixed strings with variables'
+values to construct the text.  Many of these variables are themselves
+defined to have mode-line constructs as their values.
 
-If you set this variable to @code{nil} in a buffer, that buffer does not
-have a mode line.
-@end defvar
-
-  A mode-line construct may be as simple as a fixed string of text, but
-it usually specifies how to use other variables to construct the text.
-Many of these variables are themselves defined to have mode-line
-constructs as their values.
-
-  The default value of @code{mode-line-format} incorporates the values
-of variables such as @code{mode-line-position} and
-@code{mode-line-modes} (which in turn incorporates the values of the
-variables @code{mode-name} and @code{minor-mode-alist}).  Because of
-this, very few modes need to alter @code{mode-line-format} itself.  For
-most purposes, it is sufficient to alter some of the variables that
-@code{mode-line-format} either directly or indirectly refers to.
-
-  A mode-line construct may be a list, a symbol, or a string.  If the
-value is a list, each element may be a list, a symbol, or a string.
-
-  The mode line can display various faces, if the strings that control
-it have the @code{face} property.  @xref{Properties in Mode}.  In
-addition, the face @code{mode-line} is used as a default for the whole
-mode line (@pxref{Standard Faces}).
+  Here are the meanings of various data types as mode-line constructs:
 
 @table @code
 @cindex percent symbol in mode line
 @item @var{string}
-A string as a mode-line construct is displayed verbatim in the mode line
-except for @dfn{@code{%}-constructs}.  Decimal digits after the @samp{%}
-specify the field width for space filling on the right (i.e., the data
-is left justified).  @xref{%-Constructs}.
+A string as a mode-line construct appears verbatim in the mode line
+except for @dfn{@code{%}-constructs} in it.  These stand for
+substitution of other data; see @ref{%-Constructs}.
+
+If the string has @code{face} properties, they are copied into the
+mode line contents too (@pxref{Properties in Mode}).  Any characters
+in the mode line which have no @code{face} properties are displayed,
+by default, in the face @code{mode-line} or @code{mode-line-inactive}
+(@pxref{Standard Faces,,, emacs, The GNU Emacs Manual}).
 
 @item @var{symbol}
 A symbol as a mode-line construct stands for its value.  The value of
@@ -1627,11 +1610,13 @@ There is one exception: if the value of @var{symbol} is a string, it is
 displayed verbatim: the @code{%}-constructs are not recognized.
 
 Unless @var{symbol} is marked as ``risky'' (i.e., it has a
-non-@code{nil} @code{risky-local-variable} property), all properties in
-any strings, as well as all @code{:eval} and @code{:propertize} forms in
-the value of that symbol will be ignored.
+non-@code{nil} @code{risky-local-variable} property), all text
+properties specified in @var{symbol}'s value are ignored.  This
+includes the text properties of strings in @var{symbol}'s value, as
+well as all @code{:eval} and @code{:propertize} forms in it.
 
-@item (@var{string} @var{rest}@dots{}) @r{or} (@var{list} @var{rest}@dots{})
+@item (@var{string} @var{rest}@dots{})
+@itemx (@var{list} @var{rest}@dots{})
 A list whose first element is a string or list means to process all the
 elements recursively and concatenate the results.  This is the most
 common form of mode-line construct.
@@ -1644,19 +1629,19 @@ recursion.
 
 @item (:propertize @var{elt} @var{props}@dots{})
 A list whose first element is the symbol @code{:propertize} says to
-process the mode-line construct @var{elt} recursively and add the text
+process the mode-line construct @var{elt} recursively, then add the text
 properties specified by @var{props} to the result.  The argument
 @var{props} should consist of zero or more pairs @var{text-property}
 @var{value}.  (This feature is new as of Emacs 22.1.)
 
 @item (@var{symbol} @var{then} @var{else})
-A list whose first element is a symbol that is not a keyword specifies a
-conditional.  Its meaning depends on the value of @var{symbol}.  If the
-value is non-@code{nil}, the second element, @var{then}, is processed
-recursively as a mode-line element.  But if the value of @var{symbol} is
-@code{nil}, the third element, @var{else}, is processed recursively.
-You may omit @var{else}; then the mode-line element displays nothing if
-the value of @var{symbol} is @code{nil}.
+A list whose first element is a symbol that is not a keyword specifies
+a conditional.  Its meaning depends on the value of @var{symbol}.  If
+@var{symbol} has a non-@code{nil} value, the second element,
+@var{then}, is processed recursively as a mode-line element.
+Otherwise, the third element, @var{else}, is processed recursively.
+You may omit @var{else}; then the mode-line element displays nothing
+if the value of @var{symbol} is @code{nil} or void.
 
 @item (@var{width} @var{rest}@dots{})
 A list whose first element is an integer specifies truncation or
@@ -1670,6 +1655,29 @@ space filled on the right if its width is less than @var{width}.  When
 For example, the usual way to show what percentage of a buffer is above
 the top of the window is to use a list like this: @code{(-3 "%p")}.
 @end table
+
+@node Mode Line Top
+@subsection The Top Level of Mode Line Control
+
+  The variable in overall control of the mode line is
+@code{mode-line-format}.
+
+@defvar mode-line-format
+The value of this variable is a mode-line construct that controls the
+contents of the mode-line.  It is always buffer-local in all buffers.
+
+If you set this variable to @code{nil} in a buffer, that buffer does
+not have a mode line.  (A window that is just one line tall never
+displays a mode line.)
+@end defvar
+
+  The default value of @code{mode-line-format} is designed to use the
+values of other variables such as @code{mode-line-position} and
+@code{mode-line-modes} (which in turn incorporates the values of the
+variables @code{mode-name} and @code{minor-mode-alist}).  Very few
+modes need to alter @code{mode-line-format} itself.  For most
+purposes, it is sufficient to alter some of the variables that
+@code{mode-line-format} either directly or indirectly refers to.
 
   If you do alter @code{mode-line-format} itself, the new value should
 use the same variables that appear in the default value (@pxref{Mode
@@ -1724,11 +1732,14 @@ these variable names are also the minor mode command names.)
 @node Mode Line Variables
 @subsection Variables Used in the Mode Line
 
-  This section describes variables incorporated by the
-standard value of @code{mode-line-format} into the text of the mode
-line.  There is nothing inherently special about these variables; any
-other variables could have the same effects on the mode line if
-@code{mode-line-format} were changed to use them.
+  This section describes variables incorporated by the standard value
+of @code{mode-line-format} into the text of the mode line.  There is
+nothing inherently special about these variables; any other variables
+could have the same effects on the mode line if
+@code{mode-line-format}'s value were changed to use them.  However,
+various parts of Emacs set these variables on the understanding that
+they will control parts of the mode line; therefore, practically
+speaking, it is essential for the mode line to use them.
 
 @defvar mode-line-mule-info
 This variable holds the value of the mode-line construct that displays
@@ -1901,10 +1912,12 @@ specifies addition of text properties.
 @node %-Constructs
 @subsection @code{%}-Constructs in the Mode Line
 
-  The following table lists the recognized @code{%}-constructs and what
-they mean.  In any construct except @samp{%%}, you can add a decimal
-integer after the @samp{%} to specify a minimum field width.  If the
-width is less, the field is padded with spaces to the right.
+  Strings used as mode-line constructs can use certain
+@code{%}-constructs to substitute various kinds of data.  Here is a
+list of the defined @code{%}-constructs, and what they mean.  In any
+construct except @samp{%%}, you can add a decimal integer after the
+@samp{%} to specify a minimum field width.  If the width is less, the
+field is padded with spaces to the right.
 
 @table @code
 @item %b
@@ -1920,7 +1933,7 @@ function.  @xref{Buffer File Name}.
 
 @item %F
 The title (only on a window system) or the name of the selected frame.
-@xref{Window Frame Parameters}.
+@xref{Basic Parameters}.
 
 @item %i
 The size of the accessible part of the current buffer; basically
@@ -2071,6 +2084,11 @@ that do not override it.  This is the same as @code{(default-value
 
 It is normally @code{nil}, so that ordinary buffers have no header line.
 @end defvar
+
+  A window that is just one line tall never displays a header line.  A
+window that is two lines tall cannot display both a mode line and a
+header line at once; if it has a mode line, then it does not display a
+header line.
 
 @node Emulating Mode Line
 @subsection Emulating Mode-Line Formatting
@@ -2236,7 +2254,7 @@ If this variable is non-@code{nil}, its value should be a function that
 finds the next ``definition'' to put in the buffer index, scanning
 backward in the buffer from point.  It should return @code{nil} if it
 doesn't find another ``definition'' before point.  Otherwise it should
-leave point at the place it finds a ``definition,'' and return any
+leave point at the place it finds a ``definition'' and return any
 non-@code{nil} value.
 
 Setting this variable makes it buffer-local in the current buffer.
@@ -2290,8 +2308,8 @@ A nested sub-alist element looks like this:
 It creates the submenu @var{menu-title} specified by @var{sub-alist}.
 
 The default value of @code{imenu-create-index-function} is
-@code{imenu-default-create-index-function}.  This function uses
-@code{imenu-prev-index-position-function} and
+@code{imenu-default-create-index-function}.  This function calls the
+value of @code{imenu-prev-index-position-function} and the value of
 @code{imenu-extract-index-name-function} to produce the index alist.
 However, if either of these two variables is @code{nil}, the default
 function uses @code{imenu-generic-expression} instead.
@@ -2319,6 +2337,7 @@ Search-based fontification happens second.
 @menu
 * Font Lock Basics::            Overview of customizing Font Lock.
 * Search-based Fontification::  Fontification based on regexps.
+* Customizing Keywords::        Customizing search-based fontification.
 * Other Font Lock Variables::   Additional customization facilities.
 * Levels of Font Lock::         Each mode can define alternative levels
                                   so that the user can select more or less.
@@ -2455,7 +2474,7 @@ highlighted (instead of the entire text that @var{matcher} matched).
 @end example
 
 If you use @code{regexp-opt} to produce the regular expression
-@var{matcher}, then you can use @code{regexp-opt-depth} (@pxref{Regexp
+@var{matcher}, you can use @code{regexp-opt-depth} (@pxref{Regexp
 Functions}) to calculate the value for @var{subexp}.
 
 @item (@var{matcher} . @var{facespec})
@@ -2624,28 +2643,56 @@ Non-@code{nil} means that regular expression matching for the sake of
 @code{font-lock-keywords} should be case-insensitive.
 @end defvar
 
-You can use @code{font-lock-add-keywords} to add additional
+@node Customizing Keywords
+@subsection Customizing Search-Based Fontification
+
+  You can use @code{font-lock-add-keywords} to add additional
 search-based fontification rules to a major mode, and
 @code{font-lock-remove-keywords} to removes rules.
 
-@defun font-lock-add-keywords mode keywords &optional append
-This function adds highlighting @var{keywords} for @var{mode}.  The
-argument @var{keywords} should be a list with the same format as the
-variable @code{font-lock-keywords}.  @var{mode} should be a symbol,
-the major mode command name, such as @code{c-mode}.  When Font Lock
-mode is turned on in @var{mode}, it adds @var{keywords} to
-@code{font-lock-keywords}.  @var{mode} can also be @code{nil}; the
-highlighting @var{keywords} are immediately added to
-@code{font-lock-keywords} in the current buffer in that case.
+@defun font-lock-add-keywords mode keywords &optional how
+This function adds highlighting @var{keywords}, for the current buffer
+or for major mode @var{mode}.  The argument @var{keywords} should be a
+list with the same format as the variable @code{font-lock-keywords}.
+
+If @var{mode} is a symbol which is a major mode command name, such as
+@code{c-mode}, the effect is that enabling Font Lock mode in
+@var{mode} will add @var{keywords} to @code{font-lock-keywords}.
+Calling with a non-@code{nil} value of @var{mode} is correct only in
+your @file{~/.emacs} file.
+
+If @var{mode} is @code{nil}, this function adds @var{keywords} to
+@code{font-lock-keywords} in the current buffer.  This way of calling
+@code{font-lock-add-keywords} is usually used in mode hook functions.
 
 By default, @var{keywords} are added at the beginning of
-@code{font-lock-keywords}.  If the optional argument @var{append} is
+@code{font-lock-keywords}.  If the optional argument @var{how} is
 @code{set}, they are used to replace the value of
-@code{font-lock-keywords}.  If @var{append} is any other
-non-@code{nil} value, they are added at the end of
-@code{font-lock-keywords}.
+@code{font-lock-keywords}.  If @var{how} is any other non-@code{nil}
+value, they are added at the end of @code{font-lock-keywords}.
 
-For example:
+Some modes provide specialized support you can use in additional
+highlighting patterns.  See the variables
+@code{c-font-lock-extra-types}, @code{c++-font-lock-extra-types},
+and @code{java-font-lock-extra-types}, for example.
+
+@strong{Warning:} major mode functions must not call
+@code{font-lock-add-keywords} under any circumstances, either directly
+or indirectly, except through their mode hooks.  (Doing so would lead
+to incorrect behavior for some minor modes.)  They should set up their
+rules for search-based fontification by setting
+@code{font-lock-keywords}.
+@end defun
+
+@defun font-lock-remove-keywords mode keywords
+This function removes @var{keywords} from @code{font-lock-keywords}
+for the current buffer or for major mode @var{mode}.  As in
+@code{font-lock-add-keywords}, @var{mode} should be a major mode
+command name or @code{nil}.  All the caveats and requirements for
+@code{font-lock-add-keywords} apply here too.
+@end defun
+
+  For example, this code
 
 @smallexample
 (font-lock-add-keywords 'c-mode
@@ -2653,30 +2700,23 @@ For example:
    ("\\<\\(and\\|or\\|not\\)\\>" . font-lock-keyword-face)))
 @end smallexample
 
+@noindent
 adds two fontification patterns for C mode: one to fontify the word
 @samp{FIXME}, even in comments, and another to fontify the words
 @samp{and}, @samp{or} and @samp{not} as keywords.
 
-Some modes have specialized support for additional patterns.  See the
-variables @code{c-font-lock-extra-types},
-@code{c++-font-lock-extra-types}, @code{objc-font-lock-extra-types}
-and @code{java-font-lock-extra-types}, for example.
-@end defun
+@noindent
+That example affects only C mode proper.  To add the same patterns to
+C mode @emph{and} all modes derived from it, do this instead:
 
-@defun font-lock-remove-keywords mode keywords
-This function removes highlighting @var{keywords} for @var{mode}.  As
-in @code{font-lock-add-keywords}, @var{mode} should be a major mode
-command name or @code{nil}.  If @code{nil}, the highlighting
-@var{keywords} are immediately removed in the current buffer.
-@end defun
-
-@strong{Warning:} Only use a non-@code{nil} @var{mode} argument when
-you use @code{font-lock-add-keywords} or
-@code{font-lock-remove-keywords} in your @file{.emacs} file.  When you
-use these functions from a Lisp program (such as a minor mode), we
-recommend that you use @code{nil} for @var{mode} (and place the call
-on a hook) to avoid subtle problems due to the details of the
-implementation.
+@smallexample
+(add-hook 'c-mode-hook
+ (lambda ()
+  (font-lock-add-keywords nil
+   '(("\\<\\(FIXME\\):" 1 font-lock-warning-face prepend)
+     ("\\<\\(and\\|or\\|not\\)\\>" .
+      font-lock-keyword-face)))))
+@end smallexample
 
 @node Other Font Lock Variables
 @subsection Other Font Lock Variables
@@ -2737,7 +2777,7 @@ arguments, the beginning and end of the region.  The default value is
 This variable specifies the number of extra lines to consider when
 refontifying the buffer after each text change.  Font lock begins
 refontifying from that number of lines before the changed region.  The
-default is 1, but using a larger value can be useful for coping with
+default is 0, but using a larger value can be useful for coping with
 multi-line patterns.
 @end defvar
 

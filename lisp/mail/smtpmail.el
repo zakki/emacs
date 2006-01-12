@@ -1,6 +1,6 @@
 ;;; smtpmail.el --- simple SMTP protocol (RFC 821) for sending mail
 
-;; Copyright (C) 1995, 1996, 2001, 2002, 2003, 2004
+;; Copyright (C) 1995, 1996, 2001, 2002, 2003, 2004, 2005, 2006
 ;;   Free Software Foundation, Inc.
 
 ;; Author: Tomoji Kagatani <kagatani@rbc.ncl.omron.co.jp>
@@ -26,8 +26,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -207,7 +207,7 @@ This is relative to `smtpmail-queue-dir'.")
 (defvar smtpmail-queue-index (concat smtpmail-queue-dir
 				     smtpmail-queue-index-file))
 
-(defconst smtpmail-auth-supported '(cram-md5 login)
+(defconst smtpmail-auth-supported '(cram-md5 plain login)
   "List of supported SMTP AUTH mechanisms.")
 
 ;;;
@@ -365,7 +365,7 @@ This is relative to `smtpmail-queue-dir'.")
 		(make-directory smtpmail-queue-dir t))
 	      (with-current-buffer buffer-data
 		(erase-buffer)
-		(insert-buffer tembuf)
+		(insert-buffer-contents tembuf)
 		(write-file file-data)
 		(set-buffer buffer-elisp)
 		(erase-buffer)
@@ -559,8 +559,26 @@ This is relative to `smtpmail-queue-dir'.")
 		(not (integerp (car ret)))
 		(>= (car ret) 400))
 	    (throw 'done nil)))
+       ((eq mech 'plain)
+	;; We used to send an empty initial request, and wait for an
+	;; empty response, and then send the password, but this
+	;; violate a SHOULD in RFC 2222 paragraph 5.1.  Note that this
+	;; is not sent if the server did not advertise AUTH PLAIN in
+	;; the EHLO response.  See RFC 2554 for more info.
+	(smtpmail-send-command process
+			       (concat "AUTH PLAIN "
+				       (base64-encode-string
+					(concat "\0"
+						(smtpmail-cred-user cred)
+						"\0"
+						passwd))))
+	(if (or (null (car (setq ret (smtpmail-read-response process))))
+		(not (integerp (car ret)))
+		(not (equal (car ret) 235)))
+	    (throw 'done nil)))
+
        (t
-        (error "Mechanism %s not implemented" mech)))
+	(error "Mechanism %s not implemented" mech)))
       ;; Remember the password.
       (when (and (not (stringp smtpmail-auth-credentials))
 		 (null (smtpmail-cred-passwd cred)))
@@ -589,6 +607,7 @@ This is relative to `smtpmail-queue-dir'.")
 
 	  ;; clear the trace buffer of old output
 	  (with-current-buffer process-buffer
+	    (setq buffer-undo-list t)
 	    (erase-buffer))
 
 	  ;; open the connection to the server

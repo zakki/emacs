@@ -1,6 +1,7 @@
 ;;; calc-poly.el --- polynomial functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -1071,15 +1072,35 @@
 	((and (eq (car-safe expr) '^)
 	      (memq (car-safe (nth 1 expr)) '(+ -))
 	      (integerp (nth 2 expr))
-	      (if (> (nth 2 expr) 0)
-		  (or (and (or (> math-mt-many 500000) (< math-mt-many -500000))
-			   (math-expand-power (nth 1 expr) (nth 2 expr)
-					      nil t))
-		      (list '*
-			    (nth 1 expr)
-			    (list '^ (nth 1 expr) (1- (nth 2 expr)))))
-		(if (< (nth 2 expr) 0)
-		    (list '/ 1 (list '^ (nth 1 expr) (- (nth 2 expr))))))))
+              (if (and 
+                   (or (math-known-matrixp (nth 1 (nth 1 expr)))
+                       (math-known-matrixp (nth 2 (nth 1 expr)))
+                       (and
+                        calc-matrix-mode
+                        (not (eq calc-matrix-mode 'scalar))
+                        (not (and (math-known-scalarp (nth 1 (nth 1 expr)))
+                                  (math-known-scalarp (nth 2 (nth 1 expr)))))))
+                   (> (nth 2 expr) 1))
+                  (if (= (nth 2 expr) 2)
+                      (math-add-or-sub (list '* (nth 1 (nth 1 expr)) (nth 1 expr))
+                                       (list '* (nth 2 (nth 1 expr)) (nth 1 expr))
+                                       nil (eq (car (nth 1 expr)) '-))
+                    (math-add-or-sub (list '* (nth 1 (nth 1 expr)) 
+                                           (list '^ (nth 1 expr) 
+                                                 (1- (nth 2 expr))))
+                                     (list '* (nth 2 (nth 1 expr)) 
+                                           (list '^ (nth 1 expr) 
+                                                 (1- (nth 2 expr))))
+                                     nil (eq (car (nth 1 expr)) '-)))
+                (if (> (nth 2 expr) 0)
+                    (or (and (or (> math-mt-many 500000) (< math-mt-many -500000))
+                             (math-expand-power (nth 1 expr) (nth 2 expr)
+                                                nil t))
+                        (list '*
+                              (nth 1 expr)
+                              (list '^ (nth 1 expr) (1- (nth 2 expr)))))
+                  (if (< (nth 2 expr) 0)
+                      (list '/ 1 (list '^ (nth 1 expr) (- (nth 2 expr)))))))))
 	(t expr)))
 
 (defun calcFunc-expand (expr &optional many)

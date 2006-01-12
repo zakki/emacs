@@ -1,6 +1,7 @@
 ;;; mm-decode.el --- Functions for decoding MIME things
-;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;;	MORIOKA Tomohiko <morioka@jaist.ac.jp>
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -36,6 +37,8 @@
   (autoload 'mm-inline-partial "mm-partial")
   (autoload 'mm-inline-external-body "mm-extern")
   (autoload 'mm-insert-inline "mm-view"))
+
+(defvar gnus-current-window-configuration)
 
 (add-hook 'gnus-exit-gnus-hook 'mm-destroy-postponed-undisplay-list)
 
@@ -219,7 +222,12 @@ before the external MIME handler is invoked."
     ("text/richtext" mm-inline-text identity)
     ("text/x-patch" mm-display-patch-inline
      (lambda (handle)
-       (locate-library "diff-mode")))
+       ;; If the diff-mode.el package is installed, the function is
+       ;; autoloaded.  Checking (locate-library "diff-mode") would be trying
+       ;; to cater to broken installations.  OTOH checking the function
+       ;; makes it possible to install another package which provides an
+       ;; alternative implementation of diff-mode.  --Stef
+       (fboundp 'diff-mode)))
     ("application/emacs-lisp" mm-display-elisp-inline identity)
     ("application/x-emacs-lisp" mm-display-elisp-inline identity)
     ("text/html"
@@ -275,7 +283,7 @@ before the external MIME handler is invoked."
   "List of media types that are to be displayed inline.
 See also `mm-inline-media-tests', which says how to display a media
 type inline."
-  :type '(repeat string)
+  :type '(repeat regexp)
   :group 'mime-display)
 
 (defcustom mm-keep-viewer-alive-types
@@ -284,7 +292,7 @@ type inline."
   "List of media types for which the external viewer will not be killed
 when selecting a different article."
   :version "22.1"
-  :type '(repeat string)
+  :type '(repeat regexp)
   :group 'mime-display)
 
 (defcustom mm-automatic-display
@@ -296,7 +304,7 @@ when selecting a different article."
     "application/pkcs7-signature" "application/x-pkcs7-mime"
     "application/pkcs7-mime")
   "A list of MIME types to be displayed automatically."
-  :type '(repeat string)
+  :type '(repeat regexp)
   :group 'mime-display)
 
 (defcustom mm-attachment-override-types '("text/x-vcard"
@@ -305,17 +313,17 @@ when selecting a different article."
 					  "application/pkcs7-signature"
 					  "application/x-pkcs7-signature")
   "Types to have \"attachment\" ignored if they can be displayed inline."
-  :type '(repeat string)
+  :type '(repeat regexp)
   :group 'mime-display)
 
 (defcustom mm-inline-override-types nil
   "Types to be treated as attachments even if they can be displayed inline."
-  :type '(repeat string)
+  :type '(repeat regexp)
   :group 'mime-display)
 
 (defcustom mm-automatic-external-display nil
   "List of MIME type regexps that will be displayed externally automatically."
-  :type '(repeat string)
+  :type '(repeat regexp)
   :group 'mime-display)
 
 (defcustom mm-discouraged-alternatives nil
@@ -327,8 +335,13 @@ for instance, text/html parts are very unwanted, and text/richtext are
 somewhat unwanted, then the value of this variable should be set
 to:
 
- (\"text/html\" \"text/richtext\")"
-  :type '(repeat string)
+ (\"text/html\" \"text/richtext\")
+
+Adding \"image/.*\" might also be useful.  Spammers use it as the
+prefered part of multipart/alternative messages.  See also
+`gnus-buttonized-mime-types', to which adding \"multipart/alternative\"
+enables you to choose manually one of two types those mails include."
+  :type '(repeat regexp) ;; See `mm-preferred-alternative-precedence'.
   :group 'mime-display)
 
 (defcustom mm-tmp-directory
@@ -448,20 +461,18 @@ If not set, `default-directory' will be used."
 (defvar mm-viewer-completion-map
   (let ((map (make-sparse-keymap 'mm-viewer-completion-map)))
     (set-keymap-parent map minibuffer-local-completion-map)
+    ;; Should we bind other key to minibuffer-complete-word?
+    (define-key map " " 'self-insert-command)
     map)
   "Keymap for input viewer with completion.")
-
-;; Should we bind other key to minibuffer-complete-word?
-(define-key mm-viewer-completion-map " " 'self-insert-command)
 
 (defvar mm-viewer-completion-map
   (let ((map (make-sparse-keymap 'mm-viewer-completion-map)))
     (set-keymap-parent map minibuffer-local-completion-map)
+    ;; Should we bind other key to minibuffer-complete-word?
+    (define-key map " " 'self-insert-command)
     map)
   "Keymap for input viewer with completion.")
-
-;; Should we bind other key to minibuffer-complete-word?
-(define-key mm-viewer-completion-map " " 'self-insert-command)
 
 ;;; The functions.
 
@@ -561,7 +572,7 @@ Postpone undisplaying of viewers for types in
 	     ;; what really needs to be done here is a way to link a
 	     ;; MIME handle back to it's parent MIME handle (in a multilevel
 	     ;; MIME article).  That would probably require changing
-	     ;; the mm-handle API so we simply store the multipart buffert
+	     ;; the mm-handle API so we simply store the multipart buffer
 	     ;; name as a text property of the "multipart/whatever" string.
 	     (add-text-properties 0 (length (car ctl))
 				  (list 'buffer (mm-copy-to-buffer)
@@ -755,7 +766,19 @@ external if displayed external."
 			  (gnus-map-function mm-file-name-rewrite-functions
 					     (file-name-nondirectory filename))
 			  dir))
-	    (setq file (mm-make-temp-file (expand-file-name "mm." dir))))
+	    (setq file (mm-make-temp-file (expand-file-name "mm." dir)))
+	    (let ((newname
+		   ;; Use nametemplate (defined in RFC1524) if it is
+		   ;; specified in mailcap.
+		   (if (assoc "nametemplate" mime-info)
+		       (format (cdr (assoc "nametemplate" mime-info)) file)
+		     ;; Add a suffix according to `mailcap-mime-extensions'.
+		     (concat file (car (rassoc (mm-handle-media-type handle)
+					       mailcap-mime-extensions))))))
+	      (unless (string-equal file newname)
+		(when (file-exists-p file)
+		  (rename-file file newname))
+		(setq file newname))))
 	  (let ((coding-system-for-write mm-binary-coding-system))
 	    (write-region (point-min) (point-max) file nil 'nomesg))
 	  (message "Viewing with %s" method)
@@ -804,8 +827,7 @@ external if displayed external."
 				   (mm-mailcap-command
 				    method file (mm-handle-type handle)))
 		     (if (buffer-live-p buffer)
-			 (save-excursion
-			   (set-buffer buffer)
+			 (with-current-buffer buffer
 			   (buffer-string))))
 		 (progn
 		   (ignore-errors (delete-file file))
@@ -814,14 +836,52 @@ external if displayed external."
 		   (ignore-errors (kill-buffer buffer))))))
 	    'inline)
 	   (t
+	    ;; Deleting the temp file should be postponed for some wrappers,
+	    ;; shell scripts, and so on, which might exit right after having
+	    ;; started a viewer command as a background job.
 	    (let ((command (mm-mailcap-command
 			    method file (mm-handle-type handle))))
 	      (unwind-protect
-		  (start-process "*display*"
-				 (setq buffer
-				       (generate-new-buffer " *mm*"))
-				 shell-file-name
-				 shell-command-switch command)
+		  (progn
+		    (start-process "*display*"
+				   (setq buffer
+					 (generate-new-buffer " *mm*"))
+				   shell-file-name
+				   shell-command-switch command)
+		    (set-process-sentinel
+		     (get-buffer-process buffer)
+		     (lexical-let ;; Don't use `let'.
+			 ;; Function used to remove temp file and directory.
+			 ((fn `(lambda nil
+				 ;; Don't use `ignore-errors'.
+				 (condition-case nil
+				     (delete-file ,file)
+				   (error))
+				 (condition-case nil
+				     (delete-directory
+				      ,(file-name-directory file))
+				   (error))))
+			  ;; Form uses to kill the process buffer and
+			  ;; remove the undisplayer.
+			  (fm `(progn
+				 (kill-buffer ,buffer)
+				 ,(macroexpand
+				   (list 'mm-handle-set-undisplayer
+					 (list 'quote handle)
+					 nil))))
+			  ;; Message to be issued when the process exits.
+			  (done (format "Displaying %s...done" command))
+			  ;; In particular, the timer object (which is
+			  ;; a vector in Emacs but is a list in XEmacs)
+			  ;; requires that it is lexically scoped.
+			  (timer (run-at-time 2.0 nil 'ignore)))
+		       (lambda (process state)
+			 (when (eq 'exit (process-status process))
+			   (if (memq timer timer-list)
+			       (timer-set-function timer fn)
+			     (funcall fn))
+			   (ignore-errors (eval fm))
+			   (message "%s" done))))))
 		(mm-handle-set-external-undisplayer
 		 handle (cons file buffer)))
 	      (message "Displaying %s..." command))
@@ -1034,9 +1094,15 @@ external if displayed external."
 (defun mm-insert-part (handle)
   "Insert the contents of HANDLE in the current buffer."
   (save-excursion
-    (insert (if (mm-multibyte-p)
-		(mm-string-as-multibyte (mm-get-part handle))
-	      (mm-get-part handle)))))
+    (insert
+     (cond ((eq (mail-content-type-get (mm-handle-type handle) 'charset)
+		'gnus-decoded)
+	    (with-current-buffer (mm-handle-buffer handle)
+	      (buffer-string)))
+	   ((mm-multibyte-p)
+	    (mm-string-as-multibyte (mm-get-part handle)))
+	   (t
+	    (mm-get-part handle))))))
 
 (defun mm-file-name-delete-whitespace (file-name)
   "Remove all whitespace characters from FILE-NAME."

@@ -1,7 +1,7 @@
 ;;; ediff-util.el --- the core commands and utilities of ediff
 
 ;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-;;   2004 Free Software Foundation, Inc.
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Michael Kifer <kifer@cs.stonybrook.edu>
 
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -117,6 +117,12 @@ Commands:
   (kill-all-local-variables)
   (setq major-mode 'ediff-mode)
   (setq mode-name "Ediff")
+  ;; We use run-hooks instead of run-mode-hooks for two reasons.
+  ;; The ediff control buffer is read-only and it is not supposed to be
+  ;; modified by minor modes and such. So, run-mode-hooks doesn't do anything
+  ;; useful here on top of what run-hooks does.
+  ;; Second, changing run-hooks to run-mode-hooks would require an
+  ;; if-statement, since XEmacs doesn't have this. 
   (run-hooks 'ediff-mode-hook))
 
 
@@ -323,7 +329,7 @@ to invocation.")
 	    ediff-word-mode-job (ediff-word-mode-job))
 
       ;; Don't delete variants in case of ediff-buffer-* jobs without asking.
-      ;; This is because u may loose work---dangerous.
+      ;; This is because one may loose work---dangerous.
       (if (string-match "buffer" (symbol-name ediff-job-name))
 	  (setq ediff-keep-variants t))
 
@@ -361,7 +367,8 @@ to invocation.")
 		   (ediff-unique-buffer-name "*ediff-merge" "*")))
 	    (save-excursion
 	      (set-buffer buffer-C)
-	      (insert-buffer buf)
+	      (insert-buffer-substring buf)
+	      (goto-char (point-min))
 	      (funcall (ediff-with-current-buffer buf major-mode))
 	      (widen) ; merge buffer is always widened
 	      (add-hook 'local-write-file-hooks 'ediff-set-merge-mode nil t)
@@ -1723,7 +1730,7 @@ With a prefix argument, go forward that many differences."
 	(or (>= n ediff-number-of-differences)
 	    (setq regexp-skip (funcall ediff-skip-diff-region-function n))
 	    ;; this won't exec if regexp-skip is t
-	    (setq non-clash-skip (ediff-merge-region-is-non-clash n)
+	    (setq non-clash-skip (ediff-merge-region-is-non-clash-to-skip n)
 		  skip-changed
 		  (ediff-skip-merge-region-if-changed-from-default-p n))
 	    (ediff-install-fine-diff-if-necessary n))
@@ -1738,6 +1745,7 @@ With a prefix argument, go forward that many differences."
 		     skip-changed
 		     ;; skip difference regions that differ in white space
 		     (and ediff-ignore-similar-regions
+			  (ediff-merge-region-is-non-clash n)
 			  (or (eq (ediff-no-fine-diffs-p n) t)
 			      (and (ediff-merge-job)
 				   (eq (ediff-no-fine-diffs-p n) 'C)))
@@ -1748,7 +1756,7 @@ With a prefix argument, go forward that many differences."
 	  (or (>= n ediff-number-of-differences)
 	      (setq regexp-skip (funcall ediff-skip-diff-region-function n))
 	      ;; this won't exec if regexp-skip is t
-	      (setq non-clash-skip (ediff-merge-region-is-non-clash n)
+	      (setq non-clash-skip (ediff-merge-region-is-non-clash-to-skip n)
 		    skip-changed
 		    (ediff-skip-merge-region-if-changed-from-default-p n))
 	      (ediff-install-fine-diff-if-necessary n))
@@ -1772,7 +1780,7 @@ With a prefix argument, go back that many differences."
 	(or (< n 0)
 	    (setq regexp-skip (funcall ediff-skip-diff-region-function n))
 	    ;; this won't exec if regexp-skip is t
-	    (setq non-clash-skip (ediff-merge-region-is-non-clash n)
+	    (setq non-clash-skip (ediff-merge-region-is-non-clash-to-skip n)
 		  skip-changed
 		  (ediff-skip-merge-region-if-changed-from-default-p n))
 	    (ediff-install-fine-diff-if-necessary n))
@@ -1786,6 +1794,7 @@ With a prefix argument, go back that many differences."
 		     skip-changed
 		     ;; skip difference regions that differ in white space
 		     (and ediff-ignore-similar-regions
+			  (ediff-merge-region-is-non-clash n)
 			  (or (eq (ediff-no-fine-diffs-p n) t)
 			      (and (ediff-merge-job)
 				   (eq (ediff-no-fine-diffs-p n) 'C)))
@@ -1796,7 +1805,7 @@ With a prefix argument, go back that many differences."
 	  (or (< n 0)
 	      (setq regexp-skip (funcall ediff-skip-diff-region-function n))
 	      ;; this won't exec if regexp-skip is t
-	      (setq non-clash-skip (ediff-merge-region-is-non-clash n)
+	      (setq non-clash-skip (ediff-merge-region-is-non-clash-to-skip n)
 		    skip-changed
 		    (ediff-skip-merge-region-if-changed-from-default-p n))
 	      (ediff-install-fine-diff-if-necessary n))
@@ -2069,7 +2078,7 @@ ARG is a prefix argument.  If nil, copy the current difference region."
 	  (ediff-clear-fine-differences n))
       ;; Make sure that the message about saving and how to restore is seen
       ;; by the user
-      (message messg))
+      (message "%s" messg))
     ))
 
 ;; Save Nth diff of buffer BUF-TYPE \(A, B, or C\).
@@ -2105,7 +2114,7 @@ ARG is a prefix argument.  If nil, copy the current difference region."
     (if this-buf-n-th-diff-saved
 	(if (yes-or-no-p
 	     (format
-	      "You've previously copied diff region %d to buffer %S.  Confirm "
+	      "You've previously copied diff region %d to buffer %S.  Confirm? "
 	      (1+ n) buf-type))
 	    t
 	  (error "Quit"))
@@ -2213,18 +2222,18 @@ a regular expression typed in by the user."
 	    regexp-A
 	    (read-string
 	     (format
-	      "Ignore A-regions matching this regexp (default \"%s\"): "
+	      "Ignore A-regions matching this regexp (default %s): "
 	      ediff-regexp-hide-A))
 	    regexp-B
 	    (read-string
 	     (format
-	      "Ignore B-regions matching this regexp (default \"%s\"): "
+	      "Ignore B-regions matching this regexp (default %s): "
 	      ediff-regexp-hide-B)))
       (if ediff-3way-comparison-job
 	  (setq regexp-C
 		(read-string
 		 (format
-		  "Ignore C-regions matching this regexp (default \"%s\"): "
+		  "Ignore C-regions matching this regexp (default %s): "
 		  ediff-regexp-hide-C))))
       (if (eq ediff-hide-regexp-connective 'and)
 	  (setq msg-connective "BOTH"
@@ -2252,18 +2261,18 @@ a regular expression typed in by the user."
 	    regexp-A
 	    (read-string
 	     (format
-	      "Focus on A-regions matching this regexp (default \"%s\"): "
+	      "Focus on A-regions matching this regexp (default %s): "
 	      ediff-regexp-focus-A))
 	    regexp-B
 	    (read-string
 	     (format
-	      "Focus on B-regions matching this regexp (default \"%s\"): "
+	      "Focus on B-regions matching this regexp (default %s): "
 	      ediff-regexp-focus-B)))
       (if ediff-3way-comparison-job
 	  (setq regexp-C
 		(read-string
 		 (format
-		  "Focus on C-regions matching this regexp (default \"%s\"): "
+		  "Focus on C-regions matching this regexp (default %s): "
 		  ediff-regexp-focus-C))))
       (if (eq ediff-focus-regexp-connective 'and)
 	  (setq msg-connective "BOTH"
@@ -2714,7 +2723,7 @@ only if this merge job is part of a group, i.e., was invoked from within
 	     (format "Another buffer is visiting file %s. Too dangerous to save the merge buffer"
 		     file)))
 	(beep)
-	(message warn-message)
+	(message "%s" warn-message)
 	(with-output-to-temp-buffer ediff-msg-buffer
 	  (princ "\n\n")
 	  (princ warn-message)
@@ -3164,7 +3173,7 @@ Hit \\[ediff-recenter] to reset the windows afterward."
     (setq f (concat ediff-temp-file-prefix p)
 	  short-f (concat ediff-temp-file-prefix short-p)
   	  f (cond (given-file)
-		  ((find-file-name-handler f 'find-file-noselect)
+		  ((find-file-name-handler f 'insert-file-contents)
 		   ;; to thwart file handlers in write-region, e.g., if file
 		   ;; name ends with .Z or .gz
 		   ;; This is needed so that patches produced by ediff will
@@ -3280,7 +3289,7 @@ Hit \\[ediff-recenter] to reset the windows afterward."
 	    (princ warn-message)
 	    (princ "\n\n"))
 	  (if (y-or-n-p
-	       (message warn-message))
+	       (message "%s" warn-message))
 	      (with-current-buffer buff
 		(save-buffer)
 		(kill-buffer (current-buffer)))
@@ -3788,9 +3797,8 @@ Ediff Control Panel to restore highlighting."
 		      type ediff-current-diff-overlay-alist))
 	    (buffer (ediff-get-buffer type))
 	    (face (face-name
-		   (symbol-value
-		    (ediff-get-symbol-from-alist
-		     type ediff-current-diff-face-alist)))))
+		   (ediff-get-symbol-from-alist
+		    type ediff-current-diff-face-alist))))
 	(set overlay
 	     (ediff-make-bullet-proof-overlay (point-max) (point-max) buffer))
 	(ediff-set-overlay-face (symbol-value overlay) face)

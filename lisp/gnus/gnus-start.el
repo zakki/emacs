@@ -1,6 +1,7 @@
 ;;; gnus-start.el --- startup functions for Gnus
-;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: news
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -605,7 +606,7 @@ Can be used to turn version control on or off."
   "Subscribe the new GROUP interactively.
 It is inserted in hierarchical newsgroup order if subscribed.  If not,
 it is killed."
-  (if (gnus-y-or-n-p (format "Subscribe new newsgroup: %s " group))
+  (if (gnus-y-or-n-p (format "Subscribe new newsgroup %s? " group))
       (gnus-subscribe-hierarchically group)
     (push group gnus-killed-list)))
 
@@ -716,11 +717,12 @@ the first newsgroup."
 
 (defun gnus-no-server-1 (&optional arg slave)
   "Read network news.
-If ARG is a positive number, Gnus will use that as the
-startup level.	If ARG is nil, Gnus will be started at level 2.
-If ARG is non-nil and not a positive number, Gnus will
-prompt the user for the name of an NNTP server to use.
-As opposed to `gnus', this command will not connect to the local server."
+If ARG is a positive number, Gnus will use that as the startup
+level.  If ARG is nil, Gnus will be started at level 2
+\(`gnus-level-default-subscribed' minus one).  If ARG is non-nil
+and not a positive number, Gnus will prompt the user for the name
+of an NNTP server to use.  As opposed to \\[gnus], this command
+will not connect to the local server."
   (interactive "P")
   (let ((val (or arg (1- gnus-level-default-subscribed))))
     (gnus val t slave)
@@ -804,8 +806,12 @@ prompt the user for the name of an NNTP server to use."
   "Make sure the draft group exists."
   (gnus-request-create-group "drafts" '(nndraft ""))
   (unless (gnus-gethash "nndraft:drafts" gnus-newsrc-hashtb)
+    (gnus-message 3 "Subscribing drafts group")
     (let ((gnus-level-default-subscribed 1))
-      (gnus-subscribe-group "nndraft:drafts" nil '(nndraft "")))
+      (gnus-subscribe-group "nndraft:drafts" nil '(nndraft ""))))
+  (unless (equal (gnus-group-get-parameter "nndraft:drafts" 'gnus-dummy t)
+		 '((gnus-draft-mode)))
+    (gnus-message 3 "Setting up drafts group")
     (gnus-group-set-parameter
      "nndraft:drafts" 'gnus-dummy '((gnus-draft-mode)))))
 
@@ -857,6 +863,7 @@ prompt the user for the name of an NNTP server to use."
       (set-buffer (setq gnus-dribble-buffer
 			(gnus-get-buffer-create
 			 (file-name-nondirectory dribble-file))))
+      (set (make-local-variable 'file-precious-flag) t)
       (erase-buffer)
       (setq buffer-file-name dribble-file)
       (auto-save-mode t)
@@ -2811,6 +2818,7 @@ If FORCE is non-nil, the .newsrc file is read."
            (print-escape-nonascii t)
            (print-length nil)
            (print-level nil)
+	   (print-circle nil)
            (print-escape-newlines t)
 	   (gnus-killed-list
 	    (if (and gnus-save-killed-list

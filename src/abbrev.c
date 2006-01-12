@@ -1,6 +1,6 @@
 /* Primitives for word-abbrev mode.
-   Copyright (C) 1985, 1986, 1993, 1996, 1998, 2001,02,03,04
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1993, 1996, 1998, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -442,7 +442,7 @@ is not undone.  */)
 
       val = SYMBOL_VALUE (Vlast_abbrev);
       if (!STRINGP (val))
-	error ("value of abbrev-symbol must be a string");
+	error ("Value of `abbrev-symbol' must be a string");
       zv_before = ZV;
       del_range_byte (PT_BYTE, PT_BYTE + SBYTES (val), 1);
       /* Don't inherit properties here; just copy from old contents.  */

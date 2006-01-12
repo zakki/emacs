@@ -1,7 +1,7 @@
 ;;; mail-extr.el --- extract full name and address from RFC 822 mail header -*- coding: utf-8 -*-
 
-;; Copyright (C) 1991, 1992, 1993, 1994, 1997, 2001
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1991, 1992, 1993, 1994, 1997, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Joe Wells <jbw@cs.bu.edu>
 ;; Maintainer: FSF
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -699,9 +699,10 @@ Unless NO-REPLACE is true, at each of the positions in LIST-SYMBOL
 ;;;###autoload
 (defun mail-extract-address-components (address &optional all)
   "Given an RFC-822 address ADDRESS, extract full name and canonical address.
-Returns a list of the form (FULL-NAME CANONICAL-ADDRESS).
-If no name can be extracted, FULL-NAME will be nil.  Also see
-`mail-extr-ignore-single-names' and `mail-extr-ignore-realname-equals-mailbox-name'.
+Returns a list of the form (FULL-NAME CANONICAL-ADDRESS).  If no
+name can be extracted, FULL-NAME will be nil.  Also see
+`mail-extr-ignore-single-names' and
+`mail-extr-ignore-realname-equals-mailbox-name'.
 
 If the optional argument ALL is non-nil, then ADDRESS can contain zero
 or more recipients, separated by commas, and we return a list of

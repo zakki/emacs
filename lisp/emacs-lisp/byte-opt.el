@@ -1,7 +1,7 @@
 ;;; byte-opt.el --- the optimization passes of the emacs-lisp byte compiler
 
-;; Copyright (c) 1991, 1994, 2000, 2001, 2002, 2004
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1991, 1994, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Jamie Zawinski <jwz@lucid.com>
 ;;	Hallvard Furuseth <hbf@ulrik.uio.no>
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -152,11 +152,11 @@
 ;; ;; Associative math should recognize subcalls to identical function:
 ;; (disassemble (lambda (x) (+ (+ (foo) 1) (+ (bar) 2))))
 ;; ;; This should generate the same as (1+ x) and (1- x)
-   
+
 ;; (disassemble (lambda (x) (cons (+ x 1) (- x 1))))
 ;; ;; An awful lot of functions always return a non-nil value.  If they're
 ;; ;; error free also they may act as true-constants.
-   
+
 ;; (disassemble (lambda (x) (and (point) (foo))))
 ;; ;; When
 ;; ;;   - all but one arguments to a function are constant
@@ -165,19 +165,19 @@
 ;; ;; condition is side-effect-free [assignment-free] then the other
 ;; ;; arguments may be any expressions.  Since, however, the code size
 ;; ;; can increase this way they should be "simple".  Compare:
-   
+
 ;; (disassemble (lambda (x) (eq (if (point) 'a 'b) 'c)))
 ;; (disassemble (lambda (x) (if (point) (eq 'a 'c) (eq 'b 'c))))
-   
+
 ;; ;; (car (cons A B)) -> (prog1 A B)
 ;; (disassemble (lambda (x) (car (cons (foo) 42))))
-   
+
 ;; ;; (cdr (cons A B)) -> (progn A B)
 ;; (disassemble (lambda (x) (cdr (cons 42 (foo)))))
-   
+
 ;; ;; (car (list A B ...)) -> (prog1 A B ...)
 ;; (disassemble (lambda (x) (car (list (foo) 42 (bar)))))
-   
+
 ;; ;; (cdr (list A B ...)) -> (progn A (list B ...))
 ;; (disassemble (lambda (x) (cdr (list 42 (foo) (bar)))))
 
@@ -545,7 +545,7 @@
 				(eq (car-safe (nth 2 last)) 'cdr)
 				(eq (cadr (nth 2 last)) var))))
 		    (progn
-		      (byte-compile-warn "`%s' called for effect"
+		      (byte-compile-warn "value returned by `%s' is not used"
 					 (prin1-to-string (car form)))
 		      nil)))
 	   (byte-compile-log "  %s called for effect; deleted" fn)
@@ -1121,12 +1121,13 @@
 (put 'symbol-name 'byte-optimizer 'byte-optimize-pure-func)
 (put 'regexp-opt 'byte-optimizer 'byte-optimize-pure-func)
 (put 'regexp-quote 'byte-optimizer 'byte-optimize-pure-func)
+(put 'string-to-syntax 'byte-optimizer 'byte-optimize-pure-func)
 (defun byte-optimize-pure-func (form)
   "Do constant folding for pure functions.
 This assumes that the function will not have any side-effects and that
 its return value depends solely on its arguments.
 If the function can signal an error, this might change the semantics
-of FORM by signalling the error at compile-time."
+of FORM by signaling the error at compile-time."
   (let ((args (cdr form))
 	(constant t))
     (while (and args constant)
@@ -1134,7 +1135,7 @@ of FORM by signalling the error at compile-time."
 	  (setq constant nil))
       (setq args (cdr args)))
     (if constant
-	(eval form)
+	(list 'quote (eval form))
       form)))
 
 ;; Avoid having to write forward-... with a negative arg for speed.

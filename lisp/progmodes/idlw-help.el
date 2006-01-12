@@ -1,12 +1,12 @@
 ;;; idlw-help.el --- HTML Help code for IDLWAVE
 ;; Copyright (c) 2000 Carsten Dominik
 ;; Copyright (c) 2001, 2002 J.D. Smith
-;; Copyright (c) 2003,2004,2005 Free Software Foundation
+;; Copyright (c) 2003, 2004, 2005, Free Software Foundation
 ;;
 ;; Authors: J.D. Smith <jdsmith@as.arizona.edu>
-;;          Carsten Dominik <dominik@astro.uva.nl>
+;;          Carsten Dominik <dominik@science.uva.nl>
 ;; Maintainer: J.D. Smith <jdsmith@as.arizona.edu>
-;; Version: 5.5
+;; Version: 5.7_22
 
 ;; This file is part of GNU Emacs.
 
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -41,7 +41,15 @@
 
 
 ;;; Code:
-(require 'browse-url)
+(defvar browse-url-generic-args)
+
+(defvar idlwave-help-browse-url-available nil
+  "Whether browse-url is available")
+
+(setq idlwave-help-browse-url-available
+      (condition-case nil
+	  (require 'browse-url)
+	(error nil)))
 
 (defgroup idlwave-online-help nil
   "Online Help options for IDLWAVE mode."
@@ -182,9 +190,8 @@ support."
   :group 'idlwave-online-help
   :type 'string)
 
-(defface idlwave-help-link-face
-  '((((min-colors 88) (class color)) (:foreground "Blue1"))
-    (((class color)) (:foreground "Blue"))
+(defface idlwave-help-link
+  '((((class color)) (:foreground "Blue"))
     (t (:weight bold)))
   "Face for highlighting links into IDLWAVE online help."
   :group 'idlwave-online-help)
@@ -240,6 +247,10 @@ support."
     "--"
     ["Quit" idlwave-help-quit t]))
 
+(defvar idlwave-help-def-pos)
+(defvar idlwave-help-args)
+(defvar idlwave-help-in-header)
+
 (defun idlwave-help-mode ()
   "Major mode for displaying IDL Help.
 
@@ -280,6 +291,7 @@ Here are all keybindings.
   (set (make-local-variable 'idlwave-help-in-header) nil)
   (run-mode-hooks 'idlwave-help-mode-hook))
 
+(defvar idlwave-system-directory)
 (defun idlwave-html-help-location ()
   "Return the help directory where HTML files are, or nil if that is unknown."
   (or (and (stringp idlwave-html-help-location)
@@ -319,7 +331,11 @@ It collects and prints the diagnostics messages."
 				   "; "))))))
 
 (defvar idlwave-help-do-class-struct-tag nil)
+(defvar idlwave-structtag-struct-location)
 (defvar idlwave-help-do-struct-tag nil)
+(defvar idlwave-system-variables-alist)
+(defvar idlwave-executive-commands-alist)
+(defvar idlwave-system-class-info)
 (defun idlwave-do-context-help1 (&optional arg)
   "The work-horse version of `idlwave-context-help', which see."
   (save-excursion
@@ -389,8 +405,7 @@ It collects and prints the diagnostics messages."
 	(let* ((word  (match-string 1 this-word))
 	       (link  (cdr (assoc-string
 			    word
-			    idlwave-executive-commands-alist
-                            t))))
+			    idlwave-executive-commands-alist t))))
 	  (setq mod1 (list link))))
 
        ;; A class -- system OR in-text help (via class__define).
@@ -586,12 +601,12 @@ Needs additional info stored in global `idlwave-completion-help-info'."
 (defun idlwave-highlight-linked-completions ()
   "Highlight all completions for which help is available and attach link.
 Those words in `idlwave-completion-help-links' have links.  The
-`idlwave-help-link-face' face is used for this."
+`idlwave-help-link' face is used for this."
   (if idlwave-highlight-help-links-in-completion
       (with-current-buffer (get-buffer "*Completions*")
 	(save-excursion
 	  (let* ((case-fold-search t)
-		 (props (list 'face 'idlwave-help-link-face))
+		 (props (list 'face 'idlwave-help-link))
 		 (info idlwave-completion-help-info) ; global passed in
 		 (what (nth 0 info))  ; what was completed, or a func
 		 (class (nth 3 info)) ; any class
@@ -742,6 +757,9 @@ see if a link is set for it.  Try extra help functions if necessary."
 	;(browse-url-generic-args idlwave-help-browser-generic-args)
 	full-link)
 
+    (unless idlwave-help-browse-url-available
+      (error "browse-url is not available -- install it to use HTML help."))
+
     (if (and (memq system-type '(ms-dos windows-nt))
 	     idlwave-help-use-hh)
 	(progn
@@ -771,11 +789,10 @@ see if a link is set for it.  Try extra help functions if necessary."
       (browse-url full-link))))
 
 ;; A special help routine for source-level syntax help in files.
-(defvar idlwave-help-def-pos)
-(defvar idlwave-help-args)
-(defvar idlwave-help-in-header)
 (defvar idlwave-help-fontify-source-code)
 (defvar idlwave-help-source-try-header)
+(defvar idlwave-current-tags-buffer)
+(defvar idlwave-current-tags-class)
 (defun idlwave-help-with-source (name type class keyword)
   "Provide help for routines not documented in the IDL manuals.  Works
 by loading the routine source file into the help buffer.  Depending on
@@ -818,7 +835,8 @@ This function can be used as `idlwave-extra-help-function'."
 	      (progn
 		(setq file (buffer-file-name in-buf))
 		(erase-buffer)
-		(insert-buffer in-buf))
+		(insert-buffer-substring in-buf)
+                (goto-char (point-min)))
 	    (if (file-exists-p file) ;; otherwise just load the file
 		(progn
 		  (erase-buffer)

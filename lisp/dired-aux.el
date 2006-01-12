@@ -1,7 +1,7 @@
 ;;; dired-aux.el --- less commonly used parts of dired  -*-byte-compile-dynamic: t;-*-
 
-;; Copyright (C) 1985, 1986, 1992, 1994, 1998, 2000, 2001, 2004
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1992, 1994, 1998, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Sebastian Kremer <sk@thp.uni-koeln.de>.
 ;; Maintainer: FSF
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -59,10 +59,10 @@ With prefix arg, prompt for second argument SWITCHES,
 		      (save-excursion (goto-char (mark t))
 				      (dired-get-filename t t)))))
      (require 'diff)
-     (list (read-file-name (format "Diff %s with: %s"
+     (list (read-file-name (format "Diff %s with%s: "
 				   (dired-get-filename t)
 				   (if default
-				       (concat "(default " default ") ")
+				       (concat " (default " default ")")
 				     ""))
 			   (if default
 			       (dired-current-directory)
@@ -126,16 +126,21 @@ Examples of PREDICATE:
   (let* ((dir1 (dired-current-directory))
          (file-alist1 (dired-files-attributes dir1))
          (file-alist2 (dired-files-attributes dir2))
-	 (file-list1 (mapcar
+	 file-list1 file-list2)
+    (setq file-alist1 (delq (assoc "." file-alist1) file-alist1))
+    (setq file-alist1 (delq (assoc ".." file-alist1) file-alist1))
+    (setq file-alist2 (delq (assoc "." file-alist2) file-alist2))
+    (setq file-alist2 (delq (assoc ".." file-alist2) file-alist2))
+    (setq file-list1 (mapcar
 		      'cadr
                       (dired-file-set-difference
                        file-alist1 file-alist2
-		       predicate)))
-	 (file-list2 (mapcar
+		       predicate))
+	  file-list2 (mapcar
 		      'cadr
                       (dired-file-set-difference
                        file-alist2 file-alist1
-		       predicate))))
+		       predicate)))
     (dired-fun-in-all-buffers
      dir1 nil
      (lambda ()
@@ -839,6 +844,9 @@ Otherwise, the rule is a compression rule, and compression is done with gzip.")
 	       (sit-for 1)
 	       (apply 'message qprompt qs-args)
 	       (setq char (set qs-var (read-char))))
+	     ;; Display the question with the answer.
+	     (message "%s" (concat (apply 'format qprompt qs-args)
+			      (char-to-string char)))
 	     (memq (cdr elt) '(t y yes)))))))
 
 ;;;###autoload
@@ -1118,8 +1126,8 @@ Special value `always' suppresses confirmation."
 	     (setq backup (car (find-backup-file-name to)))
 	     (or (eq 'always dired-backup-overwrite)
 		 (dired-query 'overwrite-backup-query
-			      (format "Make backup for existing file `%s'? "
-				      to))))
+			      "Make backup for existing file `%s'? "
+			      to)))
 	(progn
 	  (rename-file to backup 0)	; confirm overwrite of old backup
 	  (dired-relist-entry backup)))))
@@ -1139,7 +1147,7 @@ Special value `always' suppresses confirmation."
     (if (and recursive
 	     (eq t (car attrs))
 	     (or (eq recursive 'always)
-		 (yes-or-no-p (format "Recursive copies of %s " from))))
+		 (yes-or-no-p (format "Recursive copies of %s? " from))))
 	;; This is a directory.
 	(let ((files (directory-files from nil dired-re-no-dot)))
 	  (if (eq recursive 'top) (setq recursive 'always)) ; Don't ask any more.
@@ -1509,7 +1517,7 @@ suggested for the target directory depends on the value of
   (interactive "P")
   (let ((dired-recursive-copies dired-recursive-copies))
     (dired-do-create-files 'copy (function dired-copy-file)
-			   (if dired-copy-preserve-time "Copy [-p]" "Copy")
+			   "Copy"
 			   arg dired-keep-marker-copy
 			   nil dired-copy-how-to-fn)))
 
@@ -2200,7 +2208,10 @@ Third arg DELIMITED (prefix arg) means replace only word-delimited matches.
 If you exit (\\[keyboard-quit], RET or q), you can resume the query replace
 with the command \\[tags-loop-continue]."
   (interactive
-   "sQuery replace in marked files (regexp): \nsQuery replace %s by: \nP")
+   (let ((common
+	  (query-replace-read-args
+	   "Query replace regexp in marked files" t t)))
+     (list (nth 0 common) (nth 1 common) (nth 2 common))))
   (dolist (file (dired-get-marked-files nil nil 'dired-nondirectory-p))
     (let ((buffer (get-file-buffer file)))
       (if (and buffer (with-current-buffer buffer

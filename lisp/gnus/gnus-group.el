@@ -1,6 +1,7 @@
 ;;; gnus-group.el --- group mode commands for Gnus
-;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: news
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -283,14 +284,15 @@ variable."
   :type 'hook)
 
 (defcustom gnus-useful-groups
-  '(("(ding) mailing list mirrored at sunsite.auc.dk"
-     "emacs.ding"
-     (nntp "sunsite.auc.dk"
-	   (nntp-address "sunsite.auc.dk")))
-    ("gnus-bug archive"
-     "gnus-bug"
-     (nndir "/ftp@ftp.ifi.uio.no:/pub/emacs/gnus/gnus-bug/"))
-    ("Gnus help group"
+  '(("(ding) mailing list mirrored at gmane.org"
+     "gmane.emacs.gnus.general"
+     (nntp "Gmane"
+	   (nntp-address "news.gmane.org")))
+    ("Gnus bug archive"
+     "gnus.gnus-bug"
+     (nntp "news.gnus.org"
+	   (nntp-address "news.gnus.org")))
+    ("Local Gnus help group"
      "gnus-help"
      (nndoc "gnus-help"
 	    (nndoc-article-type mbox)
@@ -309,50 +311,50 @@ variable."
 (defcustom gnus-group-highlight
   '(;; Mail.
     ((and mailp (= unread 0) (eq level 1)) .
-     gnus-group-mail-1-empty-face)
+     gnus-group-mail-1-empty)
     ((and mailp (eq level 1)) .
-     gnus-group-mail-1-face)
+     gnus-group-mail-1)
     ((and mailp (= unread 0) (eq level 2)) .
-     gnus-group-mail-2-empty-face)
+     gnus-group-mail-2-empty)
     ((and mailp (eq level 2)) .
-     gnus-group-mail-2-face)
+     gnus-group-mail-2)
     ((and mailp (= unread 0) (eq level 3)) .
-     gnus-group-mail-3-empty-face)
+     gnus-group-mail-3-empty)
     ((and mailp (eq level 3)) .
-     gnus-group-mail-3-face)
+     gnus-group-mail-3)
     ((and mailp (= unread 0)) .
-     gnus-group-mail-low-empty-face)
+     gnus-group-mail-low-empty)
     ((and mailp) .
-     gnus-group-mail-low-face)
+     gnus-group-mail-low)
     ;; News.
     ((and (= unread 0) (eq level 1)) .
-     gnus-group-news-1-empty-face)
+     gnus-group-news-1-empty)
     ((and (eq level 1)) .
-     gnus-group-news-1-face)
+     gnus-group-news-1)
     ((and (= unread 0) (eq level 2)) .
-     gnus-group-news-2-empty-face)
+     gnus-group-news-2-empty)
     ((and (eq level 2)) .
-     gnus-group-news-2-face)
+     gnus-group-news-2)
     ((and (= unread 0) (eq level 3)) .
-     gnus-group-news-3-empty-face)
+     gnus-group-news-3-empty)
     ((and (eq level 3)) .
-     gnus-group-news-3-face)
+     gnus-group-news-3)
     ((and (= unread 0) (eq level 4)) .
-     gnus-group-news-4-empty-face)
+     gnus-group-news-4-empty)
     ((and (eq level 4)) .
-     gnus-group-news-4-face)
+     gnus-group-news-4)
     ((and (= unread 0) (eq level 5)) .
-     gnus-group-news-5-empty-face)
+     gnus-group-news-5-empty)
     ((and (eq level 5)) .
-     gnus-group-news-5-face)
+     gnus-group-news-5)
     ((and (= unread 0) (eq level 6)) .
-     gnus-group-news-6-empty-face)
+     gnus-group-news-6-empty)
     ((and (eq level 6)) .
-     gnus-group-news-6-face)
+     gnus-group-news-6)
     ((and (= unread 0)) .
-     gnus-group-news-low-empty-face)
+     gnus-group-news-low-empty)
     (t .
-     gnus-group-news-low-face))
+     gnus-group-news-low))
   "*Controls the highlighting of group buffer lines.
 
 Below is a list of `Form'/`Face' pairs.  When deciding how a a
@@ -382,7 +384,7 @@ ticked: The number of ticked articles."
   :type 'character)
 
 (defgroup gnus-group-icons nil
-  "Add Icons to your group buffer.  "
+  "Add Icons to your group buffer."
   :group 'gnus-group-visual)
 
 (defcustom gnus-group-icon-list

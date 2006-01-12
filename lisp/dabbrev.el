@@ -1,7 +1,7 @@
 ;;; dabbrev.el --- dynamic abbreviation package
 
-;; Copyright (C) 1985, 86, 92, 94, 96, 1997, 2000, 01, 03, 2004
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1992, 1994, 1996, 1997, 2000, 2001, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Don Morrison
 ;; Maintainer: Lars Lindberg <Lars.Lindberg@sypro.cap.se>
@@ -23,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -100,7 +100,7 @@
 ;;----------------------------------------------------------------
 
 (defgroup dabbrev nil
-  "Dynamic Abbreviations"
+  "Dynamic Abbreviations."
   :tag "Dynamic Abbreviations"
   :group 'abbrev
   :group 'convenience)
@@ -373,11 +373,7 @@ function pointed out by `dabbrev-friend-buffer-function' to find the
 completions.
 
 If the prefix argument is 16 (which comes from C-u C-u),
-then it searches *all* buffers.
-
-With no prefix argument, it reuses an old completion list
-if there is a suitable one already."
-
+then it searches *all* buffers."
   (interactive "*P")
   (dabbrev--reset-global-variables)
   (let* ((dabbrev-check-other-buffers (and arg t))
@@ -392,57 +388,43 @@ if there is a suitable one already."
 	 (my-obarray dabbrev--last-obarray)
 	 init)
     (save-excursion
-      (if (and (null arg)
-	       my-obarray
-	       (or (eq dabbrev--last-completion-buffer (current-buffer))
-		   (and (window-minibuffer-p (selected-window))
-			(eq dabbrev--last-completion-buffer
-			    (dabbrev--minibuffer-origin))))
-	       dabbrev--last-abbreviation
-	       (>= (length abbrev) (length dabbrev--last-abbreviation))
-	       (string= dabbrev--last-abbreviation
-			(substring abbrev 0
-				   (length dabbrev--last-abbreviation)))
-	       (setq init (try-completion abbrev my-obarray)))
-	  ;; We can reuse the existing completion list.
-	  nil
-	;;--------------------------------
-	;; New abbreviation to expand.
-	;;--------------------------------
-	(setq dabbrev--last-abbreviation abbrev)
-	;; Find all expansion
-	(let ((completion-list
-	       (dabbrev--find-all-expansions abbrev ignore-case-p))
-	      (completion-ignore-case ignore-case-p))
-	  ;; Make an obarray with all expansions
-	  (setq my-obarray (make-vector (length completion-list) 0))
-	  (or (> (length my-obarray) 0)
-	      (error "No dynamic expansion for \"%s\" found%s"
-		     abbrev
-		     (if dabbrev--check-other-buffers "" " in this-buffer")))
-	  (cond
-	   ((or (not ignore-case-p)
-		(not dabbrev-case-replace))
-	    (mapc (function (lambda (string)
-			      (intern string my-obarray)))
-		    completion-list))
-	   ((string= abbrev (upcase abbrev))
-	    (mapc (function (lambda (string)
-			      (intern (upcase string) my-obarray)))
-		    completion-list))
-	   ((string= (substring abbrev 0 1)
-		     (upcase (substring abbrev 0 1)))
-	    (mapc (function (lambda (string)
-			      (intern (capitalize string) my-obarray)))
-		    completion-list))
-	   (t
-	    (mapc (function (lambda (string)
-			      (intern (downcase string) my-obarray)))
-		    completion-list)))
-	  (setq dabbrev--last-obarray my-obarray)
-	  (setq dabbrev--last-completion-buffer (current-buffer))
-	  ;; Find the longest common string.
-	  (setq init (try-completion abbrev my-obarray)))))
+      ;;--------------------------------
+      ;; New abbreviation to expand.
+      ;;--------------------------------
+      (setq dabbrev--last-abbreviation abbrev)
+      ;; Find all expansion
+      (let ((completion-list
+	     (dabbrev--find-all-expansions abbrev ignore-case-p))
+	    (completion-ignore-case ignore-case-p))
+	;; Make an obarray with all expansions
+	(setq my-obarray (make-vector (length completion-list) 0))
+	(or (> (length my-obarray) 0)
+	    (error "No dynamic expansion for \"%s\" found%s"
+		   abbrev
+		   (if dabbrev--check-other-buffers "" " in this-buffer")))
+	(cond
+	 ((or (not ignore-case-p)
+	      (not dabbrev-case-replace))
+	  (mapc (function (lambda (string)
+			    (intern string my-obarray)))
+		completion-list))
+	 ((string= abbrev (upcase abbrev))
+	  (mapc (function (lambda (string)
+			    (intern (upcase string) my-obarray)))
+		completion-list))
+	 ((string= (substring abbrev 0 1)
+		   (upcase (substring abbrev 0 1)))
+	  (mapc (function (lambda (string)
+			    (intern (capitalize string) my-obarray)))
+		completion-list))
+	 (t
+	  (mapc (function (lambda (string)
+			    (intern (downcase string) my-obarray)))
+		completion-list)))
+	(setq dabbrev--last-obarray my-obarray)
+	(setq dabbrev--last-completion-buffer (current-buffer))
+	;; Find the longest common string.
+	(setq init (try-completion abbrev my-obarray))))
     ;;--------------------------------
     ;; Let the user choose between the expansions
     ;;--------------------------------
@@ -461,7 +443,8 @@ if there is a suitable one already."
       ;; * String is a common substring completion already.  Make list.
       (message "Making completion list...")
       (with-output-to-temp-buffer "*Completions*"
-	(display-completion-list (all-completions init my-obarray)))
+	(display-completion-list (all-completions init my-obarray)
+				 init))
       (message "Making completion list...done")))
     (and (window-minibuffer-p (selected-window))
 	 (message nil))))
@@ -509,7 +492,7 @@ See also `dabbrev-abbrev-char-regexp' and \\[dabbrev-completion]."
 	    (setq direction dabbrev--last-direction))
 	;; If the user inserts a space after expanding
 	;; and then asks to expand again, always fetch the next word.
-	(if (and (eq (preceding-char) ?\ )
+	(if (and (eq (preceding-char) ?\s)
 		 (markerp dabbrev--last-abbrev-location)
 		 (marker-position dabbrev--last-abbrev-location)
 		 (= (point) (1+ dabbrev--last-abbrev-location)))

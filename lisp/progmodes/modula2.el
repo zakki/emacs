@@ -24,6 +24,7 @@
 
 (defgroup modula2 nil
   "Major mode for editing Modula-2 code."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :prefix "m2-"
   :group 'languages)
 
@@ -309,7 +310,7 @@ followed by the first character of the construct.
   "Build skeleton FOR loop statement, prompting for the loop parameters."
   (interactive)
   (insert "FOR ")
-  (let ((name (read-string "Loop Initialiser: ")) limit by)
+  (let ((name (read-string "Loop Initializer: ")) limit by)
     (insert name " TO ")
     (setq limit (read-string "Limit: "))
     (insert limit)

@@ -1,6 +1,6 @@
 /* Implements a lightweight menubar widget.
    Copyright (C) 1992 Lucid, Inc.
-   Copyright (C) 2002, 2005 Free Software Foundation, Inc.
+   Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of the Lucid Widget Library.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to the
-Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Created by devin@lucid.com */
 
@@ -59,9 +59,9 @@ extern int x_alloc_lighter_color_for_widget __P ((Widget, Display*, Colormap,
 						  unsigned long *,
 						  double, int));
 extern int x_catch_errors __P ((Display*));
-extern int x_uncatch_errors __P ((Display*, int));
+extern void x_uncatch_errors P_ ((Display *, int));
 extern int x_had_errors_p __P ((Display*));
-extern int x_clear_errors __P ((Display*));
+extern void x_clear_errors __P ((Display*));
 extern unsigned long x_copy_dpy_color __P ((Display *, Colormap,
 					    unsigned long));
 
@@ -2138,6 +2138,7 @@ static widget_value *
 find_next_selectable (mw, item, skip_titles)
      XlwMenuWidget mw;
      widget_value *item;
+     int skip_titles;
 {
   widget_value *current = item;
   enum menu_separator separator;
@@ -2174,6 +2175,7 @@ static widget_value *
 find_prev_selectable (mw, item, skip_titles)
      XlwMenuWidget mw;
      widget_value *item;
+     int skip_titles;
 {
   widget_value *current = item;
   widget_value *prev = item;

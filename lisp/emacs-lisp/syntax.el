@@ -1,6 +1,7 @@
 ;;; syntax.el --- helper functions to find syntactic context
 
-;; Copyright (C) 2000, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: internal
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -45,6 +46,8 @@
 ;; Note: PPSS stands for `parse-partial-sexp state'
 
 (eval-when-compile (require 'cl))
+
+(defvar font-lock-beginning-of-syntax-function)
 
 (defsubst syntax-ppss-depth (ppss)
   (nth 0 ppss))
@@ -80,10 +83,14 @@ point (where the PPSS is equivalent to nil).")
     (setq syntax-ppss-cache (cdr syntax-ppss-cache)))
   ;; Throw away `last' value if made invalid.
   (when (< beg (or (car syntax-ppss-last) 0))
-    (if (< beg (or (car (nth 10 syntax-ppss-last))
-		   (nth 9 syntax-ppss-last)
-		   (nth 2 syntax-ppss-last)
-		   0))
+    ;; If syntax-begin-function jumped to BEG, then the old state at BEG can
+    ;; depend on the text after BEG (which is presumably changed).  So if
+    ;; BEG=(car (nth 10 syntax-ppss-last)) don't reuse that data because the
+    ;; assumed nil state at BEG may not be valid any more.
+    (if (<= beg (or (car (nth 10 syntax-ppss-last))
+                    (nth 9 syntax-ppss-last)
+                    (nth 3 syntax-ppss-last)
+                    0))
 	(setq syntax-ppss-last nil)
       (setcar syntax-ppss-last nil)))
   ;; Unregister if there's no cache left.  Sadly this doesn't work
@@ -102,7 +109,6 @@ point (where the PPSS is equivalent to nil).")
 	      (error nil)))
 	  syntax-ppss-stats))
 
-;;;###autoload
 (defun syntax-ppss (&optional pos)
   "Parse-Partial-Sexp State at POS.
 The returned value is the same as `parse-partial-sexp' except that
@@ -290,5 +296,5 @@ Point is at POS when this function returns."
 
 (provide 'syntax)
 
-;;; arch-tag: 302f1eeb-e77c-4680-a8c5-c543e01161a5
+;; arch-tag: 302f1eeb-e77c-4680-a8c5-c543e01161a5
 ;;; syntax.el ends here

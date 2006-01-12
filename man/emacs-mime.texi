@@ -9,12 +9,12 @@
 @copying
 This file documents the Emacs MIME interface functionality.
 
-Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003
+Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
           Free Software Foundation, Inc.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, with the Front-Cover texts being ``A GNU
 Manual'', and with the Back-Cover Texts as in (a) below.  A copy of the
@@ -56,7 +56,7 @@ license to the document, as described in section 6 of the license.
 This manual documents the libraries used to compose and display
 @acronym{MIME} messages.
 
-This manual is directed at users who want to modify the behaviour of
+This manual is directed at users who want to modify the behavior of
 the @acronym{MIME} encoding/decoding process or want a more detailed
 picture of how the Emacs @acronym{MIME} library works, and people who want
 to write functions and commands that manipulate @acronym{MIME} elements.
@@ -213,10 +213,6 @@ Set the undisplayer object.
 @findex mm-handle-disposition
 Return the parsed @code{Content-Disposition} of the part.
 
-@item mm-handle-disposition
-@findex mm-handle-disposition
-Return the description of the part.
-
 @item mm-get-content-id
 Returns the handle(s) referred to by @code{Content-ID}.
 
@@ -325,6 +321,30 @@ you could say something like:
       mm-automatic-display
       (remove "text/html" mm-automatic-display))
 @end lisp
+
+Adding @code{"image/.*"} might also be useful.  Spammers use it as the
+prefered part of @samp{multipart/alternative} messages, and you might
+not notice there are other parts.  See also
+@code{gnus-buttonized-mime-types} (@pxref{MIME Commands, ,MIME Commands,
+gnus, Gnus Manual}), to which adding @code{"multipart/alternative"}
+enables you to choose manually one of two types those mails include.
+For example, you can set those variables like:
+
+@lisp
+(setq gnus-buttonized-mime-types
+      '("multipart/alternative" "multipart/signed")
+      mm-discouraged-alternatives
+      '("text/html" "image/.*"))
+@end lisp
+
+In this case, Gnus will display radio buttons for such a kind of spam
+message as follows:
+
+@example
+1.  (*) multipart/alternative  ( ) image/gif
+
+2.  (*) text/plain          ( ) text/html
+@end example
 
 @item mm-inline-large-images
 @vindex mm-inline-large-images
@@ -795,7 +815,7 @@ This plain text part is an attachment.
 Mapping from @acronym{MIME} charset to encoding to use.  This variable is
 usually used except, e.g., when other requirements force a specific
 encoding (digitally signed messages require 7bit encodings).  The
-default is 
+default is
 
 @lisp
 ((iso-2022-jp . 7bit)
@@ -813,7 +833,9 @@ by using the @code{encoding} @acronym{MML} tag (@pxref{MML Definition}).
 @item mm-coding-system-priorities
 @vindex mm-coding-system-priorities
 Prioritize coding systems to use for outgoing messages.  The default
-is @code{nil}, which means to use the defaults in Emacs.  It is a list of
+is @code{nil}, which means to use the defaults in Emacs, but is
+@code{(iso-8859-1 iso-2022-jp iso-2022-jp-2 shift_jis utf-8)} when
+running Emacs in the Japanese language environment.  It is a list of
 coding system symbols (aliases of coding systems are also allowed, use
 @kbd{M-x describe-coding-system} to make sure you are specifying correct
 coding system names).  For example, if you have configured Emacs
@@ -880,8 +902,9 @@ used, of course.
 @vindex mm-mime-mule-charset-alist
 Things are slightly more complicated when running Emacs with @sc{mule}
 support.  In this case, a list of the @sc{mule} charsets used in the
-part is obtained, and the @sc{mule} charsets are translated to @acronym{MIME}
-charsets by consulting the variable @code{mm-mime-mule-charset-alist}.
+part is obtained, and the @sc{mule} charsets are translated to
+@acronym{MIME} charsets by consulting the table provided by Emacs itself
+or the variable @code{mm-mime-mule-charset-alist} for XEmacs.
 If this results in a single @acronym{MIME} charset, this is used to encode
 the part.  But if the resulting list of @acronym{MIME} charsets contains more
 than one element, two things can happen: If it is possible to encode the
@@ -1168,7 +1191,7 @@ in the subsequent sections.
 This chapter describes the basic, ground-level functions for parsing and
 handling.  Covered here is parsing @code{From} lines, removing comments
 from header lines, decoding encoded words, parsing date headers and so
-on.  High-level functionality is dealt with in the next chapter
+on.  High-level functionality is dealt with in the first chapter
 (@pxref{Decoding and Viewing}).
 
 @menu
@@ -1504,7 +1527,7 @@ Take a time and return the number of days that represents.
 
 @item safe-date-to-time
 Take a date and return a time.  If the date is not syntactically valid,
-return a ``zero'' date.
+return a ``zero'' time.
 
 @item time-less-p
 Take two times and say whether the first time is less (i. e., earlier)

@@ -1,6 +1,7 @@
 ;;; esh-cmd.el --- command invocation
 
-;; Copyright (C) 1999, 2000 Free Software Foundation
+;; Copyright (C) 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@gnu.org>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 (provide 'esh-cmd)
 
@@ -452,12 +453,14 @@ hooks should be run before and after the command."
 
 (defun eshell-rewrite-named-command (terms)
   "If no other rewriting rule transforms TERMS, assume a named command."
-  (list (if eshell-in-pipeline-p
-	    'eshell-named-command*
-	  'eshell-named-command)
-	(car terms)
-	(and (cdr terms)
-	     (append (list 'list) (cdr terms)))))
+  (let ((sym (if eshell-in-pipeline-p
+		 'eshell-named-command*
+	       'eshell-named-command))
+	(cmd (car terms))
+	(args (cdr terms)))
+    (if args
+	(list sym cmd (append (list 'list) (cdr terms)))
+      (list sym cmd))))
 
 (eshell-deftest cmd named-command
   "Execute named command"

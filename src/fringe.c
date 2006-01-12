@@ -1,6 +1,7 @@
 /* Fringe handling (split from xdisp.c).
-   Copyright (C) 1985,86,87,88,93,94,95,97,98,99,2000,01,02,03,04
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995, 1997,
+                 1998, 1999, 2000, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 #include <stdio.h>
@@ -776,13 +777,14 @@ draw_window_fringes (w, no_fringe)
 
 
 /* Recalculate the bitmaps to show in the fringes of window W.
-   If FORCE_P is 0, only mark rows with modified bitmaps for update in
-   redraw_fringe_bitmaps_p; else mark all rows for update.  */
+   Only mark rows with modified bitmaps for update in redraw_fringe_bitmaps_p.
+
+   If KEEP_CURRENT_P is 0, update current_matrix too.  */
 
 int
-update_window_fringes (w, force_p)
+update_window_fringes (w, keep_current_p)
      struct window *w;
-     int force_p;
+     int keep_current_p;
 {
   struct glyph_row *row, *cur = 0;
   int yb = window_text_bottom_y (w);
@@ -848,7 +850,8 @@ update_window_fringes (w, force_p)
 	    {
 	      if (!done_top)
 		{
-		  if (MATRIX_ROW_START_CHARPOS (row) <= BUF_BEGV (XBUFFER (w->buffer)))
+		  if (MATRIX_ROW_START_CHARPOS (row) <= BUF_BEGV (XBUFFER (w->buffer))
+		      && !MATRIX_ROW_PARTIALLY_VISIBLE_AT_TOP_P (w, row))
 		    row->indicate_bob_p = !NILP (boundary_top);
 		  else
 		    row->indicate_top_line_p = !NILP (arrow_top);
@@ -857,7 +860,8 @@ update_window_fringes (w, force_p)
 
 	      if (!done_bot)
 		{
-		  if (MATRIX_ROW_END_CHARPOS (row) >= BUF_ZV (XBUFFER (w->buffer)))
+		  if (MATRIX_ROW_END_CHARPOS (row) >= BUF_ZV (XBUFFER (w->buffer))
+		      && !MATRIX_ROW_PARTIALLY_VISIBLE_AT_BOTTOM_P (w, row))
 		    row->indicate_eob_p = !NILP (boundary_bot), done_bot = 1;
 		  else if (y + row->height >= yb)
 		    row->indicate_bottom_line_p = !NILP (arrow_bot), done_bot = 1;
@@ -902,9 +906,12 @@ update_window_fringes (w, force_p)
 	left = LEFT_TRUNCATION_BITMAP;
       else if (row->indicate_bob_p && EQ (boundary_top, Qleft))
 	left = ((row->indicate_eob_p && EQ (boundary_bot, Qleft))
-		? LEFT_BRACKET_BITMAP : TOP_LEFT_ANGLE_BITMAP);
+		? (row->ends_at_zv_p
+		   ? TOP_RIGHT_ANGLE_BITMAP : LEFT_BRACKET_BITMAP)
+		: TOP_LEFT_ANGLE_BITMAP);
       else if (row->indicate_eob_p && EQ (boundary_bot, Qleft))
-	left = BOTTOM_LEFT_ANGLE_BITMAP;
+	left = (row->ends_at_zv_p
+		? TOP_RIGHT_ANGLE_BITMAP : BOTTOM_LEFT_ANGLE_BITMAP);
       else if (MATRIX_ROW_CONTINUATION_LINE_P (row))
 	left = CONTINUATION_LINE_BITMAP;
       else if (row->indicate_empty_line_p && EQ (empty_pos, Qleft))
@@ -928,9 +935,12 @@ update_window_fringes (w, force_p)
 	right = RIGHT_TRUNCATION_BITMAP;
       else if (row->indicate_bob_p && EQ (boundary_top, Qright))
 	right = ((row->indicate_eob_p && EQ (boundary_bot, Qright))
-		 ? RIGHT_BRACKET_BITMAP : TOP_RIGHT_ANGLE_BITMAP);
+		 ? (row->ends_at_zv_p
+		    ? TOP_LEFT_ANGLE_BITMAP : RIGHT_BRACKET_BITMAP)
+		 : TOP_RIGHT_ANGLE_BITMAP);
       else if (row->indicate_eob_p && EQ (boundary_bot, Qright))
-	right = BOTTOM_RIGHT_ANGLE_BITMAP;
+	right = (row->ends_at_zv_p
+		 ? TOP_LEFT_ANGLE_BITMAP : BOTTOM_RIGHT_ANGLE_BITMAP);
       else if (row->continued_p)
 	right = CONTINUED_LINE_BITMAP;
       else if (row->indicate_top_line_p && EQ (arrow_top, Qright))
@@ -942,8 +952,7 @@ update_window_fringes (w, force_p)
       else
 	right = NO_FRINGE_BITMAP;
 
-      if (force_p
-	  || row->y != cur->y
+      if (row->y != cur->y
 	  || row->visible_height != cur->visible_height
 	  || row->ends_at_zv_p != cur->ends_at_zv_p
 	  || left != cur->left_fringe_bitmap
@@ -952,11 +961,15 @@ update_window_fringes (w, force_p)
 	  || right_face_id != cur->right_fringe_face_id
 	  || cur->redraw_fringe_bitmaps_p)
 	{
-	  redraw_p = row->redraw_fringe_bitmaps_p = cur->redraw_fringe_bitmaps_p = 1;
-	  cur->left_fringe_bitmap = left;
-	  cur->right_fringe_bitmap = right;
-	  cur->left_fringe_face_id = left_face_id;
-	  cur->right_fringe_face_id = right_face_id;
+	  redraw_p = row->redraw_fringe_bitmaps_p = 1;
+	  if (!keep_current_p)
+	    {
+	      cur->redraw_fringe_bitmaps_p = 1;
+	      cur->left_fringe_bitmap = left;
+	      cur->right_fringe_bitmap = right;
+	      cur->left_fringe_face_id = left_face_id;
+	      cur->right_fringe_face_id = right_face_id;
+	    }
 	}
 
       if (row->overlay_arrow_bitmap != cur->overlay_arrow_bitmap)
@@ -974,7 +987,7 @@ update_window_fringes (w, force_p)
 	row[-1].redraw_fringe_bitmaps_p = cur[-1].redraw_fringe_bitmaps_p = 1;
     }
 
-  return redraw_p;
+  return redraw_p && !keep_current_p;
 }
 
 

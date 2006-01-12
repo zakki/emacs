@@ -1,5 +1,6 @@
 /* Process support for GNU Emacs on the Microsoft W32 API.
-   Copyright (C) 1992, 95, 99, 2000, 01, 04  Free Software Foundation, Inc.
+   Copyright (C) 1992, 1995, 1999, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.
 
    Drew Bliss                   Oct 14, 1993
      Adapted from alarm.c by Tim Fleehart
@@ -56,6 +57,11 @@ extern BOOL WINAPI IsValidLocale(LCID, DWORD);
 #include "process.h"
 #include "syssignal.h"
 #include "w32term.h"
+
+#define RVA_TO_PTR(var,section,filedata) \
+  ((void *)((section)->PointerToRawData					\
+	    + ((DWORD)(var) - (section)->VirtualAddress)		\
+	    + (filedata).file_base))
 
 /* Control whether spawnve quotes arguments as necessary to ensure
    correct parsing by child process.  Because not all uses of spawnve
@@ -2141,6 +2147,8 @@ syms_of_ntproc ()
 {
   Qhigh = intern ("high");
   Qlow = intern ("low");
+  staticpro (&Qhigh);
+  staticpro (&Qlow);
 
 #ifdef HAVE_SOCKETS
   defsubr (&Sw32_has_winsock);
@@ -2236,6 +2244,9 @@ the truename of a file can be slow.  */);
 Note that this option is only useful for files on NTFS volumes, where hard links
 are supported.  Moreover, it slows down `file-attributes' noticeably.  */);
   Vw32_get_true_file_attributes = Qt;
+
+  staticpro (&Vw32_valid_locale_ids);
+  staticpro (&Vw32_valid_codepages);
 }
 /* end of ntproc.c */
 

@@ -1,6 +1,7 @@
 ;;; prolog.el --- major mode for editing and running Prolog under Emacs
 
-;; Copyright (C) 1986, 1987, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1986, 1987, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Masanobu UMEDA <umerin@mse.kyutech.ac.jp>
 ;; Keywords: languages
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -30,8 +31,12 @@
 
 ;;; Code:
 
+(defvar comint-prompt-regexp)
+
+
 (defgroup prolog nil
-  "Major mode for editing and running Prolog under Emacs"
+  "Major mode for editing and running Prolog under Emacs."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'languages)
 
 
@@ -56,8 +61,8 @@
   :group 'prolog)
 
 (defcustom prolog-eof-string "end_of_file.\n"
-  "*String that represents end of file for prolog.
-nil means send actual operating system end of file."
+  "*String that represents end of file for Prolog.
+When nil, send actual operating system end of file."
   :type 'string
   :group 'prolog)
 
@@ -158,7 +163,7 @@ rigidly along with this one (not yet)."
     ))
 
 (defun prolog-indent-level ()
-  "Compute prolog indentation level."
+  "Compute Prolog indentation level."
   (save-excursion
     (beginning-of-line)
     (skip-chars-forward " \t")

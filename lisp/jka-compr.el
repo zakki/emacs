@@ -1,6 +1,7 @@
 ;;; jka-compr.el --- reading/writing/loading compressed files
 
-;; Copyright (C) 1993, 1994, 1995, 1997, 1999, 2000, 2003, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1995, 1997, 1999, 2000, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: jka@ece.cmu.edu (Jay K. Adams)
 ;; Maintainer: FSF
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -100,6 +101,8 @@
 
 ;;; Code:
 
+(require 'jka-cmpr-hook)
+
 (defcustom jka-compr-shell "sh"
   "*Shell to be used for calling compression programs.
 The value of this variable only matters if you want to discard the
@@ -118,32 +121,6 @@ data appears to be compressed already.")
 (make-variable-buffer-local 'jka-compr-really-do-compress)
 (put 'jka-compr-really-do-compress 'permanent-local t)
 
-;;; Functions for accessing the return value of jka-compr-get-compression-info
-(defun jka-compr-info-regexp               (info)  (aref info 0))
-(defun jka-compr-info-compress-message     (info)  (aref info 1))
-(defun jka-compr-info-compress-program     (info)  (aref info 2))
-(defun jka-compr-info-compress-args        (info)  (aref info 3))
-(defun jka-compr-info-uncompress-message   (info)  (aref info 4))
-(defun jka-compr-info-uncompress-program   (info)  (aref info 5))
-(defun jka-compr-info-uncompress-args      (info)  (aref info 6))
-(defun jka-compr-info-can-append           (info)  (aref info 7))
-(defun jka-compr-info-strip-extension      (info)  (aref info 8))
-(defun jka-compr-info-file-magic-bytes     (info)  (aref info 9))
-
-
-(defun jka-compr-get-compression-info (filename)
-  "Return information about the compression scheme of FILENAME.
-The determination as to which compression scheme, if any, to use is
-based on the filename itself and `jka-compr-compression-info-list'."
-  (catch 'compression-info
-    (let ((case-fold-search nil))
-      (mapcar
-       (function (lambda (x)
-		   (and (string-match (jka-compr-info-regexp x) filename)
-			(throw 'compression-info x))))
-       jka-compr-compression-info-list)
-      nil)))
-
 
 (put 'compression-error 'error-conditions '(compression-error file-error error))
 
@@ -153,8 +130,7 @@ based on the filename itself and `jka-compr-compression-info-list'."
 
 (defun jka-compr-error (prog args infile message &optional errfile)
 
-  (let ((errbuf (get-buffer-create " *jka-compr-error*"))
-	(curbuf (current-buffer)))
+  (let ((errbuf (get-buffer-create " *jka-compr-error*")))
     (with-current-buffer errbuf
       (widen) (erase-buffer)
       (insert (format "Error while executing \"%s %s < %s\"\n\n"
@@ -269,8 +245,8 @@ to keep: LEN chars starting BEG chars from the beginning."
 	   (erase-buffer)))))
 
 
-;;; Support for temp files.  Much of this was inspired if not lifted
-;;; from ange-ftp.
+;; Support for temp files.  Much of this was inspired if not lifted
+;; from ange-ftp.
 
 (defcustom jka-compr-temp-name-template
   (expand-file-name "jka-com" temporary-file-directory)
@@ -474,6 +450,9 @@ There should be no more than seven characters after the final `/'."
 			  (delete-region (point) (point-max)))
 		      (goto-char start))
 		  (error
+		   ;; If the file we wanted to uncompress does not exist,
+		   ;; handle that according to VISIT as `insert-file-contents'
+		   ;; would, maybe signaling the same error it normally would.
 		   (if (and (eq (car error-code) 'file-error)
 			    (eq (nth 3 error-code) local-file))
 		       (if visit
@@ -481,6 +460,13 @@ There should be no more than seven characters after the final `/'."
 			 (signal 'file-error
 				 (cons "Opening input file"
 				       (nthcdr 2 error-code))))
+		     ;; If the uncompression program can't be found,
+		     ;; signal that as a non-file error
+		     ;; so that find-file-noselect-1 won't handle it.
+		     (if (and (eq (car error-code) 'file-error)
+			      (equal (cadr error-code) "Searching for program"))
+			 (error "Uncompression program `%s' not found"
+				(nth 3 error-code)))
 		     (signal (car error-code) (cdr error-code))))))
 
 	    (and
@@ -552,7 +538,6 @@ There should be no more than seven characters after the final `/'."
 	       (jka-compr-run-real-handler 'file-local-copy (list filename)))
 	      (temp-file (jka-compr-make-temp-name t))
 	      (temp-buffer (get-buffer-create " *jka-compr-flc-temp*"))
-	      (notfound nil)
 	      local-file)
 
 	  (setq local-file (or local-copy filename))
@@ -600,7 +585,7 @@ There should be no more than seven characters after the final `/'."
       (jka-compr-run-real-handler 'file-local-copy (list filename)))))
 
 
-;;; Support for loading compressed files.
+;; Support for loading compressed files.
 (defun jka-compr-load (file &optional noerror nomessage nosuffix)
   "Documented as original."
 
@@ -709,17 +694,11 @@ by `jka-compr-installed'."
 
     (setq auto-mode-alist (cdr ama)))
 
-  (let* ((ama (cons nil file-coding-system-alist))
-	 (last ama)
-	 entry)
-
-    (while (cdr last)
-      (setq entry (car (cdr last)))
-      (if (member entry jka-compr-added-to-file-coding-system-alist)
-	  (setcdr last (cdr (cdr last)))
-	(setq last (cdr last))))
-
-    (setq file-coding-system-alist (cdr ama)))
+  (while jka-compr-added-to-file-coding-system-alist
+    (setq file-coding-system-alist
+          (delq (car (member (pop jka-compr-added-to-file-coding-system-alist)
+                             file-coding-system-alist))
+                file-coding-system-alist)))
 
   ;; Remove the suffixes that were added by jka-compr.
   (let ((suffixes nil)
@@ -731,5 +710,5 @@ by `jka-compr-installed'."
 
 (provide 'jka-compr)
 
-;;; arch-tag: 3f15b630-e9a7-46c4-a22a-94afdde86ebc
+;; arch-tag: 3f15b630-e9a7-46c4-a22a-94afdde86ebc
 ;;; jka-compr.el ends here

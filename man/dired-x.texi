@@ -28,7 +28,8 @@
 This documents the ``extra'' features for Dired Mode for GNU Emacs found in
 the file @file{dired-x.el}.
 
-Copyright @copyright{} 1993, 1994, 2001, 2002 Free Software Foundation, Inc.
+Copyright @copyright{} 1993, 1994, 2001, 2002, 2003, 2004,
+   2005 Free Software Foundation, Inc.
 
 @quotation
 Permission is granted to make and distribute verbatim copies of this
@@ -1154,8 +1155,8 @@ bound to @kbd{C-x C-j} and @code{dired-jump-other-window} will not be bound to
 @cindex Reading mail.
 @kindex V
 @findex dired-vm
-Bound to @kbd{V} if @code{dired-bind-vm} is t.  Run VM on this file (assumed
-to be a UNIX mail folder).
+Bound to @kbd{V} if @code{dired-bind-vm} is @code{t}.  Run VM on this
+file (assumed to be a UNIX mail folder).
 
 @vindex dired-vm-read-only-folders
 If you give this command a prefix argument, it will visit the folder
@@ -1168,8 +1169,8 @@ the symbol @code{if-file-read-only}, only files not writable by you are
 visited read-only.  This is the recommended value if you run VM 5.
 
 @vindex dired-bind-vm
-If the variable @code{dired-bind-vm} is t, @code{dired-vm} will be bound to
-@kbd{V}.  Otherwise, @code{dired-bind-rmail} will be bound.
+If the variable @code{dired-bind-vm} is @code{t}, @code{dired-vm} will be bound
+to @kbd{V}.  Otherwise, @code{dired-bind-rmail} will be bound.
 
 @item dired-rmail
 @cindex Reading mail.
@@ -1199,10 +1200,10 @@ format).
 If the variable @code{dired-bind-man} is @code{nil}, @code{dired-man} will not
 be bound to @kbd{N}.
 
-@item dired-do-relative-symlink
+@item dired-do-relsymlink
 @cindex Relative symbolic links.
 @kindex Y
-@findex dired-do-relative-symlink
+@findex dired-do-relsymlink
 Bound to @kbd{Y}.  Relative symlink all marked (or next ARG) files into a
 directory, or make a relative symbolic link to the current file.  This creates
 relative symbolic links like
@@ -1218,9 +1219,9 @@ not absolute ones like
     foo -> /ugly/path/that/may/change/any/day/bar/foo
 @end example
 
-@item dired-do-relative-symlink-regexp
+@item dired-do-relsymlink-regexp
 @kindex %Y
-@findex dired-do-relative-symlink-regexp
+@findex dired-do-relsymlink-regexp
 Bound to @kbd{%Y}.  Relative symlink all marked files containing
 @var{regexp} to @var{newname}.  See functions
 @code{dired-do-rename-regexp} and @code{dired-do-relsymlink} for more

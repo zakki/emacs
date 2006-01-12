@@ -1,6 +1,7 @@
 ;;; esh-var.el --- handling of variables
 
-;; Copyright (C) 1999, 2000, 2005 Free Software Foundation
+;; Copyright (C) 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@gnu.org>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 (provide 'esh-var)
 
@@ -28,7 +29,7 @@
 (defgroup eshell-var nil
   "Variable interpolation is introduced whenever the '$' character
 appears unquoted in any argument (except when that argument is
-surrounded by single quotes) .  It may be used to interpolate a
+surrounded by single quotes).  It may be used to interpolate a
 variable value, a subcommand, or even the result of a Lisp form."
   :tag "Variable handling"
   :group 'eshell)
@@ -297,7 +298,7 @@ This function is explicit for adding to `eshell-parse-argument-hook'."
   nil)
 
 (defun eshell/export (&rest sets)
-  "This alias allows the 'export' command to act as bash users expect."
+  "This alias allows the `export' command to act as bash users expect."
   (while sets
     (if (and (stringp (car sets))
 	     (string-match "^\\([^=]+\\)=\\(.*\\)" (car sets)))

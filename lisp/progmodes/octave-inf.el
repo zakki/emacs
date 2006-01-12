@@ -1,10 +1,11 @@
 ;;; octave-inf.el --- running Octave as an inferior Emacs process
 
-;; Copyright (C) 1997 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
-;; Author: Kurt Hornik <Kurt.Hornik@ci.tuwien.ac.at>
+;; Author: Kurt Hornik <Kurt.Hornik@wu-wien.ac.at>
 ;; Author: John Eaton <jwe@bevo.che.wisc.edu>
-;; Maintainer: Kurt Hornik <Kurt.Hornik@ci.tuwien.ac.at>
+;; Maintainer: Kurt Hornik <Kurt.Hornik@wu-wien.ac.at>
 ;; Keywords: languages
 
 ;; This file is part of GNU Emacs.
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -129,7 +130,7 @@ buffer.
 Entry to this mode successively runs the hooks `comint-mode-hook' and
 `inferior-octave-mode-hook'."
   (interactive)
-  (comint-mode)
+  (delay-mode-hooks (comint-mode))
   (setq comint-prompt-regexp inferior-octave-prompt
 	major-mode 'inferior-octave-mode
 	mode-name "Inferior Octave"
@@ -219,6 +220,13 @@ startup file, `~/.emacs-octave'."
 	  (concat (mapconcat
 		   'identity inferior-octave-output-list "\n")
 		  "\n"))))
+
+    ;; An empty secondary prompt, as e.g. obtained by '--braindead',
+    ;; means trouble.
+    (inferior-octave-send-list-and-digest (list "PS2\n"))
+    (if (string-match "^PS2 = *$" (car inferior-octave-output-list))
+	(inferior-octave-send-list-and-digest (list "PS2 = \"> \"\n")))
+
     ;; O.k., now we are ready for the Inferior Octave startup commands.
     (let* (commands
 	   (program (file-name-nondirectory inferior-octave-program))
@@ -247,7 +255,11 @@ startup file, `~/.emacs-octave'."
 
     ;; And finally, everything is back to normal.
     (set-process-filter proc 'inferior-octave-output-filter)
-    (run-hooks 'inferior-octave-startup-hook)))
+    (run-hooks 'inferior-octave-startup-hook)
+    (run-hooks 'inferior-octave-startup-hook)
+    ;; Just in case, to be sure a cd in the startup file
+    ;; won't have detrimental effects.
+    (inferior-octave-resync-dirs)))
 
 
 (defun inferior-octave-complete ()

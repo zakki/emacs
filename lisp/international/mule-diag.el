@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -64,7 +64,7 @@
   'help-echo "mouse-2, RET: show table of characters for this character set")
 
 ;;;###autoload
-(defvar non-iso-charset-alist 
+(defvar non-iso-charset-alist
   `((mac-roman
      (ascii latin-iso8859-1 mule-unicode-2500-33ff
 	    mule-unicode-0100-24ff mule-unicode-e000-ffff)
@@ -598,7 +598,7 @@ PC `codepages' and other coded character sets.  See `non-iso-charset-alist'."
 ;;;###autoload
 (defun describe-coding-system (coding-system)
   "Display information about CODING-SYSTEM."
-  (interactive "zDescribe coding system (default, current choices): ")
+  (interactive "zDescribe coding system (default current choices): ")
   (if (null coding-system)
       (describe-current-coding-system)
     (help-setup-xref (list #'describe-coding-system coding-system)
@@ -609,7 +609,7 @@ PC `codepages' and other coded character sets.  See `non-iso-charset-alist'."
       (let ((vars (coding-system-get coding-system 'dependency)))
 	(when vars
 	  (princ "See also the documentation of these customizable variables
-which alter the behaviour of this coding system.\n")
+which alter the behavior of this coding system.\n")
 	  (dolist (v vars)
 	    (princ "  `")
 	    (princ v)
@@ -1040,7 +1040,7 @@ but still contains full information about each coding system."
 ;;;###autoload
 (defun describe-font (fontname)
   "Display information about fonts which partially match FONTNAME."
-  (interactive "sFontname (default, current choice for ASCII chars): ")
+  (interactive "sFontname (default current choice for ASCII chars): ")
   (or (and window-system (fboundp 'fontset-list))
       (error "No fontsets being used"))
   (when (or (not fontname) (= (length fontname) 0))
@@ -1137,7 +1137,7 @@ This shows which font is used for which character(s)."
 			  (mapcar 'cdr fontset-alias-alist)))
 	   (completion-ignore-case t))
        (list (completing-read
-	      "Fontset (default, used by the current frame): "
+	      "Fontset (default used by the current frame): "
 	      fontset-list nil t)))))
   (if (= (length fontset) 0)
       (setq fontset (frame-parameter nil 'font)))

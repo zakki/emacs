@@ -1,7 +1,7 @@
 ;;; edebug.el --- a source-level debugger for Emacs Lisp
 
-;; Copyright (C) 1988,89,90,91,92,93,94,95,97,1999,2000,01,03,2004
-;;       Free Software Foundation, Inc.
+;; Copyright (C) 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1997, 1999,
+;;   2000, 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Daniel LaLiberte <liberte@holonexus.org>
 ;; Maintainer: FSF
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -61,7 +61,7 @@
 ;;; Options
 
 (defgroup edebug nil
-  "A source-level debugger for Emacs Lisp"
+  "A source-level debugger for Emacs Lisp."
   :group 'lisp)
 
 
@@ -80,7 +80,7 @@ using but only when you also use Edebug."
 
 ;;;###autoload
 (defcustom edebug-all-defs nil
-  "*If non-nil, evaluation of any defining forms will instrument for Edebug.
+  "*If non-nil, evaluating defining forms instruments for Edebug.
 This applies to `eval-defun', `eval-region', `eval-buffer', and
 `eval-current-buffer'.  `eval-region' is also called by
 `eval-last-sexp', and `eval-print-last-sexp'.
@@ -141,10 +141,10 @@ it."
   :group 'edebug)
 
 (defcustom edebug-initial-mode 'step
-  "*Initial execution mode for Edebug, if non-nil.  If this variable
-is non-@code{nil}, it specifies the initial execution mode for Edebug
-when it is first activated.  Possible values are step, next, go,
-Go-nonstop, trace, Trace-fast, continue, and Continue-fast."
+  "*Initial execution mode for Edebug, if non-nil.
+If this variable is non-nil, it specifies the initial execution mode
+for Edebug when it is first activated.  Possible values are step, next,
+go, Go-nonstop, trace, Trace-fast, continue, and Continue-fast."
   :type '(choice (const step) (const next) (const go)
 		 (const Go-nonstop) (const trace)
 		 (const Trace-fast) (const continue)
@@ -180,15 +180,15 @@ Use this with caution since it is not debugged."
 
 
 (defcustom edebug-print-length 50
-  "*Default value of `print-length' to use while printing results in Edebug."
+  "*Default value of `print-length' for printing results in Edebug."
   :type 'integer
   :group 'edebug)
 (defcustom edebug-print-level 50
-  "*Default value of `print-level' to use while printing results in Edebug."
+  "*Default value of `print-level' for printing results in Edebug."
   :type 'integer
   :group 'edebug)
 (defcustom edebug-print-circle t
-  "*Default value of `print-circle' to use while printing results in Edebug."
+  "*Default value of `print-circle' for printing results in Edebug."
   :type 'boolean
   :group 'edebug)
 
@@ -243,9 +243,9 @@ Both SYMBOL and SPEC are unevaluated. The SPEC can be 0, t, a symbol
   `(put (quote ,symbol) 'edebug-form-spec (quote ,spec)))
 
 (defmacro def-edebug-form-spec (symbol spec-form)
-  "For compatibility with old version.  Use `def-edebug-spec' instead."
-  (message "Obsolete: use def-edebug-spec instead.")
+  "For compatibility with old version."
   (def-edebug-spec symbol (eval spec-form)))
+(make-obsolete 'def-edebug-form-spec 'def-edebug-spec "22.1")
 
 (defun get-edebug-spec (symbol)
   ;; Get the spec of symbol resolving all indirection.
@@ -511,9 +511,16 @@ the minibuffer."
 	   (set-default (nth 1 form) (eval (nth 2 form))))
           ((eq (car form) 'defface)
            ;; Reset the face.
-           (put (nth 1 form) 'face-defface-spec nil)
            (setq face-new-frame-defaults
-                 (assq-delete-all (nth 1 form) face-new-frame-defaults))))
+                 (assq-delete-all (nth 1 form) face-new-frame-defaults))
+           (put (nth 1 form) 'face-defface-spec nil)
+	   ;; See comments in `eval-defun-1' for purpose of code below
+	   (setq form (prog1 `(prog1 ,form
+				(put ',(nth 1 form) 'saved-face
+				     ',(get (nth 1 form) 'saved-face))
+				(put ',(nth 1 form) 'customized-face
+				     ,(nth 2 form)))
+			(put (nth 1 form) 'saved-face nil)))))
     (setq edebug-result (eval form))
     (if (not edebugging)
 	(princ edebug-result)
@@ -563,6 +570,7 @@ already is one.)"
 ;; Compatibility with old versions.
 (defalias 'edebug-all-defuns 'edebug-all-defs)
 
+;;;###autoload
 (defun edebug-all-defs ()
   "Toggle edebugging of all definitions."
   (interactive)
@@ -571,6 +579,7 @@ already is one.)"
 	   (if edebug-all-defs "on" "off")))
 
 
+;;;###autoload
 (defun edebug-all-forms ()
   "Toggle edebugging of all forms."
   (interactive)
@@ -726,8 +735,7 @@ already is one.)"
   ;; Leave point before the next token, skipping white space and comments.
   (skip-chars-forward " \t\r\n\f")
   (while (= (following-char) ?\;)
-    ;; \r is counted as a comment terminator to support selective display.
-    (skip-chars-forward "^\n\r")  ; skip the comment
+    (skip-chars-forward "^\n")  ; skip the comment
     (skip-chars-forward " \t\r\n\f")))
 
 
@@ -2367,18 +2375,19 @@ MSG is printed after `::::} '."
 
 
 (defun edebug-slow-before (edebug-before-index)
-  ;; Debug current function given BEFORE position.
-  ;; Called from functions compiled with edebug-eval-top-level-form.
-  ;; Return the before index.
-  (setcar edebug-offset-indices edebug-before-index)
+  (unless edebug-active
+    ;; Debug current function given BEFORE position.
+    ;; Called from functions compiled with edebug-eval-top-level-form.
+    ;; Return the before index.
+    (setcar edebug-offset-indices edebug-before-index)
 
-  ;; Increment frequency count
-  (aset edebug-freq-count edebug-before-index
-	(1+ (aref edebug-freq-count edebug-before-index)))
+    ;; Increment frequency count
+    (aset edebug-freq-count edebug-before-index
+	  (1+ (aref edebug-freq-count edebug-before-index)))
 
-  (if (or (not (memq edebug-execution-mode '(Go-nonstop next)))
-	  (edebug-input-pending-p))
-      (edebug-debugger edebug-before-index 'before nil))
+    (if (or (not (memq edebug-execution-mode '(Go-nonstop next)))
+	    (edebug-input-pending-p))
+	(edebug-debugger edebug-before-index 'before nil)))
   edebug-before-index)
 
 (defun edebug-fast-before (edebug-before-index)
@@ -2386,22 +2395,24 @@ MSG is printed after `::::} '."
   )
 
 (defun edebug-slow-after (edebug-before-index edebug-after-index edebug-value)
-  ;; Debug current function given AFTER position and VALUE.
-  ;; Called from functions compiled with edebug-eval-top-level-form.
-  ;; Return VALUE.
-  (setcar edebug-offset-indices edebug-after-index)
-
-  ;; Increment frequency count
-  (aset edebug-freq-count edebug-after-index
-	(1+ (aref edebug-freq-count edebug-after-index)))
-  (if edebug-test-coverage (edebug-update-coverage))
-
-  (if (and (eq edebug-execution-mode 'Go-nonstop)
-	   (not (edebug-input-pending-p)))
-      ;; Just return result.
+  (if edebug-active
       edebug-value
-    (edebug-debugger edebug-after-index 'after edebug-value)
-    ))
+    ;; Debug current function given AFTER position and VALUE.
+    ;; Called from functions compiled with edebug-eval-top-level-form.
+    ;; Return VALUE.
+    (setcar edebug-offset-indices edebug-after-index)
+
+    ;; Increment frequency count
+    (aset edebug-freq-count edebug-after-index
+	  (1+ (aref edebug-freq-count edebug-after-index)))
+    (if edebug-test-coverage (edebug-update-coverage))
+
+    (if (and (eq edebug-execution-mode 'Go-nonstop)
+	     (not (edebug-input-pending-p)))
+	;; Just return result.
+	edebug-value
+      (edebug-debugger edebug-after-index 'after edebug-value)
+      )))
 
 (defun edebug-fast-after (edebug-before-index edebug-after-index edebug-value)
   ;; Do nothing but return the value.
@@ -2507,6 +2518,7 @@ MSG is printed after `::::} '."
 (defvar edebug-outside-o-a-p) ; outside overlay-arrow-position
 (defvar edebug-outside-o-a-s) ; outside overlay-arrow-string
 (defvar edebug-outside-c-i-e-a) ; outside cursor-in-echo-area
+(defvar edebug-outside-d-c-i-n-s-w) ; outside default-cursor-in-non-selected-windows
 
 (defvar edebug-eval-list nil) ;; List of expressions to evaluate.
 
@@ -2526,6 +2538,7 @@ MSG is printed after `::::} '."
   ;; Uses local variables of edebug-enter, edebug-before, edebug-after
   ;; and edebug-debugger.
   (let ((edebug-active t)		; for minor mode alist
+	(edebug-with-timeout-suspend (with-timeout-suspend))
 	edebug-stop			; should we enter recursive-edit
 	(edebug-point (+ edebug-def-mark
 			 (aref (nth 2 edebug-data) edebug-offset-index)))
@@ -2547,11 +2560,13 @@ MSG is printed after `::::} '."
 
 	(edebug-outside-o-a-p overlay-arrow-position)
 	(edebug-outside-o-a-s overlay-arrow-string)
-	(edebug-outside-c-i-e-a cursor-in-echo-area))
+	(edebug-outside-c-i-e-a cursor-in-echo-area)
+	(edebug-outside-d-c-i-n-s-w default-cursor-in-non-selected-windows))
     (unwind-protect
 	(let ((overlay-arrow-position overlay-arrow-position)
 	      (overlay-arrow-string overlay-arrow-string)
 	      (cursor-in-echo-area nil)
+	      (default-cursor-in-non-selected-windows t)
 	      ;; any others??
 	      )
 	  (if (not (buffer-name edebug-buffer))
@@ -2752,11 +2767,13 @@ MSG is printed after `::::} '."
 	    (set-buffer current-buffer))
 	  ;; ... nothing more.
 	  )
+      (with-timeout-unsuspend edebug-with-timeout-suspend)
       ;; Reset global variables to outside values in case they were changed.
       (setq
        overlay-arrow-position edebug-outside-o-a-p
        overlay-arrow-string edebug-outside-o-a-s
-       cursor-in-echo-area edebug-outside-c-i-e-a)
+       cursor-in-echo-area edebug-outside-c-i-e-a
+       default-cursor-in-non-selected-windows edebug-outside-d-c-i-n-s-w)
       )))
 
 
@@ -3189,8 +3206,8 @@ The default is one second."
 
 
 (defun edebug-modify-breakpoint (flag &optional condition temporary)
-  "Modify the breakpoint for the form at point or after it according
-to FLAG: set if t, clear if nil.  Then move to that point.
+  "Modify the breakpoint for the form at point or after it.
+Set it if FLAG is non-nil, clear it otherwise.  Then move to that point.
 If CONDITION or TEMPORARY are non-nil, add those attributes to
 the breakpoint.  "
   (let ((edebug-stop-point (edebug-find-stop-point)))
@@ -3323,7 +3340,7 @@ With prefix ARG, set temporary break at current point and go."
 
 
 (defun edebug-goto-here ()
-  "Proceed to this stop point."
+  "Proceed to first stop-point at or after current position of point."
   (interactive)
   (edebug-go-mode t))
 
@@ -3569,6 +3586,7 @@ Return the result of the last expression."
 	   (overlay-arrow-position edebug-outside-o-a-p)
 	   (overlay-arrow-string edebug-outside-o-a-s)
 	   (cursor-in-echo-area edebug-outside-c-i-e-a)
+	   (default-cursor-in-non-selected-windows edebug-outside-d-c-i-n-s-w)
 	   )
        (unwind-protect
 	   (save-excursion		; of edebug-buffer
@@ -3607,6 +3625,7 @@ Return the result of the last expression."
 	  edebug-outside-o-a-p overlay-arrow-position
 	  edebug-outside-o-a-s overlay-arrow-string
 	  edebug-outside-c-i-e-a cursor-in-echo-area
+	  edebug-outside-d-c-i-n-s-w default-cursor-in-non-selected-windows
 	  )
 
 	 ;; Restore the outside saved values; don't alter
@@ -3639,9 +3658,12 @@ Return the result of the last expression."
 ;; Replace printing functions.
 
 ;; obsolete names
-(defalias 'edebug-install-custom-print-funcs 'edebug-install-custom-print)
-(defalias 'edebug-reset-print-funcs 'edebug-uninstall-custom-print)
-(defalias 'edebug-uninstall-custom-print-funcs 'edebug-uninstall-custom-print)
+(define-obsolete-function-alias 'edebug-install-custom-print-funcs
+    'edebug-install-custom-print "22.1")
+(define-obsolete-function-alias 'edebug-reset-print-funcs
+    'edebug-uninstall-custom-print "22.1")
+(define-obsolete-function-alias 'edebug-uninstall-custom-print-funcs
+    'edebug-uninstall-custom-print "22.1")
 
 (defun edebug-install-custom-print ()
   "Replace print functions used by Edebug with custom versions."
@@ -3697,7 +3719,9 @@ Return the result of the last expression."
 	(print-level (or edebug-print-level print-level))
 	(print-circle (or edebug-print-circle print-circle))
 	(print-readably nil)) ;; lemacs uses this.
-    (edebug-prin1-to-string value)))
+    (condition-case nil
+	(edebug-prin1-to-string value)
+      (error "#Apparently circular structure#"))))
 
 (defun edebug-compute-previous-result (edebug-previous-value)
   (if edebug-unwrap-results
@@ -3729,12 +3753,13 @@ Print result in minibuffer."
             (eval-expression-print-format (car values))))))
 
 (defun edebug-eval-last-sexp ()
-  "Evaluate sexp before point in the outside environment; value in minibuffer."
+  "Evaluate sexp before point in the outside environment.
+Print value in minibuffer."
   (interactive)
   (edebug-eval-expression (edebug-last-sexp)))
 
 (defun edebug-eval-print-last-sexp ()
-  "Evaluate sexp before point in the outside environment; insert the value.
+  "Evaluate sexp before point in outside environment; insert value.
 This prints the value into current buffer."
   (interactive)
   (let* ((edebug-form (edebug-last-sexp))
@@ -3880,7 +3905,7 @@ buffer) there are local and global key bindings to several Edebug
 specific commands.  E.g. `edebug-step-mode' is bound to \\[edebug-step-mode]
 in the Edebug buffer and \\<global-map>\\[edebug-step-mode] in any buffer.
 
-Also see bindings for the eval list buffer, *edebug*.
+Also see bindings for the eval list buffer *edebug* in `edebug-eval-mode'.
 
 The edebug buffer commands:
 \\{edebug-mode-map}
@@ -4014,20 +4039,19 @@ May only be called from within edebug-recursive-edit."
 (defvar edebug-eval-mode-map nil
   "Keymap for Edebug Eval mode.  Superset of Lisp Interaction mode.")
 
-(if edebug-eval-mode-map
-    nil
-  (setq edebug-eval-mode-map (copy-keymap lisp-interaction-mode-map))
+(unless edebug-eval-mode-map
+  (setq edebug-eval-mode-map (make-sparse-keymap))
+  (set-keymap-parent edebug-eval-mode-map lisp-interaction-mode-map)
 
   (define-key edebug-eval-mode-map "\C-c\C-w" 'edebug-where)
   (define-key edebug-eval-mode-map "\C-c\C-d" 'edebug-delete-eval-item)
   (define-key edebug-eval-mode-map "\C-c\C-u" 'edebug-update-eval-list)
   (define-key edebug-eval-mode-map "\C-x\C-e" 'edebug-eval-last-sexp)
-  (define-key edebug-eval-mode-map "\C-j" 'edebug-eval-print-last-sexp)
-  )
+  (define-key edebug-eval-mode-map "\C-j" 'edebug-eval-print-last-sexp))
 
 (put 'edebug-eval-mode 'mode-class 'special)
 
-(defun edebug-eval-mode ()
+(define-derived-mode edebug-eval-mode lisp-interaction-mode "Edebug Eval"
   "Mode for evaluation list buffer while in Edebug.
 
 In addition to all Interactive Emacs Lisp commands there are local and
@@ -4038,13 +4062,8 @@ buffer and \\<global-map>\\[edebug-step-mode] in any buffer.
 Eval list buffer commands:
 \\{edebug-eval-mode-map}
 
-Global commands prefixed by global-edebug-prefix:
-\\{global-edebug-map}
-"
-  (lisp-interaction-mode)
-  (setq major-mode 'edebug-eval-mode)
-  (setq mode-name "Edebug Eval")
-  (use-local-map edebug-eval-mode-map))
+Global commands prefixed by `global-edebug-prefix':
+\\{global-edebug-map}")
 
 ;;; Interface with standard debugger.
 
@@ -4222,7 +4241,7 @@ reinstrument it."
 		       (- (current-column)
 			  (if (= ?\( (following-char)) 0 1)))))
 	    (insert (make-string
-		     (max 0 (- col (- (point) start-of-count-line))) ?\ )
+		     (max 0 (- col (- (point) start-of-count-line))) ?\s)
 		    (if (and (< 0 count)
 			     (not (memq coverage
 					'(unknown ok-coverage))))

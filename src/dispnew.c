@@ -1,6 +1,7 @@
 /* Updating of data structures for redisplay.
-   Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995, 1997, 1998, 1999,
-     2000, 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995,
+                 1997, 1998, 1999, 2000, 2001, 2002, 2003,
+                 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 #include <signal.h>
@@ -1183,6 +1184,9 @@ increment_row_positions (row, delta, delta_bytes)
   MATRIX_ROW_START_BYTEPOS (row) += delta_bytes;
   MATRIX_ROW_END_CHARPOS (row) += delta;
   MATRIX_ROW_END_BYTEPOS (row) += delta_bytes;
+
+  if (!row->enabled_p)
+    return;
 
   /* Increment positions in glyphs.  */
   for (area = 0; area < LAST_AREA; ++area)
@@ -2719,9 +2723,15 @@ build_frame_matrix_from_leaf_window (frame_matrix, w)
       if (!WINDOW_RIGHTMOST_P (w))
 	{
 	  struct Lisp_Char_Table *dp = window_display_table (w);
-	  right_border_glyph = (dp && INTEGERP (DISP_BORDER_GLYPH (dp))
-				? XINT (DISP_BORDER_GLYPH (dp))
-				: '|');
+
+	  right_border_glyph
+	    = ((dp && INTEGERP (DISP_BORDER_GLYPH (dp)))
+	       ? spec_glyph_lookup_face (w, XINT (DISP_BORDER_GLYPH (dp)))
+	       : '|');
+
+	  if (FAST_GLYPH_FACE (right_border_glyph) <= 0)
+	    right_border_glyph
+	      = FAST_MAKE_GLYPH (right_border_glyph, VERTICAL_BORDER_FACE_ID);
 	}
     }
   else
@@ -2802,6 +2812,27 @@ build_frame_matrix_from_leaf_window (frame_matrix, w)
     }
 }
 
+/* Given a user-specified glyph, possibly including a Lisp-level face
+   ID, return a glyph that has a realized face ID.
+   This is used for glyphs displayed specially and not part of the text;
+   for instance, vertical separators, truncation markers, etc.  */
+
+GLYPH
+spec_glyph_lookup_face (w, glyph)
+     struct window *w;
+     GLYPH glyph;
+{
+  int lface_id = FAST_GLYPH_FACE (glyph);
+  /* Convert the glyph's specified face to a realized (cache) face.  */
+  if (lface_id > 0)
+    {
+      int face_id = merge_faces (XFRAME (w->frame),
+				 Qt, lface_id, DEFAULT_FACE_ID);
+      glyph
+	= FAST_MAKE_GLYPH (FAST_GLYPH_CHAR (glyph), face_id);
+    }
+  return glyph;
+}
 
 /* Add spaces to a glyph row ROW in a window matrix.
 
@@ -3293,9 +3324,7 @@ window_to_frame_hpos (w, hpos)
      struct window *w;
      int hpos;
 {
-  struct frame *f = XFRAME (w->frame);
-
-  xassert (!FRAME_WINDOW_P (f));
+  xassert (!FRAME_WINDOW_P (XFRAME (w->frame)));
   hpos += WINDOW_LEFT_EDGE_COL (w);
   return hpos;
 }
@@ -3934,6 +3963,7 @@ update_single_window (w, force_p)
     }
 }
 
+#ifdef HAVE_WINDOW_SYSTEM
 
 /* Redraw lines from the current matrix of window W that are
    overlapped by other rows.  YB is bottom-most y-position in W.  */
@@ -4006,29 +4036,41 @@ redraw_overlapping_rows (w, yb)
 
       if (row->overlapping_p && i > 0 && bottom_y < yb)
 	{
-	  if (row->used[LEFT_MARGIN_AREA])
-	    rif->fix_overlapping_area (w, row, LEFT_MARGIN_AREA);
+	  int overlaps = 0;
 
-	  if (row->used[TEXT_AREA])
-	    rif->fix_overlapping_area (w, row, TEXT_AREA);
+	  if (MATRIX_ROW_OVERLAPS_PRED_P (row)
+	      && !MATRIX_ROW (w->current_matrix, i - 1)->overlapped_p)
+	    overlaps |= OVERLAPS_PRED;
+	  if (MATRIX_ROW_OVERLAPS_SUCC_P (row)
+	      && !MATRIX_ROW (w->current_matrix, i + 1)->overlapped_p)
+	    overlaps |= OVERLAPS_SUCC;
 
-	  if (row->used[RIGHT_MARGIN_AREA])
-	    rif->fix_overlapping_area (w, row, RIGHT_MARGIN_AREA);
+	  if (overlaps)
+	    {
+	      if (row->used[LEFT_MARGIN_AREA])
+		rif->fix_overlapping_area (w, row, LEFT_MARGIN_AREA, overlaps);
 
-	  /* Record in neighbour rows that ROW overwrites part of their
-	     display.  */
-	  if (row->phys_ascent > row->ascent && i > 0)
-	    MATRIX_ROW (w->current_matrix, i - 1)->overlapped_p = 1;
-	  if ((row->phys_height - row->phys_ascent
-	       > row->height - row->ascent)
-	      && bottom_y < yb)
-	    MATRIX_ROW (w->current_matrix, i + 1)->overlapped_p = 1;
+	      if (row->used[TEXT_AREA])
+		rif->fix_overlapping_area (w, row, TEXT_AREA, overlaps);
+
+	      if (row->used[RIGHT_MARGIN_AREA])
+		rif->fix_overlapping_area (w, row, RIGHT_MARGIN_AREA, overlaps);
+
+	      /* Record in neighbour rows that ROW overwrites part of
+		 their display.  */
+	      if (overlaps & OVERLAPS_PRED)
+		MATRIX_ROW (w->current_matrix, i - 1)->overlapped_p = 1;
+	      if (overlaps & OVERLAPS_SUCC)
+		MATRIX_ROW (w->current_matrix, i + 1)->overlapped_p = 1;
+	    }
 	}
 
       if (bottom_y >= yb)
 	break;
     }
 }
+
+#endif /* HAVE_WINDOW_SYSTEM */
 
 
 #ifdef GLYPH_DEBUG
@@ -4070,10 +4112,8 @@ update_window (w, force_p)
   extern int input_pending;
   extern Lisp_Object do_mouse_tracking;
 #if GLYPH_DEBUG
-  struct frame *f = XFRAME (WINDOW_FRAME (w));
-
   /* Check that W's frame doesn't have glyph matrices.  */
-  xassert (FRAME_WINDOW_P (f));
+  xassert (FRAME_WINDOW_P (XFRAME (WINDOW_FRAME (w))));
   xassert (updating_frame != NULL);
 #endif
 
@@ -4192,11 +4232,13 @@ update_window (w, force_p)
       /* Fix the appearance of overlapping/overlapped rows.  */
       if (!paused_p && !w->pseudo_window_p)
 	{
+#ifdef HAVE_WINDOW_SYSTEM
 	  if (changed_p && rif->fix_overlapping_area)
 	    {
 	      redraw_overlapped_rows (w, yb);
 	      redraw_overlapping_rows (w, yb);
 	    }
+#endif
 
 	  /* Make cursor visible at cursor position of W.  */
 	  set_window_cursor_after_update (w);
@@ -5770,8 +5812,9 @@ buffer_posn_from_coords (w, x, y, pos, object, dx, dy, width, height)
     }
 #endif
 
-  row = MATRIX_ROW (w->current_matrix, it.vpos);
-  if (row->enabled_p)
+  if (it.vpos < w->current_matrix->nrows
+      && (row = MATRIX_ROW (w->current_matrix, it.vpos),
+	  row->enabled_p))
     {
       if (it.hpos < row->used[TEXT_AREA])
 	{
@@ -6321,7 +6364,7 @@ Emacs was built without floating point support.
 
 #ifndef EMACS_HAS_USECS
   if (sec == 0 && usec != 0)
-    error ("millisecond `sleep-for' not supported on %s", SYSTEM_TYPE);
+    error ("Millisecond `sleep-for' not supported on %s", SYSTEM_TYPE);
 #endif
 
   /* Assure that 0 <= usec < 1000000.  */
@@ -6421,7 +6464,7 @@ usage: (sit-for SECONDS &optional NODISP OLD-NODISP) */)
 
 #ifndef EMACS_HAS_USECS
   if (usec != 0 && sec == 0)
-    error ("millisecond `sit-for' not supported on %s", SYSTEM_TYPE);
+    error ("Millisecond `sit-for' not supported on %s", SYSTEM_TYPE);
 #endif
 
   return sit_for (sec, usec, 0, NILP (nodisp), NILP (nodisp));
@@ -6435,68 +6478,106 @@ usage: (sit-for SECONDS &optional NODISP OLD-NODISP) */)
 
 /* A vector of size >= 2 * NFRAMES + 3 * NBUFFERS + 1, containing the
    session's frames, frame names, buffers, buffer-read-only flags, and
-   buffer-modified-flags, and a trailing sentinel (so we don't need to
-   add length checks).  */
+   buffer-modified-flags.  */
 
 static Lisp_Object frame_and_buffer_state;
 
 
 DEFUN ("frame-or-buffer-changed-p", Fframe_or_buffer_changed_p,
-       Sframe_or_buffer_changed_p, 0, 0, 0,
+       Sframe_or_buffer_changed_p, 0, 1, 0,
        doc: /* Return non-nil if the frame and buffer state appears to have changed.
-The state variable is an internal vector containing all frames and buffers,
+VARIABLE is a variable name whose value is either nil or a state vector
+that will be updated to contain all frames and buffers,
 aside from buffers whose names start with space,
-along with the buffers' read-only and modified flags, which allows a fast
-check to see whether the menu bars might need to be recomputed.
+along with the buffers' read-only and modified flags.  This allows a fast
+check to see whether buffer menus might need to be recomputed.
 If this function returns non-nil, it updates the internal vector to reflect
-the current state.  */)
-     ()
+the current state.
+
+If VARIABLE is nil, an internal variable is used.  Users should not
+pass nil for VARIABLE.  */)
+     (variable)
+     Lisp_Object variable;
 {
-  Lisp_Object tail, frame, buf;
-  Lisp_Object *vecp;
+  Lisp_Object state, tail, frame, buf;
+  Lisp_Object *vecp, *end;
   int n;
 
-  vecp = XVECTOR (frame_and_buffer_state)->contents;
+  if (! NILP (variable))
+    {
+      CHECK_SYMBOL (variable);
+      state = Fsymbol_value (variable);
+      if (! VECTORP (state))
+	goto changed;
+    }
+  else
+    state = frame_and_buffer_state;
+
+  vecp = XVECTOR (state)->contents;
+  end = vecp + XVECTOR (state)->size;
+
   FOR_EACH_FRAME (tail, frame)
     {
+      if (vecp == end)
+	goto changed;
       if (!EQ (*vecp++, frame))
+	goto changed;
+      if (vecp == end)
 	goto changed;
       if (!EQ (*vecp++, XFRAME (frame)->name))
 	goto changed;
     }
-  /* Check that the buffer info matches.
-     No need to test for the end of the vector
-     because the last element of the vector is lambda
-     and that will always cause a mismatch.  */
+  /* Check that the buffer info matches.  */
   for (tail = Vbuffer_alist; CONSP (tail); tail = XCDR (tail))
     {
       buf = XCDR (XCAR (tail));
       /* Ignore buffers that aren't included in buffer lists.  */
       if (SREF (XBUFFER (buf)->name, 0) == ' ')
 	continue;
+      if (vecp == end)
+	goto changed;
       if (!EQ (*vecp++, buf))
 	goto changed;
+      if (vecp == end)
+	goto changed;
       if (!EQ (*vecp++, XBUFFER (buf)->read_only))
+	goto changed;
+      if (vecp == end)
 	goto changed;
       if (!EQ (*vecp++, Fbuffer_modified_p (buf)))
 	goto changed;
     }
+  if (vecp == end)
+    goto changed;
   /* Detect deletion of a buffer at the end of the list.  */
   if (EQ (*vecp, Qlambda))
     return Qnil;
+
+  /* Come here if we decide the data has changed.  */
  changed:
-  /* Start with 1 so there is room for at least one lambda at the end.  */
+  /* Count the size we will need.
+     Start with 1 so there is room for at least one lambda at the end.  */
   n = 1;
   FOR_EACH_FRAME (tail, frame)
     n += 2;
   for (tail = Vbuffer_alist; CONSP (tail); tail = XCDR (tail))
     n += 3;
-  /* Reallocate the vector if it's grown, or if it's shrunk a lot.  */
-  if (n > XVECTOR (frame_and_buffer_state)->size
-      || n + 20 < XVECTOR (frame_and_buffer_state)->size / 2)
+  /* Reallocate the vector if data has grown to need it,
+     or if it has shrunk a lot.  */
+  if (! VECTORP (state)
+      || n > XVECTOR (state)->size
+      || n + 20 < XVECTOR (state)->size / 2)
     /* Add 20 extra so we grow it less often.  */
-    frame_and_buffer_state = Fmake_vector (make_number (n + 20), Qlambda);
-  vecp = XVECTOR (frame_and_buffer_state)->contents;
+    {
+      state = Fmake_vector (make_number (n + 20), Qlambda);
+      if (! NILP (variable))
+	Fset (variable, state);
+      else
+	frame_and_buffer_state = state;
+    }
+
+  /* Record the new data in the (possibly reallocated) vector.  */
+  vecp = XVECTOR (state)->contents;
   FOR_EACH_FRAME (tail, frame)
     {
       *vecp++ = frame;
@@ -6514,12 +6595,12 @@ the current state.  */)
     }
   /* Fill up the vector with lambdas (always at least one).  */
   *vecp++ = Qlambda;
-  while  (vecp - XVECTOR (frame_and_buffer_state)->contents
-	  < XVECTOR (frame_and_buffer_state)->size)
+  while (vecp - XVECTOR (state)->contents
+	 < XVECTOR (state)->size)
     *vecp++ = Qlambda;
   /* Make sure we didn't overflow the vector.  */
-  if (vecp - XVECTOR (frame_and_buffer_state)->contents
-      > XVECTOR (frame_and_buffer_state)->size)
+  if (vecp - XVECTOR (state)->contents
+      > XVECTOR (state)->size)
     abort ();
   return Qt;
 }

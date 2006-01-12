@@ -1,10 +1,10 @@
 ;;; follow.el --- synchronize windows showing the same buffer
 
-;; Copyright (C) 1995, 1996, 1997, 1999, 2001, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1996, 1997, 1999, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Anders Lindgren <andersl@andersl.com>
-;; Maintainer: Anders Lindgren <andersl@andersl.com>
+;; Maintainer: FSF (Anders' email bounces, Sep 2005)
 ;; Created: 1995-05-25
 ;; Keywords: display, window, minor-mode, convenience
 ;; Last Changed: 1999-11-17
@@ -23,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 

@@ -1,6 +1,7 @@
 ;;; ediff-mult.el --- support for multi-file/multi-buffer processing in Ediff
 
-;; Copyright (C) 1995, 96, 97, 98, 99, 2000, 01, 02, 05 Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Michael Kifer <kifer@cs.stonybrook.edu>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -106,7 +107,7 @@
 (provide 'ediff-mult)
 
 (defgroup ediff-mult nil
-  "Multi-file and multi-buffer processing in Ediff"
+  "Multi-file and multi-buffer processing in Ediff."
   :prefix "ediff-"
   :group 'ediff)
 
@@ -205,6 +206,12 @@ Should be a sexp. For instance (car ediff-filtering-regexp-history) or nil."
 This can be toggled with `ediff-toggle-filename-truncation'."
   :type 'boolean
   :group 'ediff-mult)
+
+(defcustom ediff-meta-mode-hook nil
+  "*Hooks run just after setting up meta mode."
+  :type 'hook
+  :group 'ediff-mult)
+
 (defcustom ediff-registry-setup-hook nil
   "*Hooks run just after the registry control panel is set up."
   :type 'hook
@@ -410,7 +417,9 @@ Commands:
 \\{ediff-meta-buffer-map}"
   (kill-all-local-variables)
   (setq major-mode 'ediff-meta-mode)
-  (setq mode-name "MetaEdiff"))
+  (setq mode-name "MetaEdiff")
+  ;; don't use run-mode-hooks here!
+  (run-hooks 'ediff-meta-mode-hook))
 
 
 ;; the keymap for the buffer showing directory differences
@@ -856,7 +865,7 @@ behavior."
 	 (session-info (ediff-overlay-get overl 'ediff-meta-info))
 	 (activity-marker (ediff-get-session-activity-marker session-info))
 	 buffer-read-only)
-    (or new-marker activity-marker (setq new-marker ?\ ))
+    (or new-marker activity-marker (setq new-marker ?\s))
     (goto-char (ediff-overlay-start overl))
     (if (eq (char-after (point)) new-marker)
 	() ; if marker shown in buffer is the same as new-marker, do nothing
@@ -871,7 +880,7 @@ behavior."
 	 (session-info (ediff-overlay-get overl 'ediff-meta-info))
 	 (status (ediff-get-session-status session-info))
 	 buffer-read-only)
-    (setq new-status (or new-status status ?\ ))
+    (setq new-status (or new-status status ?\s))
     (goto-char (ediff-overlay-start overl))
     (forward-char 1) ; status is the second char in session record
     (if (eq (char-after (point)) new-status)
@@ -1305,7 +1314,7 @@ Useful commands:
 	 (if otherfile
 	     (or (file-exists-p otherfile)
 		 (if (y-or-n-p
-		      (format "Copy %s to %s ? " file-abs otherfile))
+		      (format "Copy %s to %s? " file-abs otherfile))
 		     (let* ((file-diff-record (assoc file-tail dir-diff-list))
 			    (new-mem-code
 			     (* (cdr file-diff-record) file-mem-code)))
@@ -1615,7 +1624,7 @@ Useful commands:
 	   (save-excursion
 	     (set-buffer meta-diff-buff)
 	     (goto-char (point-max))
-	     (insert-buffer custom-diff-buf)
+	     (insert-buffer-substring custom-diff-buf)
 	     (insert "\n")))
 	  ;; if ediff session is not live, run diff directly on the files
 	  ((memq metajob '(ediff-directories
@@ -1634,7 +1643,7 @@ Useful commands:
 	   (save-excursion
 	     (set-buffer meta-diff-buff)
 	     (goto-char (point-max))
-	     (insert-buffer tmp-buf)
+	     (insert-buffer-substring tmp-buf)
 	     (insert "\n")))
 	  (t
 	   (ediff-kill-buffer-carefully meta-diff-buff)
@@ -1682,7 +1691,8 @@ all marked sessions must be active."
 	       (ediff-get-session-objC-name info)))
 	    (set-buffer (get-buffer-create ediff-tmp-buffer))
 	    (erase-buffer)
-	    (insert-buffer patchbuffer)
+	    (insert-buffer-substring patchbuffer)
+	    (goto-char (point-min))
 	    (display-buffer ediff-tmp-buffer 'not-this-window)
 	    ))
       (error "The patch buffer wasn't found"))))

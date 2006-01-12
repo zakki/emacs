@@ -2,8 +2,8 @@ This file is obsolete, and no longer part of the Emacs Lisp Reference Manual.
 It is still present in CVS in case we ever want to use some of it again.
 
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2002, 2003,
+@c   2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 
 
@@ -135,8 +135,8 @@ Manual.  It corresponds to Emacs Version 19.29.
 @c than the foobar edition").  --mew 13sep93
 
 Published by the Free Software Foundation
-59 Temple Place, Suite 330
-Boston, MA  02111-1307 USA
+51 Franklin Street, Fifth Floor
+Boston, MA  02110-1301 USA
 @end ifinfo
 
 @setchapternewpage odd
@@ -174,8 +174,8 @@ ISBN 1-882114-71-X
 
 @sp 2
 Published by the Free Software Foundation @*
-59 Temple Place, Suite 330 @*
-Boston, MA  02111-1307 USA
+51 Franklin Street, Fifth Floor @*
+Boston, MA  02110-1301 USA
 
 @sp 1
 Permission is granted to make and distribute verbatim copies of this

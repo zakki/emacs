@@ -1,7 +1,6 @@
 ;;; vc-mcvs.el --- VC backend for the Meta-CVS version-control system
 
-;; Copyright (C) 1995, 1998, 1999, 2000, 2001, 2002, 2003, 2004
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author:      FSF (see vc.el for full credits)
 ;; Maintainer:  Stefan Monnier <monnier@gnu.org>
@@ -20,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -226,7 +225,7 @@ the Meta-CVS command (in that order)."
     ;; Make sure the `mcvs add' will not fire up the CVSEDITOR
     ;; to add a rule for the given file's extension.
     (when (and ext (not (assoc ext types)))
-      (let ((type (completing-read "Type to use [default]: "
+      (let ((type (completing-read "Type to use (default): "
 				   '("default" "name-only" "keep-old"
 				     "binary" "value-only")
 				   nil t nil nil "default")))
@@ -351,7 +350,7 @@ This is only possible if Meta-CVS is responsible for FILE's directory.")
 
 (defun vc-mcvs-revert (file &optional contents-done)
   "Revert FILE to the version it was based on."
-  (vc-default-revert file contents-done)
+  (vc-default-revert 'MCVS file contents-done)
   (unless (eq (vc-checkout-model file) 'implicit)
     (if vc-mcvs-use-edit
         (vc-mcvs-command nil 0 file "unedit")

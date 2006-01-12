@@ -1,5 +1,6 @@
 #    Make file for building GNU Emacs on the Macintosh.
-#    Copyright (C) 1999, 2000 Free Software Foundation, Inc.
+#    Copyright (C) 1999, 2000, 2002, 2003, 2004,
+#       2005 Free Software Foundation, Inc.
 #
 #    Author: Andrew Choi <akochoi@users.sourceforge.net>
 #
@@ -17,8 +18,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-# Boston, MA 02111-1307, USA.  */
+# the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.  */
 #
 # Defines the following targets:
 #   Emacs (default) - normal Carbon Emacs build.
@@ -889,6 +890,7 @@ buildobj.lst Ä
 	"{Src}macterm.h" ¶
 		"{Src}macgui.h" ¶
 		"{Src}frame.h" ¶
+	"{Src}keymap.h" ¶
 	{BLOCKINPUT_H_GROUP}
 
 {Src}mac.c Ä ¶
@@ -1075,6 +1077,9 @@ shortlisp = ¶
 	{Lisp}subr.elc ¶
 	{Lisp}term:tty-colors.elc ¶
 	{Lisp}font-core.elc ¶
+	{Lisp}emacs-lisp:syntax.elc ¶
+	{Lisp}font-lock.elc ¶
+	{Lisp}jit-lock.elc ¶
 	{Lisp}textmodes:fill.elc ¶
 	{Lisp}textmodes:page.elc ¶
 	{Lisp}textmodes:paragraphs.elc ¶

@@ -1,7 +1,7 @@
 ;;; sgml-mode.el --- SGML- and HTML-editing modes
 
-;; Copyright (C) 1992, 1995, 1996, 1998, 2001, 2002, 2003, 2004, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1992, 1995, 1996, 1998, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: James Clark <jjc@jclark.com>
 ;; Maintainer: FSF
@@ -23,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -40,7 +40,8 @@
   (require 'cl))
 
 (defgroup sgml nil
-  "SGML editing mode"
+  "SGML editing mode."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'languages)
 
 (defcustom sgml-basic-offset 2
@@ -248,11 +249,11 @@ separated by a space."
   "Regular expression that matches a non-empty start tag.
 Any terminating `>' or `/' is not matched.")
 
-(defface sgml-namespace-face
+(defface sgml-namespace
   '((t (:inherit font-lock-builtin-face)))
   "`sgml-mode' face used to highlight the namespace part of identifiers."
   :group 'sgml)
-(defvar sgml-namespace-face 'sgml-namespace-face)
+(defvar sgml-namespace-face 'sgml-namespace)
 
 ;; internal
 (defconst sgml-font-lock-keywords-1
@@ -668,12 +669,12 @@ If QUIET, do not print a message when there are no attributes for TAG."
 	    (message "No attributes configured."))
 	(if (stringp (car alist))
 	    (progn
-	      (insert (if (eq (preceding-char) ? ) "" ? )
+	      (insert (if (eq (preceding-char) ?\s) "" ?\s)
 		      (funcall skeleton-transformation (car alist)))
 	      (sgml-value alist))
 	  (setq i (length alist))
 	  (while (> i 0)
-	    (insert ? )
+	    (insert ?\s)
 	    (insert (funcall skeleton-transformation
 			     (setq attribute
 				   (skeleton-read '(completing-read
@@ -683,7 +684,7 @@ If QUIET, do not print a message when there are no attributes for TAG."
 		(setq i 0)
 	      (sgml-value (assoc (downcase attribute) alist))
 	      (setq i (1- i))))
-	  (if (eq (preceding-char) ? )
+	  (if (eq (preceding-char) ?\s)
 	      (delete-backward-char 1)))
 	car)))
 
@@ -699,7 +700,7 @@ With prefix argument, only self insert."
 	    (eq (aref tag 0) ?/))
 	(self-insert-command (prefix-numeric-value arg))
       (sgml-attributes tag)
-      (setq last-command-char ? )
+      (setq last-command-char ?\s)
       (or (> (point) point)
 	  (self-insert-command 1)))))
 
@@ -901,8 +902,6 @@ With prefix argument ARG, repeat this ARG times."
 		  (forward-list)))))))
 
 
-(autoload 'compile-internal "compile")
-
 (defun sgml-validate (command)
   "Validate an SGML document.
 Runs COMMAND, a shell command, in a separate process asynchronously
@@ -919,7 +918,7 @@ and move to the line in the SGML document that caused it."
 					 (file-name-nondirectory name))))))))
   (setq sgml-saved-validate-command command)
   (save-some-buffers (not compilation-ask-about-save) nil)
-  (compile-internal command "No more errors"))
+  (compilation-start command))
 
 (defsubst sgml-at-indentation-p ()
   "Return true if point is at the first non-whitespace character on the line."
@@ -1384,7 +1383,7 @@ LCON is the lexical context, if any."
 	    (* sgml-basic-offset (length context)))))))
 
     (otherwise
-     (error "Unrecognised context %s" (car lcon)))
+     (error "Unrecognized context %s" (car lcon)))
 
     ))
 
@@ -1719,7 +1718,7 @@ This takes effect when first loading the library.")
     ("dir" . "Directory list (obsolete)")
     ("dl" . "Definition list")
     ("dt" . "Term to be definined")
-    ("em" . "Emphasised")
+    ("em" . "Emphasized")
     ("embed" . "Embedded data in foreign format")
     ("fig" . "Figure")
     ("figa" . "Figure anchor")
@@ -1873,7 +1872,7 @@ The third `match-string' will be the used in the menu.")
 	(setq toc-index
 	      (cons (cons (concat (make-string
 				   (* 2 (1- (string-to-number (match-string 1))))
-				   ?\ )
+				   ?\s)
 				  (match-string 3))
 			  (line-beginning-position))
 		    toc-index))))

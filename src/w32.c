@@ -1,5 +1,6 @@
 /* Utility and Unix shadow routines for GNU Emacs on the Microsoft W32 API.
-   Copyright (C) 1994, 1995, 2000, 2001 Free Software Foundation, Inc.
+   Copyright (C) 1994, 1995, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,13 +16,11 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.
 
    Geoff Voelker (voelker@cs.washington.edu)                         7-29-94
 */
-
-
 #include <stddef.h> /* for offsetof */
 #include <stdlib.h>
 #include <stdio.h>
@@ -73,6 +72,7 @@ Boston, MA 02111-1307, USA.
 #define _ANONYMOUS_STRUCT
 #endif
 #include <windows.h>
+#include <shlobj.h>
 
 #ifdef HAVE_SOCKETS	/* TCP connection support, if kernel can do it */
 #include <sys/socket.h>
@@ -99,6 +99,9 @@ Boston, MA 02111-1307, USA.
 #include "ndir.h"
 #include "w32heap.h"
 #include "systime.h"
+
+typedef HRESULT (WINAPI * ShGetFolderPath_fn)
+  (IN HWND, IN int, IN HANDLE, IN DWORD, OUT char *);
 
 void globals_of_w32 ();
 
@@ -903,7 +906,9 @@ init_environment (char ** argv)
   static const char * const tempdirs[] = {
     "$TMPDIR", "$TEMP", "$TMP", "c:/"
   };
+
   int i;
+
   const int imax = sizeof (tempdirs) / sizeof (tempdirs[0]);
 
   /* Make sure they have a usable $TMPDIR.  Many Emacs functions use
@@ -942,6 +947,8 @@ init_environment (char ** argv)
     LPBYTE lpval;
     DWORD dwType;
     char locale_name[32];
+    struct stat ignored;
+    char default_home[MAX_PATH];
 
     static struct env_entry
     {
@@ -963,6 +970,35 @@ init_environment (char ** argv)
       {"TERM", "cmd"},
       {"LANG", NULL},
     };
+
+    /* For backwards compatibility, check if a .emacs file exists in C:/
+       If not, then we can try to default to the appdata directory under the
+       user's profile, which is more likely to be writable.   */
+    if (stat ("C:/.emacs", &ignored) < 0)
+    {
+      HRESULT profile_result;
+      /* Dynamically load ShGetFolderPath, as it won't exist on versions
+	 of Windows 95 and NT4 that have not been updated to include
+	 MSIE 5.  Also we don't link with shell32.dll by default.  */
+      HMODULE shell32_dll;
+      ShGetFolderPath_fn get_folder_path;
+      shell32_dll = GetModuleHandle ("shell32.dll");
+      get_folder_path = (ShGetFolderPath_fn)
+	GetProcAddress (shell32_dll, "SHGetFolderPathA");
+
+      if (get_folder_path != NULL)
+	{
+	  profile_result = get_folder_path (NULL, CSIDL_APPDATA, NULL,
+					    0, default_home);
+
+	  /* If we can't get the appdata dir, revert to old behaviour.  */
+	  if (profile_result == S_OK)
+	    env_vars[0].def_value = default_home;
+	}
+
+      /* Unload shell32.dll, it is not needed anymore.  */
+      FreeLibrary (shell32_dll);
+    }
 
   /* Get default locale info and use it for LANG.  */
   if (GetLocaleInfo (LOCALE_USER_DEFAULT,
@@ -1895,6 +1931,14 @@ int
 sys_chmod (const char * path, int mode)
 {
   return _chmod (map_w32_filename (path, NULL), mode);
+}
+
+int
+sys_chown (const char *path, uid_t owner, gid_t group)
+{
+  if (sys_chmod (path, _S_IREAD) == -1) /* check if file exists */
+    return -1;
+  return 0;
 }
 
 int
@@ -3850,7 +3894,9 @@ check_windows_init_file ()
 	  Lisp_Object load_path_print = Fprin1_to_string (full_load_path, Qnil);
 	  char *init_file_name = SDATA (init_file);
 	  char *load_path = SDATA (load_path_print);
-	  char *buffer = alloca (1024);
+	  char *buffer = alloca (1024
+				 + strlen (init_file_name)
+				 + strlen (load_path));
 
 	  sprintf (buffer,
 		   "The Emacs Windows initialization file \"%s.el\" "

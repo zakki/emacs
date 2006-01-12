@@ -2,9 +2,9 @@
 ;;; trampver.el --- Transparent Remote Access, Multiple Protocol
 ;;; lisp/trampver.el.  Generated from trampver.el.in by configure.
 
-;; Copyright (C) 2003, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 2003, 2004, 2005 Free Software Foundation, Inc.
 
-;; Author: Kai.Grossjohann@CS.Uni-Dortmund.DE 
+;; Author: Kai Gro,A_(Bjohann <kai.grossjohann@gmx.net>
 ;; Keywords: comm, processes
 
 ;; This file is part of GNU Emacs.
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
 
@@ -30,7 +30,7 @@
 ;; are auto-frobbed from configure.ac, so you should edit that file and run
 ;; "autoconf && ./configure" to change them.
 
-(defconst tramp-version "2.0.49"
+(defconst tramp-version "2.0.51"
   "This version of Tramp.")
 
 (defconst tramp-bug-report-address "tramp-devel@gnu.org"

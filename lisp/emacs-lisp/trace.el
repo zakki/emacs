@@ -1,6 +1,7 @@
 ;;; trace.el --- tracing facility for Emacs Lisp functions
 
-;; Copyright (C) 1993, 1998, 2000, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1998, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Hans Chalupsky <hans@cs.buffalo.edu>
 ;; Maintainer: FSF
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;; LCD Archive Entry:
 ;; trace|Hans Chalupsky|hans@cs.buffalo.edu|
@@ -156,7 +157,7 @@
 (require 'advice)
 
 (defgroup trace nil
-  "Tracing facility for Emacs Lisp functions"
+  "Tracing facility for Emacs Lisp functions."
   :prefix "trace-"
   :group 'lisp)
 

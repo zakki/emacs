@@ -1,6 +1,7 @@
 /* Lisp parsing and input streams.
-   Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994, 1995, 1997, 1998,
-     1999, 2000, 2001, 2003, 2004, 2005  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994, 1995,
+                 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -85,6 +86,7 @@ Lisp_Object Qvariable_documentation, Vvalues, Vstandard_input, Vafter_load_alist
 Lisp_Object Qascii_character, Qload, Qload_file_name;
 Lisp_Object Qbackquote, Qcomma, Qcomma_at, Qcomma_dot, Qfunction;
 Lisp_Object Qinhibit_file_name_operation;
+Lisp_Object Qeval_buffer_list, Veval_buffer_list;
 
 extern Lisp_Object Qevent_symbol_element_mask;
 extern Lisp_Object Qfile_exists_p;
@@ -667,16 +669,20 @@ If optional fourth arg NOSUFFIX is non-nil, don't try adding
 If optional fifth arg MUST-SUFFIX is non-nil, insist on
  the suffix `.elc' or `.el'; don't accept just FILE unless
  it ends in one of those suffixes or includes a directory name.
+
+Loading a file records its definitions, and its `provide' and
+`require' calls, in an element of `load-history' whose
+car is the file name loaded.  See `load-history'.
+
 Return t if file exists.  */)
      (file, noerror, nomessage, nosuffix, must_suffix)
      Lisp_Object file, noerror, nomessage, nosuffix, must_suffix;
 {
   register FILE *stream;
   register int fd = -1;
-  register Lisp_Object lispstream;
   int count = SPECPDL_INDEX ();
   Lisp_Object temp;
-  struct gcpro gcpro1;
+  struct gcpro gcpro1, gcpro2;
   Lisp_Object found, efound;
   /* 1 means we printed the ".el is newer" message.  */
   int newer = 0;
@@ -723,7 +729,8 @@ Return t if file exists.  */)
       int size = SBYTES (file);
       Lisp_Object tmp[2];
 
-      GCPRO1 (file);
+      found = Qnil;
+      GCPRO2 (file, found);
 
       if (! NILP (must_suffix))
 	{
@@ -810,6 +817,8 @@ Return t if file exists.  */)
 	  struct stat s1, s2;
 	  int result;
 
+	  GCPRO2 (file, found);
+
 	  if (!safe_to_load_p (fd))
 	    {
 	      safe_p = 0;
@@ -826,7 +835,6 @@ Return t if file exists.  */)
 
 	  compiled = 1;
 
-	  GCPRO1 (efound);
 	  efound = ENCODE_FILE (found);
 
 #ifdef DOS_NT
@@ -836,7 +844,6 @@ Return t if file exists.  */)
 	  SSET (efound, SBYTES (efound) - 1, 0);
 	  result = stat ((char *)SDATA (efound), &s2);
 	  SSET (efound, SBYTES (efound) - 1, 'c');
-	  UNGCPRO;
 
 	  if (result >= 0 && (unsigned) s1.st_mtime < (unsigned) s2.st_mtime)
 	    {
@@ -846,12 +853,13 @@ Return t if file exists.  */)
 	      /* If we won't print another message, mention this anyway.  */
 	      if (!NILP (nomessage))
 		{
-		  Lisp_Object file;
-		  file = Fsubstring (found, make_number (0), make_number (-1));
+		  Lisp_Object msg_file;
+		  msg_file = Fsubstring (found, make_number (0), make_number (-1));
 		  message_with_string ("Source file `%s' newer than byte-compiled file",
-				       file, 1);
+				       msg_file, 1);
 		}
 	    }
+	  UNGCPRO;
 	}
     }
   else
@@ -870,12 +878,12 @@ Return t if file exists.  */)
 	}
     }
 
+  GCPRO2 (file, found);
+
 #ifdef WINDOWSNT
   emacs_close (fd);
-  GCPRO1 (efound);
   efound = ENCODE_FILE (found);
   stream = fopen ((char *) SDATA (efound), fmode);
-  UNGCPRO;
 #else  /* not WINDOWSNT */
   stream = fdopen (fd, fmode);
 #endif /* not WINDOWSNT */
@@ -902,19 +910,15 @@ Return t if file exists.  */)
 	message_with_string ("Loading %s...", file, 1);
     }
 
-  GCPRO1 (file);
-  lispstream = Fcons (Qnil, Qnil);
-  XSETCARFASTINT (lispstream, (EMACS_UINT)stream >> 16);
-  XSETCDRFASTINT (lispstream, (EMACS_UINT)stream & 0xffff);
-  record_unwind_protect (load_unwind, lispstream);
+  record_unwind_protect (load_unwind, make_save_value (stream, 0));
   record_unwind_protect (load_descriptor_unwind, load_descriptor_list);
   specbind (Qload_file_name, found);
   specbind (Qinhibit_file_name_operation, Qnil);
   load_descriptor_list
     = Fcons (make_number (fileno (stream)), load_descriptor_list);
   load_in_progress++;
-  readevalloop (Qget_file_char, stream, file, Feval,
-		0, Qnil, Qnil, Qnil, Qnil);
+  readevalloop (Qget_file_char, stream, (! NILP (Vpurify_flag) ? file : found),
+		Feval, 0, Qnil, Qnil, Qnil, Qnil);
   unbind_to (count, Qnil);
 
   /* Run any load-hooks for this file.  */
@@ -956,11 +960,12 @@ Return t if file exists.  */)
 }
 
 static Lisp_Object
-load_unwind (stream)  /* used as unwind-protect function in load */
-     Lisp_Object stream;
+load_unwind (arg)  /* used as unwind-protect function in load */
+     Lisp_Object arg;
 {
-  fclose ((FILE *) (XFASTINT (XCAR (stream)) << 16
-		    | XFASTINT (XCDR (stream))));
+  FILE *stream = (FILE *) XSAVE_VALUE (arg)->pointer;
+  if (stream != NULL)
+    fclose (stream);
   if (--load_in_progress < 0) load_in_progress = 0;
   return Qnil;
 }
@@ -1193,33 +1198,34 @@ openp (path, str, suffixes, storeptr, predicate)
 
 /* Merge the list we've accumulated of globals from the current input source
    into the load_history variable.  The details depend on whether
-   the source has an associated file name or not. */
+   the source has an associated file name or not.
+
+   FILENAME is the file name that we are loading from.
+   ENTIRE is 1 if loading that entire file, 0 if evaluating part of it.  */
 
 static void
-build_load_history (stream, source)
-     FILE *stream;
-     Lisp_Object source;
+build_load_history (filename, entire)
+     Lisp_Object filename;
+     int entire;
 {
   register Lisp_Object tail, prev, newelt;
   register Lisp_Object tem, tem2;
-  register int foundit, loading;
-
-  loading = stream || !NARROWED;
+  register int foundit = 0;
 
   tail = Vload_history;
   prev = Qnil;
-  foundit = 0;
+
   while (CONSP (tail))
     {
       tem = XCAR (tail);
 
       /* Find the feature's previous assoc list... */
-      if (!NILP (Fequal (source, Fcar (tem))))
+      if (!NILP (Fequal (filename, Fcar (tem))))
 	{
 	  foundit = 1;
 
-	  /*  If we're loading, remove it. */
-	  if (loading)
+	  /*  If we're loading the entire file, remove old data. */
+	  if (entire)
 	    {
 	      if (NILP (prev))
 		Vload_history = XCDR (tail);
@@ -1251,10 +1257,10 @@ build_load_history (stream, source)
       QUIT;
     }
 
-  /* If we're loading, cons the new assoc onto the front of load-history,
-     the most-recently-loaded position.  Also do this if we didn't find
-     an existing member for the current source.  */
-  if (loading || !foundit)
+  /* If we're loading an entire file, cons the new assoc onto the
+     front of load-history, the most-recently-loaded position.  Also
+     do this if we didn't find an existing member for the file.  */
+  if (entire || !foundit)
     Vload_history = Fcons (Fnreverse (Vcurrent_load_list),
 			   Vload_history);
 }
@@ -1310,23 +1316,34 @@ readevalloop (readcharfun, stream, sourcename, evalfun,
   register int c;
   register Lisp_Object val;
   int count = SPECPDL_INDEX ();
-  struct gcpro gcpro1;
+  struct gcpro gcpro1, gcpro2, gcpro3, gcpro4;
   struct buffer *b = 0;
+  int bpos;
   int continue_reading_p;
+  /* Nonzero if reading an entire buffer.  */
+  int whole_buffer = 0;
+  /* 1 on the first time around.  */
+  int first_sexp = 1;
+
+  if (MARKERP (readcharfun))
+    {
+      if (NILP (start))
+	start = readcharfun;	
+    }
 
   if (BUFFERP (readcharfun))
     b = XBUFFER (readcharfun);
   else if (MARKERP (readcharfun))
     b = XMARKER (readcharfun)->buffer;
 
-  specbind (Qstandard_input, readcharfun);
+  specbind (Qstandard_input, readcharfun); /* GCPROs readcharfun.  */
   specbind (Qcurrent_load_list, Qnil);
   record_unwind_protect (readevalloop_1, load_convert_to_unibyte ? Qt : Qnil);
   load_convert_to_unibyte = !NILP (unibyte);
 
   readchar_backlog = -1;
 
-  GCPRO1 (sourcename);
+  GCPRO4 (sourcename, readfun, start, end);
 
   LOADHIST_ATTACH (sourcename);
 
@@ -1340,11 +1357,31 @@ readevalloop (readcharfun, stream, sourcename, evalfun,
 
       if (!NILP (start))
 	{
+	  /* Switch to the buffer we are reading from.  */
 	  record_unwind_protect (save_excursion_restore, save_excursion_save ());
+	  set_buffer_internal (b);
+
+	  /* Save point in it.  */
+	  record_unwind_protect (save_excursion_restore, save_excursion_save ());
+	  /* Save ZV in it.  */
 	  record_unwind_protect (save_restriction_restore, save_restriction_save ());
+	  /* Those get unbound after we read one expression.  */
+
+	  /* Set point and ZV around stuff to be read.  */
 	  Fgoto_char (start);
-	  Fnarrow_to_region (make_number (BEGV), end);
+	  if (!NILP (end))
+	    Fnarrow_to_region (make_number (BEGV), end);
+
+	  /* Just for cleanliness, convert END to a marker
+	     if it is an integer.  */
+	  if (INTEGERP (end))
+	    end = Fpoint_max_marker ();
 	}
+
+      /* On the first cycle, we can easily test here
+	 whether we are reading the whole buffer.  */
+      if (b && first_sexp)
+	whole_buffer = (PT == BEG && ZV == Z);
 
       instream = stream;
     read_next:
@@ -1395,8 +1432,11 @@ readevalloop (readcharfun, stream, sourcename, evalfun,
 
       if (!NILP (start) && continue_reading_p)
 	start = Fpoint_marker ();
+
+      /* Restore saved point and BEGV.  */
       unbind_to (count1, Qnil);
 
+      /* Now eval what we just read.  */
       val = (*evalfun) (val);
 
       if (printflag)
@@ -1407,9 +1447,13 @@ readevalloop (readcharfun, stream, sourcename, evalfun,
 	  else
 	    Fprint (val, Qnil);
 	}
+
+      first_sexp = 0;
     }
 
-  build_load_history (stream, sourcename);
+  build_load_history (sourcename, 
+		      stream || whole_buffer);
+
   UNGCPRO;
 
   unbind_to (count, Qnil);
@@ -1452,6 +1496,7 @@ This function preserves the position of point.  */)
   if (NILP (filename))
     filename = XBUFFER (buf)->filename;
 
+  specbind (Qeval_buffer_list, Fcons (buf, Veval_buffer_list));
   specbind (Qstandard_output, tem);
   record_unwind_protect (save_excursion_restore, save_excursion_save ());
   BUF_SET_PT (XBUFFER (buf), BUF_BEGV (XBUFFER (buf)));
@@ -1487,6 +1532,7 @@ This function does not move point.  */)
   else
     tem = printflag;
   specbind (Qstandard_output, tem);
+  specbind (Qeval_buffer_list, Fcons (cbuf, Veval_buffer_list));
 
   /* readevalloop calls functions which check the type of start and end.  */
   readevalloop (cbuf, 0, XBUFFER (cbuf)->filename, Feval,
@@ -1727,13 +1773,12 @@ read_escape (readcharfun, stringp, byterep)
       return c | alt_modifier;
 
     case 's':
-      if (stringp)
-	return ' ';
       c = READCHAR;
-      if (c != '-') {
-	UNREAD (c);
-	return ' ';
-      }
+      if (c != '-')
+	{
+	  UNREAD (c);
+	  return ' ';
+	}
       c = READCHAR;
       if (c == '\\')
 	c = read_escape (readcharfun, 0, byterep);
@@ -2595,6 +2640,23 @@ read1 (readcharfun, pch, first_in_list)
 		    break;
 		  case 'N':
 		    value = zero / zero;
+
+		    /* If that made a "negative" NaN, negate it.  */
+
+		    {
+		      int i;
+		      union { double d; char c[sizeof (double)]; } u_data, u_minus_zero;
+
+		      u_data.d = value;
+		      u_minus_zero.d = - 0.0;
+		      for (i = 0; i < sizeof (double); i++)
+			if (u_data.c[i] & u_minus_zero.c[i])
+			  {
+			    value = - value;
+			    break;
+			  }
+		    }
+		    /* Now VALUE is a positive NaN.  */
 		    break;
 		  default:
 		    value = atof (read_buffer + negative);
@@ -2845,7 +2907,7 @@ read_vector (readcharfun, bytecodeflag)
 	  if (i == COMPILED_BYTECODE)
 	    {
 	      if (!STRINGP (item))
-		error ("invalid byte code");
+		error ("Invalid byte code");
 
 	      /* Delay handling the bytecode slot until we know whether
 		 it is lazily-loaded (we can tell by whether the
@@ -2867,7 +2929,7 @@ read_vector (readcharfun, bytecodeflag)
 
 		  item = Fread (bytestr);
 		  if (!CONSP (item))
-		    error ("invalid byte code");
+		    error ("Invalid byte code");
 
 		  otem = XCONS (item);
 		  bytestr = XCAR (item);
@@ -3861,7 +3923,7 @@ when the corresponding call to `provide' is made.  */);
   Vafter_load_alist = Qnil;
 
   DEFVAR_LISP ("load-history", &Vload_history,
-	       doc: /* Alist mapping source file names to symbols and features.
+	       doc: /* Alist mapping file names to symbols and features.
 Each alist element is a list that starts with a file name,
 except for one element (optional) that starts with nil and describes
 definitions evaluated from buffers not visiting files.
@@ -3870,7 +3932,10 @@ and cons cells of the form `(provide . FEATURE)', `(require . FEATURE)',
 `(defun . FUNCTION)', `(autoload . SYMBOL)', and `(t . SYMBOL)'.
 An element `(t . SYMBOL)' precedes an entry `(defun . FUNCTION)',
 and means that SYMBOL was an autoload before this file redefined it
-as a function.  */);
+as a function.
+
+During preloading, the file name recorded is relative to the main Lisp
+directory.  These file names are converted to absolute at startup.  */);
   Vload_history = Qnil;
 
   DEFVAR_LISP ("load-file-name", &Vload_file_name,
@@ -3944,6 +4009,10 @@ to load.  See also `load-dangerous-libraries'.  */);
   Vbytecomp_version_regexp
     = build_string ("^;;;.\\(in Emacs version\\|bytecomp version FSF\\)");
 
+  DEFVAR_LISP ("eval-buffer-list", &Veval_buffer_list,
+	       doc: /* List of buffers being read from by calls to `eval-buffer' and `eval-region'.  */);
+  Veval_buffer_list = Qnil;
+
   /* Vsource_directory was initialized in init_lread.  */
 
   load_descriptor_list = Qnil;
@@ -3985,11 +4054,15 @@ to load.  See also `load-dangerous-libraries'.  */);
   Qload_file_name = intern ("load-file-name");
   staticpro (&Qload_file_name);
 
+  Qeval_buffer_list = intern ("eval-buffer-list");
+  staticpro (&Qeval_buffer_list);
+
   staticpro (&dump_path);
 
   staticpro (&read_objects);
   read_objects = Qnil;
   staticpro (&seen_list);
+  seen_list = Qnil;
 
   Vloads_in_progress = Qnil;
   staticpro (&Vloads_in_progress);

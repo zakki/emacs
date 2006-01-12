@@ -2,7 +2,7 @@
 
 ;; Copyright (C) 2004
 ;;   Free Software Foundation, Inc.
-;; Copyright (C) 2004
+;; Copyright (C) 2004, 2005
 ;;   National Institute of Advanced Industrial Science and Technology (AIST)
 ;;   Registration Number H13PRO009
 
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -33,6 +33,12 @@
 
 (eval-after-load "quail/PY-b5"
   '(quail-defrule "ling2" ?$(0!r(B nil t))
+
+;; Enable inputting full-width space (U+3000).
+(eval-after-load "quail/Punct"
+  '(quail-defrule " " ?$A!!(B nil t))
+(eval-after-load "quail/Punct-b5"
+  '(quail-defrule " " ?$(0!!(B nil t))
 
 (autoload 'ucs-input-activate "quail/uni-input"
   "Activate UCS input method.

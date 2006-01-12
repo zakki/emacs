@@ -1,7 +1,7 @@
 ;;; man.el --- browse UNIX manual pages -*- coding: iso-8859-1 -*-
 
-;; Copyright (C) 1993, 1994, 1996, 1997, 2001, 2003, 2004
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1996, 1997, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Barry A. Warsaw <bwarsaw@cen.com>
 ;; Maintainer: FSF
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -262,7 +262,7 @@ the associated section number."
 (defvar Man-name-regexp "[-a-zA-Z0-9_­+][-a-zA-Z0-9_.:­+]*"
   "Regular expression describing the name of a manpage (without section).")
 
-(defvar Man-section-regexp "[0-9][a-zA-Z+]*\\|[LNln]"
+(defvar Man-section-regexp "[0-9][a-zA-Z0-9+]*\\|[LNln]"
   "Regular expression describing a manpage section within parentheses.")
 
 (defvar Man-page-header-regexp
@@ -286,8 +286,12 @@ This regexp should not start with a `^' character.")
 This regular expression should start with a `^' character.")
 
 (defvar Man-reference-regexp
-  (concat "\\(" Man-name-regexp "\\)(\\(" Man-section-regexp "\\))")
+  (concat "\\(" Man-name-regexp "\\)[ \t]*(\\(" Man-section-regexp "\\))")
   "Regular expression describing a reference to another manpage.")
+
+(defvar Man-apropos-regexp
+  (concat "\\\[\\(" Man-name-regexp "\\)\\\][ \t]*(\\(" Man-section-regexp "\\))")
+  "Regular expression describing a reference to manpages in \"man -k output\".")
 
 (defvar Man-synopsis-regexp "SYNOPSIS"
   "Regular expression for SYNOPSIS heading (or your equivalent).
@@ -352,6 +356,7 @@ Otherwise, the value is whatever the function
 (make-variable-buffer-local 'Man-page-mode-string)
 (make-variable-buffer-local 'Man-original-frame)
 (make-variable-buffer-local 'Man-arguments)
+(put 'Man-arguments 'permanent-local t)
 
 (setq-default Man-sections-alist nil)
 (setq-default Man-refpages-alist nil)
@@ -391,10 +396,11 @@ Otherwise, the value is whatever the function
     table)
   "Syntax table used in Man mode buffers.")
 
-(if Man-mode-map
-    nil
-  (setq Man-mode-map (copy-keymap button-buffer-map))
+(unless Man-mode-map
+  (setq Man-mode-map (make-sparse-keymap))
   (suppress-keymap Man-mode-map)
+  (set-keymap-parent Man-mode-map button-buffer-map)
+
   (define-key Man-mode-map " "    'scroll-up)
   (define-key Man-mode-map "\177" 'scroll-down)
   (define-key Man-mode-map "n"    'Man-next-section)
@@ -410,14 +416,22 @@ Otherwise, the value is whatever the function
   (define-key Man-mode-map "k"    'Man-kill)
   (define-key Man-mode-map "q"    'Man-quit)
   (define-key Man-mode-map "m"    'man)
-  (define-key Man-mode-map "?"    'describe-mode)
-  )
+  (define-key Man-mode-map "?"    'describe-mode))
 
 ;; buttons
-(define-button-type 'Man-xref-man-page
-  'action (lambda (button) (man-follow (button-label button)))
+(define-button-type 'Man-abstract-xref-man-page
   'follow-link t
-  'help-echo "mouse-2, RET: display this man page")
+  'help-echo "mouse-2, RET: display this man page"
+  'func nil
+  'action (lambda (button) (funcall 
+			    (button-get button 'func)
+			    (or (button-get button 'Man-target-string)
+				(button-label button)))))
+
+(define-button-type 'Man-xref-man-page 
+  :supertype 'Man-abstract-xref-man-page
+  'func 'man-follow)
+
 
 (define-button-type 'Man-xref-header-file
     'action (lambda (button)
@@ -444,7 +458,7 @@ Otherwise, the value is whatever the function
 ;; utilities
 
 (defun Man-init-defvars ()
-  "Used for initialising variables based on display's color support.
+  "Used for initializing variables based on display's color support.
 This is necessary if one wants to dump man.el with Emacs."
 
   ;; Avoid possible error in call-process by using a directory that must exist.
@@ -552,8 +566,8 @@ This is necessary if one wants to dump man.el with Emacs."
 (defun Man-translate-references (ref)
   "Translates REF from \"chmod(2V)\" to \"2v chmod\" style.
 Leave it as is if already in that style.  Possibly downcase and
-translate the section (see the Man-downcase-section-letters-flag
-and the Man-section-translations-alist variables)."
+translate the section (see the `Man-downcase-section-letters-flag'
+and the `Man-section-translations-alist' variables)."
   (let ((name "")
         (section "")
         (slist Man-section-translations-alist))
@@ -591,7 +605,7 @@ This option allows `man' to interpret command line arguments
 as local filenames.
 Return the value of the variable `Man-support-local-filenames'
 if it was set to nil or t before the call of this function.
-If t, the man command supports `-l' option.  If nil, it don't.
+If t, the man command supports `-l' option.  If nil, it doesn't.
 Otherwise, if the value of `Man-support-local-filenames'
 is neither t nor nil, then determine a new value, set it
 to the variable `Man-support-local-filenames' and return
@@ -662,10 +676,10 @@ all sections related to a subject, put something appropriate into the
   (interactive
    (list (let* ((default-entry (Man-default-man-entry))
 		(input (read-string
-			(format "Manual entry%s: "
+			(format "Manual entry%s"
 				(if (string= default-entry "")
-				    ""
-				  (format " (default %s)" default-entry)))
+				    ": "
+				  (format " (default %s): " default-entry)))
 			nil nil default-entry)))
 	   (if (string= input "")
 	       (error "No man args given")
@@ -902,36 +916,58 @@ Same for the ANSI bold and normal escape sequences."
 			 'face Man-overstrike-face)))
   (message "%s man page formatted" Man-arguments))
 
-(defun Man-highlight-references ()
+(defun Man-highlight-references (&optional xref-man-type)
   "Highlight the references on mouse-over.
-references include items in the SEE ALSO section,
-header file(#include <foo.h>) and files in FILES"
-  (let ((dummy 0))
-    (Man-highlight-references0
-     Man-see-also-regexp Man-reference-regexp 1 dummy
-     'Man-xref-man-page)
-    (Man-highlight-references0
-     Man-synopsis-regexp Man-header-regexp 0 2
-     'Man-xref-header-file)
-    (Man-highlight-references0
-     Man-files-regexp Man-normal-file-regexp 0 0
-     'Man-xref-normal-file)))
+References include items in the SEE ALSO section,
+header file (#include <foo.h>), and files in FILES.
+If optional argument XREF-MAN-TYPE is non-nil, it used as the
+button type for items in SEE ALSO section.  If it is nil, the
+default type, `Man-xref-man-page' is used for the buttons."
+  ;; `Man-highlight-references' is used from woman.el, too.
+  ;; woman.el doesn't set `Man-arguments'.
+  (unless Man-arguments
+    (setq Man-arguments ""))
+  (if (string-match "-k " Man-arguments)
+      (progn
+	(Man-highlight-references0 nil Man-reference-regexp 1 nil
+				   (or xref-man-type 'Man-xref-man-page))
+	(Man-highlight-references0 nil Man-apropos-regexp 1
+				   (lambda ()
+				     (format "%s(%s)"
+					     (match-string 1)
+					     (match-string 2)))
+				   (or xref-man-type 'Man-xref-man-page)))
+    (Man-highlight-references0 Man-see-also-regexp Man-reference-regexp 1 nil
+			       (or xref-man-type 'Man-xref-man-page))
+    (Man-highlight-references0 Man-synopsis-regexp Man-header-regexp 0 2
+			       'Man-xref-header-file)
+    (Man-highlight-references0 Man-files-regexp Man-normal-file-regexp 0 0
+			       'Man-xref-normal-file)))
 
-(defun Man-highlight-references0 (start-section regexp button-pos target-pos type)
+(defun Man-highlight-references0 (start-section regexp button-pos target type)
   ;; Based on `Man-build-references-alist'
-  (when (Man-find-section start-section)
-    (forward-line 1)
-    (let ((end (save-excursion
-                 (Man-next-section 1)
-                 (point))))
-      (back-to-indentation)
+  (when (or (null start-section)
+	    (Man-find-section start-section))
+    (let ((end (if start-section
+		   (progn
+		     (forward-line 1)
+		     (back-to-indentation)
+		     (save-excursion
+		       (Man-next-section 1)
+		       (point)))
+		 (goto-char (point-min))
+		 (point-max))))
       (while (re-search-forward regexp end t)
 	(make-text-button
 	 (match-beginning button-pos)
 	 (match-end button-pos)
 	 'type type
-	 'Man-target-string (match-string target-pos)
-	 )))))
+	 'Man-target-string (cond
+			     ((numberp target) 
+			      (match-string target))
+			     ((functionp target)
+			      (funcall target))
+			     (t nil)))))))
 
 (defun Man-cleanup-manpage (&optional interactive)
   "Remove overstriking and underlining from the current buffer.
@@ -1005,8 +1041,15 @@ manpage command."
           (if Man-fontify-manpage-flag
               (Man-fontify-manpage)
             (Man-cleanup-manpage))
+
           (run-hooks 'Man-cooked-hook)
-          (Man-mode)
+	  (Man-mode)
+
+	  (if (not Man-page-list)
+	      (let ((args Man-arguments))
+		(kill-buffer (current-buffer))
+		(error "Can't find the %s manpage" args)))
+
           (set-buffer-modified-p nil)
           ))
 	;; Restore case-fold-search before calling
@@ -1022,6 +1065,8 @@ manpage command."
 
 ;; ======================================================================
 ;; set up manual mode in buffer and build alists
+
+(put 'Man-mode 'mode-class 'special)
 
 (defun Man-mode ()
   "A mode for browsing Un*x manual pages.
@@ -1080,7 +1125,7 @@ The following key bindings are currently in effect in the buffer:
   (Man-build-page-list)
   (Man-strip-page-headers)
   (Man-unindent)
-  (Man-goto-page 1)
+  (Man-goto-page 1 t)
   (run-mode-hooks 'Man-mode-hook))
 
 (defsubst Man-build-section-alist ()
@@ -1263,7 +1308,7 @@ Returns t if section is found, nil otherwise."
 	(let* ((default (aheadsym Man-sections-alist))
 	       (completion-ignore-case t)
 	       chosen
-	       (prompt (concat "Go to section: (default " default ") ")))
+	       (prompt (concat "Go to section (default " default "): ")))
 	  (setq chosen (completing-read prompt Man-sections-alist))
 	  (if (or (not chosen)
 		  (string= chosen ""))
@@ -1318,7 +1363,7 @@ Specify which REFERENCE to use; default is based on word at point."
 				  Man-refpages-alist))
 			    (aheadsym Man-refpages-alist)))
 		   chosen
-		   (prompt (concat "Refer to: (default " default ") ")))
+		   (prompt (concat "Refer to (default " default "): ")))
 	      (setq chosen (completing-read prompt Man-refpages-alist))
 	      (if (or (not chosen)
 		      (string= chosen ""))
@@ -1340,35 +1385,32 @@ Specify which REFERENCE to use; default is based on word at point."
   (interactive)
   (quit-window))
 
-(defun Man-goto-page (page)
+(defun Man-goto-page (page &optional noerror)
   "Go to the manual page on page PAGE."
   (interactive
    (if (not Man-page-list)
-       (let ((args Man-arguments))
-	 (kill-buffer (current-buffer))
-	 (error "Can't find the %s manpage" args))
+       (error "Not a man page buffer")
      (if (= (length Man-page-list) 1)
 	 (error "You're looking at the only manpage in the buffer")
        (list (read-minibuffer (format "Go to manpage [1-%d]: "
 				      (length Man-page-list)))))))
-  (if (not Man-page-list)
-      (let ((args Man-arguments))
-	(kill-buffer (current-buffer))
-	(error "Can't find the %s manpage" args)))
-  (if (or (< page 1)
-	  (> page (length Man-page-list)))
-      (error "No manpage %d found" page))
-  (let* ((page-range (nth (1- page) Man-page-list))
-	 (page-start (car page-range))
-	 (page-end (car (cdr page-range))))
-    (setq Man-current-page page
-	  Man-page-mode-string (Man-make-page-mode-string))
-    (widen)
-    (goto-char page-start)
-    (narrow-to-region page-start page-end)
-    (Man-build-section-alist)
-    (Man-build-references-alist)
-    (goto-char (point-min))))
+  (if (and (not Man-page-list) (not noerror))
+      (error "Not a man page buffer"))
+  (when Man-page-list
+    (if (or (< page 1)
+	    (> page (length Man-page-list)))
+	(error "No manpage %d found" page))
+    (let* ((page-range (nth (1- page) Man-page-list))
+	   (page-start (car page-range))
+	   (page-end (car (cdr page-range))))
+      (setq Man-current-page page
+	    Man-page-mode-string (Man-make-page-mode-string))
+      (widen)
+      (goto-char page-start)
+      (narrow-to-region page-start page-end)
+      (Man-build-section-alist)
+      (Man-build-references-alist)
+      (goto-char (point-min)))))
 
 
 (defun Man-next-manpage ()

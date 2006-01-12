@@ -1,10 +1,11 @@
 ;;; calculator.el --- a [not so] simple calculator for Emacs
 
-;; Copyright (C) 1998, 2000, 2001 by Free Software Foundation, Inc.
+;; Copyright (C) 1998, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Eli Barzilay <eli@barzilay.org>
 ;; Keywords: tools, convenience
-;; Time-stamp: <26 May 2005, 14:32:34, Lute Kamstra, pijl>
+;; Time-stamp: <2005-07-18 17:45:34 juri>
 
 ;; This file is part of GNU Emacs.
 
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston,
-;; MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
+;; MA 02110-1301, USA.
 
 ;;;=====================================================================
 ;;; Commentary:
@@ -1277,12 +1278,6 @@ arguments."
             (if Dbound (fset 'D Dsave) (fmakunbound 'D)))))
     (error 0)))
 
-(eval-when-compile ; silence the compiler
-  (or (fboundp 'event-key)
-      (defun event-key (&rest _) nil))
-  (or (fboundp 'key-press-event-p)
-      (defun key-press-event-p (&rest _) nil)))
-
 ;;;---------------------------------------------------------------------
 ;;; Input interaction
 
@@ -1301,8 +1296,9 @@ Optional string argument KEYS will force using it as the keys entered."
           (setq k (aref inp i))
           ;; if Emacs will someday have a event-key, then this would
           ;; probably be modified anyway
-          (and (fboundp 'event-key) (key-press-event-p k)
-               (event-key k) (setq k (event-key k)))
+          (and (if (fboundp 'key-press-event-p) (key-press-event-p k))
+	       (if (fboundp 'event-key)
+		   (and (event-key k) (setq k (event-key k)))))
           ;; assume all symbols are translatable with an ascii-character
           (and (symbolp k)
                (setq k (or (get k 'ascii-character) ? )))
@@ -1599,7 +1595,7 @@ Optional string argument KEYS will force using it as the keys entered."
         (calculator-displayers
          (if calculator-copy-displayer nil calculator-displayers)))
     (calculator-enter)
-    ;; remove trailing spaces and and an index
+    ;; remove trailing spaces and an index
     (let ((s (cdr calculator-stack-display)))
       (and s
            (if (string-match "^\\([^ ]+\\) *\\(\\[[0-9/]+\\]\\)? *$" s)

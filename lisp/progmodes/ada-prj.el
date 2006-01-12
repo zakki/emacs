@@ -1,6 +1,7 @@
 ;;; ada-prj.el --- easy editing of project files for the ada-mode
 
-;; Copyright (C) 1998, 99, 2000-2003 Free Software Foundation, Inc.
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005 
+;; Free Software Foundation, Inc.
 
 ;; Author: Emmanuel Briot <briot@gnat.com>
 ;; Keywords: languages, ada, project file
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -476,7 +477,8 @@ connect to the target when working with cross-environments" t)
   (widget-insert "\n\n")
 
   (widget-setup)
-  (beginning-of-buffer)
+  (with-no-warnings
+    (beginning-of-buffer))
   )
 
 

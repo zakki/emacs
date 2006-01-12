@@ -1,6 +1,6 @@
 /* Synchronous subprocess invocation for GNU Emacs.
    Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995, 1999, 2000, 2001,
-     2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+                 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -1013,9 +1013,11 @@ static Lisp_Object
 delete_temp_file (name)
      Lisp_Object name;
 {
-  /* Use Fdelete_file (indirectly) because that runs a file name handler.
-     We did that when writing the file, so we should do so when deleting.  */
+  /* Suppress jka-compr handling, etc.  */
+  int count = SPECPDL_INDEX ();
+  specbind (intern ("file-name-handler-alist"), Qnil);
   internal_delete_file (name);
+  unbind_to (count, Qnil);
   return Qnil;
 }
 
@@ -1126,6 +1128,9 @@ usage: (call-process-region START END PROGRAM &optional DELETE BUFFER DISPLAY &r
     int count1 = SPECPDL_INDEX ();
 
     specbind (intern ("coding-system-for-write"), val);
+    /* POSIX lets mk[s]temp use "."; don't invoke jka-compr if we
+       happen to get a ".Z" suffix.  */
+    specbind (intern ("file-name-handler-alist"), Qnil);
     Fwrite_region (start, end, filename_string, Qnil, Qlambda, Qnil, Qnil);
 
     unbind_to (count1, Qnil);

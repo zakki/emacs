@@ -1,6 +1,7 @@
 ;;; xt-mouse.el --- support the mouse when emacs run in an xterm
 
-;; Copyright (C) 1994, 2000, 2001, 2005 Free Software Foundation
+;; Copyright (C) 1994, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Per Abrahamsen <abraham@dina.kvl.dk>
 ;; Keywords: mouse, terminals
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -37,9 +38,6 @@
 ;; when you press the mouse button.
 
 ;;; Todo:
-
-;; The xterm mouse escape codes are supposedly also supported by the
-;; Linux console, but I have not been able to verify this.
 
 ;; Support multi-click -- somehow.
 
@@ -145,10 +143,12 @@
 
     (setq xterm-mouse-x x
 	  xterm-mouse-y y)
-    (if w
-	(list mouse (posn-at-x-y (- x left) (- y top) w t))
-      (list mouse
-	    (append (list nil 'menu-bar) (nthcdr 2 (posn-at-x-y x y w t)))))))
+    (setq
+     last-input-event
+     (if w
+	 (list mouse (posn-at-x-y (- x left) (- y top) w t))
+       (list mouse
+	     (append (list nil 'menu-bar) (nthcdr 2 (posn-at-x-y x y w t))))))))
 
 ;;;###autoload
 (define-minor-mode xterm-mouse-mode

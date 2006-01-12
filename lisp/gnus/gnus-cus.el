@@ -1,7 +1,7 @@
 ;;; gnus-cus.el --- customization commands for Gnus
-;;
-;; Copyright (C) 1996, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1996, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Per Abrahamsen <abraham@dina.kvl.dk>
 ;; Keywords: news
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -35,6 +35,14 @@
 (require 'gnus-art)
 
 ;;; Widgets:
+
+(defvar gnus-custom-map
+  (let ((map (make-keymap)))
+    (set-keymap-parent map widget-keymap)
+    (suppress-keymap map)
+    (define-key map [mouse-1] 'widget-move-and-invoke)
+    map)
+  "Keymap for editing Gnus customization buffers.")
 
 (defun gnus-custom-mode ()
   "Major mode for editing Gnus customization buffers.
@@ -51,7 +59,7 @@ if that value is non-nil."
   (kill-all-local-variables)
   (setq major-mode 'gnus-custom-mode
 	mode-name "Gnus Customize")
-  (use-local-map widget-keymap)
+  (use-local-map gnus-custom-map)
   ;; Emacs 21 stuff:
   (when (and (facep 'custom-button-face)
 	     (facep 'custom-button-pressed-face))
@@ -227,8 +235,11 @@ See `gnus-emphasis-alist'.")
 			      (const signature-file)
 			      (const organization)
 			      (const address)
+			      (const x-face-file)
 			      (const name)
-			      (const body))
+			      (const body)
+			      (symbol)
+			      (string :tag "Header"))
 		      (string :format "%v"))))
      "post style.
 See `gnus-posting-styles'."))
@@ -479,7 +490,7 @@ form, but who cares?"
 	    (widget-create 'sexp
 			   :tag "Method"
 			   :value (gnus-info-method info))))
-    (use-local-map widget-keymap)
+    (use-local-map gnus-custom-map)
     (widget-setup)
     (buffer-enable-undo)
     (goto-char (point-min))))
@@ -772,8 +783,8 @@ When called interactively, FILE defaults to the current score file.
 This can be changed using the `\\[gnus-score-change-score-file]' command."
   (interactive (list gnus-current-score-file))
   (unless file
-    (error (format "No score file for %s"
-		   (gnus-group-decoded-name gnus-newsgroup-name))))
+    (error "No score file for %s"
+           (gnus-group-decoded-name gnus-newsgroup-name)))
   (let ((scores (gnus-score-load file))
 	(types (mapcar (lambda (entry)
 			 `(group :format "%v%h\n"
@@ -873,7 +884,7 @@ articles in the thread.
 			 '(repeat :inline t
 				  :tag "Unknown entries"
 				  sexp)))
-    (use-local-map widget-keymap)
+    (use-local-map gnus-custom-map)
     (widget-setup)))
 
 (defun gnus-score-customize-done (&rest ignore)
@@ -1014,9 +1025,9 @@ articles in the thread.
       ;; gnus-agent-cat-prepare-category-field as I don't want the
       ;; group list to appear when customizing a topic.
       (widget-insert "\n")
-      
-      (let ((symb 
-             (set 
+
+      (let ((symb
+             (set
               (make-local-variable 'gnus-agent-cat-groups)
               (widget-create
                `(choice
@@ -1050,7 +1061,7 @@ articles in the thread.
 
       (gnus-agent-cat-prepare-category-field agent-enable-undownloaded-faces)
 
-      (use-local-map widget-keymap)
+      (use-local-map gnus-custom-map)
       (widget-setup)
       (buffer-enable-undo))))
 

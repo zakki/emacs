@@ -1,7 +1,7 @@
 ;;; rfc2231.el --- Functions for decoding rfc2231 headers
 
-;; Copyright (C) 1998, 1999, 2000, 2002, 2003, 2004
-;;        Free Software Foundation, Inc.
+;; Copyright (C) 1998, 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; This file is part of GNU Emacs.
@@ -18,8 +18,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -52,7 +52,7 @@ The list will be on the form
 	  (prev-value "")
 	  display-name mailbox c display-string parameters
 	  attribute value type subtype number encoded
-	  prev-attribute)
+	  prev-attribute prev-encoded)
       (ietf-drums-init (mail-header-remove-whitespace
 			(mail-header-remove-comments string)))
       (let ((table (copy-syntax-table ietf-drums-syntax-table)))
@@ -106,9 +106,14 @@ The list will be on the form
 	    ;; See if we have any previous continuations.
 	    (when (and prev-attribute
 		       (not (eq prev-attribute attribute)))
-	      (push (cons prev-attribute prev-value) parameters)
+	      (push (cons prev-attribute
+			  (if prev-encoded
+			      (rfc2231-decode-encoded-string prev-value)
+			    prev-value))
+		    parameters)
 	      (setq prev-attribute nil
-		    prev-value ""))
+		    prev-value ""
+		    prev-encoded nil))
 	    (unless (eq c ?=)
 	      (error "Invalid header: %s" string))
 	    (forward-char 1)
@@ -122,12 +127,23 @@ The list will be on the form
 		       (> c ?\177)) ;; EXTENSION: Support non-ascii chars.
 		   (not (memq c stoken)))
 	      (setq value (buffer-substring
-			   (point) (progn (forward-sexp) (point)))))
+			   (point)
+			   (progn
+			     (forward-sexp)
+			     ;; We might not have reached at the end of
+			     ;; the value because of non-ascii chars,
+			     ;; so we should jump over them if any.
+			     (while (and (not (eobp))
+					 (> (char-after) ?\177))
+			       (forward-char 1)
+			       (forward-sexp))
+			     (point)))))
 	     (t
 	      (error "Invalid header: %s" string)))
 	    (if number
 		(setq prev-attribute attribute
-		      prev-value (concat prev-value value))
+		      prev-value (concat prev-value value)
+		      prev-encoded encoded)
 	      (push (cons attribute
 			  (if encoded
 			      (rfc2231-decode-encoded-string value)
@@ -137,7 +153,7 @@ The list will be on the form
 	;; Take care of any final continuations.
 	(when prev-attribute
 	  (push (cons prev-attribute
-		      (if encoded
+		      (if prev-encoded
 			  (rfc2231-decode-encoded-string prev-value)
 			prev-value))
 		parameters))

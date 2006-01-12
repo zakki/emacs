@@ -1,6 +1,7 @@
 ;;; gametree.el --- manage game analysis trees in Emacs
 
-;;  Copyright (C) 1997, 1999 Free Software Foundation, Inc
+;; Copyright (C) 1997, 1999, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Ian T Zimmerman <itz@rahul.net>
 ;; Created: Wed Dec 10 07:41:46 PST 1997
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -573,9 +574,9 @@ Useful to postal and email chess (and, it is hoped, also checkers, go,
 shogi, etc.) players, it is a slightly modified version of Outline mode.
 
 \\{gametree-mode-map}"
-(auto-fill-mode 0)
-(make-variable-buffer-local 'write-contents-hooks)
-(add-hook 'write-contents-hooks 'gametree-save-and-hack-layout))
+  (auto-fill-mode 0)
+  (make-local-variable 'write-contents-hooks)
+  (add-hook 'write-contents-hooks 'gametree-save-and-hack-layout))
 
 ;;;; Key bindings
 

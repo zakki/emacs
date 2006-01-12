@@ -1,7 +1,7 @@
 ;;; ps-print.el --- print text from the buffer as PostScript
 
-;; Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
-;; 2003, 2004, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
+;;   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Jim Thompson (was <thompson@wg2.waii.com>)
 ;;	Jacques Duthen (was <duthen@cegelec-red.fr>)
@@ -10,12 +10,12 @@
 ;; Maintainer: Kenichi Handa <handa@etl.go.jp> (multi-byte characters)
 ;;	Vinicius Jose Latorre <viniciusjl@ig.com.br>
 ;; Keywords: wp, print, PostScript
-;; Time-stamp: <2005/03/19 00:40:12 vinicius>
-;; Version: 6.6.6
+;; Time-stamp: <2005/06/27 00:57:22 vinicius>
+;; Version: 6.6.7
 ;; X-URL: http://www.cpqd.com.br/~vinicius/emacs/
 
-(defconst ps-print-version "6.6.6"
-  "ps-print.el, v 6.6.6 <2005/03/19 vinicius>
+(defconst ps-print-version "6.6.7"
+  "ps-print.el, v 6.6.7 <2005/06/27 vinicius>
 
 Vinicius's last change version -- this file may have been edited as part of
 Emacs without changes to the version number.  When reporting bugs, please also
@@ -38,7 +38,7 @@ Please send all bug fixes and enhancements to
 
 ;; You should have received a copy of the GNU General Public License along with
 ;; GNU Emacs; see the file COPYING.  If not, write to the Free Software
-;; Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
+;; Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -1549,9 +1549,10 @@ Please send all bug fixes and enhancements to
        (defvar mark-active nil)
        (defun ps-mark-active-p ()
 	 mark-active)
-       (defalias 'ps-face-foreground-name 'face-foreground)
-       (defalias 'ps-face-background-name 'face-background)
-       ))
+       (defun ps-face-foreground-name (face)
+	 (face-foreground face nil t))
+       (defun ps-face-background-name (face)
+	 (face-background face nil t))))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1561,13 +1562,13 @@ Please send all bug fixes and enhancements to
 ;;; Interface to the command system
 
 (defgroup postscript nil
-  "PostScript Group"
+  "PostScript Group."
   :tag "PostScript"
   :version "20"
   :group 'emacs)
 
 (defgroup ps-print nil
-  "PostScript generator for Emacs"
+  "PostScript generator for Emacs."
   :link '(emacs-library-link :tag "Source Lisp File" "ps-print.el")
   :prefix "ps-"
   :version "20"
@@ -1575,42 +1576,42 @@ Please send all bug fixes and enhancements to
   :group 'postscript)
 
 (defgroup ps-print-horizontal nil
-  "Horizontal page layout"
+  "Horizontal page layout."
   :prefix "ps-"
   :tag "Horizontal"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-vertical nil
-  "Vertical page layout"
+  "Vertical page layout."
   :prefix "ps-"
   :tag "Vertical"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-headers nil
-  "Headers & footers layout"
+  "Headers & footers layout."
   :prefix "ps-"
   :tag "Header & Footer"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-font nil
-  "Fonts customization"
+  "Fonts customization."
   :prefix "ps-"
   :tag "Font"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-color nil
-  "Color customization"
+  "Color customization."
   :prefix "ps-"
   :tag "Color"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-face nil
-  "Faces customization"
+  "Faces customization."
   :prefix "ps-"
   :tag "PS Faces"
   :version "20"
@@ -1618,42 +1619,42 @@ Please send all bug fixes and enhancements to
   :group 'faces)
 
 (defgroup ps-print-n-up nil
-  "N-up customization"
+  "N-up customization."
   :prefix "ps-"
   :tag "N-Up"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-zebra nil
-  "Zebra customization"
+  "Zebra customization."
   :prefix "ps-"
   :tag "Zebra"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-background nil
-  "Background customization"
+  "Background customization."
   :prefix "ps-"
   :tag "Background"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-printer '((lpr custom-group))
-  "Printer customization"
+  "Printer customization."
   :prefix "ps-"
   :tag "Printer"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-page nil
-  "Page customization"
+  "Page customization."
   :prefix "ps-"
   :tag "Page"
   :version "20"
   :group 'ps-print)
 
 (defgroup ps-print-miscellany nil
-  "Miscellany customization"
+  "Miscellany customization."
   :prefix "ps-"
   :tag "Miscellany"
   :version "20"
@@ -2268,7 +2269,7 @@ programming like EPS.
 FILENAME is ignored, if it doesn't exist or is read protected.
 
 X and Y are relative positions on paper to put the image.
-If X and Y are nil, the image is centralized on paper.
+If X and Y are nil, the image is centered on paper.
 
 XSCALE and YSCALE are scale factor to be applied to image before printing.
 If XSCALE and YSCALE are nil, the original size is used.
@@ -3019,7 +3020,7 @@ Valid values are:
    NUMBER	It's a real value between 0.0 (black) and 1.0 (white) that
 		indicate the gray color.
 
-   COLOR-NAME	It's a string wich contains the color name.  For example:
+   COLOR-NAME	It's a string which contains the color name.  For example:
 		\"yellow\".
 
    LIST		It's a list of RGB values, that is a list of three real values
@@ -3030,7 +3031,7 @@ Valid values are:
 		Where RED, GREEN and BLUE are reals between 0.0 (no color) and
 		1.0 (full color).
 
-Any other value is ignored and it's used the black color.
+Any other value is ignored and black will be used.
 
 It's used only when `ps-print-color-p' is non-nil."
   :type '(choice :menu-tag "Default Foreground Gray/Color"
@@ -3059,7 +3060,7 @@ Valid values are:
    NUMBER	It's a real value between 0.0 (black) and 1.0 (white) that
 		indicate the gray color.
 
-   COLOR-NAME	It's a string wich contains the color name.  For example:
+   COLOR-NAME	It's a string which contains the color name.  For example:
 		\"yellow\".
 
    LIST		It's a list of RGB values, that is a list of three real values
@@ -3070,7 +3071,7 @@ Valid values are:
 		Where RED, GREEN and BLUE are reals between 0.0 (no color) and
 		1.0 (full color).
 
-Any other value is ignored and it's used the white color.
+Any other value is ignored and white will be used.
 
 It's used only when `ps-print-color-p' is non-nil.
 
@@ -3759,7 +3760,7 @@ If `ps-prefix-quote' is nil, it's set to t after generating string."
 		"(setq ")
 	      key
 	      (if (> col len)
-		  (make-string (- col len) ?\ )
+		  (make-string (- col len) ?\s)
 		" ")
 	      (ps-value-string val))))
    (t "")
@@ -4136,10 +4137,10 @@ Each symbol correspond to one bit in a bit vector.")
 If optional MERGE-P is non-nil, extensions in FACE-EXTENSION-LIST are merged
 with face extension in ALIST-SYM; otherwise, overrides.
 
-If optional ALIST-SYM is nil, it's used `ps-print-face-extension-alist';
+If optional ALIST-SYM is nil, `ps-print-face-extension-alist' is used;
 otherwise, it should be an alist symbol.
 
-The elements in FACE-EXTENSION-LIST is like those for `ps-extend-face'.
+The elements in FACE-EXTENSION-LIST are like those for `ps-extend-face'.
 
 See `ps-extend-face' for documentation."
   (while face-extension-list
@@ -4154,7 +4155,7 @@ See `ps-extend-face' for documentation."
 If optional MERGE-P is non-nil, extensions in FACE-EXTENSION list are merged
 with face extensions in ALIST-SYM; otherwise, overrides.
 
-If optional ALIST-SYM is nil, it's used `ps-print-face-extension-alist';
+If optional ALIST-SYM is nil, `ps-print-face-extension-alist' is used;
 otherwise, it should be an alist symbol.
 
 The elements of FACE-EXTENSION list have the form:
@@ -4662,7 +4663,7 @@ page-height == ((floor print-height ((th + ls) * zh)) * ((th + ls) * zh)) - th
        (let* ((name   (concat (file-name-nondirectory (or (buffer-file-name)
 							  (buffer-name)))
 			      ".ps"))
-	      (prompt (format "Save PostScript to file: (default %s) " name))
+	      (prompt (format "Save PostScript to file (default %s): " name))
 	      (res    (read-file-name prompt default-directory name nil)))
 	 (while (cond ((file-directory-p res)
 		       (ding)
@@ -5003,7 +5004,7 @@ page-height == ((floor print-height ((th + ls) * zh)) * ((th + ls) * zh)) - th
 			     "PrintHeight 2 div BottomMargin add")
 	    "\nBeginBackImage\n")
 	   (ps-insert-file image-file)
-	   ;; coordinate adjustment to centralize image
+	   ;; coordinate adjustment to center image
 	   ;; around x and y position
 	   (let ((box (ps-get-boundingbox)))
 	     (save-excursion
@@ -5960,10 +5961,14 @@ XSTART YSTART are the relative position for the first page in a sheet.")
   (ps-begin-page))
 
 
+(defun ps-end-sheet ()
+  (and ps-print-page-p (> ps-page-sheet 0)
+       (ps-output "EndSheet\n")))
+
+
 (defun ps-header-sheet ()
   ;; Print only when a new sheet begins.
-  (and ps-print-page-p (> ps-page-sheet 0)
-       (ps-output "EndSheet\n"))
+  (ps-end-sheet)
   (setq ps-page-sheet (1+ ps-page-sheet))
   (when (ps-print-sheet-p)
     (setq ps-page-order (1+ ps-page-order))
@@ -6155,7 +6160,7 @@ XSTART YSTART are the relative position for the first page in a sheet.")
     (if (and (boundp 'ucs-mule-8859-to-mule-unicode)
 	   (char-table-p ucs-mule-8859-to-mule-unicode))
 	(map-char-table
-	 #'(lambda (k v) 
+	 #'(lambda (k v)
 	     (if (and v (eq (char-charset v) 'latin-iso8859-1) (/= k v))
 		 (aset tbl k v)))
 	 ucs-mule-8859-to-mule-unicode))
@@ -6688,8 +6693,7 @@ If FACE is not a valid face name, it is used default face."
 
 
 (defun ps-end-job (needs-begin-file)
-  (let ((previous-print ps-print-page-p)
-	(ps-print-page-p t))
+  (let ((ps-print-page-p t))
     (ps-flush-output)
     (save-excursion
       (let ((pages-per-sheet (mod ps-page-printed ps-n-up-printing))
@@ -6716,8 +6720,7 @@ If FACE is not a valid face name, it is used default face."
 		      (number-to-string ps-lines-printed) " BeginPage\n")
 	   (ps-end-page)))
     ;; Set end of PostScript file
-    (and previous-print
-	 (ps-output "EndSheet\n"))
+    (ps-end-sheet)
     (ps-output "\n%%Trailer\n%%Pages: "
 	       (number-to-string
 		(if (and needs-begin-file

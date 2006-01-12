@@ -1,6 +1,6 @@
 /* X Communication module for terminals which understand the X protocol.
-   Copyright (C) 1986, 1988, 1993, 1994, 1996, 1999, 2000, 2001, 2003, 2004,
-   2005  Free Software Foundation, Inc.
+   Copyright (C) 1986, 1988, 1993, 1994, 1996, 1999, 2000, 2001, 2002, 2003,
+                 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* X pop-up deck-of-cards menu facility for GNU Emacs.
  *
@@ -899,8 +899,11 @@ no quit occurs and `x-popup-menu' returns nil.  */)
 
       xpos += XINT (x);
       ypos += XINT (y);
+
+      XSETFRAME (Vmenu_updating_frame, f);
     }
-  Vmenu_updating_frame = Qnil;
+  else
+    Vmenu_updating_frame = Qnil;
 #endif /* HAVE_MENUS */
 
   record_unwind_protect (unuse_menu_items, Qnil);
@@ -1576,6 +1579,15 @@ menubar_selection_callback (widget, client_data)
   if (! cb_data || ! cb_data->cl_data || ! cb_data->cl_data->f)
     return;
 
+  /* For a group of radio buttons, GTK calls the selection callback first
+     for the item that was active before the selection and then for the one that
+     is active after the selection.  For C-h k this means we get the help on
+     the deselected item and then the selected item is executed.  Prevent that
+     by ignoring the non-active item.  */
+  if (GTK_IS_RADIO_MENU_ITEM (widget)
+      && ! gtk_check_menu_item_get_active (GTK_CHECK_MENU_ITEM (widget)))
+    return;
+
   /* When a menu is popped down, X generates a focus event (i.e. focus
      goes back to the frame below the menu).  Since GTK buffers events,
      we force it out here before the menu selection event.  Otherwise
@@ -1895,7 +1907,7 @@ update_submenu_strings (first_wv)
     {
       if (STRINGP (wv->lname))
         {
-          wv->name = SDATA (wv->lname);
+          wv->name = (char *) SDATA (wv->lname);
 
           /* Ignore the @ that means "separate pane".
              This is a kludge, but this isn't worth more time.  */
@@ -1908,7 +1920,7 @@ update_submenu_strings (first_wv)
         }
 
       if (STRINGP (wv->lkey))
-        wv->key = SDATA (wv->lkey);
+        wv->key = (char *) SDATA (wv->lkey);
 
       if (wv->contents)
         update_submenu_strings (wv->contents);
@@ -2034,7 +2046,7 @@ set_frame_menubar (f, first_time, deep_p)
 	 because it is not reentrant.  */
       specbind (Qdebug_on_next_call, Qnil);
 
-      record_unwind_protect (Fset_match_data, Fmatch_data (Qnil, Qnil));
+      record_unwind_save_match_data ();
       record_unwind_protect (unuse_menu_items, Qnil);
       if (NILP (Voverriding_local_map_menu_flag))
 	{
@@ -3334,6 +3346,11 @@ xmenu_show (f, x, y, for_click, keymaps, title, error)
       *error = "Can't create menu";
       return Qnil;
     }
+
+  /* Don't GC while we prepare and show the menu,
+     because we give the oldxmenu library pointers to the
+     contents of strings.  */
+  inhibit_garbage_collection ();
 
 #ifdef HAVE_X_WINDOWS
   /* Adjust coordinates to relative to the outer (window manager) window.  */

@@ -1,7 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
 @c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2000, 2001,
-@c   2002, 2005  Free Software Foundation, Inc.
+@c   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/display
 @node Display, System Interface, Processes, Top
@@ -14,9 +14,8 @@ that Emacs presents to the user.
 * Refresh Screen::      Clearing the screen and redrawing everything on it.
 * Forcing Redisplay::   Forcing redisplay.
 * Truncation::          Folding or wrapping long text lines.
-* The Echo Area::       Where messages are displayed.
+* The Echo Area::       Displaying messages at the bottom of the screen.
 * Warnings::            Displaying warning messages for the user.
-* Progress::            Informing user about progress of a long operation.
 * Invisible Text::      Hiding part of the buffer text.
 * Selective Display::   Hiding part of the buffer text (the old way).
 * Temporary Displays::  Displays that go away automatically.
@@ -32,7 +31,6 @@ that Emacs presents to the user.
 * Images::              Displaying images in Emacs buffers.
 * Buttons::             Adding clickable buttons to Emacs buffers.
 * Blinking::            How Emacs shows the matching open parenthesis.
-* Inverse Video::       Specifying how the screen looks.
 * Usual Display::       The usual conventions for displaying nonprinting chars.
 * Display Tables::      How to specify other conventions.
 * Beeping::             Audible signal to the user.
@@ -184,7 +182,7 @@ This variable is automatically buffer-local in every buffer.
 @cindex error display
 @cindex echo area
 
-The @dfn{echo area} is used for displaying error messages
+  The @dfn{echo area} is used for displaying error messages
 (@pxref{Errors}), for messages made with the @code{message} primitive,
 and for echoing keystrokes.  It is not the same as the minibuffer,
 despite the fact that the minibuffer appears (when active) in the same
@@ -193,13 +191,26 @@ specifies the rules for resolving conflicts between the echo area and
 the minibuffer for use of that screen space (@pxref{Minibuffer,, The
 Minibuffer, emacs, The GNU Emacs Manual}).
 
-You can write output in the echo area by using the Lisp printing
-functions with @code{t} as the stream (@pxref{Output Functions}), or as
-follows:
+  You can write output in the echo area by using the Lisp printing
+functions with @code{t} as the stream (@pxref{Output Functions}), or
+explicitly.
 
-@defun message string &rest arguments
-This function displays a message in the echo area.  The
-argument @var{string} is similar to a C language @code{printf} control
+@menu
+* Displaying Messages:: Explicitly displaying text in the echo area.
+* Progress::            Informing user about progress of a long operation.
+* Logging Messages::    Echo area messages are logged for the user.
+* Echo Area Customization:: Controlling the echo area.
+@end menu
+
+@node Displaying Messages
+@subsection Displaying Messages in the Echo Area
+
+  This section describes the functions for explicitly producing echo
+area messages.  Many other Emacs features display messages there, too.
+
+@defun message format-string &rest arguments
+This function displays a message in the echo area.  The argument
+@var{format-string} is similar to a C language @code{printf} format
 string.  See @code{format} in @ref{Formatting Strings}, for the details
 on the conversion specifications.  @code{message} returns the
 constructed string.
@@ -207,20 +218,15 @@ constructed string.
 In batch mode, @code{message} prints the message text on the standard
 error stream, followed by a newline.
 
-If @var{string}, or strings among the @var{arguments}, have @code{face}
-text properties, these affect the way the message is displayed.
+If @var{format-string}, or strings among the @var{arguments}, have
+@code{face} text properties, these affect the way the message is displayed.
 
 @c Emacs 19 feature
-If @var{string} is @code{nil}, @code{message} clears the echo area; if
-the echo area has been expanded automatically, this brings it back to
-its normal size.  If the minibuffer is active, this brings the
-minibuffer contents back onto the screen immediately.
-
-@vindex message-truncate-lines
-Normally, displaying a long message resizes the echo area to display
-the entire message.  But if the variable @code{message-truncate-lines}
-is non-@code{nil}, the echo area does not resize, and the message is
-truncated to fit it, as in Emacs 20 and before.
+If @var{format-string} is @code{nil} or the empty string,
+@code{message} clears the echo area; if the echo area has been
+expanded automatically, this brings it back to its normal size.
+If the minibuffer is active, this brings the minibuffer contents back
+onto the screen immediately.
 
 @example
 @group
@@ -241,12 +247,6 @@ To automatically display a message in the echo area or in a pop-buffer,
 depending on its size, use @code{display-message-or-buffer} (see below).
 @end defun
 
-@defopt max-mini-window-height
-This variable specifies the maximum height for resizing minibuffer
-windows.  If a float, it specifies a fraction of the height of the
-frame.  If an integer, it specifies a number of lines.
-@end defopt
-
 @tindex with-temp-message
 @defmac with-temp-message message &rest body
 This construct displays a message in the echo area temporarily, during
@@ -255,7 +255,7 @@ the execution of @var{body}.  It displays @var{message}, executes
 the previous echo area contents.
 @end defmac
 
-@defun message-or-box string &rest arguments
+@defun message-or-box format-string &rest arguments
 This function displays a message like @code{message}, but may display it
 in a dialog box instead of the echo area.  If this function is called in
 a command that was invoked using the mouse---more precisely, if
@@ -269,7 +269,7 @@ You can force use of the mouse or of the echo area by binding
 @code{last-nonmenu-event} to a suitable value around the call.
 @end defun
 
-@defun message-box string &rest arguments
+@defun message-box format-string &rest arguments
 This function displays a message like @code{message}, but uses a dialog
 box (or a pop-up menu) whenever that is possible.  If it is impossible
 to use a dialog box or pop-up menu, because the terminal does not
@@ -303,6 +303,170 @@ This function returns the message currently being displayed in the
 echo area, or @code{nil} if there is none.
 @end defun
 
+@node Progress
+@subsection Reporting Operation Progress
+@cindex progress reporting
+
+  When an operation can take a while to finish, you should inform the
+user about the progress it makes.  This way the user can estimate
+remaining time and clearly see that Emacs is busy working, not hung.
+
+  Functions listed in this section provide simple and efficient way of
+reporting operation progress.  Here is a working example that does
+nothing useful:
+
+@smallexample
+(let ((progress-reporter
+       (make-progress-reporter "Collecting mana for Emacs..."
+                               0  500)))
+  (dotimes (k 500)
+    (sit-for 0.01)
+    (progress-reporter-update progress-reporter k))
+  (progress-reporter-done progress-reporter))
+@end smallexample
+
+@defun make-progress-reporter message min-value max-value &optional current-value min-change min-time
+This function creates and returns a @dfn{progress reporter}---an
+object you will use as an argument for all other functions listed
+here.  The idea is to precompute as much data as possible to make
+progress reporting very fast.
+
+When this progress reporter is subsequently used, it will display
+@var{message} in the echo area, followed by progress percentage.
+@var{message} is treated as a simple string.  If you need it to depend
+on a filename, for instance, use @code{format} before calling this
+function.
+
+@var{min-value} and @var{max-value} arguments stand for starting and
+final states of your operation.  For instance, if you scan a buffer,
+they should be the results of @code{point-min} and @code{point-max}
+correspondingly.  It is required that @var{max-value} is greater than
+@var{min-value}.  If you create progress reporter when some part of
+the operation has already been completed, then specify
+@var{current-value} argument.  But normally you should omit it or set
+it to @code{nil}---it will default to @var{min-value} then.
+
+Remaining arguments control the rate of echo area updates.  Progress
+reporter will wait for at least @var{min-change} more percents of the
+operation to be completed before printing next message.
+@var{min-time} specifies the minimum time in seconds to pass between
+successive prints.  It can be fractional.  Depending on Emacs and
+system capabilities, progress reporter may or may not respect this
+last argument or do it with varying precision.  Default value for
+@var{min-change} is 1 (one percent), for @var{min-time}---0.2
+(seconds.)
+
+This function calls @code{progress-reporter-update}, so the first
+message is printed immediately.
+@end defun
+
+@defun progress-reporter-update reporter value
+This function does the main work of reporting progress of your
+operation.  It displays the message of @var{reporter}, followed by
+progress percentage determined by @var{value}.  If percentage is zero,
+or close enough according to the @var{min-change} and @var{min-time}
+arguments, then it is omitted from the output.
+
+@var{reporter} must be the result of a call to
+@code{make-progress-reporter}.  @var{value} specifies the current
+state of your operation and must be between @var{min-value} and
+@var{max-value} (inclusive) as passed to
+@code{make-progress-reporter}.  For instance, if you scan a buffer,
+then @var{value} should be the result of a call to @code{point}.
+
+This function respects @var{min-change} and @var{min-time} as passed
+to @code{make-progress-reporter} and so does not output new messages
+on every invocation.  It is thus very fast and normally you should not
+try to reduce the number of calls to it: resulting overhead will most
+likely negate your effort.
+@end defun
+
+@defun progress-reporter-force-update reporter value &optional new-message
+This function is similar to @code{progress-reporter-update} except
+that it prints a message in the echo area unconditionally.
+
+The first two arguments have the same meaning as for
+@code{progress-reporter-update}.  Optional @var{new-message} allows
+you to change the message of the @var{reporter}.  Since this functions
+always updates the echo area, such a change will be immediately
+presented to the user.
+@end defun
+
+@defun progress-reporter-done reporter
+This function should be called when the operation is finished.  It
+prints the message of @var{reporter} followed by word ``done'' in the
+echo area.
+
+You should always call this function and not hope for
+@code{progress-reporter-update} to print ``100%.''  Firstly, it may
+never print it, there are many good reasons for this not to happen.
+Secondly, ``done'' is more explicit.
+@end defun
+
+@defmac dotimes-with-progress-reporter (var count [result]) message body@dots{}
+This is a convenience macro that works the same way as @code{dotimes}
+does, but also reports loop progress using the functions described
+above.  It allows you to save some typing.
+
+You can rewrite the example in the beginning of this node using
+this macro this way:
+
+@example
+(dotimes-with-progress-reporter
+    (k 500)
+    "Collecting some mana for Emacs..."
+  (sit-for 0.01))
+@end example
+@end defmac
+
+@node Logging Messages
+@subsection Logging Messages in @samp{*Messages*}
+@cindex logging echo-area messages
+
+  Almost all the messages displayed in the echo area are also recorded
+in the @samp{*Messages*} buffer so that the user can refer back to
+them.  This includes all the messages that are output with
+@code{message}.
+
+@defopt message-log-max
+This variable specifies how many lines to keep in the @samp{*Messages*}
+buffer.  The value @code{t} means there is no limit on how many lines to
+keep.  The value @code{nil} disables message logging entirely.  Here's
+how to display a message and prevent it from being logged:
+
+@example
+(let (message-log-max)
+  (message @dots{}))
+@end example
+@end defopt
+
+  To make @samp{*Messages*} more convenient for the user, the logging
+facility combines successive identical messages.  It also combines
+successive related messages for the sake of two cases: question
+followed by answer, and a series of progress messages.
+
+  A ``question followed by an answer'' means two messages like the
+ones produced by @code{y-or-n-p}: the first is @samp{@var{question}},
+and the second is @samp{@var{question}...@var{answer}}.  The first
+message conveys no additional information beyond what's in the second,
+so logging the second message discards the first from the log.
+
+  A ``series of progress messages'' means successive messages like
+those produced by @code{make-progress-reporter}.  They have the form
+@samp{@var{base}...@var{how-far}}, where @var{base} is the same each
+time, while @var{how-far} varies.  Logging each message in the series
+discards the previous one, provided they are consecutive.
+
+  The functions @code{make-progress-reporter} and @code{y-or-n-p}
+don't have to do anything special to activate the message log
+combination feature.  It operates whenever two consecutive messages
+are logged that share a common prefix ending in @samp{...}.
+
+@node Echo Area Customization
+@subsection Echo Area Customization
+
+  These variables control details of how the echo area works.
+
 @defvar cursor-in-echo-area
 This variable controls where the cursor appears when a message is
 displayed in the echo area.  If it is non-@code{nil}, then the cursor
@@ -318,21 +482,6 @@ This normal hook is run whenever the echo area is cleared---either by
 @code{(message nil)} or for any other reason.
 @end defvar
 
-Almost all the messages displayed in the echo area are also recorded
-in the @samp{*Messages*} buffer.
-
-@defopt message-log-max
-This variable specifies how many lines to keep in the @samp{*Messages*}
-buffer.  The value @code{t} means there is no limit on how many lines to
-keep.  The value @code{nil} disables message logging entirely.  Here's
-how to display a message and prevent it from being logged:
-
-@example
-(let (message-log-max)
-  (message @dots{}))
-@end example
-@end defopt
-
 @defvar echo-keystrokes
 This variable determines how much time should elapse before command
 characters echo.  Its value must be an integer or floating point number,
@@ -345,6 +494,18 @@ sequence are echoed immediately.)
 
 If the value is zero, then command input is not echoed.
 @end defvar
+
+@defvar message-truncate-lines
+Normally, displaying a long message resizes the echo area to display
+the entire message.  But if the variable @code{message-truncate-lines}
+is non-@code{nil}, the echo area does not resize, and the message is
+truncated to fit it, as in Emacs 20 and before.
+@end defvar
+
+  The variable @code{max-mini-window-height}, which specifies the
+maximum height for resizing minibuffer windows, also applies to the
+echo area (which is really a special use of the minibuffer window.
+@xref{Minibuffer Misc}.
 
 @node Warnings
 @section Reporting Warnings
@@ -534,122 +695,6 @@ warnings buffer.  Each element of the list should be a list of
 symbols.  If it matches the first few elements in a warning type, then
 that warning is not logged.
 @end defopt
-
-@node Progress
-@section Reporting Operation Progress
-@cindex progress reporting
-
-  When an operation can take a while to finish, you should inform the
-user about the progress it makes.  This way the user can estimate
-remaining time and clearly see that Emacs is busy working, not hung.
-
-  Functions listed in this section provide simple and efficient way of
-reporting operation progress.  Here is a working example that does
-nothing useful:
-
-@example
-(let ((progress-reporter
-       (make-progress-reporter "Collecting some mana for Emacs..."
-                               0  500)))
-  (dotimes (k 500)
-    (sit-for 0.01)
-    (progress-reporter-update progress-reporter k))
-  (progress-reporter-done progress-reporter))
-@end example
-
-@defun make-progress-reporter message min-value max-value &optional current-value min-change min-time
-This function creates and returns a @dfn{progress reporter}---an
-object you will use as an argument for all other functions listed
-here.  The idea is to precompute as much data as possible to make
-progress reporting very fast.
-
-When this progress reporter is subsequently used, it will display
-@var{message} in the echo area, followed by progress percentage.
-@var{message} is treated as a simple string.  If you need it to depend
-on a filename, for instance, use @code{format} before calling this
-function.
-
-@var{min-value} and @var{max-value} arguments stand for starting and
-final states of your operation.  For instance, if you scan a buffer,
-they should be the results of @code{point-min} and @code{point-max}
-correspondingly.  It is required that @var{max-value} is greater than
-@var{min-value}.  If you create progress reporter when some part of
-the operation has already been completed, then specify
-@var{current-value} argument.  But normally you should omit it or set
-it to @code{nil}---it will default to @var{min-value} then.
-
-Remaining arguments control the rate of echo area updates.  Progress
-reporter will wait for at least @var{min-change} more percents of the
-operation to be completed before printing next message.
-@var{min-time} specifies the minimum time in seconds to pass between
-successive prints.  It can be fractional.  Depending on Emacs and
-system capabilities, progress reporter may or may not respect this
-last argument or do it with varying precision.  Default value for
-@var{min-change} is 1 (one percent), for @var{min-time}---0.2
-(seconds.)
-
-This function calls @code{progress-reporter-update}, so the first
-message is printed immediately.
-@end defun
-
-@defun progress-reporter-update reporter value
-This function does the main work of reporting progress of your
-operation.  It displays the message of @var{reporter}, followed by
-progress percentage determined by @var{value}.  If percentage is zero,
-or close enough according to the @var{min-change} and @var{min-time}
-arguments, then it is omitted from the output.
-
-@var{reporter} must be the result of a call to
-@code{make-progress-reporter}.  @var{value} specifies the current
-state of your operation and must be between @var{min-value} and
-@var{max-value} (inclusive) as passed to
-@code{make-progress-reporter}.  For instance, if you scan a buffer,
-then @var{value} should be the result of a call to @code{point}.
-
-This function respects @var{min-change} and @var{min-time} as passed
-to @code{make-progress-reporter} and so does not output new messages
-on every invocation.  It is thus very fast and normally you should not
-try to reduce the number of calls to it: resulting overhead will most
-likely negate your effort.
-@end defun
-
-@defun progress-reporter-force-update reporter value &optional new-message
-This function is similar to @code{progress-reporter-update} except
-that it prints a message in the echo area unconditionally.
-
-The first two arguments have the same meaning as for
-@code{progress-reporter-update}.  Optional @var{new-message} allows
-you to change the message of the @var{reporter}.  Since this functions
-always updates the echo area, such a change will be immediately
-presented to the user.
-@end defun
-
-@defun progress-reporter-done reporter
-This function should be called when the operation is finished.  It
-prints the message of @var{reporter} followed by word ``done'' in the
-echo area.
-
-You should always call this function and not hope for
-@code{progress-reporter-update} to print ``100%.''  Firstly, it may
-never print it, there are many good reasons for this not to happen.
-Secondly, ``done'' is more explicit.
-@end defun
-
-@defmac dotimes-with-progress-reporter (var count [result]) message body...
-This is a convenience macro that works the same way as @code{dotimes}
-does, but also reports loop progress using the functions described
-above.  It allows you to save some typing.
-
-You can rewrite the example in the beginning of this node using
-this macro this way:
-
-@example
-(dotimes-with-progress-reporter
-    (k 500)
-    "Collecting some mana for Emacs..."
-  (sit-for 0.01))
-@end example
-@end defmac
 
 @node Invisible Text
 @section Invisible Text
@@ -1054,7 +1099,7 @@ object that belongs to a particular buffer, and has a specified
 beginning and end.  It also has properties that you can examine and set;
 these affect the display of the text within the overlay.
 
-An overlays uses markers to record its beginning and end; thus,
+An overlay uses markers to record its beginning and end; thus,
 editing the text of the buffer adjusts the beginning and end of each
 overlay so that it stays with the text.  When you create the overlay,
 you can specify whether text inserted at the beginning should be
@@ -1087,12 +1132,14 @@ markers.  If @var{buffer} is omitted, the overlay is created in the
 current buffer.
 
 The arguments @var{front-advance} and @var{rear-advance} specify the
-insertion type for the start of the overlay and for the end of the
-overlay, respectively.  @xref{Marker Insertion Types}.  If
-@var{front-advance} is non-@code{nil}, text inserted at the beginning
-of the overlay is excluded from the overlay.  If @var{read-advance} is
-non-@code{nil}, text inserted at the beginning of the overlay is
-included in the overlay.
+marker insertion type for the start of the overlay and for the end of
+the overlay, respectively.  @xref{Marker Insertion Types}.  If they
+are both @code{nil}, the default, then the overlay extends to include
+any text inserted at the beginning, but not text inserted at the end.
+If @var{front-advance} is non-@code{nil}, text inserted at the
+beginning of the overlay is excluded from the overlay.  If
+@var{rear-advance} is non-@code{nil}, text inserted at the end of the
+overlay is included in the overlay.
 @end defun
 
 @defun overlay-start overlay
@@ -1296,8 +1343,8 @@ A cons cell of the form @code{(foreground-color . @var{color-name})} or
 @code{(background-color . @var{color-name})}.  These elements specify
 just the foreground color or just the background color.
 
-@code{(foreground-color . @var{color-name})} is equivalent to
-@code{(:foreground @var{color-name})}, and likewise for the background.
+@code{(foreground-color . @var{color-name})} has the same effect as
+@code{(:foreground @var{color-name})}; likewise for the background.
 @end itemize
 
 @item mouse-face
@@ -1340,6 +1387,10 @@ modified, and the length of the pre-change text replaced by that range.
 (For an insertion, the pre-change length is zero; for a deletion, that
 length is the number of characters deleted, and the post-change
 beginning and end are equal.)
+
+If these functions modify the buffer, they should bind
+@code{inhibit-modification-hooks} to @code{t} around doing so, to
+avoid confusing the internal mechanism that calls these hooks.
 
 @item insert-in-front-hooks
 @kindex insert-in-front-hooks @r{(overlay property)}
@@ -1451,18 +1502,24 @@ end of an overlay, before @var{pos}.  If there is none, it returns
 @code{(point-min)}.
 @end defun
 
-  Here's an easy way to use @code{next-overlay-change} to search for the
-next character which gets a non-@code{nil} @code{happy} property from
+  Here's a function which uses @code{next-overlay-change} to search
+for the next character which gets a given property @code{prop} from
 either its overlays or its text properties (@pxref{Property Search}):
 
 @smallexample
 (defun find-overlay-prop (prop)
   (save-excursion
     (while (and (not (eobp))
-                (not (get-char-property (point) 'happy)))
+                (not (get-char-property (point) prop)))
       (goto-char (min (next-overlay-change (point))
-                      (next-single-property-change (point) 'happy))))
+                      (next-single-property-change (point) prop))))
     (point)))
+@end smallexample
+
+  Now you can search for a @code{happy} property like this:
+
+@smallexample
+(find-overlay-prop 'happy)
 @end smallexample
 
 @node Width
@@ -1590,7 +1647,7 @@ parts of Emacs text.
 
 @vindex default-line-spacing
   You can specify the line spacing for all lines in a frame with the
-@code{line-spacing} frame parameter, @xref{Window Frame Parameters}.
+@code{line-spacing} frame parameter (@pxref{Layout Parameters}).
 However, if the variable @code{default-line-spacing} is
 non-@code{nil}, it overrides the frame's @code{line-spacing}
 parameter.  An integer value specifies the number of pixels put below
@@ -1623,17 +1680,19 @@ height.
   A @dfn{face} is a named collection of graphical attributes: font
 family, foreground color, background color, optional underlining, and
 many others.  Faces are used in Emacs to control the style of display of
-particular parts of the text or the frame.
+particular parts of the text or the frame.  @xref{Standard Faces,,,
+emacs, The GNU Emacs Manual}, for the list of faces Emacs normally
+comes with.
 
 @cindex face id
 Each face has its own @dfn{face number}, which distinguishes faces at
 low levels within Emacs.  However, for most purposes, you refer to
-faces in Lisp programs by their names.
+faces in Lisp programs by the symbols that name them.
 
 @defun facep object
-This function returns @code{t} if @var{object} is a face name symbol (or
-if it is a vector of the kind used internally to record face data).  It
-returns @code{nil} otherwise.
+This function returns @code{t} if @var{object} is a face name string
+or symbol (or if it is a vector of the kind used internally to record
+face data).  It returns @code{nil} otherwise.
 @end defun
 
 Each face name is meaningful for all frames, and by default it has the
@@ -1641,7 +1700,6 @@ same meaning in all frames.  But you can arrange to give a particular
 face name a special meaning in one frame if you wish.
 
 @menu
-* Standard Faces::      The faces Emacs normally comes with.
 * Defining Faces::      How to define a face with @code{defface}.
 * Face Attributes::     What is in a face?
 * Attribute Functions::  Functions to examine and set face attributes.
@@ -1655,135 +1713,6 @@ face name a special meaning in one frame if you wish.
                           that handle a range of character sets.
 @end menu
 
-@node Standard Faces
-@subsection Standard Faces
-
-  This table lists all the standard faces and their uses.  Most of them
-are used for displaying certain parts of the frames or certain kinds of
-text; you can control how those places look by customizing these faces.
-
-@table @code
-@item default
-@kindex default @r{(face name)}
-This face is used for ordinary text.
-
-@item mode-line
-@kindex mode-line @r{(face name)}
-This face is used for the mode line of the selected window, and for
-menu bars when toolkit menus are not used---but only if
-@code{mode-line-inverse-video} is non-@code{nil}.
-
-@item modeline
-@kindex modeline @r{(face name)}
-This is an alias for the @code{mode-line} face, for compatibility with
-old Emacs versions.
-
-@item mode-line-inactive
-@kindex mode-line-inactive @r{(face name)}
-This face is used for mode lines of non-selected windows.
-This face inherits from @code{mode-line}, so changes
-in that face affect all windows.
-
-@item header-line
-@kindex header-line @r{(face name)}
-This face is used for the header lines of windows that have them.
-
-@item menu
-This face controls the display of menus, both their colors and their
-font.  (This works only on certain systems.)
-
-@item fringe
-@kindex fringe @r{(face name)}
-This face controls the default colors of window fringes, the thin
-areas on either side that are used to display continuation and
-truncation glyphs.  Other faces used to display bitmaps in the fringe
-are implicitly merged with this face.
-
-@item minibuffer-prompt
-@kindex minibuffer-prompt @r{(face name)}
-@vindex minibuffer-prompt-properties
-This face is used for the text of minibuffer prompts.  By default,
-Emacs automatically adds this face to the value of
-@code{minibuffer-prompt-properties}, which is a list of text
-properties used to display the prompt text.
-
-@item scroll-bar
-@kindex scroll-bar @r{(face name)}
-This face controls the colors for display of scroll bars.
-
-@item tool-bar
-@kindex tool-bar @r{(face name)}
-This face is used for display of the tool bar, if any.
-
-@item region
-@kindex region @r{(face name)}
-This face is used for highlighting the region in Transient Mark mode.
-
-@item secondary-selection
-@kindex secondary-selection @r{(face name)}
-This face is used to show any secondary selection you have made.
-
-@item highlight
-@kindex highlight @r{(face name)}
-This face is meant to be used for highlighting for various purposes.
-
-@item mode-line-highlight
-@kindex mode-line-highlight @r{(face name)}
-This face is used for highlighting something on @code{mode-line} or
-@code{header-line} for various purposes.
-
-@item trailing-whitespace
-@kindex trailing-whitespace @r{(face name)}
-This face is used to display excess whitespace at the end of a line,
-if @code{show-trailing-whitespace} is non-@code{nil}.
-
-@item escape-glyph
-@kindex escape-glyph @r{(face name)}
-This face is used to display control characters and escape glyphs.
-@end table
-
-  In contrast, these faces are provided to change the appearance of text
-in specific ways.  You can use them on specific text, when you want
-the effects they produce.
-
-@table @code
-@item bold
-@kindex bold @r{(face name)}
-This face uses a bold font, if possible.  It uses the bold variant of
-the frame's font, if it has one.  It's up to you to choose a default
-font that has a bold variant, if you want to use one.
-
-@item italic
-@kindex italic @r{(face name)}
-This face uses the italic variant of the frame's font, if it has one.
-
-@item bold-italic
-@kindex bold-italic @r{(face name)}
-This face uses the bold italic variant of the frame's font, if it has
-one.
-
-@item underline
-@kindex underline @r{(face name)}
-This face underlines text.
-
-@item fixed-pitch
-@kindex fixed-pitch @r{(face name)}
-This face forces use of a particular fixed-width font.
-
-@item variable-pitch
-@kindex variable-pitch @r{(face name)}
-This face forces use of a particular variable-width font.  It's
-reasonable to customize this to use a different variable-width font, if
-you like, but you should not make it a fixed-width font.
-@end table
-
-@defvar show-trailing-whitespace
-@tindex show-trailing-whitespace
-If this variable is non-@code{nil}, Emacs uses the
-@code{trailing-whitespace} face to display any spaces and tabs at the
-end of a line.
-@end defvar
-
 @node Defining Faces
 @subsection Defining Faces
 
@@ -1792,12 +1721,13 @@ kind of customization item (@pxref{Customization}) which the user can
 customize using the Customization buffer (@pxref{Easy Customization,,,
 emacs, The GNU Emacs Manual}).
 
-@defmac defface face spec doc [keyword value]...
-This declares @var{face} as a customizable face that defaults according
-to @var{spec}.  You should not quote the symbol @var{face}.  The
+@defmac defface face spec doc [keyword value]@dots{}
+This declares @var{face} as a customizable face that defaults
+according to @var{spec}.  You should not quote the symbol @var{face},
+and it should not end in @samp{-face} (that would be redundant).  The
 argument @var{doc} specifies the face documentation.  The keywords you
-can use in @code{defface} are the same ones that are meaningful in both
-@code{defgroup} and @code{defcustom} (@pxref{Common Keywords}).
+can use in @code{defface} are the same as in @code{defgroup} and
+@code{defcustom} (@pxref{Common Keywords}).
 
 When @code{defface} executes, it defines the face according to
 @var{spec}, then uses any customizations that were read from the
@@ -1807,7 +1737,7 @@ The purpose of @var{spec} is to specify how the face should appear on
 different kinds of terminals.  It should be an alist whose elements
 have the form @code{(@var{display} @var{atts})}.  Each element's
 @sc{car}, @var{display}, specifies a class of terminals.  (The first
-element, if it s @sc{car} is @code{default}, is special---it specifies
+element, if its @sc{car} is @code{default}, is special---it specifies
 defaults for the remaining elements).  The element's @sc{cadr},
 @var{atts}, is a list of face attributes and their values; it
 specifies what the face should look like on that kind of terminal.
@@ -1901,8 +1831,9 @@ frame must match one of the @var{value}s specified for it in
   Internally, @code{defface} uses the symbol property
 @code{face-defface-spec} to record the face attributes specified in
 @code{defface}, @code{saved-face} for the attributes saved by the user
-with the customization buffer, and @code{face-documentation} for the
-documentation string.
+with the customization buffer, @code{customized-face} for the
+attributes customized by the user for the current session, but not
+saved, and @code{face-documentation} for the documentation string.
 
 @defopt frame-background-mode
 This option, if non-@code{nil}, specifies the background type to use for
@@ -2232,10 +2163,14 @@ This function sets the underline attribute of face @var{face}.
 Non-@code{nil} means do underline; @code{nil} means don't.
 @end defun
 
+@defun set-face-inverse-video-p face inverse-video-p &optional frame
+This function sets the @code{:inverse-video} attribute of face
+@var{face}.
+@end defun
+
 @defun invert-face face &optional frame
-This function inverts the @code{:inverse-video} attribute of face
-@var{face}.  If the attribute is @code{nil}, this function sets it to
-@code{t}, and vice versa.
+This function swaps the foreground and background colors of face
+@var{face}.
 @end defun
 
   These functions examine the attributes of a face.  If you don't
@@ -2244,7 +2179,7 @@ They return the symbol @code{unspecified} if the face doesn't define any
 value for that attribute.
 
 @defun face-foreground face &optional frame inherit
-@defunx face-background face &optional frame
+@defunx face-background face &optional frame inherit
 These functions return the foreground color (or background color,
 respectively) of face @var{face}, as a string.
 
@@ -2322,7 +2257,8 @@ properties too; they apply to all the text covered by the overlay.
 
 @item
 With a region that is active.  In Transient Mark mode, the region is
-highlighted with the face @code{region} (@pxref{Standard Faces}).
+highlighted with the face @code{region} (@pxref{Standard Faces,,,
+emacs, The GNU Emacs Manual}).
 
 @item
 With special glyphs.  Each glyph can specify a particular face
@@ -2515,6 +2451,17 @@ same attributes for display.
 This returns non-@code{nil} if the face @var{face} displays
 differently from the default face.
 @end defun
+
+@cindex face alias
+A @dfn{face alias} provides an equivalent name for a face.  You can
+define a face alias by giving the alias symbol the @code{face-alias}
+property, with a value of the target face name.  The following example
+makes @code{modeline} an alias for the @code{mode-line} face.
+
+@example
+(put 'modeline 'face-alias 'mode-line)
+@end example
+
 
 @node Auto Faces
 @subsection Automatic Face Assignment
@@ -2751,10 +2698,9 @@ For instance, this changes the default fontset to use a font of which
 registry name is @samp{JISX0208.1983} for all characters belonging to
 the charset @code{japanese-jisx0208}.
 
-@example
+@smallexample
 (set-fontset-font nil 'japanese-jisx0208 '(nil . "JISX0208.1983"))
-@end example
-
+@end smallexample
 @end defun
 
 @defun char-displayable-p char
@@ -2784,23 +2730,25 @@ continuation, horizontal scrolling, and the overlay arrow.
 @node Fringe Size/Pos
 @subsection Fringe Size and Position
 
-  Here's how to control the position and width of the window fringes.
+  The following buffer-local variables control the position and width
+of the window fringes.
 
 @defvar fringes-outside-margins
-If the value is non-@code{nil}, the frames appear outside the display
-margins.  The fringes normally appear between the display margins and
-the window text.  It works to set @code{fringes-outside-margins}
-buffer-locally.  @xref{Display Margins}.
+The fringes normally appear between the display margins and the window
+text.  If the value is non-@code{nil}, they appear outside the display
+margins.  @xref{Display Margins}.
 @end defvar
 
 @defvar left-fringe-width
 This variable, if non-@code{nil}, specifies the width of the left
-fringe in pixels.
+fringe in pixels.  A value of @code{nil} means to use the left fringe
+width from the window's frame.
 @end defvar
 
 @defvar right-fringe-width
 This variable, if non-@code{nil}, specifies the width of the right
-fringe in pixels.
+fringe in pixels.  A value of @code{nil} means to use the right fringe
+width from the window's frame.
 @end defvar
 
   The values of these variables take effect when you display the
@@ -2856,9 +2804,9 @@ default @code{fringe} face.  @var{face} is automatically merged with
 the @code{fringe} face, so normally @var{face} need only specify the
 foreground color for the bitmap.
 
-  These are the symbols identify the standard fringe bitmaps.
-Evaluate @code{(require 'fringe)} to define them.  Fringe bitmap
-symbols have their own name space.
+  These symbols identify the standard fringe bitmaps.  Evaluate
+@code{(require 'fringe)} to define them.  Fringe bitmap symbols have
+their own name space.
 
 @table @asis
 @item Truncation and continuation line bitmaps:
@@ -2974,9 +2922,12 @@ otherwise appear.  Since the arrow is usually short, and the line
 usually begins with indentation, normally nothing significant is
 overwritten.
 
-The overlay string is displayed only in the buffer that this marker
-points into.  Thus, only one buffer can have an overlay arrow at any
-given time.
+The overlay-arrow string is displayed in any given buffer if the value
+of @code{overlay-arrow-position} in that buffer points into that
+buffer.  Thus, it works to can display multiple overlay arrow strings
+by creating buffer-local bindings of @code{overlay-arrow-position}.
+However, it is usually cleaner to use
+@code{overlay-arrow-variable-list} to achieve this result.
 @c !!! overlay-arrow-position: but the overlay string may remain in the display
 @c of some other buffer until an update is required.  This should be fixed
 @c now.  Is it?
@@ -3010,7 +2961,7 @@ Normally the frame parameter @code{vertical-scroll-bars} controls
 whether the windows in the frame have vertical scroll bars, and
 whether they are on the left or right.  The frame parameter
 @code{scroll-bar-width} specifies how wide they are (@code{nil}
-meaning the default).  @xref{Window Frame Parameters}.
+meaning the default).  @xref{Layout Parameters}.
 
 @defun frame-current-scroll-bars &optional frame
 This function reports the scroll bar type settings for frame
@@ -3131,7 +3082,7 @@ single unit.  By contrast, characters that have similar but distinct
 Lisp objects as their @code{display} properties are handled
 separately.  Here's a function that illustrates this point:
 
-@example
+@smallexample
 (defun foo ()
   (goto-char (point-min))
   (dotimes (i 5)
@@ -3140,7 +3091,7 @@ separately.  Here's a function that illustrates this point:
       (forward-char 1)
       (put-text-property (point) (1+ (point)) 'display string)
       (forward-char 1))))
-@end example
+@end smallexample
 
 @noindent
 It gives each of the first ten characters in the buffer string
@@ -3152,7 +3103,7 @@ Likewise for each following pair of characters.  Thus, the ten
 characters appear as five A's.  This function would have the same
 results:
 
-@example
+@smallexample
 (defun foo ()
   (goto-char (point-min))
   (dotimes (i 5)
@@ -3160,7 +3111,7 @@ results:
       (put-text-property (point) (2+ (point)) 'display string)
       (put-text-property (point) (1+ (point)) 'display string)
       (forward-char 2))))
-@end example
+@end smallexample
 
 @noindent
 This illustrates that what matters is the property value for
@@ -3256,18 +3207,20 @@ as an absolute number of pixels.
 
   The following expressions are supported:
 
-@example
+@smallexample
 @group
   @var{expr} ::= @var{num} | (@var{num}) | @var{unit} | @var{elem} | @var{pos} | @var{image} | @var{form}
   @var{num}  ::= @var{integer} | @var{float} | @var{symbol}
   @var{unit} ::= in | mm | cm | width | height
+@end group
+@group
   @var{elem} ::= left-fringe | right-fringe | left-margin | right-margin
         |  scroll-bar | text
   @var{pos}  ::= left | center | right
   @var{form} ::= (@var{num} . @var{expr}) | (@var{op} @var{expr} ...)
   @var{op}   ::= + | -
 @end group
-@end example
+@end smallexample
 
   The form @var{num} specifies a fraction of the default frame font
 height or width.  The form @code{(@var{num})} specifies an absolute
@@ -3325,7 +3278,7 @@ in the @code{display} text property.
 Display @var{string} instead of the text that has this property.
 
 @item (image . @var{image-props})
-This display specification is an image descriptor (@pxref{Images}).
+This kind of display specification is an image descriptor (@pxref{Images}).
 When used as a display specification, it means to display the image
 instead of the text that has the display specification.
 
@@ -3999,9 +3952,30 @@ The first specification in the list whose @var{type} is supported, and
 @var{file} exists, is used to construct the image specification to be
 returned.  If no specification is satisfied, @code{nil} is returned.
 
-The image is looked for first on @code{load-path} and then in
-@code{data-directory}.
+The image is looked for in @code{image-load-path}.
 @end defun
+
+@defvar image-load-path
+@tindex image-load-path
+This variable's value is a list of locations in which to search for
+image files.  If an element is a string or a variable symbol whose
+value is a string, the string is taken to be the name of a directory
+to search.  If an element is a variable symbol whose value is a list,
+that is taken to be a list of directory names to search.
+
+The default is to search in the @file{images} subdirectory of the
+directory specified by @code{data-directory}, then the directory
+specified by @code{data-directory}, and finally in the directories in
+@code{load-path}.  Subdirectories are not automatically included in
+the search, so if you put an image file in a subdirectory, you have to
+supply the subdirectory name explicitly.  For example, to find the
+image @file{images/foo/bar.xpm} within @code{data-directory}, you
+should specify the image as follows:
+
+@example
+(defimage foo-image '((:type xpm :file "foo/bar.xpm")))
+@end example
+@end defvar
 
 @node Showing Images
 @subsection Showing Images
@@ -4086,6 +4060,25 @@ font).  @var{frame} is the frame on which the image will be displayed.
 @var{frame} null or omitted means use the selected frame (@pxref{Input
 Focus}).
 @end defun
+
+@defvar max-image-size
+@tindex max-image-size
+This variable is used to define the maximum size of image that Emacs
+will load.  Emacs will refuse to load (and display) any image that is
+larger than this limit.
+
+If the value is an integer, it directly specifies the maximum
+image height and width, measured in pixels.  If it is a floating
+point number, it specifies the maximum image height and width
+as a ratio to the frame height and width.  If the value is
+non-numeric, there is no explicit limit on the size of images.
+
+The purpose of this variable is to prevent unreasonably large images
+from accidentally being loaded into Emacs.  It only takes effect the
+first time an image is loaded.  Once an image is placed in the image
+cache, it can always be displayed, even if the value of
+@var{max-image-size} is subsequently changed (@pxref{Image Cache}).
+@end defvar
 
 @node Image Cache
 @subsection Image Cache
@@ -4265,8 +4258,8 @@ this is a simple underline, like a typical web-page link.
 
   For convenience, there are two sorts of button-creation functions,
 those that add button properties to an existing region of a buffer,
-called @code{make-...button}, and those also insert the button text,
-called @code{insert-...button}.
+called @code{make-...button}, and those that also insert the button
+text, called @code{insert-...button}.
 
   The button-creation functions all take the @code{&rest} argument
 @var{properties}, which should be a sequence of @var{property value}
@@ -4522,24 +4515,6 @@ Here is an example of calling this function explicitly.
 @end smallexample
 @end deffn
 
-@node Inverse Video
-@section Inverse Video
-@cindex Inverse Video
-
-@defopt inverse-video
-@cindex highlighting
-This variable controls whether Emacs uses inverse video for all text
-on the screen.  Non-@code{nil} means yes, @code{nil} means no.  The
-default is @code{nil}.
-@end defopt
-
-@defopt mode-line-inverse-video
-This variable controls the use of inverse video for mode lines and
-menu bars.  If it is non-@code{nil}, then these lines are displayed in
-the face @code{mode-line}.  Otherwise, these lines are displayed
-normally, just like other text.  The default is @code{t}.
-@end defopt
-
 @node Usual Display
 @section Usual Display Conventions
 
@@ -4617,11 +4592,11 @@ buffers that do not override it.  @xref{Default Value}.
 @end defvar
 
 @defopt tab-width
-The value of this variable is the spacing between tab stops used for
-displaying tab characters in Emacs buffers.  The value is in units of
-columns, and the default is 8.  Note that this feature is completely
-independent of the user-settable tab stops used by the command
-@code{tab-to-tab-stop}.  @xref{Indent Tabs}.
+The value of this buffer-local variable is the spacing between tab
+stops used for displaying tab characters in Emacs buffers.  The value
+is in units of columns, and the default is 8.  Note that this feature
+is completely independent of the user-settable tab stops used by the
+command @code{tab-to-tab-stop}.  @xref{Indent Tabs}.
 @end defopt
 
 @defopt indicate-empty-lines
@@ -4630,6 +4605,7 @@ independent of the user-settable tab stops used by the command
 When this is non-@code{nil}, Emacs displays a special glyph in the
 fringe of each empty line at the end of the buffer, on terminals that
 support it (window systems).  @xref{Fringes}.
+This variable is automatically buffer-local in every buffer.
 @end defopt
 
 @defvar indicate-buffer-boundaries

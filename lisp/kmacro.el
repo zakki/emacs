@@ -1,6 +1,6 @@
 ;;; kmacro.el --- enhanced keyboard macros
 
-;; Copyright (C) 2002, 2003, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Kim F. Storm <storm@cua.dk>
 ;; Keywords: keyboard convenience
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -631,7 +631,7 @@ A prefix argument serves as a repeat count.  Zero means repeat until error.
 When you call the macro, you can call the macro again by repeating
 just the last key in the key sequence that you used to call this
 command.  See `kmacro-call-repeat-key' and `kmacro-call-repeat-with-arg'
-for details on how to adjust or disable this behaviour.
+for details on how to adjust or disable this behavior.
 
 To make a macro permanent so you can call it even after defining
 others, use \\[kmacro-name-last-macro]."

@@ -1,6 +1,7 @@
 ;;; calcalg3.el --- more algebraic functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -369,7 +370,7 @@
       (setq defv (calc-invent-independent-variables nv)))
   (or defc
       (setq defc (calc-invent-parameter-variables nc defv)))
-  (let ((vars (read-string (format "Fitting variables: (default %s; %s) "
+  (let ((vars (read-string (format "Fitting variables (default %s; %s): "
 				   (mapconcat 'symbol-name
 					      (mapcar (function (lambda (v)
 								  (nth 1 v)))

@@ -1,5 +1,6 @@
 #  -*- Makefile -*- for GNU Emacs on the Microsoft W32 API.
-#  Copyright (c) 2000, 2001, 2004, 2005 Free Software Foundation, Inc.
+#  Copyright (C) 2000, 2001, 2002, 2003, 2004,
+#                2005 Free Software Foundation, Inc.
 #
 #  This file is part of GNU Emacs.
 #
@@ -15,8 +16,8 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with GNU Emacs; see the file COPYING.  If not, write to the
-#  Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-#  Boston, MA 02111-1307, USA.
+#  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+#  Boston, MA 02110-1301, USA.
 #
 
 ALL =
@@ -90,14 +91,15 @@ WINS=\
 	progmodes \
 	term \
 	textmodes \
-	toolbar \
 	url
 
 doit:
 
-cus-load.el:
+$(lisp)/cus-load.el:
 	touch $@
-custom-deps: cus-load.el doit
+# WARNING: Do NOT split the part inside $(ARGQUOTE)s into multiple lines as
+#          this can break with GNU Make 3.81 and later if sh.exe is used.
+custom-deps: $(lisp)/cus-load.el doit
 	@echo Directories: $(WINS)
 	-$(emacs) -l cus-dep --eval $(ARGQUOTE)(setq find-file-hook nil)$(ARGQUOTE) -f custom-make-dependencies $(lisp) $(WINS)
 
@@ -105,7 +107,7 @@ finder-data: doit
 	@echo Directories: $(WINS)
 	$(emacs) -l finder -f finder-compile-keywords-make-dist $(lisp) $(WINS)
 
-loaddefs.el:
+$(lisp)/loaddefs.el:
 	$(MAKE) $(MFLAGS) loaddefs.el-$(SHELLTYPE)
 	cp loaddefs.el-$(SHELLTYPE) $@
 	rm loaddefs.el-$(SHELLTYPE)
@@ -138,7 +140,7 @@ loaddefs.el-CMD:
 	echo (autoload 'define-derived-mode "derived")>> $@
 	echo (autoload 'encoded-kbd-mode "encoded-kb")>> $@
 	echo (defvar cvs-global-menu nil)>> $@
-	echo ;;; >> $@
+	echo.>> $@
 	echo ;;; Local Variables:>> $@
 	echo ;;; version-control: never>> $@
 	echo ;;; no-byte-compile: t>> $@
@@ -146,28 +148,32 @@ loaddefs.el-CMD:
 	echo ;;; End:>> $@
 	echo ;;; loaddefs.el ends here>> $@
 
-autoloads: loaddefs.el doit
-	@echo Directories: $(WINS)
+# Use . instead of $(lisp) because $(lisp) is an absolute file name,
+# including a drive letter and any leading directories, so the generated
+# loaddefs.el will mention file names that on other machine reference
+# possibly non-existent directories.
+#
+# WARNING: Do NOT split the part inside $(ARGQUOTE)s into multiple lines as
+#          this can break with GNU Make 3.81 and later if sh.exe is used.
+autoloads: $(lisp)/loaddefs.el doit
+	@echo Directories: . $(WINS)
 	$(emacs) -l autoload \
-		--eval $(ARGQUOTE)(setq find-file-hook nil \
-			find-file-suppress-same-file-warnings t \
-			generated-autoload-file \
-			  $(DQUOTE)$(lisp)/loaddefs.el$(DQUOTE))$(ARGQUOTE) \
-		-f batch-update-autoloads $(lisp) $(WINS)
+		--eval $(ARGQUOTE)(setq find-file-hook nil find-file-suppress-same-file-warnings t)$(ARGQUOTE) \
+		-f w32-batch-update-autoloads "$(lisp)/loaddefs.el" . $(WINS)
 
-subdirs.el:
+$(lisp)/subdirs.el:
 	$(MAKE) $(MFLAGS) update-subdirs
 
 # Need separate version for sh and native cmd.exe
 update-subdirs: update-subdirs-$(SHELLTYPE)
 
 update-subdirs-CMD: doit
-	echo ;; -*- no-byte-compile: t -*->subdirs.el
-	echo ;; In load-path, after this directory should come>> subdirs.el
-	echo ;; certain of its subdirectories.  Here we specify them.>> subdirs.el
-	echo (normal-top-level-add-to-load-path $(SQUOTE)(>> subdirs.el
-	@for %%d in ($(WINS)) do if not (%%d)==(term) echo "%%d">> subdirs.el
-	echo ))>> subdirs.el
+	echo ;; -*- no-byte-compile: t -*-> $(lisp)/subdirs.el
+	echo ;; In load-path, after this directory should come>> $(lisp)/subdirs.el
+	echo ;; certain of its subdirectories.  Here we specify them.>> $(lisp)/subdirs.el
+	echo (normal-top-level-add-to-load-path $(SQUOTE)(>> $(lisp)/subdirs.el
+	@for %%d in ($(WINS)) do if not (%%d)==(term) echo "%%d">> $(lisp)/subdirs.el
+	echo ))>> $(lisp)/subdirs.el
 
 update-subdirs-SH: doit
 	$(srcdir)/update-subdirs $(lisp); \
@@ -175,7 +181,10 @@ update-subdirs-SH: doit
 	   $(srcdir)/update-subdirs $$file; \
 	done;
 
-updates: update-subdirs autoloads finder-data custom-deps
+updates: update-subdirs autoloads mh-autoloads finder-data custom-deps
+
+# This is useful after "cvs up".
+cvs-update: recompile autoloads finder-data custom-deps
 
 # Update the AUTHORS file.
 
@@ -206,7 +215,7 @@ TAGS-LISP: $(lisptagsfiles1) $(lisptagsfiles2)
 # compiled find the right files.
 
 # Need separate version for sh and native cmd.exe
-compile: subdirs.el compile-$(SHELLTYPE) doit
+compile: $(lisp)/subdirs.el mh-autoloads compile-$(SHELLTYPE) doit
 
 compile-CMD:
 #	-for %%f in ($(lisp) $(WINS)) do for %%g in (%%f\*.elc) do @attrib -r %%g
@@ -235,7 +244,7 @@ compile-SH:
 # unconditionally.  Some files don't actually get compiled because they
 # set the local variable no-byte-compile.
 
-compile-always: subdirs.el compile-always-$(SHELLTYPE) doit
+compile-always: $(lisp)/subdirs.el compile-always-$(SHELLTYPE) doit
 
 compile-always-CMD:
 #	-for %%f in ($(lisp) $(WINS)) do for %%g in (%%f\*.elc) do @attrib -r %%g
@@ -281,41 +290,104 @@ compile-after-backup: backup-compiled-files compile-always
 # Note that this doesn't create .elc files.  It only recompiles if an
 # .elc is present.
 
-recompile: doit
+recompile: mh-autoloads doit
 	$(emacs) -f batch-byte-recompile-directory $(lisp)
+
+# Update MH-E internal autoloads. These are not to be confused with
+# the autoloads for the MH-E entry points, which are already in
+# loaddefs.el.
+MH_E_SRC = $(lisp)/mh-e/mh-acros.el $(lisp)/mh-e/mh-alias.el	\
+	$(lisp)/mh-e/mh-comp.el $(lisp)/mh-e/mh-customize.el	\
+	$(lisp)/mh-e/mh-e.el $(lisp)/mh-e/mh-funcs.el		\
+	$(lisp)/mh-e/mh-mime.el $(lisp)/mh-e/mh-pick.el		\
+	$(lisp)/mh-e/mh-print.el $(lisp)/mh-e/mh-inc.el		\
+	$(lisp)/mh-e/mh-init.el $(lisp)/mh-e/mh-index.el	\
+	$(lisp)/mh-e/mh-identity.el $(lisp)/mh-e/mh-junk.el	\
+	$(lisp)/mh-e/mh-seq.el $(lisp)/mh-e/mh-speed.el		\
+	$(lisp)/mh-e/mh-utils.el
+
+mh-autoloads: $(lisp)/mh-e/mh-loaddefs.el
+$(lisp)/mh-e/mh-loaddefs.el: $(MH_E_SRC)
+	$(MAKE) $(MFLAGS) pre-mh-loaddefs.el-$(SHELLTYPE)
+	cp pre-mh-loaddefs.el-$(SHELLTYPE) $@
+	rm pre-mh-loaddefs.el-$(SHELLTYPE)
+	$(EMACS) $(EMACSOPT) \
+	   -l autoload \
+	   --eval "(setq generate-autoload-cookie \";;;###mh-autoload\")" \
+	   --eval "(setq find-file-suppress-same-file-warnings t)" \
+	   --eval "(setq make-backup-files nil)" \
+	   -f w32-batch-update-autoloads \
+	   "$(lisp)/mh-e/mh-loaddefs.el" $(lisp)/mh-e
+
+pre-mh-loaddefs.el-SH:
+	echo ";;; mh-loaddefs.el --- automatically extracted autoloads" > $@
+	echo ";;" >> $@
+	echo ";;; Copyright (C) 2003, 2004, 2005 Free Software Foundation, Inc." >> $@
+	echo ";;; Author: Bill Wohler <wohler@newt.com>" >> $@
+	echo ";;; Keywords: mail" >> $@
+	echo ";;; Commentary:" >> $@
+	echo ";;; Change Log:" >> $@
+	echo ";;; Code:" >> $@
+	echo "" >> $@
+	echo "(provide 'mh-loaddefs)" >> $@
+	echo ";;; Local Variables:" >> $@
+	echo ";;; version-control: never" >> $@
+	echo ";;; no-byte-compile: t" >> $@
+	echo ";;; no-update-autoloads: t" >> $@
+	echo ";;; End:" >> $@
+	echo ";;; mh-loaddefs.el ends here" >> $@
+
+pre-mh-loaddefs.el-CMD:
+	echo ;;; mh-loaddefs.el --- automatically extracted autoloads> $@
+	echo ;;>> $@
+	echo ;;; Copyright (C) 2003, 2004, 2005 Free Software Foundation, Inc.>> $@
+	echo ;;; Author: Bill Wohler (wohler@newt.com)>> $@
+	echo ;;; Keywords: mail>> $@
+	echo ;;; Commentary:>> $@
+	echo ;;; Change Log:>> $@
+	echo ;;; Code:>> $@
+	echo.>> $@
+	echo (provide 'mh-loaddefs)>> $@
+	echo ;;; Local Variables:>> $@
+	echo ;;; version-control: never>> $@
+	echo ;;; no-byte-compile: t>> $@
+	echo ;;; no-update-autoloads: t>> $@
+	echo ;;; End:>> $@
+	echo ;;; mh-loaddefs.el ends here>> $@
 
 # Prepare a bootstrap in the lisp subdirectory.
 #
-# Build loaddefs.el, because it's not sure it's up-to-date, and if it's not,
-# that might lead to errors during the bootstrap because something fails to
-# autoload as expected.  However, if there is no emacs binary, then we can't
-# build autoloads yet, so just make sure there's some loaddefs.el file, as
-# it's necessary for generating the binary (because loaddefs.el is an
-# automatically generated file, we don't want to store it in the source
-# repository).
+# Build loaddefs.el to make sure it's up-to-date.  If it's not, that
+# might lead to errors during the bootstrap because something fails to
+# autoload as expected.  If there is no emacs binary, then we can't
+# build autoloads yet.  In that case we have to use ldefs-boot.el;
+# bootstrap should always work with ldefs-boot.el.  (Because
+# loaddefs.el is an automatically generated file, we don't want to
+# store it in the source repository).
 #
 # Remove compiled Lisp files so that bootstrap-emacs will be built from
 # sources only.
 
 # Need separate version for sh and native cmd.exe
-bootstrap-clean: bootstrap-clean-$(SHELLTYPE) loaddefs.el
+bootstrap-clean: bootstrap-clean-$(SHELLTYPE) $(lisp)/loaddefs.el
 
 bootstrap-clean-CMD:
 #	if exist $(EMACS) $(MAKE) $(MFLAGS) autoloads
-	if not exist $(lisp)\loaddefs.el cp $(lisp)/ldefs-boot.el $(lisp)/loaddefs.el
+	cp $(lisp)/ldefs-boot.el $(lisp)/loaddefs.el
 	-for %%f in (. $(WINS)) do for %%g in (%%f\*.elc) do @$(DEL) %%g
 
 bootstrap-clean-SH:
 #	if test -f $(EMACS); then $(MAKE) $(MFLAGS) autoloads; fi
 #	-rm -f $(lisp)/*.elc $(lisp)/*/*.elc
-	if ! test -r $(lisp)/loaddefs.el; then \
-	  cp $(lisp)/ldefs-boot.el $(lisp)/loaddefs.el; \
-	fi
+	cp $(lisp)/ldefs-boot.el $(lisp)/loaddefs.el
 	-for dir in . $(WINS); do rm -f $$dir/*.elc; done
 
 # Generate/update files for the bootstrap process.
+# When done, remove bootstrap-emacs from ../bin, so that
+# it will not be mistaken for an installed binary.
 
-bootstrap: update-subdirs autoloads compile finder-data custom-deps
+bootstrap: update-subdirs autoloads mh-autoloads compile finder-data custom-deps
+	- $(DEL) $(EMACS)
 
 #
 # Assuming INSTALL_DIR is defined, copy the elisp files to it

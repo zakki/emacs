@@ -1,6 +1,6 @@
 ;;; mpuz.el --- multiplication puzzle for GNU Emacs
 
-;; Copyright (C) 1990, 2002, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Philippe Schnoebelen <phs@lsv.ens-cachan.fr>
 ;; Overhauled: Daniel Pfeiffer <occitan@esperanto.org>
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -57,25 +57,25 @@ t means never ding, and `error' means only ding on wrong input."
   :type 'boolean
   :group 'mpuz)
 
-(defface mpuz-unsolved-face
+(defface mpuz-unsolved
   '((((class color)) (:foreground "red1" :bold t))
     (t (:bold t)))
   "*Face to use for letters to be solved."
   :group 'mpuz)
 
-(defface mpuz-solved-face
+(defface mpuz-solved
   '((((class color)) (:foreground "green1" :bold t))
     (t (:bold t)))
   "*Face to use for solved digits."
   :group 'mpuz)
 
-(defface mpuz-trivial-face
+(defface mpuz-trivial
   '((((class color)) (:foreground "blue" :bold t))
     (t (:bold t)))
   "*Face to use for trivial digits solved for you."
   :group 'mpuz)
 
-(defface mpuz-text-face
+(defface mpuz-text
   '((t (:inherit variable-pitch)))
   "*Face to use for text on right."
   :group 'mpuz)
@@ -296,7 +296,7 @@ You may abort a game by typing \\<mpuz-mode-map>\\[mpuz-offer-abort]."
 (defun mpuz-create-buffer ()
   "Create (or recreate) the puzzle buffer. Return it."
   (let ((buf (get-buffer-create "*Mult Puzzle*"))
-	(face '(face mpuz-text-face))
+	(face '(face mpuz-text))
 	buffer-read-only)
     (save-excursion
       (set-buffer buf)
@@ -347,9 +347,9 @@ You may abort a game by typing \\<mpuz-mode-map>\\[mpuz-offer-abort]."
 		  (+ digit ?0)
 		(+ (mpuz-to-letter digit) ?A)))
 	(face `(face
-		,(cond ((aref mpuz-trivial-digits digit) 'mpuz-trivial-face)
-		       ((aref mpuz-found-digits digit) 'mpuz-solved-face)
-		       ('mpuz-unsolved-face))))
+		,(cond ((aref mpuz-trivial-digits digit) 'mpuz-trivial)
+		       ((aref mpuz-found-digits digit) 'mpuz-solved)
+		       ('mpuz-unsolved))))
 	buffer-read-only)
     (mapc (lambda (square)
 	    (goto-line (car square))	; line before column!
@@ -400,7 +400,7 @@ You may abort a game by typing \\<mpuz-mode-map>\\[mpuz-offer-abort]."
 (defun mpuz-offer-abort ()
   "Ask if user wants to abort current puzzle."
   (interactive)
-  (if (y-or-n-p "Abort game ")
+  (if (y-or-n-p "Abort game? ")
       (let ((buf (mpuz-get-buffer)))
 	(message "Mult Puzzle aborted.")
 	(setq mpuz-in-progress nil
@@ -444,7 +444,7 @@ You may abort a game by typing \\<mpuz-mode-map>\\[mpuz-offer-abort]."
 	       (mpuz-ding t))
 	      (t
 	       (mpuz-try-proposal letter-char digit-char))))
-    (if (y-or-n-p "Start a new game ")
+    (if (y-or-n-p "Start a new game? ")
 	(mpuz-start-new-game)
       (message "OK. I won't."))))
 
@@ -489,7 +489,7 @@ You may abort a game by typing \\<mpuz-mode-map>\\[mpuz-offer-abort]."
 			       (t			"not serious.")))))
     (message message)
     (sit-for 4)
-    (if (y-or-n-p (concat message "  Start a new game "))
+    (if (y-or-n-p (concat message "  Start a new game? "))
 	(mpuz-start-new-game)
       (message "Good Bye!"))))
 

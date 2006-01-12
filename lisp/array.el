@@ -1,6 +1,7 @@
 ;;; array.el --- array editing commands for GNU Emacs
 
-;; Copyright (C) 1987, 2000 Free Software Foundation, Inc.
+;; Copyright (C) 1987, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author David M. Brown
 ;; Maintainer: FSF
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -638,7 +639,7 @@ If optional ARG is given, copy through ARG rows up."
   "Reconfigure the state of `array-rows-numbered' and `array-columns-per-line'.
 NEW-COLUMNS-PER-LINE is the desired value of `array-columns-per-line' and
 NEW-ROWS-NUMBERED (a character, either ?y or ?n) is the desired value
-of array-rows-numbered."
+of `array-rows-numbered'."
   (interactive "nColumns per line: \ncRows numbered? (y or n) ")
   ;; Check on new-columns-per-line
   (let ((check t))
@@ -717,7 +718,7 @@ of array-rows-numbered."
     (let ((inhibit-quit t))
       (set-buffer main-buffer)
       (erase-buffer)
-      (insert-buffer temp-buffer)
+      (insert-buffer-substring temp-buffer)
       ;; Update local variables.
       (setq array-columns-per-line new-columns-per-line)
       (setq array-rows-numbered new-rows-numbered)
@@ -767,7 +768,7 @@ Return COLUMN."
 	  (move-to-column column)))))
 
 (defun untabify-backward ()
-  "Untabify the preceding tab."
+  "Untabify the preceding TAB."
   (save-excursion
     (let ((start (point)))
       (backward-char 1)
@@ -817,7 +818,7 @@ NOT recognized as integers or real numbers.
   The array MUST reside at the top of the buffer.
 
   TABs are not respected, and may be converted into spaces at any time.
-Setting the variable 'array-respect-tabs to non-nil will prevent TAB conversion,
+Setting the variable `array-respect-tabs' to non-nil will prevent TAB conversion,
 but will cause many functions to give errors if they encounter one.
 
   Upon entering array mode, you will be prompted for the values of

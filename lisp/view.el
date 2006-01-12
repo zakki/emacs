@@ -1,7 +1,7 @@
 ;;; view.el --- peruse file or buffer without editing
 
-;; Copyright (C) 1985, 1989, 1994, 1995, 1997, 2000, 2001
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1989, 1994, 1995, 1997, 2000, 2001, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: K. Shane Hartman
 ;; Maintainer: Inge Frick <inge@nada.kth.se>
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -92,6 +92,12 @@ If `view-exits-all-viewing-windows' is nil, only the selected window is
 considered for restoring."
   :type 'boolean
   :group 'view)
+
+(defcustom view-inhibit-help-message nil
+  "*Non-nil inhibits the help message showed upon entering View mode."
+  :type 'boolean
+  :group 'view
+  :version "22.1")
 
 ;;;###autoload
 (defvar view-mode nil
@@ -433,12 +439,14 @@ p	searches backward for last regular expression.
 \\[View-kill-and-leave]	quit View mode, kill current buffer and go back to other buffer.
 
 The effect of \\[View-leave] , \\[View-quit] and \\[View-kill-and-leave] depends on how view-mode was entered.  If it was
-entered by view-file, view-file-other-window or view-file-other-frame
-\(\\[view-file], \\[view-file-other-window], \\[view-file-other-frame] or the dired mode v command), then \\[View-quit] will
-try to kill the current buffer.  If view-mode was entered from another buffer
-as is done by View-buffer, View-buffer-other-window, View-buffer-other frame,
-View-file, View-file-other-window or View-file-other-frame then \\[View-leave] , \\[View-quit] and \\[View-kill-and-leave]
-will return to that buffer.
+entered by view-file, view-file-other-window, view-file-other-frame, or
+\\[dired-view-file] \(\\[view-file], \\[view-file-other-window],
+\\[view-file-other-frame], or the Dired mode v command),
+then \\[View-quit] will try to kill the current buffer.
+If view-mode was entered from another buffer, by \\[view-buffer],
+\\[view-buffer-other-window], \\[view-buffer-other frame], \\[view-file],
+\\[view-file-other-window], or \\[view-file-other-frame],
+then \\[View-leave] , \\[View-quit] and \\[View-kill-and-leave] will return to that buffer.
 
 Entry to view-mode runs the normal hook `view-mode-hook'."
   (interactive "P")
@@ -516,9 +524,10 @@ This function runs the normal hook `view-mode-hook'."
   (unless view-mode			; Do nothing if already in view mode.
     (view-mode-enable)
     (force-mode-line-update)
-    (message "%s"
-	     (substitute-command-keys "\
-View mode: type \\[help-command] for help, \\[describe-mode] for commands, \\[View-quit] to quit."))))
+    (unless view-inhibit-help-message
+      (message "%s"
+	       (substitute-command-keys "\
+View mode: type \\[help-command] for help, \\[describe-mode] for commands, \\[View-quit] to quit.")))))
 
 (defun view-mode-exit (&optional return-to-alist exit-action all-win)
   "Exit View mode in various ways, depending on optional arguments.
@@ -874,7 +883,7 @@ If LINES is more than a window-full, only the last window-full is shown."
   (interactive "P")
   (let ((view-scroll-auto-exit nil)
 	(view-try-extend-at-buffer-end t))
-    (view-scroll-lines lines nil view-page-size nil)))
+    (view-scroll-lines lines nil (view-page-size-default view-page-size) nil)))
 
 (defun View-search-regexp-forward (n regexp)
   "Search forward for first (or prefix Nth) occurrence of REGEXP in View mode.

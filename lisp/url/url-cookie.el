@@ -1,6 +1,7 @@
 ;;; url-cookie.el --- Netscape Cookie support
 
-;; Copyright (c) 1996 - 1999,2004  Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2004,
+;;   2005, 2006 Free Software Foundation, Inc.
 
 ;; Keywords: comm, data, processes, hypermedia
 
@@ -18,8 +19,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -34,46 +35,60 @@
 ;; 'open standard' defining this crap.
 ;;
 ;; A cookie is stored internally as a vector of 7 slots
-;; [ 'cookie name value expires path domain secure ]
+;; [ cookie NAME VALUE EXPIRES LOCALPART DOMAIN SECURE ]
 
 (defsubst url-cookie-name    (cookie) (aref cookie 1))
 (defsubst url-cookie-value   (cookie) (aref cookie 2))
 (defsubst url-cookie-expires (cookie) (aref cookie 3))
-(defsubst url-cookie-path    (cookie) (aref cookie 4))
+(defsubst url-cookie-localpart    (cookie) (aref cookie 4))
 (defsubst url-cookie-domain  (cookie) (aref cookie 5))
 (defsubst url-cookie-secure  (cookie) (aref cookie 6))
 
 (defsubst url-cookie-set-name    (cookie val) (aset cookie 1 val))
 (defsubst url-cookie-set-value   (cookie val) (aset cookie 2 val))
 (defsubst url-cookie-set-expires (cookie val) (aset cookie 3 val))
-(defsubst url-cookie-set-path    (cookie val) (aset cookie 4 val))
+(defsubst url-cookie-set-localpart (cookie val) (aset cookie 4 val))
 (defsubst url-cookie-set-domain  (cookie val) (aset cookie 5 val))
 (defsubst url-cookie-set-secure  (cookie val) (aset cookie 6 val))
 (defsubst url-cookie-retrieve-arg (key args) (nth 1 (memq key args)))
 
 (defsubst url-cookie-create (&rest args)
+  "Create a cookie vector object from keyword-value pairs ARGS.
+The keywords allowed are
+  :name NAME
+  :value VALUE
+  :expires TIME
+  :localpart LOCALPAR
+  :domain DOMAIN
+  :secure ???
+Could someone fill in more information?"
   (let ((retval (make-vector 7 nil)))
     (aset retval 0 'cookie)
     (url-cookie-set-name retval (url-cookie-retrieve-arg :name args))
     (url-cookie-set-value retval (url-cookie-retrieve-arg :value args))
     (url-cookie-set-expires retval (url-cookie-retrieve-arg :expires args))
-    (url-cookie-set-path retval (url-cookie-retrieve-arg :path args))
+    (url-cookie-set-localpart retval (url-cookie-retrieve-arg :localpart args))
     (url-cookie-set-domain retval (url-cookie-retrieve-arg :domain args))
     (url-cookie-set-secure retval (url-cookie-retrieve-arg :secure args))
     retval))
 
 (defun url-cookie-p (obj)
+  "Return non-nil if OBJ is a cookie vector object.
+These objects represent cookies in the URL package.
+A cookie vector object is a vector of 7 slots:
+ [cookie NAME VALUE EXPIRES LOCALPART DOMAIN SECURE]."
   (and (vectorp obj) (= (length obj) 7) (eq (aref obj 0) 'cookie)))
 
 (defgroup url-cookie nil
-  "URL cookies"
+  "URL cookies."
   :prefix "url-"
   :prefix "url-cookie-"
   :group 'url)
 
 (defvar url-cookie-storage nil         "Where cookies are stored.")
 (defvar url-cookie-secure-storage nil  "Where secure cookies are stored.")
-(defcustom url-cookie-file nil            "*Where cookies are stored on disk."
+(defcustom url-cookie-file nil
+  "*File where cookies are stored on disk."
   :type '(choice (const :tag "Default" :value nil) file)
   :group 'url-file
   :group 'url-cookie)
@@ -86,7 +101,7 @@
 (defcustom url-cookie-multiple-line nil
   "*If nil, HTTP requests put all cookies for the server on one line.
 Some web servers, such as http://www.hotmail.com/, only accept cookies
-when they are on one line.  This is broken behaviour, but just try
+when they are on one line.  This is broken behavior, but just try
 telling Microsoft that."
   :type 'boolean
   :group 'url-cookie)
@@ -94,12 +109,14 @@ telling Microsoft that."
 (defvar url-cookies-changed-since-last-save nil
   "Whether the cookies list has changed since the last save operation.")
 
-;;;###autoload
 (defun url-cookie-parse-file (&optional fname)
   (setq fname (or fname url-cookie-file))
   (condition-case ()
       (load fname nil t)
-    (error (message "Could not load cookie file %s" fname))))
+    (error
+     ;; It's completely normal for the cookies file not to exist yet.
+     ;; (message "Could not load cookie file %s" fname)
+     )))
 
 (defun url-cookie-clean-up (&optional secure)
   (let* (
@@ -130,9 +147,10 @@ telling Microsoft that."
 	(setq new (cons cur new))))
     (set var new)))
 
-;;;###autoload
 (defun url-cookie-write-file (&optional fname)
   (setq fname (or fname url-cookie-file))
+  (unless (file-directory-p (file-name-directory fname))
+    (ignore-errors (make-directory (file-name-directory fname))))
   (cond
    ((not url-cookies-changed-since-last-save) nil)
    ((not (file-writable-p fname))
@@ -140,8 +158,7 @@ telling Microsoft that."
    (t
     (url-cookie-clean-up)
     (url-cookie-clean-up t)
-    (save-excursion
-      (set-buffer (get-buffer-create " *cookies*"))
+    (with-current-buffer (get-buffer-create " *cookies*")
       (erase-buffer)
       (fundamental-mode)
       (insert ";; Emacs-W3 HTTP cookies file\n"
@@ -154,7 +171,7 @@ telling Microsoft that."
       (write-file fname)
       (kill-buffer (current-buffer))))))
 
-(defun url-cookie-store (name value &optional expires domain path secure)
+(defun url-cookie-store (name value &optional expires domain localpart secure)
   "Store a netscape-style cookie."
   (let* ((storage (if secure url-cookie-secure-storage url-cookie-storage))
 	 (tmp storage)
@@ -173,7 +190,7 @@ telling Microsoft that."
 	  (while storage
 	    (setq cur (car storage)
 		  storage (cdr storage))
-	    (if (and (equal path (url-cookie-path cur))
+	    (if (and (equal localpart (url-cookie-localpart cur))
 		     (equal name (url-cookie-name cur)))
 		(progn
 		  (url-cookie-set-expires cur expires)
@@ -186,7 +203,7 @@ telling Microsoft that."
 						       :value value
 						       :expires expires
 						       :domain domain
-						       :path path
+						       :localpart localpart
 						       :secure secure)
 				    (cdr found-domain)))))
       ;; Need to add a new top-level domain
@@ -194,7 +211,7 @@ telling Microsoft that."
 				   :value value
 				   :expires expires
 				   :domain domain
-				   :path path
+				   :localpart localpart
 				   :secure secure))
       (cond
        (storage
@@ -234,9 +251,8 @@ telling Microsoft that."
 			  (*   1 (string-to-number (aref exp-time 0))))))
 	(> (- cur-norm exp-norm) 1))))))
 
-;;;###autoload
-(defun url-cookie-retrieve (host path &optional secure)
-  "Retrieve all the netscape-style cookies for a specified HOST and PATH."
+(defun url-cookie-retrieve (host localpart &optional secure)
+  "Retrieve all the netscape-style cookies for a specified HOST and LOCALPART."
   (let ((storage (if secure
 		     (append url-cookie-secure-storage url-cookie-storage)
 		   url-cookie-storage))
@@ -244,7 +260,7 @@ telling Microsoft that."
 	(cookies nil)
 	(cur nil)
 	(retval nil)
-	(path-regexp nil))
+	(localpart-regexp nil))
     (while storage
       (setq cur (car storage)
 	    storage (cdr storage)
@@ -255,26 +271,25 @@ telling Microsoft that."
 	  (while cookies
 	    (setq cur (car cookies)
 		  cookies (cdr cookies)
-		  path-regexp (concat "^" (regexp-quote
-					   (url-cookie-path cur))))
-	    (if (and (string-match path-regexp path)
+		  localpart-regexp (concat "^" (regexp-quote
+						(url-cookie-localpart cur))))
+	    (if (and (string-match localpart-regexp localpart)
 		     (not (url-cookie-expired-p cur)))
 		(setq retval (cons cur retval))))))
     retval))
 
-;;;###autolaod
-(defun url-cookie-generate-header-lines (host path secure)
-  (let* ((cookies (url-cookie-retrieve host path secure))
-	(retval nil)
-	(cur nil)
-	(chunk nil))
+(defun url-cookie-generate-header-lines (host localpart secure)
+  (let* ((cookies (url-cookie-retrieve host localpart secure))
+	 (retval nil)
+	 (cur nil)
+	 (chunk nil))
     ;; Have to sort this for sending most specific cookies first
     (setq cookies (and cookies
 		       (sort cookies
 			     (function
 			      (lambda (x y)
-				(> (length (url-cookie-path x))
-				   (length (url-cookie-path y))))))))
+				(> (length (url-cookie-localpart x))
+				   (length (url-cookie-localpart y))))))))
     (while cookies
       (setq cur (car cookies)
 	    cookies (cdr cookies)
@@ -328,7 +343,6 @@ telling Microsoft that."
      (t
       nil))))
 
-;;;###autoload
 (defun url-cookie-handle-set-cookie (str)
   (setq url-cookies-changed-since-last-save t)
   (let* ((args (url-parse-args str t))
@@ -340,9 +354,9 @@ telling Microsoft that."
 	 (trusted url-cookie-trusted-urls)
 	 (untrusted url-cookie-untrusted-urls)
 	 (expires (cdr-safe (assoc-string "expires" args t)))
-	 (path (or (cdr-safe (assoc-string "path" args t))
-		   (file-name-directory
-		    (url-filename url-current-object))))
+	 (localpart (or (cdr-safe (assoc-string "path" args t))
+			(file-name-directory
+			 (url-filename url-current-object))))
 	 (rest nil))
     (while args
       (if (not (member (downcase (car (car args)))
@@ -422,7 +436,7 @@ telling Microsoft that."
 	(while rest
 	  (setq cur (pop rest))
 	  (url-cookie-store (car cur) (cdr cur)
-			    expires domain path secure))))
+			    expires domain localpart secure))))
      (t
       (message "%s tried to set a cookie for domain %s - rejected."
 	       (url-host url-current-object) domain)))))
@@ -434,33 +448,22 @@ telling Microsoft that."
 Default is 1 hour.  Note that if you change this variable outside of
 the `customize' interface after `url-do-setup' has been run, you need
 to run the `url-cookie-setup-save-timer' function manually."
-  :set (function (lambda (var val)
-		   (set-default var val)
-		   (and (featurep 'url)
-			(fboundp 'url-cookie-setup-save-timer)
-			(url-cookie-setup-save-timer))))
+  :set #'(lambda (var val)
+	   (set-default var val)
+	   (if (bound-and-true-p url-setup-done)
+	       (url-cookie-setup-save-timer)))
   :type 'integer
   :group 'url)
 
-;;;###autoload
 (defun url-cookie-setup-save-timer ()
   "Reset the cookie saver timer."
   (interactive)
-  (ignore-errors
-    (cond ((fboundp 'cancel-timer) (cancel-timer url-cookie-timer))
-	  ((fboundp 'delete-itimer) (delete-itimer url-cookie-timer))))
+  (ignore-errors (cancel-timer url-cookie-timer))
   (setq url-cookie-timer nil)
   (if url-cookie-save-interval
-      (setq url-cookie-timer
-	    (cond
-	     ((fboundp 'run-at-time)
-	      (run-at-time url-cookie-save-interval
-			   url-cookie-save-interval
-			   'url-cookie-write-file))
-	     ((fboundp 'start-itimer)
-	      (start-itimer "url-cookie-saver" 'url-cookie-write-file
-			    url-cookie-save-interval
-			    url-cookie-save-interval))))))
+      (setq url-cookie-timer (run-at-time url-cookie-save-interval
+					  url-cookie-save-interval
+					  #'url-cookie-write-file))))
 
 (provide 'url-cookie)
 

@@ -1,6 +1,7 @@
 ;;; nnmail.el --- mail support functions for the Gnus mail backends
-;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: news, mail
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -49,7 +50,7 @@
   :group 'nnmail)
 
 (defgroup nnmail-prepare nil
-  "Preparing (or mangling) new mail after retrival."
+  "Preparing (or mangling) new mail after retrieval."
   :group 'nnmail)
 
 (defgroup nnmail-duplicate nil
@@ -1141,7 +1142,7 @@ FUNC will be called with the group name to determine the article number."
 		       5 "Error in `nnmail-split-methods'; using `bogus' mail group")
 		      (sit-for 1)
 		      '("bogus")))))
-	      (setq split (gnus-remove-duplicates split))
+	      (setq split (mm-delete-duplicates split))
 	      ;; The article may be "cross-posted" to `junk'.  What
 	      ;; to do?  Just remove the `junk' spec.  Don't really
 	      ;; see anything else to do...
@@ -1871,9 +1872,15 @@ See the Info node `(gnus)Fancy Mail Splitting' for more details."
 	 (case-fold-search nil)
 	 (from (or (message-fetch-field "from") ""))
 	 (to (or (message-fetch-field "to") ""))
-	 (date (date-to-time
-		(or (message-fetch-field "date") (current-time-string))))
+	 (date (message-fetch-field "date"))
 	 (target 'delete))
+    (setq date (if date
+		   (condition-case err
+		       (date-to-time date)
+		     (error
+		      (message "%s" (error-message-string err))
+		      (current-time)))
+		 (current-time)))
     (dolist (regexp-target-pair (reverse nnmail-fancy-expiry-targets) target)
       (setq header (car regexp-target-pair))
       (cond

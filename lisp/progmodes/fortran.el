@@ -1,10 +1,10 @@
 ;;; fortran.el --- Fortran mode for GNU Emacs
 
 ;; Copyright (C) 1986, 1993, 1994, 1995, 1997, 1998, 1999, 2000, 2001,
-;;               2003, 2004, 2005  Free Software Foundation, Inc.
+;;               2002, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 ;; Author: Michael D. Prange <prange@erl.mit.edu>
-;; Maintainer: Glenn Morris <gmorris@ast.cam.ac.uk>
+;; Maintainer: Glenn Morris <rgm@gnu.org>
 ;; Keywords: fortran, languages
 
 ;; This file is part of GNU Emacs.
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -55,13 +55,16 @@
 
 (eval-when-compile			; silence compiler
   (defvar dabbrev-case-fold-search)
+  (defvar font-lock-syntactic-keywords)
+  (defvar gud-find-expr-function)
   (defvar imenu-case-fold-search)
   (defvar imenu-syntax-alist))
 
 
 (defgroup fortran nil
   "Major mode for editing fixed format Fortran code."
-  :link  '(custom-manual "(emacs)Fortran")
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
+  :link '(custom-manual "(emacs)Fortran")
   :group 'languages)
 
 (defgroup fortran-indent nil
@@ -1249,7 +1252,7 @@ Use function FIND-BEGIN to match it."
       (if message
           (message "%s" message)
         (goto-char matching)
-        (sit-for 1)
+        (sit-for blink-matching-delay)
         (goto-char end-point)))))
 
 (defun fortran-blink-matching-if ()
@@ -1646,7 +1649,7 @@ notes: 1) A non-zero/non-blank character in column 5 indicates a continuation
 	    (let* ((char (if (stringp fortran-comment-indent-char)
 			     (aref fortran-comment-indent-char 0)
 			   fortran-comment-indent-char))
-		   (chars (string ?  ?\t char)))
+		   (chars (string ?\s ?\t char)))
 	      (goto-char (match-end 0))
 	      (skip-chars-backward chars)
 	      (delete-region (point) (progn (skip-chars-forward chars)
@@ -1656,7 +1659,7 @@ notes: 1) A non-zero/non-blank character in column 5 indicates a continuation
 	  (if indent-tabs-mode
 	      (goto-char (match-end 0))
 	    (delete-char 2)
-	    (insert-char ?  5)
+	    (insert-char ?\s 5)
 	    (insert fortran-continuation-string))
 	(if (looking-at " \\{5\\}[^ 0\n]")
 	    (if indent-tabs-mode

@@ -1,7 +1,7 @@
 ;;; compile.el --- run compiler as inferior of Emacs, parse error messages
 
 ;; Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-;;   2001, 2003, 2004, 2005  Free Software Foundation, Inc.
+;;   2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 ;; Authors: Roland McGrath <roland@gnu.org>,
 ;;	    Daniel Pfeiffer <occitan@esperanto.org>
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -70,6 +70,12 @@
 
 (eval-when-compile (require 'cl))
 
+(defvar font-lock-extra-managed-props)
+(defvar font-lock-keywords)
+(defvar font-lock-maximum-size)
+(defvar font-lock-support-mode)
+
+
 (defgroup compilation nil
   "Run compiler as inferior of Emacs, parse error messages."
   :group 'tools
@@ -78,7 +84,7 @@
 
 ;;;###autoload
 (defcustom compilation-mode-hook nil
-  "*List of hook functions run by `compilation-mode' (see `run-hooks')."
+  "*List of hook functions run by `compilation-mode' (see `run-mode-hooks')."
   :type 'hook
   :group 'compilation)
 
@@ -246,8 +252,8 @@ of[ \t]+\"?\\([a-zA-Z]?:?[^\":\n]+\\)\"?:" 3 2 nil (1))
      " in \\([^()\n ]+\\)(\\([0-9]+\\))$" 1 2)
 
     (msft
-     "^\\(\\(?:[a-zA-Z]:\\)?[^:(\t\n]+\\)(\\([0-9]+\\)) \
-: \\(?:error\\|warnin\\(g\\)\\) C[0-9]+:" 1 2 nil (3))
+     "^\\([0-9]+>\\)?\\(\\(?:[a-zA-Z]:\\)?[^:(\t\n]+\\)(\\([0-9]+\\)) \
+: \\(?:error\\|warnin\\(g\\)\\) C[0-9]+:" 2 3 nil (4))
 
     (oracle
      "^\\(?:Semantic error\\|Error\\|PCC-[0-9]+:\\).* line \\([0-9]+\\)\
@@ -287,11 +293,11 @@ File = \\(.+\\), Line = \\([0-9]+\\)\\(?:, Column = \\([0-9]+\\)\\)?"
 \\(?:: \\(warning:\\)?\\|$\\| ),\\)" 1 2 nil (3))
 
     (gcov-file
-     "^ +-:    \\(0\\):Source:\\(.+\\)$" 2 1 nil 0)    
+     "^ +-:    \\(0\\):Source:\\(.+\\)$" 2 1 nil 0)
     (gcov-bb-file
-     "^ +-:    \\(0\\):Object:\\(?:.+\\)$" nil 1 nil 0)    
+     "^ +-:    \\(0\\):Object:\\(?:.+\\)$" nil 1 nil 0)
     (gcov-never-called-line
-     "^ +\\(#####\\): +\\([0-9]+\\):.+$" nil 2 nil 2 nil 
+     "^ +\\(#####\\): +\\([0-9]+\\):.+$" nil 2 nil 2 nil
      (1 compilation-error-face))
     (gcov-called-line
      "^ +[-0-9]+: +\\([1-9]\\|[0-9]\\{2,\\}\\):.*$" nil 1 nil 0)
@@ -301,7 +307,7 @@ File = \\(.+\\), Line = \\([0-9]+\\)\\(?:, Column = \\([0-9]+\\)\\)?"
 (defcustom compilation-error-regexp-alist
   (mapcar 'car compilation-error-regexp-alist-alist)
   "Alist that specifies how to match errors in compiler output.
-Note that on Unix everything is a valid filename, so these
+On GNU and Unix, any string is a valid filename, so these
 matchers must make some common sense assumptions, which catch
 normal cases.  A shorter list will be lighter on resource usage.
 
@@ -325,7 +331,8 @@ beginning of line's indentation.
 FILE can also have the form (FILE FORMAT...), where the FORMATs
 \(e.g. \"%s.c\") will be applied in turn to the recognized file
 name, until a file of that name is found.  Or FILE can also be a
-function to return the filename.
+function that returns (FILENAME) or (RELATIVE-FILENAME . DIRNAME).
+In the former case, FILENAME may be relative or absolute.
 
 LINE can also be of the form (LINE . END-LINE) meaning a range
 of lines.  COLUMN can also be of the form (COLUMN . END-COLUMN)
@@ -382,8 +389,11 @@ you may also want to change `compilation-page-delimiter'.")
      ("^\\([[:alnum:]_/.+-]+\\)\\(\\[\\([0-9]+\\)\\]\\)?[ \t]*:"
       (1 font-lock-function-name-face) (3 compilation-line-face nil t))
      (" --?o\\(?:utfile\\|utput\\)?[= ]?\\(\\S +\\)" . 1)
-     ("^Compilation finished" . compilation-info-face)
-     ("^Compilation exited abnormally" . compilation-error-face))
+     ("^Compilation \\(finished\\)"
+      (1 compilation-info-face))
+     ("^Compilation \\(exited abnormally\\|interrupt\\|killed\\|terminated\\)\\(?:.*with code \\([0-9]+\\)\\)?"
+      (1 compilation-error-face)
+      (2 compilation-error-face nil t)))
    "Additional things to highlight in Compilation mode.
 This gets tacked on the end of the generated expressions.")
 
@@ -427,6 +437,7 @@ nil as an element means to try the default directory."
 			 (string :tag "Directory")))
   :group 'compilation)
 
+;;;###autoload
 (defcustom compile-command "make -k "
   "*Last shell command used to do a compilation; default for next compilation.
 
@@ -442,6 +453,15 @@ You might also use mode hooks to specify it in certain modes, like this:
 			(file-name-sans-extension buffer-file-name))))))"
   :type 'string
   :group 'compilation)
+
+;;;###autoload
+(defcustom compilation-disable-input nil
+  "*If non-nil, send end-of-file as compilation process input.
+This only affects platforms that support asynchronous processes (see
+`start-process'); synchronous compilation processes never accept input."
+  :type 'boolean
+  :group 'compilation
+  :version "22.1")
 
 ;; A weak per-compilation-buffer hash indexed by (FILENAME . DIRECTORY).  Each
 ;; value is a FILE-STRUCTURE as described above, with the car eq to the hash
@@ -468,15 +488,21 @@ starting the compilation process.")
 ;; History of compile commands.
 (defvar compile-history nil)
 
-(defface compilation-warning-face
+(defface compilation-error
+  '((t :inherit font-lock-warning-face))
+  "Face used to highlight compiler errors."
+  :group 'compilation
+  :version "22.1")
+
+(defface compilation-warning
   '((((class color) (min-colors 16)) (:foreground "Orange" :weight bold))
     (((class color)) (:foreground "cyan" :weight bold))
     (t (:weight bold)))
   "Face used to highlight compiler warnings."
-  :group 'font-lock-highlighting-faces
+  :group 'compilation
   :version "22.1")
 
-(defface compilation-info-face
+(defface compilation-info
   '((((class color) (min-colors 16) (background light))
      (:foreground "Green3" :weight bold))
     (((class color) (min-colors 88) (background dark))
@@ -485,37 +511,49 @@ starting the compilation process.")
      (:foreground "Green" :weight bold))
     (((class color)) (:foreground "green" :weight bold))
     (t (:weight bold)))
-  "Face used to highlight compiler warnings."
-  :group 'font-lock-highlighting-faces
+  "Face used to highlight compiler information."
+  :group 'compilation
   :version "22.1")
 
-(defvar compilation-message-face nil
+(defface compilation-line-number
+  '((t :inherit font-lock-variable-name-face))
+  "Face for displaying line numbers in compiler messages."
+  :group 'compilation
+  :version "22.1")
+
+(defface compilation-column-number
+  '((t :inherit font-lock-type-face))
+  "Face for displaying column numbers in compiler messages."
+  :group 'compilation
+  :version "22.1")
+
+(defvar compilation-message-face 'underline
   "Face name to use for whole messages.
 Faces `compilation-error-face', `compilation-warning-face',
 `compilation-info-face', `compilation-line-face' and
 `compilation-column-face' get prepended to this, when applicable.")
 
-(defvar compilation-error-face 'font-lock-warning-face
+(defvar compilation-error-face 'compilation-error
   "Face name to use for file name in error messages.")
 
-(defvar compilation-warning-face 'compilation-warning-face
+(defvar compilation-warning-face 'compilation-warning
   "Face name to use for file name in warning messages.")
 
-(defvar compilation-info-face 'compilation-info-face
+(defvar compilation-info-face 'compilation-info
   "Face name to use for file name in informational messages.")
 
-(defvar compilation-line-face 'font-lock-variable-name-face
-  "Face name to use for line number in message.")
+(defvar compilation-line-face 'compilation-line-number
+  "Face name to use for line numbers in compiler messages.")
 
-(defvar compilation-column-face 'font-lock-type-face
-  "Face name to use for column number in message.")
+(defvar compilation-column-face 'compilation-column-number
+  "Face name to use for column numbers in compiler messages.")
 
 ;; same faces as dired uses
 (defvar compilation-enter-directory-face 'font-lock-function-name-face
-  "Face name to use for column number in message.")
+  "Face name to use for entering directory messages.")
 
 (defvar compilation-leave-directory-face 'font-lock-type-face
-  "Face name to use for column number in message.")
+  "Face name to use for leaving directory messages.")
 
 
 
@@ -577,6 +615,7 @@ Faces `compilation-error-face', `compilation-warning-face',
 ;; This function is the central driver, called when font-locking to gather
 ;; all information needed to later jump to corresponding source code.
 ;; Return a property list with all meta information on this error location.
+
 (defun compilation-error-properties (file line end-line col end-col type fmt)
   (unless (< (next-single-property-change (match-beginning 0) 'directory nil (point))
 	     (point))
@@ -591,11 +630,22 @@ Faces `compilation-error-face', `compilation-warning-face',
 				    (get-text-property dir 'directory)))))
 	    (setq file (cons file (car dir)))))
       ;; This message didn't mention one, get it from previous
-      (setq file (previous-single-property-change (point) 'message)
-	    file (or (if file
-			 (car (nth 2 (car (or (get-text-property (1- file) 'message)
-					 (get-text-property file 'message))))))
-		     '("*unknown*"))))
+      (let ((prev-pos
+	     ;; Find the previous message.
+	     (previous-single-property-change (point) 'message)))
+	(if prev-pos
+	    ;; Get the file structure that belongs to it.
+	    (let* ((prev
+		    (or (get-text-property (1- prev-pos) 'message)
+			(get-text-property prev-pos 'message)))
+		   (prev-struct
+		    (car (nth 2 (car prev)))))
+	      ;; Construct FILE . DIR from that.
+	      (if prev-struct
+		  (setq file (cons (car prev-struct)
+				   (cadr prev-struct))))))
+	(unless file
+	  (setq file '("*unknown*")))))
     ;; All of these fields are optional, get them only if we have an index, and
     ;; it matched some part of the message.
     (and line
@@ -629,24 +679,26 @@ just char-counts."
       (move-to-column col)
     (goto-char (min (+ (line-beginning-position) col) (line-end-position)))))
 
-(defun compilation-internal-error-properties (file line end-line col end-col type fmt)
+(defun compilation-internal-error-properties (file line end-line col end-col type fmts)
   "Get the meta-info that will be added as text-properties.
 LINE, END-LINE, COL, END-COL are integers or nil.
-TYPE can be 0, 1, or 2.
-FILE should be (ABSOLUTE-FILENAME) or (RELATIVE-FILENAME . DIRNAME) or nil."
+TYPE can be 0, 1, or 2, meaning error, warning, or just info.
+FILE should be (FILENAME) or (RELATIVE-FILENAME . DIRNAME) or nil.
+FMTS is a list of format specs for transforming the file name.
+ (See `compilation-error-regexp-alist'.)"
   (unless file (setq file '("*unknown*")))
-  (setq file (compilation-get-file-structure file fmt))
-  ;; Get first already existing marker (if any has one, all have one).
-  ;; Do this first, as the compilation-assq`s may create new nodes.
-  (let* ((marker-line (car (cddr file)))	; a line structure
+  (let* ((file-struct (compilation-get-file-structure file fmts))
+	 ;; Get first already existing marker (if any has one, all have one).
+	 ;; Do this first, as the compilation-assq`s may create new nodes.
+	 (marker-line (car (cddr file-struct)))	; a line structure
 	 (marker (nth 3 (cadr marker-line)))	; its marker
 	 (compilation-error-screen-columns compilation-error-screen-columns)
 	 end-marker loc end-loc)
     (if (not (and marker (marker-buffer marker)))
-	(setq marker)			; no valid marker for this file
+	(setq marker nil)		; no valid marker for this file
       (setq loc (or line 1))		; normalize no linenumber to line 1
       (catch 'marker			; find nearest loc, at least one exists
-	(dolist (x (nthcdr 3 file))	; loop over remaining lines
+	(dolist (x (nthcdr 3 file-struct))	; loop over remaining lines
 	  (if (> (car x) loc)		; still bigger
 	      (setq marker-line x)
 	    (if (> (- (or (car marker-line) 1) loc)
@@ -656,36 +708,38 @@ FILE should be (ABSOLUTE-FILENAME) or (RELATIVE-FILENAME . DIRNAME) or nil."
       (setq marker (nth 3 (cadr marker-line))
 	    marker-line (or (car marker-line) 1))
       (with-current-buffer (marker-buffer marker)
-	(save-restriction
-	  (widen)
-	  (goto-char (marker-position marker))
-	  (when (or end-col end-line)
-	    (beginning-of-line (- (or end-line line) marker-line -1))
-	    (if (or (null end-col) (< end-col 0))
-		(end-of-line)
-	      (compilation-move-to-column
-	       end-col compilation-error-screen-columns))
-	    (setq end-marker (list (point-marker))))
-	  (beginning-of-line (if end-line
-				 (- line end-line -1)
-			       (- loc marker-line -1)))
-	  (if col
-	      (compilation-move-to-column
-	       col compilation-error-screen-columns)
-	    (forward-to-indentation 0))
-	  (setq marker (list (point-marker))))))
+	(save-excursion
+	  (save-restriction
+	    (widen)
+	    (goto-char (marker-position marker))
+	    (when (or end-col end-line)
+	      (beginning-of-line (- (or end-line line) marker-line -1))
+	      (if (or (null end-col) (< end-col 0))
+		  (end-of-line)
+		(compilation-move-to-column
+		 end-col compilation-error-screen-columns))
+	      (setq end-marker (list (point-marker))))
+	    (beginning-of-line (if end-line
+				   (- line end-line -1)
+				 (- loc marker-line -1)))
+	    (if col
+		(compilation-move-to-column
+		 col compilation-error-screen-columns)
+	      (forward-to-indentation 0))
+	    (setq marker (list (point-marker)))))))
 
-    (setq loc (compilation-assq line (cdr file)))
+    (setq loc (compilation-assq line (cdr file-struct)))
     (if end-line
-	(setq end-loc (compilation-assq end-line (cdr file))
+	(setq end-loc (compilation-assq end-line (cdr file-struct))
 	      end-loc (compilation-assq end-col end-loc))
       (if end-col			; use same line element
 	  (setq end-loc (compilation-assq end-col loc))))
     (setq loc (compilation-assq col loc))
     ;; If they are new, make the loc(s) reference the file they point to.
-    (or (cdr loc) (setcdr loc `(,line ,file ,@marker)))
+    (or (cdr loc) (setcdr loc `(,line ,file-struct ,@marker)))
     (if end-loc
-	(or (cdr end-loc) (setcdr end-loc `(,(or end-line line) ,file ,@end-marker))))
+	(or (cdr end-loc)
+	    (setcdr end-loc `(,(or end-line line) ,file-struct ,@end-marker))))
 
     ;; Must start with face
     `(face ,compilation-message-face
@@ -847,19 +901,20 @@ visible rather than the beginning."
   :group 'compilation)
 
 
-(defun compilation-buffer-name (mode-name name-function)
+(defun compilation-buffer-name (mode-name mode-command name-function)
   "Return the name of a compilation buffer to use.
 If NAME-FUNCTION is non-nil, call it with one argument MODE-NAME
 to determine the buffer name.
 Likewise if `compilation-buffer-name-function' is non-nil.
-If current buffer is in Compilation mode for the same mode name
+If current buffer is the mode MODE-COMMAND,
 return the name of the current buffer, so that it gets reused.
 Otherwise, construct a buffer name from MODE-NAME."
   (cond (name-function
 	 (funcall name-function mode-name))
 	(compilation-buffer-name-function
 	 (funcall compilation-buffer-name-function mode-name))
-	((eq major-mode (nth 1 compilation-arguments))
+	((and (eq mode-command major-mode)
+	      (eq major-mode (nth 1 compilation-arguments)))
 	 (buffer-name))
 	(t
 	 (concat "*" (downcase mode-name) "*"))))
@@ -882,6 +937,7 @@ Otherwise, construct a buffer name from MODE-NAME."
     (compilation-start command nil name-function highlight-regexp)))
 (make-obsolete 'compile-internal 'compilation-start)
 
+;;;###autoload
 (defun compilation-start (command &optional mode name-function highlight-regexp)
   "Run compilation command COMMAND (low level interface).
 If COMMAND starts with a cd command, that becomes the `default-directory'.
@@ -889,7 +945,8 @@ The rest of the arguments are optional; for them, nil means use the default.
 
 MODE is the major mode to set in the compilation buffer.  Mode
 may also be t meaning use `compilation-shell-minor-mode' under `comint-mode'.
-NAME-FUNCTION is a function called to name the buffer.
+If NAME-FUNCTION is non-nil, call it with one argument (the mode name)
+to determine the buffer name.
 
 If HIGHLIGHT-REGEXP is non-nil, `next-error' will temporarily highlight
 the matching section of the visited source line; the default is to use the
@@ -906,7 +963,7 @@ Returns the compilation buffer created."
     (with-current-buffer
 	(setq outbuf
 	      (get-buffer-create
-	       (compilation-buffer-name name-of-mode name-function)))
+	       (compilation-buffer-name name-of-mode mode name-function)))
       (let ((comp-proc (get-buffer-process (current-buffer))))
 	(if comp-proc
 	    (if (or (not (eq (process-status comp-proc) 'run))
@@ -935,6 +992,7 @@ Returns the compilation buffer created."
 		    (substitute-env-vars (match-string 1 command))
 		  "~")
 	      default-directory))
+	(erase-buffer)
 	;; Select the desired mode.
 	(if (not (eq mode t))
 	    (funcall mode)
@@ -944,11 +1002,15 @@ Returns the compilation buffer created."
 	(if highlight-regexp
 	    (set (make-local-variable 'compilation-highlight-regexp)
 		 highlight-regexp))
-	(erase-buffer)
 	;; Output a mode setter, for saving and later reloading this buffer.
 	(insert "-*- mode: " name-of-mode
 		"; default-directory: " (prin1-to-string default-directory)
-		" -*-\n" command "\n")	(setq thisdir default-directory))
+		" -*-\n"
+		(format "%s started at %s\n\n"
+			mode-name
+			(substring (current-time-string) 0 19))
+		command "\n")
+	(setq thisdir default-directory))
       (set-buffer-modified-p nil))
     ;; If we're already in the compilation buffer, go to the end
     ;; of the buffer, so point will track the compilation output.
@@ -999,6 +1061,11 @@ Returns the compilation buffer created."
 	      (set-process-sentinel proc 'compilation-sentinel)
 	      (set-process-filter proc 'compilation-filter)
 	      (set-marker (process-mark proc) (point) outbuf)
+	      (when compilation-disable-input
+                (condition-case nil
+                    (process-send-eof proc)
+                  ;; The process may have exited already.
+                  (error nil)))
 	      (setq compilation-in-progress
 		    (cons proc compilation-in-progress)))
 	  ;; No asynchronous processes available.
@@ -1118,6 +1185,8 @@ exited abnormally with code %d\n"
     (define-key map "\M-p" 'compilation-previous-error)
     (define-key map "\M-{" 'compilation-previous-file)
     (define-key map "\M-}" 'compilation-next-file)
+    (define-key map "\t" 'compilation-next-error)
+    (define-key map [backtab] 'compilation-previous-error)
 
     (define-key map " " 'scroll-up)
     (define-key map "\^?" 'scroll-down)
@@ -1131,7 +1200,7 @@ exited abnormally with code %d\n"
     (define-key map [menu-bar compilation compilation-separator2]
       '("----" . nil))
     (define-key map [menu-bar compilation compilation-grep]
-      '("Search Files (grep)" . grep))
+      '("Search Files (grep)..." . grep))
     (define-key map [menu-bar compilation compilation-recompile]
       '("Recompile" . recompile))
     (define-key map [menu-bar compilation compilation-compile]
@@ -1173,7 +1242,7 @@ from a different message."
 move point to the error message line and type \\[compile-goto-error].
 To kill the compilation, type \\[kill-compilation].
 
-Runs `compilation-mode-hook' with `run-hooks' (which see).
+Runs `compilation-mode-hook' with `run-mode-hooks' (which see).
 
 \\{compilation-mode-map}"
   (interactive)
@@ -1190,9 +1259,9 @@ Runs `compilation-mode-hook' with `run-hooks' (which see).
 (defmacro define-compilation-mode (mode name doc &rest body)
   "This is like `define-derived-mode' without the PARENT argument.
 The parent is always `compilation-mode' and the customizable `compilation-...'
-variables are also set from the name of the mode you have chosen, by replacing
-the fist word, e.g `compilation-scroll-output' from `grep-scroll-output' if that
-variable exists."
+variables are also set from the name of the mode you have chosen,
+by replacing the first word, e.g `compilation-scroll-output' from
+`grep-scroll-output' if that variable exists."
   (let ((mode-name (replace-regexp-in-string "-mode\\'" "" (symbol-name mode))))
     `(define-derived-mode ,mode compilation-mode ,name
        ,doc
@@ -1267,19 +1336,18 @@ Optional argument MINOR indicates this is called from
   ;; jit-lock might fontify some things too late.
   (set (make-local-variable 'font-lock-support-mode) nil)
   (set (make-local-variable 'font-lock-maximum-size) nil)
-  (let ((fld font-lock-defaults))
-    (if (and minor fld)
+  (if minor
+      (let ((fld font-lock-defaults))
 	(font-lock-add-keywords nil (compilation-mode-font-lock-keywords))
-      (setq font-lock-defaults '(compilation-mode-font-lock-keywords t)))
-    (if minor
 	(if font-lock-mode
 	    (if fld
 		(font-lock-fontify-buffer)
 	      (font-lock-change-mode)
 	      (turn-on-font-lock))
-	  (turn-on-font-lock))
-      ;; maybe defer font-lock till after derived mode is set up
-      (run-mode-hooks 'compilation-turn-on-font-lock))))
+	  (turn-on-font-lock)))
+    (setq font-lock-defaults '(compilation-mode-font-lock-keywords t))
+    ;; maybe defer font-lock till after derived mode is set up
+    (run-mode-hooks 'compilation-turn-on-font-lock)))
 
 ;;;###autoload
 (define-minor-mode compilation-shell-minor-mode
@@ -1337,8 +1405,9 @@ Turning the mode on runs the normal hook `compilation-minor-mode-hook'."
     (force-mode-line-update)
     (if (and opoint (< opoint omax))
 	(goto-char opoint))
-    (if compilation-finish-function
-	(funcall compilation-finish-function (current-buffer) msg))
+    (with-no-warnings
+      (if compilation-finish-function
+	  (funcall compilation-finish-function (current-buffer) msg)))
     (let ((functions compilation-finish-functions))
       (while functions
 	(funcall (car functions) (current-buffer) msg)
@@ -1470,7 +1539,7 @@ Prefix arg N says how many files to move backwards (or forwards, if negative)."
   (let ((buffer (compilation-find-buffer)))
     (if (get-buffer-process buffer)
 	(interrupt-process (get-buffer-process buffer))
-      (error "The compilation process is not running"))))
+      (error "The %s process is not running" (downcase mode-name)))))
 
 (defalias 'compile-mouse-goto-error 'compile-goto-error)
 
@@ -1485,7 +1554,7 @@ Use this command in a compilation log buffer.  Sets the mark at point there."
       (dired-other-window (car (get-text-property (point) 'directory)))
     (push-mark)
     (setq compilation-current-error (point))
-    (next-error 0)))
+    (next-error-internal)))
 
 ;; Return a compilation buffer.
 ;; If the current buffer is a compilation buffer, return it.
@@ -1496,8 +1565,9 @@ Use this command in a compilation log buffer.  Sets the mark at point there."
 
 ;;;###autoload
 (defun compilation-next-error-function (n &optional reset)
+  "Advance to the next error message and visit the file where the error was.
+This is the value of `next-error-function' in Compilation buffers."
   (interactive "p")
-  (set-buffer (compilation-find-buffer))
   (when reset
     (setq compilation-current-error nil))
   (let* ((columns compilation-error-screen-columns) ; buffer's local value
@@ -1519,8 +1589,7 @@ Use this command in a compilation log buffer.  Sets the mark at point there."
     ;; markers for that file.
     (unless (and (nth 3 loc) (marker-buffer (nth 3 loc)))
       (with-current-buffer (compilation-find-file marker (caar (nth 2 loc))
-						  (or (cdar (nth 2 loc))
-						      default-directory))
+						  (cadr (car (nth 2 loc))))
 	(save-restriction
 	  (widen)
 	  (goto-char (point-min))
@@ -1610,41 +1679,51 @@ displays at the top of the window; there is no arrow."
   "Jump to an error corresponding to MSG at MK.
 All arguments are markers.  If END-MK is non-nil, mark is set there
 and overlay is highlighted between MK and END-MK."
-  (if (eq (window-buffer (selected-window))
-	  (marker-buffer msg))
-      ;; If the compilation buffer window is selected,
-      ;; keep the compilation buffer in this window;
-      ;; display the source in another window.
-      (let ((pop-up-windows t))
-	(pop-to-buffer (marker-buffer mk)))
-    (if (window-dedicated-p (selected-window))
-	(pop-to-buffer (marker-buffer mk))
-      (switch-to-buffer (marker-buffer mk))))
-  ;; If narrowing gets in the way of going to the right place, widen.
-  (unless (eq (goto-char mk) (point))
-    (widen)
-    (goto-char mk))
-  (if end-mk
-      (push-mark end-mk t)
-    (if mark-active (setq mark-active)))
-  ;; If hideshow got in the way of
-  ;; seeing the right place, open permanently.
-  (dolist (ov (overlays-at (point)))
-    (when (eq 'hs (overlay-get ov 'invisible))
-      (delete-overlay ov)
-      (goto-char mk)))
-
   ;; Show compilation buffer in other window, scrolled to this error.
-  (let* ((pop-up-windows t)
-	 ;; Use an existing window if it is in a visible frame.
-	 (w (or (get-buffer-window (marker-buffer msg) 'visible)
-		;; Pop up a window.
-		(display-buffer (marker-buffer msg))))
+  (let* ((from-compilation-buffer (eq (window-buffer (selected-window))
+                                      (marker-buffer msg)))
+         ;; Use an existing window if it is in a visible frame.
+         (pre-existing (get-buffer-window (marker-buffer msg) 0))
+         (w (if (and from-compilation-buffer pre-existing)
+                ;; Calling display-buffer here may end up (partly) hiding
+                ;; the error location if the two buffers are in two
+                ;; different frames.  So don't do it if it's not necessary.
+                pre-existing
+              (let ((display-buffer-reuse-frames t)
+                    (pop-up-windows t))
+	        ;; Pop up a window.
+                (display-buffer (marker-buffer msg)))))
 	 (highlight-regexp (with-current-buffer (marker-buffer msg)
 			     ;; also do this while we change buffer
 			     (compilation-set-window w msg)
 			     compilation-highlight-regexp)))
-    (compilation-set-window-height w)
+    ;; Ideally, the window-size should be passed to `display-buffer' (via
+    ;; something like special-display-buffer) so it's only used when
+    ;; creating a new window.
+    (unless pre-existing (compilation-set-window-height w))
+
+    (if from-compilation-buffer
+        ;; If the compilation buffer window was selected,
+        ;; keep the compilation buffer in this window;
+        ;; display the source in another window.
+        (let ((pop-up-windows t))
+          (pop-to-buffer (marker-buffer mk) 'other-window))
+      (if (window-dedicated-p (selected-window))
+          (pop-to-buffer (marker-buffer mk))
+        (switch-to-buffer (marker-buffer mk))))
+    ;; If narrowing gets in the way of going to the right place, widen.
+    (unless (eq (goto-char mk) (point))
+      (widen)
+      (goto-char mk))
+    (if end-mk
+        (push-mark end-mk t)
+      (if mark-active (setq mark-active)))
+    ;; If hideshow got in the way of
+    ;; seeing the right place, open permanently.
+    (dolist (ov (overlays-at (point)))
+      (when (eq 'hs (overlay-get ov 'invisible))
+        (delete-overlay ov)
+        (goto-char mk)))
 
     (when highlight-regexp
       (if (timerp next-error-highlight-timer)
@@ -1679,16 +1758,21 @@ and overlay is highlighted between MK and END-MK."
 	    (copy-marker (line-beginning-position))))))
 
 
-(defun compilation-find-file (marker filename dir &rest formats)
+(defun compilation-find-file (marker filename directory &rest formats)
   "Find a buffer for file FILENAME.
 Search the directories in `compilation-search-path'.
 A nil in `compilation-search-path' means to try the
-current directory, which is passed in DIR.
+\"current\" directory, which is passed in DIRECTORY.
+If DIRECTORY. is relative, it is combined with `default-directory'.
+If DIRECTORY. is nil, that means use `default-directory'.
 If FILENAME is not found at all, ask the user where to find it.
 Pop up the buffer containing MARKER and scroll to MARKER if we ask the user."
   (or formats (setq formats '("%s")))
   (save-excursion
     (let ((dirs compilation-search-path)
+	  (spec-dir (if directory
+			(expand-file-name directory)
+		      default-directory))
 	  buffer thisdir fmts name)
       (if (file-name-absolute-p filename)
 	  ;; The file name is absolute.  Use its explicit directory as
@@ -1698,7 +1782,7 @@ Pop up the buffer containing MARKER and scroll to MARKER if we ask the user."
 		filename (file-name-nondirectory filename)))
       ;; Now search the path.
       (while (and dirs (null buffer))
-	(setq thisdir (or (car dirs) dir)
+	(setq thisdir (or (car dirs) spec-dir)
 	      fmts formats)
 	;; For each directory, try each format string.
 	(while (and fmts (null buffer))
@@ -1714,9 +1798,9 @@ Pop up the buffer containing MARKER and scroll to MARKER if we ask the user."
 				    marker)
 	    (let ((name (expand-file-name
 			 (read-file-name
-			  (format "Find this error in: (default %s) "
-				  filename)
-			  dir filename t))))
+			  (format "Find this %s in (default %s): "
+				  compilation-error filename)
+			  spec-dir filename t))))
 	      (if (file-directory-p name)
 		  (setq name (expand-file-name filename name)))
 	      (setq buffer (and (file-exists-p name)
@@ -1730,26 +1814,32 @@ Pop up the buffer containing MARKER and scroll to MARKER if we ask the user."
 
 (defun compilation-get-file-structure (file &optional fmt)
   "Retrieve FILE's file-structure or create a new one.
-FILE should be (ABSOLUTE-FILENAME) or (RELATIVE-FILENAME . DIRNAME)."
+FILE should be (FILENAME) or (RELATIVE-FILENAME . DIRNAME).
+In the former case, FILENAME may be relative or absolute.
 
+The file-structure looks like this:
+  (list (list FILENAME [DIR-FROM-PREV-MSG]) FMT LINE-STRUCT...)
+"
   (or (gethash file compilation-locs)
       ;; File was not previously encountered, at least not in the form passed.
       ;; Let's normalize it and look again.
       (let ((filename (car file))
-	    (default-directory (if (cdr file)
-				   (file-truename (cdr file))
-				 default-directory)))
+	    ;; Get the specified directory from FILE.
+	    (spec-directory (if (cdr file)
+				(file-truename (cdr file)))))
 
 	;; Check for a comint-file-name-prefix and prepend it if appropriate.
 	;; (This is very useful for compilation-minor-mode in an rlogin-mode
 	;; buffer.)
-	(if (boundp 'comint-file-name-prefix)
-	    (if (file-name-absolute-p filename)
-		(setq filename
-		      (concat (with-no-warnings comint-file-name-prefix) filename))
-	      (setq default-directory
-		    (file-truename
-		     (concat (with-no-warnings comint-file-name-prefix) default-directory)))))
+	(when (and (boundp 'comint-file-name-prefix)
+		   (not (equal comint-file-name-prefix "")))
+	  (if (file-name-absolute-p filename)
+	      (setq filename
+		    (concat comint-file-name-prefix filename))
+	    (if spec-directory
+		(setq spec-directory
+		      (file-truename
+		       (concat comint-file-name-prefix spec-directory))))))
 
 	;; If compilation-parse-errors-filename-function is
 	;; defined, use it to process the filename.
@@ -1765,20 +1855,13 @@ FILE should be (ABSOLUTE-FILENAME) or (RELATIVE-FILENAME . DIRNAME)."
 	;; name and fix them.
 	(setq filename (command-line-normalize-file-name filename))
 
-	;; Now eliminate any "..", because find-file would get them wrong.
-	;; Make relative and absolute filenames, with or without links, the
-	;; same.
-	(setq filename
-	      (list (abbreviate-file-name
-		     (file-truename (if (cdr file)
-					(expand-file-name filename)
-				      filename)))))
-
 	;; Store it for the possibly unnormalized name
 	(puthash file
 		 ;; Retrieve or create file-structure for normalized name
-		 (or (gethash filename compilation-locs)
-		     (puthash filename (list filename fmt) compilation-locs))
+		 (or (gethash (list filename) compilation-locs)
+		     (puthash (list filename)
+			      (list (list filename spec-directory) fmt)
+			      compilation-locs))
 		 compilation-locs))))
 
 (add-to-list 'debug-ignored-errors "^No more [-a-z ]+s yet$")

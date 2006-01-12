@@ -1,7 +1,6 @@
 #### -*- Makefile -*- for the Emacs Manual and other documentation.
 
-# Copyright (C) 2003, 2004
-#  Free Software Foundation, Inc.
+# Copyright (C) 2003, 2004, 2005 Free Software Foundation, Inc.
 
 # This file is part of GNU Emacs.
 
@@ -17,8 +16,8 @@
 
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-# Boston, MA 02111-1307, USA.
+# the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
 
 # Where to find the source code.  The source code for Emacs's C kernel is
 # expected to be in $(srcdir)/src, and the source code for Emacs's
@@ -29,33 +28,29 @@ srcdir=.
 infodir = $(srcdir)/../info
 
 # The makeinfo program is part of the Texinfo distribution.
-MAKEINFO = makeinfo
+MAKEINFO = makeinfo --force
 MULTI_INSTALL_INFO = $(srcdir)\..\nt\multi-install-info.bat
-INFO_TARGETS = $(infodir)/emacs $(infodir)/ccmode \
-		$(infodir)/cl $(infodir)/dired-x \
-		$(infodir)/ediff $(infodir)/forms \
-		$(infodir)/gnus $(infodir)/info \
-		$(infodir)/message $(infodir)/mh-e \
-		$(infodir)/reftex $(infodir)/sc \
-		$(infodir)/vip $(infodir)/viper \
-		$(infodir)/widget $(infodir)/efaq \
-		$(infodir)/ada-mode $(infodir)/autotype \
-		$(infodir)/calc $(infodir)/idlwave \
-		$(infodir)/eudc $(infodir)/ebrowse \
-		$(infodir)/pcl-cvs $(infodir)/woman \
-		$(infodir)/emacs-mime $(infodir)/eshell \
-		$(infodir)/speedbar $(infodir)/tramp \
-		$(infodir)/ses $(infodir)/smtpmail \
-		$(infodir)/flymake $(infodir)/emacs-xtra \
-		$(infodir)/org $(infodir)/url \
-		$(infodir)/pgg $(infodir)/sieve
+INFO_TARGETS = $(infodir)/emacs $(infodir)/emacs-xtra $(infodir)/ccmode \
+		$(infodir)/cl $(infodir)/dired-x $(infodir)/ediff \
+		$(infodir)/forms $(infodir)/gnus $(infodir)/message \
+		$(infodir)/sieve $(infodir)/pgg $(infodir)/emacs-mime \
+		$(infodir)/info $(infodir)/mh-e $(infodir)/reftex \
+		$(infodir)/sc $(infodir)/vip $(infodir)/viper \
+		$(infodir)/widget $(infodir)/efaq $(infodir)/ada-mode \
+		$(infodir)/autotype $(infodir)/calc $(infodir)/idlwave \
+		$(infodir)/eudc $(infodir)/ebrowse $(infodir)/pcl-cvs \
+		$(infodir)/woman $(infodir)/eshell $(infodir)/org \
+		$(infodir)/url $(infodir)/speedbar $(infodir)/tramp \
+		$(infodir)/ses $(infodir)/smtpmail $(infodir)/flymake \
+		$(infodir)/newsticker
 DVI_TARGETS = 	emacs.dvi calc.dvi cc-mode.dvi cl.dvi dired-x.dvi \
-		 ediff.dvi forms.dvi gnus.dvi message.dvi mh-e.dvi \
+		 ediff.dvi forms.dvi gnus.dvi message.dvi emacs-mime.dvi \
+                 gnus.dvi message.dvi sieve.dvi pgg.dvi mh-e.dvi \
 		 reftex.dvi sc.dvi vip.dvi viper.dvi widget.dvi faq.dvi \
 		 ada-mode.dvi autotype.dvi idlwave.dvi eudc.dvi ebrowse.dvi \
-		 org.dvi pcl-cvs.dvi woman.dvi emacs-mime.dvi eshell.dvi \
+		 pcl-cvs.dvi woman.dvi eshell.dvi org.dvi url.dvi \
 		 speedbar.dvi tramp.dvi ses.dvi smtpmail.dvi flymake.dvi \
-		 emacs-xtra.dvi pgg.dvi sieve.dvi url.dvi
+                 newsticker.dvi emacs-xtra.dvi
 INFOSOURCES = info.texi
 
 # The following rule does not work with all versions of `make'.
@@ -114,7 +109,6 @@ EMACSSOURCES= \
 	$(srcdir)/kmacro.texi
 
 info: $(INFO_TARGETS)
-	$(MULTI_INSTALL_INFO) --info-dir=$(infodir) $(INFO_TARGETS)
 
 dvi: $(DVI_TARGETS)
 
@@ -128,6 +122,9 @@ dvi: $(DVI_TARGETS)
 # the Texinfo distribution.
 # Some Windows ports of makeinfo seem to require -o to come before the
 # texi filename, contrary to GNU standards.
+
+$(infodir)/dir:
+	$(MULTI_INSTALL_INFO) --info-dir=$(infodir) $(INFO_TARGETS)
 
 $(infodir)/info: $(INFOSOURCES)
 	$(MAKEINFO) --no-split -o $@ info.texi
@@ -197,7 +194,7 @@ forms.dvi: forms.texi
 $(infodir)/gnus: gnus.texi
 	$(MAKEINFO) gnus.texi
 gnus.dvi: gnus.texi
-	sed -e '/@iflatex/,/@end iflatex/d' $(srcdir)/gnus.texi > gnustmp.texi
+	sed -e "/@iflatex/,/@end iflatex/d" $(srcdir)/gnus.texi > gnustmp.texi
 	$(ENVADD) $(TEXI2DVI) gnustmp.texi
 	cp gnustmp.dvi $*.dvi
 	rm gnustmp.*
@@ -321,15 +318,18 @@ emacs-xtra.dvi: emacs-xtra.texi
 
 $(infodir)/org: org.texi
 	$(MAKEINFO) org.texi
-
 org.dvi: org.texi
 	$(ENVADD) $(TEXI2DVI) $(srcdir)/org.texi
 
 $(infodir)/url: url.texi
 	$(MAKEINFO) url.texi
-
 url.dvi: url.texi
 	$(ENVADD) $(TEXI2DVI) $(srcdir)/url.texi
+
+$(infodir)/newsticker: newsticker.texi
+	$(MAKEINFO) newsticker.texi
+newsticker.dvi: newsticker.texi
+	$(ENVADD) $(TEXI2DVI) $(srcdir)/newsticker.texi
 
 mostlyclean:
 	- $(DEL) *.log *.cp *.fn *.ky *.pg *.vr core *.tp *.core gnustmp.*

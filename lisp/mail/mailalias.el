@@ -1,6 +1,7 @@
 ;;; mailalias.el --- expand and complete mailing address aliases
 
-;; Copyright (C) 1985, 1987, 1995, 1996, 1997 Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1987, 1995, 1996, 1997, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: mail
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -33,7 +34,7 @@
 (require 'sendmail)
 
 (defgroup mailalias nil
-  "Expanding mail aliases"
+  "Expanding mail aliases."
   :group 'mail)
 
 (defcustom mail-passwd-files '("/etc/passwd")
@@ -261,6 +262,12 @@ By default, this is the file specified by `mail-personal-alias-file'."
 		  ((file-exists-p (setq file (concat "~/" file)))
 		   (insert-file-contents file))
 		  (t (setq file nil)))
+	    (goto-char (point-min))
+	    ;; Delete comments from the contents.
+	    (while (search-forward "# " nil t)
+	      (let ((p (- (point) 2)))
+		(end-of-line)
+		(delete-region p (point))))
 	    ;; Don't lose if no final newline.
 	    (goto-char (point-max))
 	    (or (eq (preceding-char) ?\n) (newline))

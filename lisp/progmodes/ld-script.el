@@ -1,6 +1,6 @@
 ;;; ld-script.el --- GNU linker script editing mode for Emacs
 
-;; Copyright (C) 2003 Free Software Foundation, Inc.
+;; Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Masatake YAMATO<jet@gyve.org>
 ;; Keywords: languages, faces
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with this program; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -34,8 +34,8 @@
   :prefix "ld-script-"
   :group 'languages)
 
-(defvar ld-script-location-counter-face 'ld-script-location-counter-face)
-(defface ld-script-location-counter-face
+(defvar ld-script-location-counter-face 'ld-script-location-counter)
+(defface ld-script-location-counter
   '((t (:weight bold :inherit font-lock-builtin-face)))
   "Face for location counter in GNU ld script."
   :group 'ld-script)
@@ -97,29 +97,38 @@
     "ADDR"
     "ALIGN"
     "BLOCK"
+    "DATA_SEGMENT_ALIGN"
+    "DATA_SEGMENT_END"
+    "DATA_SEGMENT_RELRO_END"
     "DEFINED"
+    "LENGTH"
     "LOADADDR"
     "MAX"
     "MIN"
     "NEXT"
+    "ORIGIN"
+    "SEGMENT_START"
     "SIZEOF"
     "SIZEOF_HEADERS"
     "sizeof_headers")
   "Builtin functions of GNU ld script.")
 
 (defvar ld-script-font-lock-keywords
-  `((,(regexp-opt ld-script-keywords 'words)
-     1 font-lock-keyword-face)
-    (,(regexp-opt ld-script-builtins 'words)
-     1 font-lock-builtin-face)
-    ("/DISCARD/" . font-lock-warning-face)
-    ("##\\|#[^#\n]+$"  . font-lock-preprocessor-face)
-    ("\\W\\(\\.\\)\\W" 1 ld-script-location-counter-face)
-    )
+  (append
+   `((,(regexp-opt ld-script-keywords 'words)
+      1 font-lock-keyword-face)
+     (,(regexp-opt ld-script-builtins 'words)
+      1 font-lock-builtin-face)
+     ("/DISCARD/" . font-lock-warning-face)
+     ("\\W\\(\\.\\)\\W" 1 ld-script-location-counter-face)
+     )
+   cpp-font-lock-keywords)
   "Default font-lock-keywords for `ld-script-mode'.")
 
 ;;;###autoload
-(add-to-list 'auto-mode-alist '("\\.lds" . ld-script-mode))
+(add-to-list 'auto-mode-alist '("\\.ld[s]?\\>" . ld-script-mode))
+;;;###autoload
+(add-to-list 'auto-mode-alist '("\\.x[bdsru]?[cn]?$" . ld-script-mode))
 
 ;;;###autoload
 (define-derived-mode ld-script-mode nil "LD-Script"

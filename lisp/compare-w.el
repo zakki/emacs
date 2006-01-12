@@ -1,6 +1,7 @@
 ;;; compare-w.el --- compare text between windows for Emacs
 
-;; Copyright (C) 1986,1989,1993,1997,2003,2004 Free Software Foundation, Inc.
+;; Copyright (C) 1986, 1989, 1993, 1997, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: convenience files
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -56,7 +57,8 @@ whitespace is considered to match, and is skipped."
 (defcustom compare-ignore-whitespace nil
   "*Non-nil means `compare-windows' ignores whitespace."
   :type 'boolean
-  :group 'compare-w)
+  :group 'compare-w
+  :version "22.1")
 
 (defcustom compare-ignore-case nil
   "*Non-nil means `compare-windows' ignores case differences."
@@ -88,7 +90,8 @@ be made buffer-local.
 If the value of this variable is `nil', then function `ding' is
 called to beep or flash the screen when points are mismatched."
   :type '(choice regexp function)
-  :group 'compare-w)
+  :group 'compare-w
+  :version "22.1")
 
 (defcustom compare-windows-sync-string-size 32
   "*Size of string from one window that is searched in second window.
@@ -99,7 +102,8 @@ difference regions more coarse-grained.
 
 The default value 32 is good for the most cases."
   :type 'integer
-  :group 'compare-w)
+  :group 'compare-w
+  :version "22.1")
 
 (defcustom compare-windows-recenter nil
   "*List of two values, each of which is used as argument of
@@ -109,23 +113,20 @@ matching points side-by-side.
 The value `(-1 0)' is useful if windows are split vertically,
 and the value `((4) (4))' for horizontally split windows."
   :type '(list sexp sexp)
-  :group 'compare-w)
+  :group 'compare-w
+  :version "22.1")
 
 (defcustom compare-windows-highlight t
   "*Non-nil means compare-windows highlights the differences."
   :type 'boolean
-  :group 'compare-w)
+  :group 'compare-w
+  :version "22.1")
 
-(defface compare-windows-face
-  '((((class color) (min-colors 88) (background light))
-     (:background "paleturquoise"))
-    (((class color) (min-colors 88) (background dark))
-     (:background "paleturquoise4"))
-    (((class color))
-     (:background "turquoise3"))
-    (t (:underline t)))
+(defface compare-windows
+  '((t :inherit lazy-highlight))
   "Face for highlighting of compare-windows difference regions."
-  :group 'compare-w)
+  :group 'compare-w
+  :version "22.1")
 
 (defvar compare-windows-overlay1 nil)
 (defvar compare-windows-overlay2 nil)
@@ -341,14 +342,14 @@ on third call it again advances points to the next difference and so on."
     (if compare-windows-overlay1
         (move-overlay compare-windows-overlay1 beg1 end1 b1)
       (setq compare-windows-overlay1 (make-overlay beg1 end1 b1))
-      (overlay-put compare-windows-overlay1 'face 'compare-windows-face)
-      (overlay-put compare-windows-overlay1 'priority 1))
+      (overlay-put compare-windows-overlay1 'face 'compare-windows)
+      (overlay-put compare-windows-overlay1 'priority 1000))
     (overlay-put compare-windows-overlay1 'window w1)
     (if compare-windows-overlay2
         (move-overlay compare-windows-overlay2 beg2 end2 b2)
       (setq compare-windows-overlay2 (make-overlay beg2 end2 b2))
-      (overlay-put compare-windows-overlay2 'face 'compare-windows-face)
-      (overlay-put compare-windows-overlay2 'priority 1))
+      (overlay-put compare-windows-overlay2 'face 'compare-windows)
+      (overlay-put compare-windows-overlay2 'priority 1000))
     (overlay-put compare-windows-overlay2 'window w2)
     ;; Remove highlighting before next command is executed
     (add-hook 'pre-command-hook 'compare-windows-dehighlight)))

@@ -1,6 +1,7 @@
 ;;; ediff-diff.el --- diff-related utilities
 
-;; Copyright (C) 1994, 95, 96, 97, 98, 99, 2000, 01, 02 Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
+;;   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Michael Kifer <kifer@cs.stonybrook.edu>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -30,6 +31,7 @@
 ;; compiler pacifier
 (defvar ediff-default-variant)
 (defvar null-device)
+(defvar longlines-mode)
 
 (eval-when-compile
   (let ((load-path (cons (expand-file-name ".") load-path)))
@@ -43,7 +45,7 @@
 (require 'ediff-init)
 
 (defgroup ediff-diff nil
-  "Diff related utilities"
+  "Diff related utilities."
   :prefix "ediff-"
   :group 'ediff)
 
@@ -459,24 +461,46 @@ one optional arguments, diff-number to refine.")
 		   c-prev c-end)
 	   ;; else convert lines to points
 	   (ediff-with-current-buffer A-buffer
-	     (forward-line (- a-begin a-prev))
-	     (setq a-begin-pt (point))
-	     (forward-line (- a-end a-begin))
-	     (setq a-end-pt (point)
-		   a-prev a-end))
+	     (let ((longlines-mode-val
+		    (if (and (boundp 'longlines-mode) longlines-mode) 1 0)))
+	       ;; we must disable and then restore longlines-mode
+	       (if (eq longlines-mode-val 1)
+		   (longlines-mode 0))
+	       (forward-line (- a-begin a-prev))
+	       (setq a-begin-pt (point))
+	       (forward-line (- a-end a-begin))
+	       (setq a-end-pt (point)
+		     a-prev a-end)
+	       (if (eq longlines-mode-val 1)
+		   (longlines-mode longlines-mode-val))
+	       ))
 	   (ediff-with-current-buffer B-buffer
-	     (forward-line (- b-begin b-prev))
-	     (setq b-begin-pt (point))
-	     (forward-line (- b-end b-begin))
-	     (setq b-end-pt (point)
-		   b-prev b-end))
+	     (let ((longlines-mode-val
+		    (if (and (boundp 'longlines-mode) longlines-mode) 1 0)))
+	       (if (eq longlines-mode-val 1)
+		   (longlines-mode 0))
+	       (forward-line (- b-begin b-prev))
+	       (setq b-begin-pt (point))
+	       (forward-line (- b-end b-begin))
+	       (setq b-end-pt (point)
+		     b-prev b-end)
+	       (if (eq longlines-mode-val 1)
+		   (longlines-mode longlines-mode-val))
+	       ))
 	   (if (ediff-buffer-live-p C-buffer)
 	       (ediff-with-current-buffer C-buffer
-		 (forward-line (- c-begin c-prev))
-		 (setq c-begin-pt (point))
-		 (forward-line (- c-end c-begin))
-		 (setq c-end-pt (point)
-		       c-prev c-end)))
+		 (let ((longlines-mode-val
+			(if (and (boundp 'longlines-mode) longlines-mode) 1 0)))
+		   (if (eq longlines-mode-val 1)
+		       (longlines-mode 0))
+		   (forward-line (- c-begin c-prev))
+		   (setq c-begin-pt (point))
+		   (forward-line (- c-end c-begin))
+		   (setq c-end-pt (point)
+			 c-prev c-end)
+		   (if (eq longlines-mode-val 1)
+		       (longlines-mode longlines-mode-val))
+		 )))
 	   (setq diff-list
 		 (nconc
 		  diff-list
@@ -1060,30 +1084,59 @@ delimiter regions"))
 			 c-prev c-end)
 		 ;; else convert lines to points
 		 (ediff-with-current-buffer A-buffer
-		   (forward-line (- a-begin a-prev))
-		   (setq a-begin-pt (point))
-		   (forward-line (- a-end a-begin))
-		   (setq a-end-pt (point)
-			 a-prev a-end))
+		   (let ((longlines-mode-val
+			  (if (and (boundp 'longlines-mode) longlines-mode) 1 0)))
+		     ;; we must disable and then restore longlines-mode
+		     (if (eq longlines-mode-val 1)
+			 (longlines-mode 0))
+		     (forward-line (- a-begin a-prev))
+		     (setq a-begin-pt (point))
+		     (forward-line (- a-end a-begin))
+		     (setq a-end-pt (point)
+			   a-prev a-end)
+		     (if (eq longlines-mode-val 1)
+			 (longlines-mode longlines-mode-val))
+		     ))
 		 (ediff-with-current-buffer B-buffer
-		   (forward-line (- b-begin b-prev))
-		   (setq b-begin-pt (point))
-		   (forward-line (- b-end b-begin))
-		   (setq b-end-pt (point)
-			 b-prev b-end))
+		   (let ((longlines-mode-val
+			  (if (and (boundp 'longlines-mode) longlines-mode) 1 0)))
+		     (if (eq longlines-mode-val 1)
+			 (longlines-mode 0))
+		     (forward-line (- b-begin b-prev))
+		     (setq b-begin-pt (point))
+		     (forward-line (- b-end b-begin))
+		     (setq b-end-pt (point)
+			   b-prev b-end)
+		     (if (eq longlines-mode-val 1)
+			 (longlines-mode longlines-mode-val))
+		     ))
 		 (ediff-with-current-buffer C-buffer
-		   (forward-line (- c-begin c-prev))
-		   (setq c-begin-pt (point))
-		   (forward-line (- c-end c-begin))
-		   (setq c-end-pt (point)
-			 c-prev c-end))
+		   (let ((longlines-mode-val
+			  (if (and (boundp 'longlines-mode) longlines-mode) 1 0)))
+		     (if (eq longlines-mode-val 1)
+			 (longlines-mode 0))
+		     (forward-line (- c-begin c-prev))
+		     (setq c-begin-pt (point))
+		     (forward-line (- c-end c-begin))
+		     (setq c-end-pt (point)
+			   c-prev c-end)
+		     (if (eq longlines-mode-val 1)
+			 (longlines-mode longlines-mode-val))
+		     ))
 		 (if (ediff-buffer-live-p anc-buffer)
 		     (ediff-with-current-buffer anc-buffer
-		       (forward-line (- c-or-anc-begin anc-prev))
-		       (setq anc-begin-pt (point))
-		       (forward-line (- c-or-anc-end c-or-anc-begin))
-		       (setq anc-end-pt (point)
-			     anc-prev c-or-anc-end)))
+		       (let ((longlines-mode-val
+			      (if (and (boundp 'longlines-mode) longlines-mode) 1 0)))
+			 (if (eq longlines-mode-val 1)
+			     (longlines-mode 0))
+			 (forward-line (- c-or-anc-begin anc-prev))
+			 (setq anc-begin-pt (point))
+			 (forward-line (- c-or-anc-end c-or-anc-begin))
+			 (setq anc-end-pt (point)
+			       anc-prev c-or-anc-end)
+			 (if (eq longlines-mode-val 1)
+			     (longlines-mode longlines-mode-val))
+			 )))
 		 (setq diff-list
 		       (nconc
 			diff-list
@@ -1424,7 +1477,6 @@ affects only files whose names match the expression."
 ;;; eval: (put 'ediff-with-current-buffer 'lisp-indent-hook 1)
 ;;; eval: (put 'ediff-with-current-buffer 'edebug-form-spec '(form body))
 ;;; End:
-
 
 ;;; arch-tag: a86d448e-58d7-4572-a1d9-fdedfa22f648
 ;;; ediff-diff.el ends here

@@ -1,6 +1,7 @@
 ;;; meta-mode.el --- major mode for editing Metafont or MetaPost sources
 
-;; Copyright (C) 1997 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Ulrik Vieth <vieth@thphy.uni-duesseldorf.de>
 ;; Version: 1.0
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -134,6 +135,7 @@
 
 (defgroup meta-font nil
   "Major mode for editing Metafont or MetaPost sources."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'languages)
 
 ;;; Fontification.
@@ -508,7 +510,7 @@ If the list was changed, sort the list and remove duplicates first."
                  (message "Making completion list...")
                  (let ((list (all-completions symbol list nil)))
                    (with-output-to-temp-buffer "*Completions*"
-                     (display-completion-list list)))
+                     (display-completion-list list symbol)))
                  (message "Making completion list... done"))))
       (funcall (nth 1 entry)))))
 

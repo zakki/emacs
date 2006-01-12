@@ -1,7 +1,7 @@
 ;;; tooltip.el --- show tooltip windows
 
-;; Copyright (C) 1997, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;        Free Software Foundation, Inc.
+;; Copyright (C) 1997, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Gerd Moellmann <gerd@acm.org>
 ;; Keywords: help c mouse tools
@@ -20,14 +20,14 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
 ;;; Code:
 
-;;; Customizable settings
+(defvar comint-prompt-regexp)
 
 (defgroup tooltip nil
   "Customization group for the `tooltip' package."
@@ -37,70 +37,97 @@
   :group 'tools
   :version "21.1"
   :tag "Tool Tips")
+
+;;; Switching tooltips on/off
+
+;; We don't set track-mouse globally because this is a big redisplay
+;; problem in buffers having a pre-command-hook or such installed,
+;; which does a set-buffer, like the summary buffer of Gnus.  Calling
+;; set-buffer prevents redisplay optimizations, so every mouse motion
+;; would be accompanied by a full redisplay.
+
+(define-minor-mode tooltip-mode
+  "Toggle Tooltip display.
+With ARG, turn tooltip mode on if and only if ARG is positive.
+When this minor mode is enabled, Emacs displays help text
+in a pop-up window on mouse-over.  When it is disabled,
+Emacs displays the help text in the echo area instead."
+  :global t
+  :init-value (not (or noninteractive
+		       emacs-basic-display
+		       (not (display-graphic-p))
+		       (not (fboundp 'x-show-tip))))
+  :initialize 'custom-initialize-safe-default
+  :group 'tooltip
+  (unless (or (null tooltip-mode) (fboundp 'x-show-tip))
+    (error "Sorry, tooltips are not yet available on this system"))
+  (if tooltip-mode
+      (progn
+	(add-hook 'pre-command-hook 'tooltip-hide)
+	(add-hook 'tooltip-hook 'tooltip-help-tips))
+    (unless (and (boundp 'gud-tooltip-mode) gud-tooltip-mode)
+      (remove-hook 'pre-command-hook 'tooltip-hide))
+    (remove-hook 'tooltip-hook 'tooltip-help-tips))
+  (setq show-help-function
+	(if tooltip-mode 'tooltip-show-help nil)))
+
+
+;;; Customizable settings
 
 (defcustom tooltip-delay 0.7
   "Seconds to wait before displaying a tooltip the first time."
-  :tag "Delay"
   :type 'number
   :group 'tooltip)
 
 (defcustom tooltip-short-delay 0.1
   "Seconds to wait between subsequent tooltips on different items."
-  :tag "Short delay"
   :type 'number
   :group 'tooltip)
 
 (defcustom tooltip-recent-seconds 1
   "Display tooltips if changing tip items within this many seconds.
 Do so after `tooltip-short-delay'."
-  :tag "Recent seconds"
   :type 'number
   :group 'tooltip)
 
 (defcustom tooltip-hide-delay 10
   "Hide tooltips automatically after this many seconds."
-  :tag "Hide delay"
   :type 'number
   :group 'tooltip)
 
-(defcustom tooltip-x-offset nil
+(defcustom tooltip-x-offset 5
   "X offset, in pixels, for the display of tooltips.
-The offset is relative to the position of the mouse.  It must
-be chosen so that the tooltip window doesn't contain the mouse
-when it pops up.  If the value is nil, the default offset is 5
-pixels.
+The offset is the distance between the X position of the mouse and
+the left border of the tooltip window.  It must be chosen so that the
+tooltip window doesn't contain the mouse when it pops up, or it may
+interfere with clicking where you wish.
 
 If `tooltip-frame-parameters' includes the `left' parameter,
 the value of `tooltip-x-offset' is ignored."
-  :tag "X offset"
-  :type '(choice (const :tag "Default" nil)
-		 (integer :tag "Offset" :value 1))
+  :type 'integer
   :group 'tooltip)
 
-(defcustom tooltip-y-offset nil
+(defcustom tooltip-y-offset +20
   "Y offset, in pixels, for the display of tooltips.
-The offset is relative to the position of the mouse.  It must
-be chosen so that the tooltip window doesn't contain the mouse
-when it pops up.  If the value is nil, the default offset is -10
-pixels.
+The offset is the distance between the Y position of the mouse and
+the top border of the tooltip window.  It must be chosen so that the
+tooltip window doesn't contain the mouse when it pops up, or it may
+interfere with clicking where you wish.
 
 If `tooltip-frame-parameters' includes the `top' parameter,
 the value of `tooltip-y-offset' is ignored."
-  :tag "Y offset"
-  :type '(choice (const :tag "Default" nil)
-		 (integer :tag "Offset" :value 1))
+  :type 'integer
   :group 'tooltip)
 
 (defcustom tooltip-frame-parameters
   '((name . "tooltip")
-    (internal-border-width . 5)
+    (internal-border-width . 2)
     (border-width . 1))
   "Frame parameters used for tooltips.
 
 If `left' or `top' parameters are included, they specify the absolute
 position to pop up the tooltip."
   :type 'sexp
-  :tag "Frame Parameters"
   :group 'tooltip)
 
 (defface tooltip
@@ -111,6 +138,12 @@ position to pop up the tooltip."
     (t
      :inherit variable-pitch))
   "Face for tooltips."
+  :group 'tooltip
+  :group 'basic-faces)
+
+(defcustom tooltip-use-echo-area nil
+  "Use the echo area instead of tooltip frames for help and GUD tooltips."
+  :type 'boolean
   :group 'tooltip)
 
 
@@ -130,6 +163,8 @@ the last mouse movement event that occurred.")
 (defvar tooltip-hide-time nil
   "Time when the last tooltip was hidden.")
 
+(defvar gud-tooltip-mode) ;; Prevent warning.
+
 ;;; Event accessors
 
 (defun tooltip-event-buffer (event)
@@ -137,39 +172,6 @@ the last mouse movement event that occurred.")
 This might return nil if the event did not occur over a buffer."
   (let ((window (posn-window (event-end event))))
     (and window (window-buffer window))))
-
-;;; Switching tooltips on/off
-
-;; We don't set track-mouse globally because this is a big redisplay
-;; problem in buffers having a pre-command-hook or such installed,
-;; which does a set-buffer, like the summary buffer of Gnus.  Calling
-;; set-buffer prevents redisplay optimizations, so every mouse motion
-;; would be accompanied by a full redisplay.
-
-;;;###autoload
-(define-minor-mode tooltip-mode
-  "Toggle Tooltip display.
-With ARG, turn tooltip mode on if and only if ARG is positive."
-  :global t
-  ;; If you change the :init-value below, you also need to change the
-  ;; corresponding code in startup.el.
-  :init-value (not (or noninteractive
-		       (and (boundp 'emacs-quick-startup) emacs-quick-startup)
-		       (not (and (fboundp 'display-graphic-p)
-				 (display-graphic-p)))
-		       (not (fboundp 'x-show-tip))))
-  :group 'tooltip
-  (unless (or (null tooltip-mode) (fboundp 'x-show-tip))
-    (error "Sorry, tooltips are not yet available on this system"))
-  (if tooltip-mode
-      (progn
-	(add-hook 'pre-command-hook 'tooltip-hide)
-	(add-hook 'tooltip-hook 'tooltip-help-tips))
-    (unless (and (boundp 'gud-tooltip-mode) gud-tooltip-mode)
-      (remove-hook 'pre-command-hook 'tooltip-hide))
-    (remove-hook 'tooltip-hook 'tooltip-help-tips))
-  (setq show-help-function
-	(if tooltip-mode 'tooltip-show-help-function nil)))
 
 
 ;;; Timeout for tooltip display
@@ -190,12 +192,12 @@ With ARG, turn tooltip mode on if and only if ARG is positive."
     (setq tooltip-timeout-id nil)))
 
 (defun tooltip-start-delayed-tip ()
-  "Add a one-shot timeout to call function tooltip-timeout."
+  "Add a one-shot timeout to call function `tooltip-timeout'."
   (setq tooltip-timeout-id
 	(add-timeout (tooltip-delay) 'tooltip-timeout nil)))
 
 (defun tooltip-timeout (object)
-  "Function called when timer with id tooltip-timeout-id fires."
+  "Function called when timer with id `tooltip-timeout-id' fires."
   (run-hook-with-args-until-success 'tooltip-hook
 				    tooltip-last-mouse-motion-event))
 
@@ -290,8 +292,8 @@ where the mouse is."
 
 (defun tooltip-process-prompt-regexp (process)
   "Return regexp matching the prompt of PROCESS at the end of a string.
-The prompt is taken from the value of COMINT-PROMPT-REGEXP in the buffer
-of PROCESS."
+The prompt is taken from the value of `comint-prompt-regexp' in
+the buffer of PROCESS."
   (let ((prompt-regexp (save-excursion
 			 (set-buffer (process-buffer process))
 			 comint-prompt-regexp)))
@@ -314,9 +316,9 @@ of PROCESS."
 ;;; Tooltip help.
 
 (defvar tooltip-help-message nil
-  "The last help message received via `tooltip-show-help-function'.")
+  "The last help message received via `tooltip-show-help'.")
 
-(defun tooltip-show-help-function (msg)
+(defun tooltip-show-help (msg)
   "Function installed as `show-help-function'.
 MSG is either a help string to display, or nil to cancel the display."
   (let ((previous-help tooltip-help-message))
@@ -338,10 +340,10 @@ MSG is either a help string to display, or nil to cancel the display."
 (defun tooltip-help-tips (event)
   "Hook function to display a help tooltip.
 This is installed on the hook `tooltip-hook', which is run when
-the timer with ID `tooltip-timeout-id' fires.
+the timer with id `tooltip-timeout-id' fires.
 Value is non-nil if this function handled the tip."
   (when (stringp tooltip-help-message)
-    (tooltip-show tooltip-help-message)
+    (tooltip-show tooltip-help-message tooltip-use-echo-area)
     t))
 
 (provide 'tooltip)

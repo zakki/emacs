@@ -1,6 +1,6 @@
 ;;; elint.el --- Lint Emacs Lisp
 
-;; Copyright (C) 1997 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Peter Liljenberg <petli@lysator.liu.se>
 ;; Created: May 1997
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -66,7 +66,7 @@
      left-margin left-margin-width line-spacing local-abbrev-table local-write-file-hooks major-mode
      mark-active mark-ring mode-line-buffer-identification
      mode-line-format mode-line-modified mode-line-process mode-name
-     overwrite-mode 
+     overwrite-mode
      point-before-scroll right-fringe-width right-margin-width
      scroll-bar-width scroll-down-aggressively scroll-up-aggressively selective-display
      selective-display-ellipses tab-width truncate-lines vc-mode vertical-scroll-bar)
@@ -298,7 +298,7 @@ Return nil if there are no more forms, t otherwise."
   (not (eobp)))
 
 (defun elint-init-env (forms)
-  "Initialise the environment from FORMS."
+  "Initialize the environment from FORMS."
   (let ((env (elint-make-env))
 	form)
     (while forms

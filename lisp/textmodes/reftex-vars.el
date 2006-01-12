@@ -3,7 +3,7 @@
 ;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.28
+;; Version: VERSIONTAG
 
 ;; This file is part of GNU Emacs.
 
@@ -19,13 +19,13 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
 ;;; Code:
-
+(eval-when-compile (defvar reftex-tables-dirty))
 (eval-when-compile (require 'cl))
 (eval-and-compile
   (defun reftex-set-dirty (symbol value)
@@ -1704,6 +1704,7 @@ The value of this variable will only have any effect when
 
 (defgroup reftex-fontification-configurations nil
   "Options concerning the faces used in RefTeX."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'reftex)
 
 (defcustom reftex-use-fonts t

@@ -1,6 +1,7 @@
 ;;; etags.el --- etags facility for Emacs
 
-;; Copyright (C) 1985, 86, 88, 89, 92, 93, 94, 95, 96, 98, 2000, 2001
+;; Copyright (C) 1985, 1986, 1988, 1989, 1992, 1993, 1994, 1995, 1996, 1998,
+;;               2000, 2001, 2002, 2003, 2004, 2005
 ;;	Free Software Foundation, Inc.
 
 ;; Author: Roland McGrath <roland@gnu.org>
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -40,7 +41,7 @@ Use the `etags' program to make a tags table file.")
 ;; Make M-x set-variable tags-file-name like M-x visit-tags-table.
 ;;;###autoload (put 'tags-file-name 'variable-interactive "fVisit tags table: ")
 
-(defgroup etags nil "Tags tables"
+(defgroup etags nil "Tags tables."
   :group 'tools)
 
 ;;;###autoload
@@ -273,6 +274,14 @@ One argument, the tag info returned by `snarf-tag-function'.")
   (run-hook-with-args-until-success 'tags-table-format-functions))
 
 ;;;###autoload
+(defun tags-table-mode ()
+  "Major mode for tags table file buffers."
+  (interactive)
+  (setq major-mode 'tags-table-mode)
+  (setq mode-name "Tags Table")
+  (initialize-new-tags-table))
+
+;;;###autoload
 (defun visit-tags-table (file &optional local)
   "Tell tags commands to use tags table file FILE.
 FILE should be the name of a file created with the `etags' program.
@@ -283,7 +292,7 @@ With a prefix arg, set the buffer-local value instead.
 When you find a tag with \\[find-tag], the buffer it finds the tag
 in is given a local value of this variable which is the name of the tags
 file the tag was in."
-  (interactive (list (read-file-name "Visit tags table: (default TAGS) "
+  (interactive (list (read-file-name "Visit tags table (default TAGS): "
 				     default-directory
 				     (expand-file-name "TAGS"
 						       default-directory)
@@ -414,7 +423,7 @@ Returns non-nil iff it is a valid table."
       ;; having changed since we last used it.
       (let (win)
 	(set-buffer (get-file-buffer file))
-	(setq win (or verify-tags-table-function (initialize-new-tags-table)))
+	(setq win (or verify-tags-table-function (tags-table-mode)))
 	(if (or (verify-visited-file-modtime (current-buffer))
 		;; Decide whether to revert the file.
 		;; revert-without-query can say to revert
@@ -433,7 +442,7 @@ Returns non-nil iff it is a valid table."
 	    (and verify-tags-table-function
 		 (funcall verify-tags-table-function))
 	  (revert-buffer t t)
-	  (initialize-new-tags-table)))
+	  (tags-table-mode)))
     (and (file-exists-p file)
 	 (progn
 	   (set-buffer (find-file-noselect file))
@@ -445,7 +454,7 @@ Returns non-nil iff it is a valid table."
 		     (setcar tail buffer-file-name))
 		 (if (eq file tags-file-name)
 		     (setq tags-file-name buffer-file-name))))
-	   (initialize-new-tags-table)))))
+	   (tags-table-mode)))))
 
 ;; Subroutine of visit-tags-table-buffer.  Search the current tags tables
 ;; for one that has tags for THIS-FILE (or that includes a table that
@@ -589,7 +598,7 @@ Returns t if it visits a tags table, or nil if there are no more in the list."
 		  (car list))
 		;; Finally, prompt the user for a file name.
 		(expand-file-name
-		 (read-file-name "Visit tags table: (default TAGS) "
+		 (read-file-name "Visit tags table (default TAGS): "
 				 default-directory
 				 "TAGS"
 				 t))))))
@@ -1886,7 +1895,7 @@ directory specification."
 ;; XXX Kludge interface.
 
 (define-button-type 'tags-select-tags-table
-  'action (lambda (button) (select-tags-table-select))
+  'action 'select-tags-table-select
   'help-echo "RET, t or mouse-2: select tags table")
 
 ;; XXX If a file is in multiple tables, selection may get the wrong one.
@@ -1903,30 +1912,27 @@ see the doc of that variable if you want to add names to the list."
 	(desired-point nil)
 	b)
     (when tags-table-list
-	  (setq desired-point (point-marker))
-	  (setq b (point))
-	  (princ tags-table-list (current-buffer))
-	  (make-text-button b (point) 'type 'tags-select-tags-table)
-	  (insert "\C-m")
-	  (prin1 (car tags-table-list) (current-buffer)) ;invisible
+      (setq desired-point (point-marker))
+      (setq b (point))
+      (princ (mapcar 'abbreviate-file-name tags-table-list) (current-buffer))
+      (make-text-button b (point) 'type 'tags-select-tags-table
+                        'etags-table (car tags-table-list))
       (insert "\n"))
     (while set-list
       (unless (eq (car set-list) tags-table-list)
 	(setq b (point))
-	(princ (car set-list) (current-buffer))
-	(make-text-button b (point) 'type 'tags-select-tags-table)
-	(insert "\C-m")
-	(prin1 (car (car set-list)) (current-buffer)) ;invisible
+	(princ (mapcar 'abbreviate-file-name (car set-list)) (current-buffer))
+	(make-text-button b (point) 'type 'tags-select-tags-table
+                          'etags-table (car (car set-list)))
 	(insert "\n"))
       (setq set-list (cdr set-list)))
     (when tags-file-name
-	  (or desired-point
-	      (setq desired-point (point-marker)))
-	  (setq b (point))
-	  (insert tags-file-name)
-	  (make-text-button b (point) 'type 'tags-select-tags-table)
-	  (insert "\C-m")
-	  (prin1 tags-file-name (current-buffer)) ;invisible
+      (or desired-point
+          (setq desired-point (point-marker)))
+      (setq b (point))
+      (insert (abbreviate-file-name tags-file-name))
+      (make-text-button b (point) 'type 'tags-select-tags-table
+                        'etags-table tags-file-name)
       (insert "\n"))
     (setq set-list (delete tags-file-name
 			   (apply 'nconc (cons (copy-sequence tags-table-list)
@@ -1934,10 +1940,9 @@ see the doc of that variable if you want to add names to the list."
 						       tags-table-set-list)))))
     (while set-list
       (setq b (point))
-      (insert (car set-list))
-      (make-text-button b (point) 'type 'tags-select-tags-table)
-      (insert "\C-m")
-      (prin1 (car set-list) (current-buffer)) ;invisible
+      (insert (abbreviate-file-name (car set-list)))
+      (make-text-button b (point) 'type 'tags-select-tags-table
+                          'etags-table (car set-list))
       (insert "\n")
       (setq set-list (delete (car set-list) set-list)))
     (goto-char (point-min))
@@ -1950,7 +1955,8 @@ see the doc of that variable if you want to add names to the list."
   (select-tags-table-mode))
 
 (defvar select-tags-table-mode-map
-  (let ((map (copy-keymap button-buffer-map)))
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map button-buffer-map)
     (define-key map "t" 'push-button)
     (define-key map " " 'next-line)
     (define-key map "\^?" 'previous-line)
@@ -1959,24 +1965,17 @@ see the doc of that variable if you want to add names to the list."
     (define-key map "q" 'select-tags-table-quit)
     map))
 
-(defun select-tags-table-mode ()
+(define-derived-mode select-tags-table-mode fundamental-mode "Select Tags Table"
   "Major mode for choosing a current tags table among those already loaded.
 
 \\{select-tags-table-mode-map}"
-  (interactive)
-  (kill-all-local-variables)
-  (setq buffer-read-only t
-	major-mode 'select-tags-table-mode
-	mode-name "Select Tags Table")
-  (use-local-map select-tags-table-mode-map)
-  (setq selective-display t
-	selective-display-ellipses nil))
+  (setq buffer-read-only t))
 
-(defun select-tags-table-select ()
+(defun select-tags-table-select (button)
   "Select the tags table named on this line."
-  (interactive)
-  (search-forward "\C-m")
-  (let ((name (read (current-buffer))))
+  (interactive (list (or (button-at (line-beginning-position))
+                         (error "No tags table on current line"))))
+  (let ((name (button-get button 'etags-table)))
     (visit-tags-table name)
     (select-tags-table-quit)
     (message "Tags table now %s" name)))
@@ -2024,7 +2023,8 @@ for \\[find-tag] (which see)."
 	   (message "Making completion list...")
 	   (with-output-to-temp-buffer "*Completions*"
 	     (display-completion-list
-	      (all-completions pattern 'tags-complete-tag nil)))
+	      (all-completions pattern 'tags-complete-tag nil)
+	      pattern))
 	   (message "Making completion list...%s" "done")))))
 
 (dolist (x '("^No tags table in use; use .* to select one$"
@@ -2042,5 +2042,5 @@ for \\[find-tag] (which see)."
 
 (provide 'etags)
 
-;;; arch-tag: b897c2b5-08f3-4837-b2d3-0e7d6db1b63e
+;; arch-tag: b897c2b5-08f3-4837-b2d3-0e7d6db1b63e
 ;;; etags.el ends here

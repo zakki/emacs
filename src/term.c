@@ -1,6 +1,6 @@
 /* Terminal control module for terminals described by TERMCAP
-   Copyright (C) 1985, 86, 87, 93, 94, 95, 98, 2000, 2001, 2002, 2005
-   Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1998, 2000, 2001,
+                 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* New redisplay, TTY faces by Gerd Moellmann <gerd@gnu.org>.  */
 
@@ -86,6 +86,10 @@ extern Lisp_Object Qspace, QCalign_to, QCwidth;
 /* Function to use to ring the bell.  */
 
 Lisp_Object Vring_bell_function;
+
+/* If true, use "vs", otherwise use "ve" to make the cursor visible.  */
+
+static int visible_cursor;
 
 /* Terminal characteristics that higher levels want to look at.
    These are all extern'd in termchar.h */
@@ -449,8 +453,18 @@ set_terminal_modes ()
 {
   if (FRAME_TERMCAP_P (XFRAME (selected_frame)))
     {
-      OUTPUT_IF (TS_termcap_modes);
-      OUTPUT_IF (TS_cursor_visible);
+      if (TS_termcap_modes)
+	OUTPUT (TS_termcap_modes);
+      else
+	{
+	  /* Output enough newlines to scroll all the old screen contents
+	     off the screen, so it won't be overwritten and lost.  */
+	  int i;
+	  for (i = 0; i < FRAME_LINES (XFRAME (selected_frame)); i++)
+	    putchar ('\n');
+	}
+
+      OUTPUT_IF (visible_cursor ? TS_cursor_visible : TS_cursor_normal);
       OUTPUT_IF (TS_keypad_mode);
       losecursor ();
     }
@@ -605,7 +619,8 @@ tty_show_cursor ()
     {
       tty_cursor_hidden = 0;
       OUTPUT_IF (TS_cursor_normal);
-      OUTPUT_IF (TS_cursor_visible);
+      if (visible_cursor)
+	OUTPUT_IF (TS_cursor_visible);
     }
 }
 
@@ -806,7 +821,7 @@ encode_terminal_code (src, src_len, coding)
      int src_len;
      struct coding_system *coding;
 {
-  struct glyph *src_start = src, *src_end = src + src_len;
+  struct glyph *src_end = src + src_len;
   register GLYPH g;
   unsigned char *buf;
   int nchars, nbytes, required;
@@ -891,7 +906,7 @@ encode_terminal_code (src, src_len, coding)
   if (SYMBOLP (coding->pre_write_conversion)
       && ! NILP (Ffboundp (coding->pre_write_conversion)))
     {
-      run_pre_write_conversin_on_c_str (&encode_terminal_buf, 
+      run_pre_write_conversin_on_c_str (&encode_terminal_buf,
 					&encode_terminal_bufsize,
 					nchars, nbytes, coding);
       nchars = coding->produced_char;
@@ -1808,7 +1823,7 @@ produce_stretch_glyph (it)
 	   && calc_pixel_width_or_height (&tem, it, prop, 0, 1, &align_to))
     {
       if (it->glyph_row == NULL || !it->glyph_row->mode_line_p)
-	align_to = (align_to < 0 
+	align_to = (align_to < 0
 		    ? 0
 		    : align_to - window_box_left_offset (it->w, TEXT_AREA));
       else if (align_to < 0)
@@ -1857,6 +1872,7 @@ produce_special_glyphs (it, what)
      enum display_element_type what;
 {
   struct it temp_it;
+  GLYPH glyph;
 
   temp_it = *it;
   temp_it.dp = NULL;
@@ -1872,15 +1888,11 @@ produce_special_glyphs (it, what)
 	  && INTEGERP (DISP_CONTINUE_GLYPH (it->dp))
 	  && GLYPH_CHAR_VALID_P (XINT (DISP_CONTINUE_GLYPH (it->dp))))
 	{
-	  temp_it.c = FAST_GLYPH_CHAR (XINT (DISP_CONTINUE_GLYPH (it->dp)));
-	  temp_it.len = CHAR_BYTES (temp_it.c);
+	  glyph = XINT (DISP_CONTINUE_GLYPH (it->dp));
+	  glyph = spec_glyph_lookup_face (XWINDOW (it->window), glyph);
 	}
       else
-	temp_it.c = '\\';
-
-      produce_glyphs (&temp_it);
-      it->pixel_width = temp_it.pixel_width;
-      it->nglyphs = temp_it.pixel_width;
+	glyph = '\\';
     }
   else if (what == IT_TRUNCATION)
     {
@@ -1889,18 +1901,22 @@ produce_special_glyphs (it, what)
 	  && INTEGERP (DISP_TRUNC_GLYPH (it->dp))
 	  && GLYPH_CHAR_VALID_P (XINT (DISP_TRUNC_GLYPH (it->dp))))
 	{
-	  temp_it.c = FAST_GLYPH_CHAR (XINT (DISP_TRUNC_GLYPH (it->dp)));
-	  temp_it.len = CHAR_BYTES (temp_it.c);
+	  glyph = XINT (DISP_TRUNC_GLYPH (it->dp));
+	  glyph = spec_glyph_lookup_face (XWINDOW (it->window), glyph);
 	}
       else
-	temp_it.c = '$';
-
-      produce_glyphs (&temp_it);
-      it->pixel_width = temp_it.pixel_width;
-      it->nglyphs = temp_it.pixel_width;
+	glyph = '$';
     }
   else
     abort ();
+
+  temp_it.c = FAST_GLYPH_CHAR (glyph);
+  temp_it.face_id = FAST_GLYPH_FACE (glyph);
+  temp_it.len = CHAR_BYTES (temp_it.c);
+
+  produce_glyphs (&temp_it);
+  it->pixel_width = temp_it.pixel_width;
+  it->nglyphs = temp_it.pixel_width;
 }
 
 
@@ -1919,7 +1935,8 @@ produce_special_glyphs (it, what)
       ? (TN_no_color_video & (ATTR)) == 0	\
       : 1)
 
-/* Turn appearances of face FACE_ID on tty frame F on.  */
+/* Turn appearances of face FACE_ID on tty frame F on.
+   FACE_ID is a realized face ID number, in the face cache.  */
 
 static void
 turn_on_face (f, face_id)
@@ -1999,18 +2016,20 @@ turn_on_face (f, face_id)
 
   if (TN_max_colors > 0)
     {
-      char *p;
+      char *ts, *p;
 
-      if (fg >= 0 && TS_set_foreground)
+      ts = standout_mode ? TS_set_background : TS_set_foreground;
+      if (fg >= 0 && ts)
 	{
-	  p = tparam (TS_set_foreground, NULL, 0, (int) fg);
+	  p = tparam (ts, NULL, 0, (int) fg);
 	  OUTPUT (p);
 	  xfree (p);
 	}
 
-      if (bg >= 0 && TS_set_background)
+      ts = standout_mode ? TS_set_foreground : TS_set_background;
+      if (bg >= 0 && ts)
 	{
-	  p = tparam (TS_set_background, NULL, 0, (int) bg);
+	  p = tparam (ts, NULL, 0, (int) bg);
 	  OUTPUT (p);
 	  xfree (p);
 	}
@@ -2685,6 +2704,16 @@ fatal (str, arg1, arg2)
   exit (1);
 }
 
+DEFUN ("tty-no-underline", Ftty_no_underline, Stty_no_underline, 0, 0, 0,
+       doc: /* Declare that this terminal does not handle underlining.
+This is used to override the terminfo data, for certain terminals that
+do not really do underlining, but say that they do.  */)
+  ()
+{
+  TS_enter_underline_mode = 0;
+  return Qnil;
+}
+
 void
 syms_of_term ()
 {
@@ -2702,8 +2731,16 @@ This variable can be used by terminal emulator packages.  */);
 The function should accept no arguments.  */);
   Vring_bell_function = Qnil;
 
+  DEFVAR_BOOL ("visible-cursor", &visible_cursor,
+	       doc: /* Non-nil means to make the cursor very visible.
+This only has an effect when running in a text terminal.
+What means \"very visible\" is up to your terminal.  It may make the cursor
+bigger, or it may make it blink, or it may do nothing at all.  */);
+  visible_cursor = 1;
+
   defsubr (&Stty_display_color_p);
   defsubr (&Stty_display_color_cells);
+  defsubr (&Stty_no_underline);
 }
 
 /* arch-tag: 498e7449-6f2e-45e2-91dd-b7d4ca488193

@@ -1,6 +1,7 @@
 ;;; mail-source.el --- functions for fetching mail
-;; Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004
-;;        Free Software Foundation, Inc.
+
+;; Copyright (C) 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;; Keywords: news, mail
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -739,6 +740,7 @@ Pass INFO on to CALLBACK."
 	      (funcall function mail-source-crash-box))
 	     ;; The default is to use pop3.el.
 	     (t
+	      (require 'pop3)
 	      (let ((pop3-password password)
 		    (pop3-maildrop user)
 		    (pop3-mailhost server)
@@ -800,6 +802,7 @@ Pass INFO on to CALLBACK."
 	     (function)
 	     ;; The default is to use pop3.el.
 	     (t
+	      (require 'pop3)
 	      (let ((pop3-password password)
 		    (pop3-maildrop user)
 		    (pop3-mailhost server)

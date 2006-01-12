@@ -1,7 +1,7 @@
 ;;; font-core.el --- Core interface to font-lock
 
 ;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-;;   2002, 2003, 2005  Free Software Foundation, Inc.
+;;   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: languages, faces
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
 
@@ -118,17 +118,14 @@ of `font-lock-global-modes'.  For example, put in your ~/.emacs:
 
  (global-font-lock-mode t)
 
-There are a number of support modes that may be used to speed up Font Lock mode
-in various ways, specified via the variable `font-lock-support-mode'.  Where
-major modes support different levels of fontification, you can use the variable
-`font-lock-maximum-decoration' to specify which level you generally prefer.
-When you turn Font Lock mode on/off the buffer is fontified/defontified, though
-fontification occurs only if the buffer is less than `font-lock-maximum-size'.
+Where major modes support different levels of fontification, you can use
+the variable `font-lock-maximum-decoration' to specify which level you
+generally prefer.  When you turn Font Lock mode on/off the buffer is
+fontified/defontified, though fontification occurs only if the buffer is
+less than `font-lock-maximum-size'.
 
-For example, to specify that Font Lock mode use use Lazy Lock mode as a support
-mode and use maximum levels of fontification, put in your ~/.emacs:
+For example, to use maximum levels of fontification, put in your ~/.emacs:
 
- (setq font-lock-support-mode 'lazy-lock-mode)
  (setq font-lock-maximum-decoration t)
 
 To add your own highlighting for some major mode, and modify the highlighting
@@ -294,9 +291,13 @@ means that Font Lock mode is turned on for buffers in C and C++ modes only."
     (let (inhibit-quit)
       (turn-on-font-lock))))
 
-(easy-mmode-define-global-mode
- global-font-lock-mode font-lock-mode turn-on-font-lock-if-enabled
- :extra-args (dummy))
+(define-global-minor-mode global-font-lock-mode
+  font-lock-mode turn-on-font-lock-if-enabled
+  :extra-args (dummy)
+  :initialize 'custom-initialize-safe-default
+  :init-value (not (or noninteractive emacs-basic-display))
+  :group 'font-lock
+  :version "22.1")
 
 ;;; End of Global Font Lock mode.
 

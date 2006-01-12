@@ -1,5 +1,5 @@
 /* Implementation of BDF font handling on the Microsoft W32 API.
-   Copyright (C) 1999 Free Software Foundation, Inc.
+   Copyright (C) 1999, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +15,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Based heavily on code by H. Miyashita for Meadow (a descendant of
    MULE for W32). */
@@ -604,7 +604,7 @@ create_offscreen_bitmap(HDC hdc, int width, int height, unsigned char **bitsp)
   info.c[1].rgbRed = info.c[1].rgbGreen = info.c[1].rgbBlue = 255;
 
   return CreateDIBSection(hdc, (LPBITMAPINFO)&info,
-			  DIB_RGB_COLORS, bitsp, NULL, 0);
+			  DIB_RGB_COLORS, (void **)bitsp, NULL, 0);
 }
 
 glyph_metric *

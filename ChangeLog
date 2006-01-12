@@ -1,3 +1,141 @@
+2006-01-02  Chong Yidong  <cyd@stupidchicken.com>
+
+	* configure.in: Use -Wno-pointer-sign if available.
+	* configure: Regenerate.
+
+2005-12-29  Andreas Schwab  <schwab@suse.de>
+
+	* config.guess, config.sub: Updated from master source.
+
+2005-12-25  Giorgos Keramidas  <keramida@ceid.upatras.gr>  (tiny change)
+
+	* configure.in: use amdx86-64 for freebsd on x86_64.
+
+2005-11-22  Romain Francoise  <romain@orebokech.com>
+
+	* make-dist: Add etc/images/icons.
+
+2005-11-03  Andreas Schwab  <schwab@suse.de>
+
+	* configure.in: Use GZIP_PROG instead of GZIP.
+
+	* Makefile.in (GZIP_PROG): Renamed from GZIP.
+	(install-arch-indep): Adjust.
+
+2005-11-01  Andreas Schwab  <schwab@suse.de>
+
+	* Makefile.in (bootstrap): Fix dependencies for parallel build.
+	(bootfast): Likewise.
+
+2005-11-01  Romain Francoise  <romain@orebokech.com>
+
+	* configure.in: Check for gzip.
+	* configure: Regenerate.
+
+	* Makefile.in (install): Compress source files.
+
+2005-10-24  Steven Tamm  <steventamm@mac.com>
+
+	* configure.in: Fix darwin386 configuration issue.
+	* configure: Regenerate.
+
+2005-10-22  Eli Zaretskii  <eliz@gnu.org>
+
+	* INSTALL.CVS: Add mh-autoloads to the partial rebuild procedure.
+
+2005-10-17  Bill Wohler  <wohler@newt.com>
+
+	* make-dist: Create and populate etc/images/low-color.
+
+2005-10-15  Bill Wohler  <wohler@newt.com>
+
+	* make-dist: Create and populate etc/images/gud.
+
+2005-10-08  Richard M. Stallman  <rms@gnu.org>
+
+	* make-dist (tempparent): Don't check for 14-char file name limit.
+
+2005-10-07  Romain Francoise  <romain@orebokech.com>
+
+	* make-dist: Add etc/images/ezimage and etc/images/mail
+	directories.  Install images in etc/images.
+
+2005-10-04  YAMAMOTO Mitsuharu  <mituharu@math.s.chiba-u.ac.jp>
+
+	* configure.in: Prefer Carbon if --enable-carbon-app or
+	--with-carbon is explicitly specified even when X11 is detected.
+	* configure: Regenerate.
+
+2005-09-15  Ulf Jasper  <ulf.jasper@web.de>
+
+	* Makefile.in (install-arch-indep, uninstall):
+	Handle newsticker manual.
+	(info): Add - to commands.
+
+2005-09-11  Kim F. Storm  <storm@cua.dk>
+
+	* AUTHORS: Regenerate.
+
+2005-09-10  Giuseppe Scrivano  <gscrivano@gmail.com>
+
+	Remove the MAXPATHLEN limitations:
+
+	* configure.in (AC_CHECK_FUNCS): Check for get_current_dir_name.
+	* configure: Regenerated.
+
+2005-09-09  Eli Zaretskii  <eliz@gnu.org>
+
+	* configure.in <lynxsos*>: Support for LynxOS on PPC.
+	* configure: Regenerated.
+
+2005-09-05  Paul Eggert  <eggert@cs.ucla.edu>
+
+	* config.guess, config.sub: Updated from master source.
+
+2005-08-03  Juanma Barranquero  <lekktu@gmail.com>
+
+	* .cvsignore: Add `lock'.
+
+2005-07-28  Juanma Barranquero  <lekktu@gmail.com>
+
+	* .cvsignore: Add `data' and `site-lisp' (for in-place installs).
+
+2005-07-26  Paul Eggert  <eggert@cs.ucla.edu>
+
+	Merge gnulib getopt implementation into Emacs.
+
+	* Makefile.in (AUTOCONF_INPUTS): New macro.
+	($(srcdir)/configure, $(srcdir)/src/stamp-h.in): Depend on it,
+	so that these files also depend on m4/getopt.m4.
+	* configure.in: Configure getopt by including m4/getopt.m4,
+	and configuring a getopt replacement if necessary.
+	* make-dist: Add m4 subdirectory.  Unlink lib-src/getopt.h.
+	* m4/getopt.m4: New file.
+
+2005-07-06  Lute Kamstra  <lute@gnu.org>
+
+	* configure.in: Fix capitalization.
+	* configure: Regenerate.
+
+2005-07-04  Lute Kamstra  <lute@gnu.org>
+
+	Update FSF's address in GPL notices.
+
+2005-06-19  J,bi(Br,bt(Bme Marant  <jerome@marant.org>
+
+	* Makefile.in (epaths-force): Protect both lisppath and
+	buildlisppath from whitespace.
+
+2005-06-08  Steven Tamm  <steventamm@mac.com>
+
+	* configure.in: Support Darwin/MacOSX on Intel
+	* configure: Regenerate.
+
+2005-06-06  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* configure.in (HAVE_CANCELMENUTRACKING): New test.
+	* configure: Regenerate.
+
 2005-05-11  J,Ai(Br,At(Bme Marant  <jmarant@marant.org>
 
 	* configure.in: Add --enable-locallisppath.

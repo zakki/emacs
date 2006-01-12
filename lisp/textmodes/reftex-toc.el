@@ -3,7 +3,7 @@
 ;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.28
+;; Version: VERSIONTAG
 
 ;; This file is part of GNU Emacs.
 
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -35,6 +35,12 @@
   "Keymap used for *toc* buffer.")
 
 (defvar reftex-toc-menu)
+(eval-when-compile (defvar zmacs-regions))
+(defvar reftex-last-window-height nil)
+(defvar reftex-last-window-width nil)
+(defvar reftex-toc-include-labels-indicator nil)
+(defvar reftex-toc-include-index-indicator nil)
+(defvar reftex-toc-max-level-indicator nil)
 
 (defun reftex-toc-mode ()
   "Major mode for managing Table of Contents for LaTeX files.
@@ -73,16 +79,11 @@ Here are all local bindings.
   (add-hook 'post-command-hook 'reftex-toc-post-command-hook nil t)
   (add-hook 'pre-command-hook  'reftex-toc-pre-command-hook nil t)
   (easy-menu-add reftex-toc-menu reftex-toc-map)
-  (run-mode-hooks 'reftex-toc-mode-hook))
+  (run-hooks 'reftex-toc-mode-hook))
 
 (defvar reftex-last-toc-file nil
   "Stores the file name from which `reftex-toc' was called.  For redo command.")
 
-(defvar reftex-last-window-height nil)
-(defvar reftex-last-window-width nil)
-(defvar reftex-toc-include-labels-indicator nil)
-(defvar reftex-toc-include-index-indicator nil)
-(defvar reftex-toc-max-level-indicator nil)
 
 (defvar reftex-toc-return-marker (make-marker)
   "Marker which makes it possible to return from toc to old position.")
@@ -307,7 +308,7 @@ SPC=view TAB=goto RET=goto+hide [q]uit [r]escan [l]abels [f]ollow [x]r [?]Help
                 (frame-parameter  frame 'name))
               "RefTeX TOC Frame")))
     (if (and res error)
-        (error "This frame is view-only.  Use `C-c =' to create toc window for commands."))
+        (error "This frame is view-only.  Use `C-c =' to create toc window for commands"))
     res))
 
 (defun reftex-toc-show-help ()
@@ -544,6 +545,13 @@ Useful for large TOC's."
 
 ;; Promotion/Demotion stuff
 
+(defvar delta)
+(defvar mpos)
+(defvar pro-or-de)
+(defvar start-pos)
+(defvar start-line)
+(defvar mark-line)
+
 (defun reftex-toc-demote (&optional arg)
   "Demote section at point.  If region is active, apply to all in region."
   (interactive "p")
@@ -619,12 +627,6 @@ point."
             nil))
     (if msg (progn (ding) (message msg)))))
 
-(defvar delta)
-(defvar mpos)
-(defvar pro-or-de)
-(defvar start-pos)
-(defvar start-line)
-(defvar mark-line)
 
 (defun reftex-toc-restore-region (point-line &optional mark-line)
   (if mark-line
@@ -638,6 +640,10 @@ point."
             (zmacs-activate-region)
           (setq mark-active t
                 deactivate-mark nil)))))
+
+(defvar name1)
+(defvar dummy)
+(defvar dummy2)
 
 (defun reftex-toc-promote-prepare (x)
   "Look at a toc entry and see if we could pro/demote it.

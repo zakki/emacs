@@ -1,5 +1,6 @@
 /* GNU Emacs routines to deal with case tables.
-   Copyright (C) 1993, 1994 Free Software Foundation, Inc.
+   Copyright (C) 1993, 1994, 2002, 2003, 2004, 
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Written by Howard Gayle.  */
 
@@ -96,8 +97,9 @@ A case table is a char-table which maps characters
 to their lower-case equivalents.  It also has three \"extra\" slots
 which may be additional char-tables or nil.
 These slots are called UPCASE, CANONICALIZE and EQUIVALENCES.
-UPCASE maps each character to its upper-case equivalent;
- if lower and upper case characters are in 1-1 correspondence,
+UPCASE maps each non-upper-case character to its upper-case equivalent.
+ (The value in UPCASE for an upper-case character is never used.)
+ If lower and upper case characters are in 1-1 correspondence,
  you may use nil and the upcase table will be deduced from DOWNCASE.
 CANONICALIZE maps each character to a canonical equivalent;
  any two characters that are related by case-conversion have the same

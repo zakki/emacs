@@ -1,7 +1,6 @@
 ;;; dnd.el --- drag and drop support.
 
-;; Copyright (C) 2005
-;;  Free Software Foundation, Inc.
+;; Copyright (C) 2005 Free Software Foundation, Inc.
 
 ;; Author: Jan Dj,Ad(Brv <jan.h.d@swipnet.se>
 ;; Maintainer: FSF
@@ -21,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -180,7 +179,7 @@ TEXT is the text as a string, WINDOW is the window where the drop happened."
 	  (not (windowp window)))
       (progn
 	(kill-new text)
-	(message
+	(message "%s"
 	 (substitute-command-keys
 	  "The dropped text can be accessed with \\[yank]")))
     (insert text))

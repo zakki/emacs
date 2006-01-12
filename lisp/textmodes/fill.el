@@ -1,7 +1,7 @@
 ;;; fill.el --- fill commands for Emacs		-*- coding: iso-2022-7bit -*-
 
-;; Copyright (C) 1985,86,92,94,95,96,97,1999,2001,02,03,2004
-;;               Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1992, 1994, 1995, 1996, 1997, 1999, 2001, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: wp
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -115,7 +115,7 @@ if it would act as a paragraph-starter on the second line."
 
 (defcustom adaptive-fill-function nil
   "*Function to call to choose a fill prefix for a paragraph, or nil.
-This function is used when `adaptive-fill-regexp' does not match."
+nil means the function has not determined the fill prefix."
   :type '(choice (const nil) function)
   :group 'fill)
 
@@ -163,7 +163,7 @@ Remove indentation from each line."
       ;; This is quick, but loses when a tab follows the end of a sentence.
       ;; Actually, it is difficult to tell that from "Mr.\tSmith".
       ;; Blame the typist.
-      (subst-char-in-region beg end ?\t ?\ )
+      (subst-char-in-region beg end ?\t ?\s)
       (while (and (< (point) end)
 		  (re-search-forward end-spc-re end t))
 	(delete-region
@@ -205,6 +205,16 @@ Remove indentation from each line."
       (unless (zerop cmp)
 	(substring s1 0 cmp)))))
 
+(defun fill-match-adaptive-prefix ()
+  (let ((str (or
+              (and adaptive-fill-function (funcall adaptive-fill-function))
+              (and adaptive-fill-regexp (looking-at adaptive-fill-regexp)
+                   (match-string-no-properties 0)))))
+    (if (>= (+ (current-left-margin) (length str)) (current-fill-column))
+        ;; Death to insanely long prefixes.
+        nil
+      str)))
+
 (defun fill-context-prefix (from to &optional first-line-regexp)
   "Compute a fill prefix from the text between FROM and TO.
 This uses the variables `adaptive-fill-regexp' and `adaptive-fill-function'
@@ -218,55 +228,45 @@ act as a paragraph-separator."
     (if (eolp) (forward-line 1))
     ;; Move to the second line unless there is just one.
     (move-to-left-margin)
-    (let ((firstline (point))
-	  first-line-prefix
+    (let (first-line-prefix
 	  ;; Non-nil if we are on the second line.
-	  second-line-prefix
-	  start)
-      (setq start (point))
+	  second-line-prefix)
       (setq first-line-prefix
 	    ;; We don't need to consider `paragraph-start' here since it
 	    ;; will be explicitly checked later on.
 	    ;; Also setting first-line-prefix to nil prevents
 	    ;; second-line-prefix from being used.
-	    (cond ;; ((looking-at paragraph-start) nil)
-		  ((and adaptive-fill-regexp (looking-at adaptive-fill-regexp))
-		   (match-string-no-properties 0))
-		  (adaptive-fill-function (funcall adaptive-fill-function))))
+	    ;; ((looking-at paragraph-start) nil)
+	    (fill-match-adaptive-prefix))
       (forward-line 1)
       (if (< (point) to)
-	(progn
-	  (move-to-left-margin)
-	  (setq start (point))
-	  (setq second-line-prefix
-		(cond ((looking-at paragraph-start) nil) ;Can it happen ? -stef
-		      ((and adaptive-fill-regexp
-			    (looking-at adaptive-fill-regexp))
-		       (buffer-substring-no-properties start (match-end 0)))
-		      (adaptive-fill-function
-		       (funcall adaptive-fill-function))))
-	  ;; If we get a fill prefix from the second line,
-	  ;; make sure it or something compatible is on the first line too.
-	  (when second-line-prefix
-	    (unless first-line-prefix (setq first-line-prefix ""))
-	    ;; If the non-whitespace chars match the first line,
-	    ;; just use it (this subsumes the 2 checks used previously).
-	    ;; Used when first line is `/* ...' and second-line is
-	    ;; ` * ...'.
-	    (let ((tmp second-line-prefix)
-		  (re "\\`"))
-	      (while (string-match "\\`[ \t]*\\([^ \t]+\\)" tmp)
-		(setq re (concat re ".*" (regexp-quote (match-string 1 tmp))))
-		(setq tmp (substring tmp (match-end 0))))
-	      ;; (assert (string-match "\\`[ \t]*\\'" tmp))
+          (progn
+            (move-to-left-margin)
+            (setq second-line-prefix
+                  (cond ((looking-at paragraph-start) nil) ;Can it happen? -Stef
+                        (t (fill-match-adaptive-prefix))))
+            ;; If we get a fill prefix from the second line,
+            ;; make sure it or something compatible is on the first line too.
+            (when second-line-prefix
+              (unless first-line-prefix (setq first-line-prefix ""))
+              ;; If the non-whitespace chars match the first line,
+              ;; just use it (this subsumes the 2 checks used previously).
+              ;; Used when first line is `/* ...' and second-line is
+              ;; ` * ...'.
+              (let ((tmp second-line-prefix)
+                    (re "\\`"))
+                (while (string-match "\\`[ \t]*\\([^ \t]+\\)" tmp)
+                  (setq re (concat re ".*" (regexp-quote (match-string 1 tmp))))
+                  (setq tmp (substring tmp (match-end 0))))
+                ;; (assert (string-match "\\`[ \t]*\\'" tmp))
 
-	      (if (string-match re first-line-prefix)
-		  second-line-prefix
+                (if (string-match re first-line-prefix)
+                    second-line-prefix
 
-		;; Use the longest common substring of both prefixes,
-		;; if there is one.
-		(fill-common-string-prefix first-line-prefix
-					   second-line-prefix)))))
+                  ;; Use the longest common substring of both prefixes,
+                  ;; if there is one.
+                  (fill-common-string-prefix first-line-prefix
+                                             second-line-prefix)))))
 	;; If we get a fill prefix from a one-line paragraph,
 	;; maybe change it to whitespace,
 	;; and check that it isn't a paragraph starter.
@@ -282,7 +282,7 @@ act as a paragraph-separator."
 				(string-match comment-start-skip
 					      first-line-prefix)))
 		       first-line-prefix
-		     (make-string (string-width first-line-prefix) ?\ ))))
+		     (make-string (string-width first-line-prefix) ?\s))))
 	      ;; But either way, reject it if it indicates the start
 	      ;; of a paragraph when text follows it.
 	      (if (not (eq 0 (string-match paragraph-start
@@ -291,12 +291,13 @@ act as a paragraph-separator."
 
 (defun fill-single-word-nobreak-p ()
   "Don't break a line after the first or before the last word of a sentence."
-  (or (looking-at "[ \t]*\\sw+[ \t]*[.?!:][ \t]*$")
+  (or (looking-at (concat "[ \t]*\\sw+" "\\(?:" (sentence-end) "\\)"))
       (save-excursion
 	(skip-chars-backward " \t")
 	(and (/= (skip-syntax-backward "w") 0)
 	     (/= (skip-chars-backward " \t") 0)
-	     (/= (skip-chars-backward ".?!:") 0)))))
+	     (/= (skip-chars-backward ".?!:") 0)
+	     (looking-at (sentence-end))))))
 
 (defun fill-french-nobreak-p ()
   "Return nil if French style allows breaking the line at point.
@@ -312,7 +313,7 @@ places."
 	  (backward-char 1)
 	  (or (looking-at "[([{,A+,b+(B]")
 	      ;; Don't cut right after a single-letter word.
-	      (and (memq (preceding-char) '(?\t ?\ ))
+	      (and (memq (preceding-char) '(?\t ?\s))
 		   (eq (char-syntax (following-char)) ?w)))))))
 
 (defcustom fill-nobreak-predicate nil
@@ -333,7 +334,7 @@ be tested.  If it returns t, fill commands do not break the line there."
 Can be customized with the variables `fill-nobreak-predicate'
 and `fill-nobreak-invisible'."
   (or
-   (and fill-nobreak-invisible (line-move-invisible (point)))
+   (and fill-nobreak-invisible (line-move-invisible-p (point)))
    (unless (bolp)
     (or
      ;; Don't break after a period followed by just one space.
@@ -344,13 +345,14 @@ and `fill-nobreak-invisible'."
      ;; it at the end of the line.
      (and sentence-end-double-space
 	  (save-excursion
-	    (skip-chars-backward ". ")
-	    (looking-at "\\. \\([^ ]\\|$\\)")))
+	    (skip-chars-backward " ")
+	    (and (eq (preceding-char) ?.)
+		 (looking-at " \\([^ ]\\|$\\)"))))
      ;; Another approach to the same problem.
      (save-excursion
-       (skip-chars-backward ". ")
-       (and (looking-at "\\.")
-     	    (not (looking-at (sentence-end)))))
+       (skip-chars-backward " ")
+       (and (eq (preceding-char) ?.)
+	    (not (progn (forward-char -1) (looking-at (sentence-end))))))
      ;; Don't split a line if the rest would look like a new paragraph.
      (unless use-hard-newlines
        (save-excursion
@@ -439,10 +441,10 @@ Point is moved to just past the fill prefix on the first line."
 	(sentence-end-without-space-list
 	 (string-to-list sentence-end-without-space)))
     (while (re-search-forward eol-double-space-re to t)
-      (or (>= (point) to) (memq (char-before) '(?\t ?\ ))
+      (or (>= (point) to) (memq (char-before) '(?\t ?\s))
 	  (memq (char-after (match-beginning 0))
 		sentence-end-without-space-list)
-	  (insert-and-inherit ?\ ))))
+	  (insert-and-inherit ?\s))))
 
   (goto-char from)
   (if enable-multibyte-characters
@@ -471,7 +473,7 @@ Point is moved to just past the fill prefix on the first line."
   (goto-char from)
   (skip-chars-forward " \t")
   ;; Then change all newlines to spaces.
-  (subst-char-in-region from to ?\n ?\ )
+  (subst-char-in-region from to ?\n ?\s)
   (if (and nosqueeze (not (eq justify 'full)))
       nil
     (canonically-space-region (or squeeze-after (point)) to)
@@ -830,10 +832,10 @@ can take care of filling.  JUSTIFY is used as in `fill-paragraph'."
 		(if has-code-and-comment
 		    (concat
 		     (if (not indent-tabs-mode)
-			 (make-string (current-column) ?\ )
+			 (make-string (current-column) ?\s)
 		       (concat
 			(make-string (/ (current-column) tab-width) ?\t)
-			(make-string (% (current-column) tab-width) ?\ )))
+			(make-string (% (current-column) tab-width) ?\s)))
 		     (buffer-substring (point) comin))
 		  (buffer-substring (line-beginning-position) comin))))
 	     beg end)
@@ -1128,8 +1130,6 @@ otherwise it is made canonical."
 	    ncols			; new indent point or offset
 	    (nspaces 0)			; number of spaces between words
 					; in line (not space characters)
-	    fracspace			; fractional amount of space to be
-					; added between each words
 	    (curr-fracspace 0)		; current fractional space amount
 	    count)
 	(end-of-line)
@@ -1225,7 +1225,7 @@ otherwise it is made canonical."
 			 (while (> count 0)
 			   (skip-chars-forward " ")
 			   (insert-and-inherit
-			    (make-string (/ curr-fracspace nspaces) ?\ ))
+			    (make-string (/ curr-fracspace nspaces) ?\s))
 			   (search-forward " " nil t)
 			   (setq count (1- count)
 				 curr-fracspace
@@ -1284,8 +1284,8 @@ in the paragraph.
 
 When calling from a program, pass range to fill as first two arguments.
 
-Optional third and fourth arguments JUSTIFY and MAIL-FLAG:
-JUSTIFY to justify paragraphs (prefix arg),
+Optional third and fourth arguments JUSTIFYP and CITATION-REGEXP:
+JUSTIFYP to justify paragraphs (prefix arg).
 When filling a mail message, pass a regexp for CITATION-REGEXP
 which will match the prefix of a line which is a citation marker
 plus whitespace, but no other kind of prefix.
@@ -1338,7 +1338,7 @@ Also, if CITATION-REGEXP is non-nil, don't fill header lines."
 	      (forward-line 1))))
       (narrow-to-region (point) max)
       ;; Loop over paragraphs.
-      (while (let ((here (point)))
+      (while (progn
 	       ;; Skip over all paragraph-separating lines
 	       ;; so as to not include them in any paragraph.
                (while (and (not (eobp))
@@ -1446,5 +1446,5 @@ Also, if CITATION-REGEXP is non-nil, don't fill header lines."
 	"")
     string))
 
-;;; arch-tag: 727ad455-1161-4fa9-8df5-0f74b179216d
+;; arch-tag: 727ad455-1161-4fa9-8df5-0f74b179216d
 ;;; fill.el ends here

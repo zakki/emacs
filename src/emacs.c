@@ -1,6 +1,6 @@
 /* Fully extensible Emacs, running on Unix, intended for GNU.
-   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 1998, 1999, 2001,
-     2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 1998, 1999,
+                 2001, 2002, 2003, 2004, 2005, 2006 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -112,6 +112,9 @@ EMACS_INT gdb_data_seg_bits = 0;
 #endif
 EMACS_INT PVEC_FLAG = PSEUDOVECTOR_FLAG;
 EMACS_INT gdb_array_mark_flag = ARRAY_MARK_FLAG;
+/* GDB might say "No enum type named pvec_type" if we don't have at
+   least one symbol with that type, and then xbacktrace could fail.  */
+enum pvec_type gdb_pvec_type = PVEC_TYPE_MASK;
 
 /* Command line args from shell, as list of strings.  */
 Lisp_Object Vcommand_line_args;
@@ -148,7 +151,7 @@ void *malloc_state_ptr;
 /* From glibc, a routine that returns a copy of the malloc internal state.  */
 extern void *malloc_get_state ();
 /* From glibc, a routine that overwrites the malloc internal state.  */
-extern void malloc_set_state ();
+extern int malloc_set_state ();
 /* Non-zero if the MALLOC_CHECK_ enviroment variable was set while
    dumping.  Used to work around a bug in glibc's malloc.  */
 int malloc_using_checking;
@@ -266,7 +269,7 @@ Initialization options:\n\
 --no-site-file              do not load site-start.el\n\
 --no-splash                 do not display a splash screen on startup\n\
 --no-window-system, -nw     do not communicate with X, ignoring $DISPLAY\n\
---quick, -Q                 equivalent to -q --no-site-file\n\
+--quick, -Q                 equivalent to -q --no-site-file --no-splash\n\
 --script FILE               run FILE as an Emacs Lisp script\n\
 --terminal, -t DEVICE       use DEVICE for terminal I/O\n\
 --unibyte, --no-multibyte   run Emacs in unibyte mode\n\
@@ -311,7 +314,7 @@ Display options:\n\
 --fullscreen, -fs               make first frame fullscreen\n\
 --fullwidth, -fw                make the first frame wide as the screen\n\
 --geometry, -g GEOMETRY         window geometry\n\
---icon-type, -i                 use picture of gnu for Emacs icon\n\
+--no-bitmap-icon, -nbi          do not use picture of gnu for Emacs icon\n\
 --iconic                        start Emacs in iconified state\n\
 --internal-border, -ib WIDTH    width between text and main border\n\
 --line-spacing, -lsp PIXELS     additional space to put between lines\n\
@@ -896,7 +899,7 @@ main (argc, argv
       else
 	{
 	  printf ("GNU Emacs %s\n", SDATA (tem));
-	  printf ("Copyright (C) 2004 Free Software Foundation, Inc.\n");
+	  printf ("Copyright (C) 2006 Free Software Foundation, Inc.\n");
 	  printf ("GNU Emacs comes with ABSOLUTELY NO WARRANTY.\n");
 	  printf ("You may redistribute copies of Emacs\n");
 	  printf ("under the terms of the GNU General Public License.\n");
@@ -918,7 +921,13 @@ main (argc, argv
         {
           /* Set this so we only do this once.  */
           putenv("EMACS_HEAP_EXEC=true");
-          personality (PER_LINUX32);
+
+	  /* A flag to turn off address randomization which is introduced
+	   in linux kernel shipped with fedora core 4 */
+#define ADD_NO_RANDOMIZE 0x0040000
+	  personality (PER_LINUX32 | ADD_NO_RANDOMIZE);
+#undef  ADD_NO_RANDOMIZE
+
           execvp (argv[0], argv);
 
           /* If the exec fails, try to dump anyway.  */
@@ -956,9 +965,15 @@ main (argc, argv
 
 #ifdef MAC_OSX
   /* Skip process serial number passed in the form -psn_x_y as
-     command-line argument.  */
+     command-line argument.  The WindowServer adds this option when
+     Emacs is invoked from the Finder or by the `open' command.  In
+     these cases, the working directory becomes `/', so we change it
+     to the user's home directory.  */
   if (argc > skip_args + 1 && strncmp (argv[skip_args+1], "-psn_", 5) == 0)
-    skip_args++;
+    {
+      chdir (getenv ("HOME"));
+      skip_args++;
+    }
 #endif /* MAC_OSX */
 
 #ifdef VMS
@@ -995,7 +1010,7 @@ main (argc, argv
       && !getrlimit (RLIMIT_STACK, &rlim))
     {
       long newlim;
-      extern int re_max_failures;
+      extern size_t re_max_failures;
       /* Approximate the amount regex.c needs per unit of re_max_failures.  */
       int ratio = 20 * sizeof (char *);
       /* Then add 33% to cover the size of the smaller stacks that regex.c
@@ -1147,9 +1162,9 @@ main (argc, argv
   if (argmatch (argv, argc, "-script", "--script", 3, &junk, &skip_args))
     {
       noninteractive = 1;	/* Set batch mode.  */
-      /* Convert --script to -l, un-skip it, and sort again so that -l will be
-	 handled in proper sequence.  */
-      argv[skip_args - 1] = "-l";
+      /* Convert --script to --scriptload, un-skip it, and sort again
+	 so that it will be handled in proper sequence.  */
+      argv[skip_args - 1] = "-scriptload";
       skip_args -= 2;
       sort_args (argc, argv);
     }
@@ -1618,12 +1633,10 @@ main (argc, argv
 #endif
 #endif /* HAVE_X_WINDOWS */
 
-#ifdef HAVE_MENUS
 #ifndef HAVE_NTGUI
 #ifndef MAC_OS
       /* Called before init_window_once for Mac OS Classic.  */
       syms_of_xmenu ();
-#endif
 #endif
 #endif
 
@@ -1824,11 +1837,10 @@ struct standard_args standard_args[] =
   { "-u", "--user", 30, 1 },
   { "-user", 0, 30, 1 },
   { "-debug-init", "--debug-init", 20, 0 },
-  { "-i", "--icon-type", 15, 0 },
-  { "-itype", 0, 15, 0 },
+  { "-nbi", "--no-bitmap-icon", 15, 0 },
   { "-iconic", "--iconic", 15, 0 },
   { "-D", "--basic-display", 12, 0},
-  { "--basic-display", 0, 12, 0},
+  { "-basic-display", 0, 12, 0},
   { "-bg", "--background-color", 10, 1 },
   { "-background", 0, 10, 1 },
   { "-fg", "--foreground-color", 10, 1 },
@@ -1862,6 +1874,7 @@ struct standard_args standard_args[] =
   { "-directory", 0, 0, 1 },
   { "-l", "--load", 0, 1 },
   { "-load", 0, 0, 1 },
+  { "-scriptload", "--scriptload", 0, 1 },
   { "-f", "--funcall", 0, 1 },
   { "-funcall", 0, 0, 1 },
   { "-eval", "--eval", 0, 1 },

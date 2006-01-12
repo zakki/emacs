@@ -1,6 +1,7 @@
 ;;; calc-arith.el --- arithmetic functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -238,6 +239,7 @@
     (real number)
     (number)
     (scalar)
+    (sqmatrix matrix vector)
     (matrix vector)
     (vector)
     (const)))
@@ -304,6 +306,10 @@
   (and (not (Math-scalarp a))
        (not (math-known-scalarp a t))))
 
+(defun math-known-square-matrixp (a)
+  (and (math-known-matrixp a)
+       (math-check-known-square-matrixp a)))
+
 ;;; Try to prove that A is a scalar (i.e., a non-vector).
 (defun math-check-known-scalarp (a)
   (cond ((Math-objectp a) t)
@@ -322,8 +328,17 @@
 	 (let ((decl (if (eq (car a) 'var)
 			 (or (assq (nth 2 a) math-decls-cache)
 			     math-decls-all)
-		       (assq (car a) math-decls-cache))))
-	   (memq 'scalar (nth 1 decl))))))
+		       (assq (car a) math-decls-cache)))
+               val)
+           (cond
+            ((memq 'scalar (nth 1 decl))
+             t)
+            ((and (eq (car a) 'var)
+                  (boundp (nth 2 a))
+                  (setq val (symbol-value (nth 2 a))))
+             (math-check-known-scalarp val))
+            (t
+             nil))))))
 
 ;;; Try to prove that A is *not* a scalar.
 (defun math-check-known-matrixp (a)
@@ -341,9 +356,53 @@
 	 (let ((decl (if (eq (car a) 'var)
 			 (or (assq (nth 2 a) math-decls-cache)
 			     math-decls-all)
-		       (assq (car a) math-decls-cache))))
-	   (memq 'vector (nth 1 decl))))))
+		       (assq (car a) math-decls-cache)))
+               val)
+           (cond
+            ((memq 'matrix (nth 1 decl))
+             t)
+            ((and (eq (car a) 'var)
+                  (boundp (nth 2 a))
+                  (setq val (symbol-value (nth 2 a))))
+             (math-check-known-matrixp val))
+            (t
+             nil))))))
 
+;;; Given that A is a matrix, try to prove that it is a square matrix.
+(defun math-check-known-square-matrixp (a)
+  (cond ((math-square-matrixp a)
+         t)
+        ((eq (car-safe a) '^)
+         (math-check-known-square-matrixp (nth 1 a)))
+        ((or
+          (eq (car-safe a) '*)
+          (eq (car-safe a) '+)
+          (eq (car-safe a) '-))
+         (and
+          (math-check-known-square-matrixp (nth 1 a))
+          (math-check-known-square-matrixp (nth 2 a))))
+        (t
+         (let ((decl (if (eq (car a) 'var)
+                         (or (assq (nth 2 a) math-decls-cache)
+                             math-decls-all)
+                       (assq (car a) math-decls-cache)))
+               val)
+           (cond
+            ((memq 'sqmatrix (nth 1 decl))
+             t)
+            ((and (eq (car a) 'var)
+                  (boundp (nth 2 a))
+                  (setq val (symbol-value (nth 2 a))))
+             (math-check-known-square-matrixp val))
+            ((and (or
+                   (integerp calc-matrix-mode)
+                   (eq calc-matrix-mode 'sqmatrix))
+                  (eq (car-safe a) 'var))
+             t)
+            ((memq 'matrix (nth 1 decl))
+             nil)
+            (t
+             nil))))))
 
 ;;; Try to prove that A is a real (i.e., not complex).
 (defun math-known-realp (a)
@@ -1334,6 +1393,7 @@
       (and (eq (car-safe b) '^)
 	   (Math-looks-negp (nth 2 b))
 	   (not (and (eq (car-safe a) '^) (Math-looks-negp (nth 2 a))))
+           (not (math-known-matrixp (nth 1 b)))
 	   (math-div a (math-normalize
 			(list '^ (nth 1 b) (math-neg (nth 2 b))))))
       (and (eq (car-safe a) '/)
@@ -1375,6 +1435,30 @@
 		    (list 'calcFunc-idn (math-mul a (nth 1 b))))
 	       (and (math-known-matrixp a)
 		    (math-mul a (nth 1 b)))))
+      (and (math-identity-matrix-p a t)
+           (or (and (eq (car-safe b) 'calcFunc-idn)
+                    (= (length b) 2)
+                    (list 'calcFunc-idn (math-mul 
+                                         (nth 1 (nth 1 a))
+                                         (nth 1 b))
+                          (1- (length a))))
+               (and (math-known-scalarp b)
+                    (list 'calcFunc-idn (math-mul 
+                                         (nth 1 (nth 1 a)) b)
+                          (1- (length a))))
+               (and (math-known-matrixp b)
+                    (math-mul (nth 1 (nth 1 a)) b))))
+      (and (math-identity-matrix-p b t)
+           (or (and (eq (car-safe a) 'calcFunc-idn)
+                    (= (length a) 2)
+                    (list 'calcFunc-idn (math-mul (nth 1 a) 
+                                                  (nth 1 (nth 1 b)))
+                          (1- (length b))))
+               (and (math-known-scalarp a)
+                    (list 'calcFunc-idn (math-mul a (nth 1 (nth 1 b))) 
+                          (1- (length b))))
+               (and (math-known-matrixp a)
+                    (math-mul a (nth 1 (nth 1 b))))))
       (and (math-looks-negp b)
 	   (math-mul (math-neg a) (math-neg b)))
       (and (eq (car-safe b) '-)
@@ -1654,7 +1738,9 @@
       (math-div-new-non-trig term))))
 
 (defun math-div-symb-fancy (a b)
-  (or (and math-simplify-only
+  (or (and (math-known-matrixp b)
+           (math-mul a (math-pow b -1)))
+      (and math-simplify-only
 	   (not (equal a math-simplify-only))
 	   (list '/ a b))
       (and (Math-equal-int b 1) a)
@@ -1768,6 +1854,11 @@
 	       (math-mul-zero b a))))
       (list '/ a b)))
 
+;;; Division from the left.
+(defun calcFunc-ldiv (a b)
+  (if (math-known-scalarp a)
+      (math-div b a)
+    (math-mul (math-pow a -1) b)))
 
 (defun calcFunc-mod (a b)
   (math-normalize (list '% a b)))
@@ -1868,6 +1959,22 @@
 	   (cond ((and math-simplify-only
 		       (not (equal a math-simplify-only)))
 		  (list '^ a b))
+                 ((and (eq (car-safe a) '*)
+                       (or 
+                        (and
+                         (math-known-matrixp (nth 1 a))
+                         (math-known-matrixp (nth 2 a)))
+                        (and
+                         calc-matrix-mode
+                         (not (eq calc-matrix-mode 'scalar))
+                         (and (not (math-known-scalarp (nth 1 a)))
+                              (not (math-known-scalarp (nth 2 a)))))))
+                  (if (and (= b -1)
+                           (math-known-square-matrixp (nth 1 a))
+                           (math-known-square-matrixp (nth 2 a)))
+                      (math-mul (math-pow-fancy (nth 2 a) -1) 
+                                (math-pow-fancy (nth 1 a) -1))
+                    (list '^ a b)))
 		 ((and (eq (car-safe a) '*)
 		       (or (math-known-num-integerp b)
 			   (math-known-nonnegp (nth 1 a))

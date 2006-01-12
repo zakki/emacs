@@ -1,10 +1,11 @@
 ;;; cal-menu.el --- calendar functions for menu bar and popup menu support
 
-;; Copyright (C) 1994, 1995, 2001, 2003, 2004, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 2001, 2002, 2003, 2004, 2005
+;;   Free Software Foundation, Inc.
 
 ;; Author: Edward M. Reingold <reingold@cs.uiuc.edu>
 ;;	Lara Rios <lrios@coewl.cen.uiuc.edu>
-;; Maintainer: Glenn Morris <gmorris@ast.cam.ac.uk>
+;; Maintainer: Glenn Morris <rgm@gnu.org>
 ;; Keywords: calendar
 ;; Human-Keywords: calendar, popup menus, menu bar
 
@@ -22,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -42,7 +43,6 @@
 (defvar displayed-year)
 
 (eval-when-compile (require 'calendar))
-(require 'easymenu)
 
 (define-key calendar-mode-map [menu-bar edit] 'undefined)
 (define-key calendar-mode-map [menu-bar search] 'undefined)
@@ -321,12 +321,14 @@ ERROR is t, otherwise just returns nil."
     (calendar-cursor-to-date (calendar-current-date))
     (calendar-cursor-holidays)))
 
-(defun calendar-mouse-holidays ()
+(autoload 'check-calendar-holidays "holidays")
+(autoload 'diary-list-entries "diary-lib")
+
+(defun calendar-mouse-holidays (&optional event)
   "Pop up menu of holidays for mouse selected date."
-  (interactive)
+  (interactive "e")
   (let* ((date (calendar-event-to-date))
-         (l (mapcar '(lambda (x) (list x))
-                    (check-calendar-holidays date)))
+         (l (mapcar 'list (check-calendar-holidays date)))
          (selection
           (cal-menu-x-popup-menu
            event
@@ -337,22 +339,21 @@ ERROR is t, otherwise just returns nil."
              (if l l '("None")))))))
     (and selection (call-interactively selection))))
 
-(defun calendar-mouse-view-diary-entries (&optional date diary)
+(defun calendar-mouse-view-diary-entries (&optional date diary event)
   "Pop up menu of diary entries for mouse-selected date.
 Use optional DATE and alternative file DIARY.
 
 Any holidays are shown if `holidays-in-diary-buffer' is t."
-  (interactive)
+  (interactive "i\ni\ne")
   (let* ((date (if date date (calendar-event-to-date)))
          (diary-file (if diary diary diary-file))
          (diary-list-include-blanks nil)
          (diary-display-hook 'ignore)
          (diary-entries
-          (mapcar '(lambda (x) (split-string (car (cdr x)) "\^M\\|\n"))
-                  (list-diary-entries date 1)))
+          (mapcar (lambda (x) (split-string (car (cdr x)) "\^M\\|\n"))
+                  (diary-list-entries date 1 'list-only)))
          (holidays (if holidays-in-diary-buffer
-                       (mapcar '(lambda (x) (list x))
-                               (check-calendar-holidays date))))
+                       (check-calendar-holidays date)))
          (title (concat "Diary entries "
                         (if diary (format "from %s " diary) "")
                         "for "
@@ -363,9 +364,7 @@ Any holidays are shown if `holidays-in-diary-buffer' is t."
            (list title
                  (append
                   (list title)
-                  (if holidays
-                      (mapcar '(lambda (x) (list (concat "     " (car x))))
-                              holidays))
+                  (mapcar (lambda (x) (list (concat "     " x))) holidays)
                   (if holidays
                       (list "--shadow-etched-in" "--shadow-etched-in"))
                   (if diary-entries
@@ -490,10 +489,10 @@ The output is in landscape format, one month to a page."
     (calendar-mouse-goto-date (calendar-event-to-date))
     (cal-tex-cursor-year-landscape nil)))
 
-(defun calendar-mouse-print-dates ()
+(defun calendar-mouse-print-dates (&optional event)
   "Pop up menu of equivalent dates to mouse selected date."
-  (interactive)
-  (let ((date (calendar-event-to-date))
+  (interactive "e")
+  (let* ((date (calendar-event-to-date))
         (selection
          (cal-menu-x-popup-menu
           event
@@ -524,8 +523,8 @@ The output is in landscape format, one month to a page."
             (list
              (list (format "Chinese date: %s"
                            (calendar-chinese-date-string date))))
-;            (list '("Chinese date (select to echo Chinese date)"
-;                    . calendar-mouse-chinese-date))
+            ;; (list '("Chinese date (select to echo Chinese date)"
+            ;;         . calendar-mouse-chinese-date))
             (let ((c (calendar-coptic-date-string date)))
               (if (not (string-equal c ""))
                   (list (list (format "Coptic date: %s" c)))))
@@ -580,7 +579,7 @@ The output is in landscape format, one month to a page."
   (let* ((selection
           (cal-menu-x-popup-menu
            event
-           (list (calendar-date-string date t nil)
+           (list (calendar-date-string (calendar-event-to-date t) t nil)
                  (list
                   ""
                   '("Daily (1 page)" . cal-tex-mouse-day)
@@ -603,7 +602,7 @@ The output is in landscape format, one month to a page."
   (let* ((selection
           (cal-menu-x-popup-menu
            event
-           (list (calendar-date-string date t nil)
+           (list (calendar-date-string (calendar-event-to-date t) t nil)
                  (list
                   ""
                   '("Filofax Daily (one-day-per-page)" .
@@ -639,5 +638,5 @@ The output is in landscape format, one month to a page."
 
 (provide 'cal-menu)
 
-;;; arch-tag: aa81cf73-ce89-48a4-97ec-9ef861e87fe9
+;; arch-tag: aa81cf73-ce89-48a4-97ec-9ef861e87fe9
 ;;; cal-menu.el ends here

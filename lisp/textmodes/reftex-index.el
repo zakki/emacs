@@ -3,7 +3,7 @@
 ;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.28
+;; Version: VERSIONTAG
 
 ;; This file is part of GNU Emacs.
 
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -35,6 +35,7 @@
 (defvar mark-active)
 (defvar zmacs-regions)
 (defvar transient-mark-mode)
+(defvar TeX-master)
 ;; END remove for XEmacs release
 (defun reftex-index-selection-or-word (&optional arg phrase)
   "Put selection or the word near point into the default index macro.
@@ -165,13 +166,20 @@ will prompt for other arguments."
   ;; OPT-ARGS is a list of optional argument indices, as given by
   ;; `reftex-parse-args'.
   (let* ((opt (and (integerp itag) (member itag opt-args)))
-         (index-tags (cdr (assq 'index-tags 
-                                (symbol-value reftex-docstruct-symbol))))
-         (default (reftex-default-index))
-         (prompt (concat "Index tag"
-                         (if default (format " (default: %s)" default) "")
-                         (if opt " (optional)" "") ": "))
-         (tag (completing-read prompt (mapcar 'list index-tags))))
+	 (index-tags (cdr (assq 'index-tags
+				(symbol-value reftex-docstruct-symbol))))
+	 (default (reftex-default-index))
+	 (prompt (concat "Index tag"
+			 (if (or opt default)
+			     (format " (%s): "
+				     (concat
+				      (if opt "optional" "")
+				      (if default
+					  (concat (if opt ", " "")
+						  (format "default %s" default))
+					"")))
+			   ": ")))
+	 (tag (completing-read prompt (mapcar 'list index-tags))))
     (if (and default (equal tag "")) (setq tag default))
     (reftex-update-default-index tag)
     tag))
@@ -310,7 +318,7 @@ Here are all local bindings.
   (easy-menu-add reftex-index-menu reftex-index-map)
   (add-hook 'post-command-hook 'reftex-index-post-command-hook nil t)
   (add-hook 'pre-command-hook  'reftex-index-pre-command-hook nil t)
-  (run-mode-hooks 'reftex-index-mode-hook))
+  (run-hooks 'reftex-index-mode-hook))
 
 (defconst reftex-index-help
 "                      AVAILABLE KEYS IN INDEX BUFFER
@@ -1021,7 +1029,7 @@ When index is restricted, select the previous section as restriction criterion."
         (reftex-insert-index (list data) reftex-index-tag t
                              "EDITED")))
     (setq reftex-last-follow-point 1)
-    (and message (message message))))
+    (and message (message "%s" message))))
 
 ;; Index map
 (define-key reftex-index-map (if (featurep 'xemacs) [(button2)] [(mouse-2)])
@@ -1186,7 +1194,7 @@ You get a chance to edit the entry in the phrases buffer - finish with
   (set-marker reftex-index-return-marker (point))
   (reftex-index-selection-or-word arg 'phrase)
   (if (eq major-mode 'reftex-index-phrases-mode)
-      (message 
+      (message "%s" 
        (substitute-command-keys
         "Return to LaTeX with \\[reftex-index-phrases-save-and-return]"))))
 
@@ -1231,7 +1239,7 @@ If the buffer is non-empty, delete the old header first."
           (beginning-of-line 2))          
       (cond ((fboundp 'zmacs-activate-region) (zmacs-activate-region))
             ((boundp 'make-active) (setq mark-active t)))
-      (if (yes-or-no-p "Delete and rebuilt header ")
+      (if (yes-or-no-p "Delete and rebuild header? ")
           (delete-region (point-min) (point))))
 
     ;; Insert the mode line
@@ -1273,6 +1281,7 @@ If the buffer is non-empty, delete the old header first."
 
 
 (defvar reftex-index-phrases-menu)
+(defvar reftex-index-phrases-marker)
 (defvar reftex-index-phrases-restrict-file nil)
 ;;;###autoload
 (defun reftex-index-phrases-mode ()
@@ -1308,7 +1317,7 @@ Here are all local bindings.
        reftex-index-phrases-font-lock-defaults)
   (easy-menu-add reftex-index-phrases-menu reftex-index-phrases-map)
   (set (make-local-variable 'reftex-index-phrases-marker) (make-marker))
-  (run-mode-hooks 'reftex-index-phrases-mode-hook))
+  (run-hooks 'reftex-index-phrases-mode-hook))
 (add-hook 'reftex-index-phrases-mode-hook 'turn-on-font-lock)
 
 ;; Font Locking stuff
@@ -1342,7 +1351,6 @@ Here are all local bindings.
        reftex-index-phrases-font-lock-defaults) ; XEmacs
   )
 
-(defvar reftex-index-phrases-marker)
 (defun reftex-index-next-phrase (&optional arg)
   "Index the next ARG phrases in the phrases buffer."
   (interactive "p")
@@ -1825,7 +1833,9 @@ both ends."
          (nkeys (length index-keys))
          (ckey (nth 0 index-keys))
          (all-yes nil) 
-         match rpl char beg end mathp)
+         match rpl char (beg (make-marker)) (end (make-marker)) mathp)
+    (move-marker beg 1)
+    (move-marker end 1)
     (unwind-protect
         (while (re-search-forward re nil t)
           (catch 'next-match
@@ -1838,8 +1848,8 @@ both ends."
             (setq mathp
                   (save-match-data
                     (condition-case nil (texmathp) (error nil))))
-            (setq beg (car (match-data))
-                  end (nth 1 (match-data)))
+            (setq beg (move-marker beg (match-beginning 0))
+                  end (move-marker end (match-end 0)))
             (if (and reftex-index-phrases-skip-indexed-matches
                      (save-match-data
                        (reftex-index-phrase-match-is-indexed beg
@@ -1907,7 +1917,7 @@ both ends."
                           ;; Recursive edit
                           (save-match-data
                             (save-excursion
-                              (message 
+                              (message "%s" 
                                (substitute-command-keys
                                 "Recursive edit.  Resume with \\[exit-recursive-edit]"))
                               (recursive-edit))))
@@ -1927,6 +1937,8 @@ both ends."
                          (t (ding)))
                    nil)))))
       (message "")
+      (move-marker beg nil)
+      (move-marker end nil)
       (setq all-yes nil)
       (reftex-unhighlight 0))))
 
@@ -1936,7 +1948,7 @@ both ends."
   (save-excursion
     (goto-char end)
     (let* ((all-macros (reftex-what-macro t))
-           (this-macro (car (car all-macros)))
+;           (this-macro (car (car all-macros)))
            (before-macro
             (and (> beg 2)
                  (goto-char (1- beg))

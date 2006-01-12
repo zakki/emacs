@@ -1,7 +1,7 @@
-;;; texinfo.el --- major mode for editing Texinfo files
+;;; texinfo.el --- major mode for editing Texinfo files -*- coding: iso-2022-7bit -*-
 
 ;; Copyright (C) 1985, 1988, 1989, 1990, 1991, 1992, 1993, 1996, 1997,
-;;           2000, 2001, 2003, 2004 Free Software Foundation, Inc.
+;;   2000, 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Robert J. Chassell
 ;; Date:   [See date below for texinfo-version]
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Todo:
 
@@ -42,9 +42,11 @@
       `(defvar ,var ,value ,doc)))
 
 (eval-when-compile (require 'tex-mode) (require 'cl))
+(defvar outline-heading-alist)
 
 (defgroup texinfo nil
-  "Texinfo Mode"
+  "Texinfo Mode."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'docs)
 
 ;;;###autoload
@@ -343,11 +345,13 @@ chapter."
   "Regexp for environment-like Texinfo list commands.
 Subexpression 1 is what goes into the corresponding `@end' statement.")
 
-(defface texinfo-heading-face
+(defface texinfo-heading
   '((t (:inherit font-lock-function-name-face)))
   "Face used for section headings in `texinfo-mode'."
   :group 'texinfo)
-(defvar texinfo-heading-face 'texinfo-heading-face)
+;; backward-compatibility alias
+(put 'texinfo-heading-face 'face-alias 'texinfo-heading)
+(defvar texinfo-heading-face 'texinfo-heading)
 
 (defvar texinfo-font-lock-keywords
   `(;; All but the first had an OVERRIDE of t.
@@ -590,6 +594,9 @@ value of `texinfo-mode-hook'."
 	(concat "\b\\|@[a-zA-Z]*[ \n]\\|" paragraph-separate))
   (make-local-variable 'paragraph-start)
   (setq paragraph-start (concat "\b\\|@[a-zA-Z]*[ \n]\\|" paragraph-start))
+  (make-local-variable 'sentence-end-base)
+  (setq sentence-end-base
+	"\\(@\\(end\\)?dots{}\\|[.?!]\\)[]\"'$B!I$,1r}(B)}]*")
   (make-local-variable 'adaptive-fill-mode)
   (setq adaptive-fill-mode nil)
   (make-local-variable 'fill-column)
@@ -699,7 +706,7 @@ With prefix argument or inside @code or @example, inserts a plain \"."
 		    (setq in-env t)))))
 	(self-insert-command (prefix-numeric-value arg))
       (insert
-       (if (memq (char-syntax (preceding-char)) '(?\( ?> ?\ ))
+       (if (memq (char-syntax (preceding-char)) '(?\( ?> ?\s))
 	   texinfo-open-quote
 	 texinfo-close-quote)))))
 
@@ -814,7 +821,7 @@ Otherwise, follow with a newline."
 			(texinfo-last-unended-begin)
 			(match-string 1)))
 		     "table")
-	      ? ;space
+	      ?\s
 	    ?\n)))
 
 (defun texinfo-insert-@kbd (&optional arg)
@@ -1053,5 +1060,5 @@ You are prompted for the job number (use a number shown by a previous
 
 (provide 'texinfo)
 
-;;; arch-tag: 005d7c38-43b9-4b7d-aa1d-aea69bae73e1
+;; arch-tag: 005d7c38-43b9-4b7d-aa1d-aea69bae73e1
 ;;; texinfo.el ends here

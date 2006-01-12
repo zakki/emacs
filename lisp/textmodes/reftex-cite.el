@@ -3,7 +3,7 @@
 ;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.28
+;; Version: VERSIONTAG
 
 ;; This file is part of GNU Emacs.
 
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -631,7 +631,6 @@ While entering the regexp, completion on knows citation keys is possible.
   ;; This really does the work of reftex-citation.
 
   (let* ((format (reftex-figure-out-cite-format arg no-insert format-key))
-         (start 0)
          (docstruct-symbol reftex-docstruct-symbol)
          (selected-entries (reftex-offer-bib-menu))
          (insert-entries selected-entries)
@@ -1107,7 +1106,7 @@ While entering the regexp, completion on knows citation keys is possible.
 ;;; Global BibTeX file
 (defun reftex-all-used-citation-keys ()
   (reftex-access-scan-info)
-  (let ((files (reftex-all-document-files)) file keys kkk kk k)
+  (let ((files (reftex-all-document-files)) file keys kk k)
     (save-excursion
       (while (setq file (pop files))
         (set-buffer (reftex-get-file-buffer-force file 'mark))

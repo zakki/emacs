@@ -24,8 +24,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -897,7 +897,7 @@ The format of KBD-LAYOUT is the same as `quail-keyboard-layout'."
 The variable `quail-keyboard-layout-type' holds the currently selected
 keyboard type."
   (interactive
-   (list (completing-read "Keyboard type (default, current choice): "
+   (list (completing-read "Keyboard type (default current choice): "
 			  quail-keyboard-layout-alist
 			  nil t)))
   (or (and keyboard-type (> (length keyboard-type) 0))
@@ -1598,13 +1598,21 @@ Quail map for the sequence."
   (or (and (consp def) (aref (cdr def) (car (car def))))
       def
       (and (> len 1)
-	   (let ((str (quail-get-current-str
-		       (1- len)
-		       (quail-map-definition (quail-lookup-key
-					      quail-current-key (1- len))))))
+	   (let* ((str (quail-get-current-str
+			(1- len)
+			(quail-map-definition (quail-lookup-key
+					       quail-current-key (1- len)))))
+		  (substr1 (substring quail-current-key (1- len) len))
+		  (str1 (and (quail-deterministic)
+			     (quail-get-current-str
+			      1
+			      (quail-map-definition (quail-lookup-key
+						     substr1 1))))))
 	     (if str
 		 (concat (if (stringp str) str (char-to-string str))
-			 (substring quail-current-key (1- len) len)))))))
+			 (if str1
+			     (if (stringp str1) str1 (char-to-string str1))
+			   substr1)))))))
 
 (defvar quail-guidance-translations-starting-column 20)
 
@@ -1719,6 +1727,20 @@ sequence counting from the head."
 	     (quail-update-current-translations ch)
 	     ;; And, we can terminate the current translation.
 	     t)
+
+	    ((quail-deterministic)
+	     ;; No way to handle the last character in this context.
+	     ;; Commit the longest successfully translated characters, and
+	     ;; handle the remaining characters in a new loop.
+	     (setq def nil)
+	     (while (and (not def) (> len 1))
+	       (setq len (1- len))
+	       (setq def (quail-map-definition
+			  (quail-lookup-key quail-current-key len))))
+	     (if def (setq quail-current-str
+			   (quail-get-current-str len def))
+	       (setq quail-current-str (aref quail-current-key 0)))
+	     len)
 
 	    (t
 	     ;; No way to handle the last character in this context.

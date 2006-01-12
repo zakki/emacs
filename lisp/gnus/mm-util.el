@@ -1,6 +1,7 @@
 ;;; mm-util.el --- Utility functions for Mule and low level things
-;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;   Free Software Foundation, Inc.
+
+;; Copyright (C) 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
 ;;	MORIOKA Tomohiko <morioka@jaist.ac.jp>
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -567,14 +568,21 @@ If the charset is `composition', return the actual one."
     ;; This is for XEmacs.
     (mm-mule-charset-to-mime-charset charset)))
 
-(defun mm-delete-duplicates (list)
-  "Simple substitute for CL `delete-duplicates', testing with `equal'."
-  (let (result head)
-    (while list
-      (setq head (car list))
-      (setq list (delete head list))
-      (setq result (cons head result)))
-    (nreverse result)))
+(if (fboundp 'delete-dups)
+    (defalias 'mm-delete-duplicates 'delete-dups)
+  (defun mm-delete-duplicates (list)
+    "Destructively remove `equal' duplicates from LIST.
+Store the result in LIST and return it.  LIST must be a proper list.
+Of several `equal' occurrences of an element in LIST, the first
+one is kept.
+
+This is a compatibility function for Emacsen without `delete-dups'."
+    ;; Code from `subr.el' in Emacs 22:
+    (let ((tail list))
+      (while tail
+	(setcdr tail (delete (car tail) (cdr tail)))
+	(setq tail (cdr tail))))
+    list))
 
 ;; Fixme:  This is used in places when it should be testing the
 ;; default multibyteness.  See mm-default-multibyte-p.
@@ -766,6 +774,17 @@ charset, and a longer list means no appropriate charset."
     (if (and (memq 'iso-2022-jp-2 charsets)
 	     (memq 'iso-2022-jp-2 hack-charsets))
 	(setq charsets (delq 'iso-2022-jp charsets)))
+    ;; Attempt to reduce the number of charsets if utf-8 is available.
+    (if (and (featurep 'xemacs)
+	     (> (length charsets) 1)
+	     (mm-coding-system-p 'utf-8))
+	(let ((mm-coding-system-priorities
+	       (cons 'utf-8 mm-coding-system-priorities)))
+	  (setq charsets
+		(mm-delete-duplicates
+		 (mapcar 'mm-mime-charset
+			 (delq 'ascii
+			       (mm-find-charset-region b e)))))))
     charsets))
 
 (defmacro mm-with-unibyte-buffer (&rest forms)

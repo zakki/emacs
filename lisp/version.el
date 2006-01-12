@@ -1,7 +1,7 @@
 ;;; version.el --- record version number of Emacs -*- no-byte-compile: t -*-
 
-;;; Copyright (C) 1985, 1992, 1994, 1995, 1999, 2000, 2001
-;;;   Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1992, 1994, 1995, 1999, 2000, 2001, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: internal
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -47,7 +47,7 @@ Time at which Emacs was dumped out.")
 
 (defconst emacs-build-system (system-name))
 
-(defun emacs-version  (&optional here) "\
+(defun emacs-version (&optional here) "\
 Return string describing the version of Emacs that is running.
 If optional argument HERE is non-nil, insert string at point.
 Don't use this function in programs to choose actions according
@@ -83,7 +83,7 @@ to the system configuration; look at `system-configuration' instead."
 
 ;; We put version info into the executable in the form that `ident' uses.
 (or (memq system-type '(vax-vms windows-nt))
-    (purecopy (concat "\n$Id: " (subst-char-in-string ?\n ? (emacs-version))
+    (purecopy (concat "\n$Id: " (subst-char-in-string ?\n ?\s (emacs-version))
 		      " $\n")))
 
 ;;Local variables:

@@ -1,7 +1,6 @@
 ;;; vc-svn.el --- non-resident support for Subversion version-control
 
-;; Copyright (C) 1995, 1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author:      FSF (see vc.el for full credits)
 ;; Maintainer:  Stefan Monnier <monnier@gnu.org>
@@ -20,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -115,12 +114,19 @@ This is only meaningful if you don't use the implicit checkout model
 					   (file-name-directory file)))
     (with-temp-buffer
       (cd (file-name-directory file))
-      (condition-case nil
-	  (vc-svn-command t 0 file "status" "-v")
-	;; We can't find an `svn' executable.  We could also deregister SVN.
-	(file-error nil))
-      (vc-svn-parse-status t)
-      (eq 'SVN (vc-file-getprop file 'vc-backend)))))
+      (let ((status 
+             (condition-case nil
+                 ;; Ignore all errors.
+                 (vc-svn-command t t file "status" "-v")
+               ;; Some problem happened.  E.g. We can't find an `svn'
+               ;; executable.  We used to only catch `file-error' but when
+               ;; the process is run on a remote host via Tramp, the error
+               ;; is only reported via the exit status which is turned into
+               ;; an `error' by vc-do-command.
+               (error nil))))
+        (when (eq 0 status)
+          (vc-svn-parse-status t)
+          (eq 'SVN (vc-file-getprop file 'vc-backend)))))))
 
 (defun vc-svn-state (file &optional localp)
   "SVN-specific version of `vc-state'."

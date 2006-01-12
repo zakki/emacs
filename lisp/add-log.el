@@ -1,7 +1,7 @@
 ;;; add-log.el --- change log maintenance commands for Emacs
 
-;; Copyright (C) 1985, 1986, 1988, 1993, 1994, 1997, 1998, 2000, 2003,
-;;   2004, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1988, 1993, 1994, 1997, 1998, 2000, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: tools
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -33,7 +33,7 @@
   (require 'timezone))
 
 (defgroup change-log nil
-  "Change log maintenance"
+  "Change log maintenance."
   :group 'tools
   :link '(custom-manual "(emacs)Change Log")
   :prefix "change-log-"
@@ -70,7 +70,7 @@ This defaults to the value returned by the function `user-full-name'."
 
 ;;;###autoload
 (defcustom add-log-mailing-address nil
-  "*Electronic mail addresses of user, for inclusion in ChangeLog headers.
+  "*Email addresses of user, for inclusion in ChangeLog headers.
 This defaults to the value of `user-mail-address'.  In addition to
 being a simple string, this value can also be a list.  All elements
 will be recognized as referring to the same user; when creating a new
@@ -166,86 +166,106 @@ Note: The search is conducted only within 10%, at the beginning of the file."
   :type '(repeat regexp)
   :group 'change-log)
 
-(defface change-log-date-face
+(defface change-log-date
   '((t (:inherit font-lock-string-face)))
   "Face used to highlight dates in date lines."
   :version "21.1"
   :group 'change-log)
+;; backward-compatibility alias
+(put 'change-log-date-face 'face-alias 'change-log-date)
 
-(defface change-log-name-face
+(defface change-log-name
   '((t (:inherit font-lock-constant-face)))
   "Face for highlighting author names."
   :version "21.1"
   :group 'change-log)
+;; backward-compatibility alias
+(put 'change-log-name-face 'face-alias 'change-log-name)
 
-(defface change-log-email-face
+(defface change-log-email
   '((t (:inherit font-lock-variable-name-face)))
   "Face for highlighting author email addresses."
   :version "21.1"
   :group 'change-log)
+;; backward-compatibility alias
+(put 'change-log-email-face 'face-alias 'change-log-email)
 
-(defface change-log-file-face
+(defface change-log-file
   '((t (:inherit font-lock-function-name-face)))
   "Face for highlighting file names."
   :version "21.1"
   :group 'change-log)
+;; backward-compatibility alias
+(put 'change-log-file-face 'face-alias 'change-log-file)
 
-(defface change-log-list-face
+(defface change-log-list
   '((t (:inherit font-lock-keyword-face)))
   "Face for highlighting parenthesized lists of functions or variables."
   :version "21.1"
   :group 'change-log)
+;; backward-compatibility alias
+(put 'change-log-list-face 'face-alias 'change-log-list)
 
-(defface change-log-conditionals-face
+(defface change-log-conditionals
   '((t (:inherit font-lock-variable-name-face)))
   "Face for highlighting conditionals of the form `[...]'."
   :version "21.1"
   :group 'change-log)
+;; backward-compatibility alias
+(put 'change-log-conditionals-face 'face-alias 'change-log-conditionals)
 
-(defface change-log-function-face
+(defface change-log-function
   '((t (:inherit font-lock-variable-name-face)))
   "Face for highlighting items of the form `<....>'."
   :version "21.1"
   :group 'change-log)
+;; backward-compatibility alias
+(put 'change-log-function-face 'face-alias 'change-log-function)
 
-(defface change-log-acknowledgement-face
+(defface change-log-acknowledgement
   '((t (:inherit font-lock-comment-face)))
   "Face for highlighting acknowledgments."
   :version "21.1"
   :group 'change-log)
+;; backward-compatibility alias
+(put 'change-log-acknowledgement-face 'face-alias 'change-log-acknowledgement)
 
 (defvar change-log-font-lock-keywords
   '(;;
-    ;; Date lines, new and old styles.
-    ("^\\sw.........[0-9:+ ]*"
+    ;; Date lines, new (2000-01-01) and old (Sat Jan  1 00:00:00 2000) styles.
+    ;; Fixme: this regepx is just an approximate one and may match
+    ;; wrongly with a non-date line existing as a random note.  In
+    ;; addition, using any kind of fixed setting like this doesn't
+    ;; work if a user customizes add-log-time-format.
+    ("^[0-9-]+ +\\|^\\(Sun\\|Mon\\|Tue\\|Wed\\|Thu\\|Fri\\|Sat\\) [A-z][a-z][a-z] [0-9:+ ]+"
      (0 'change-log-date-face)
      ;; Name and e-mail; some people put e-mail in parens, not angles.
      ("\\([^<(]+?\\)[ \t]*[(<]\\([A-Za-z0-9_.+-]+@[A-Za-z0-9_.-]+\\)[>)]" nil nil
-      (1 'change-log-name-face)
-      (2 'change-log-email-face)))
+      (1 'change-log-name)
+      (2 'change-log-email)))
     ;;
     ;; File names.
     ("^\\( +\\|\t\\)\\* \\([^ ,:([\n]+\\)"
-     (2 'change-log-file-face)
+     (2 'change-log-file)
      ;; Possibly further names in a list:
-     ("\\=, \\([^ ,:([\n]+\\)" nil nil (1 'change-log-file-face))
+     ("\\=, \\([^ ,:([\n]+\\)" nil nil (1 'change-log-file))
      ;; Possibly a parenthesized list of names:
      ("\\= (\\([^(),\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
-      nil nil (1 'change-log-list-face))
+      nil nil (1 'change-log-list))
      ("\\=, *\\([^(),\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
-      nil nil (1 'change-log-list-face)))
+      nil nil (1 'change-log-list)))
     ;;
     ;; Function or variable names.
     ("^\\( +\\|\t\\)(\\([^(),\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)"
-     (2 'change-log-list-face)
+     (2 'change-log-list)
      ("\\=, *\\([^(),\n]+\\|(\\(setf\\|SETF\\) [^() ,\n]+)\\)" nil nil
-      (1 'change-log-list-face)))
+      (1 'change-log-list)))
     ;;
     ;; Conditionals.
-    ("\\[!?\\([^]\n]+\\)\\]\\(:\\| (\\)" (1 'change-log-conditionals-face))
+    ("\\[!?\\([^]\n]+\\)\\]\\(:\\| (\\)" (1 'change-log-conditionals))
     ;;
     ;; Function of change.
-    ("<\\([^>\n]+\\)>\\(:\\| (\\)" (1 'change-log-function-face))
+    ("<\\([^>\n]+\\)>\\(:\\| (\\)" (1 'change-log-function))
     ;;
     ;; Acknowledgements.
     ;; Don't include plain "From" because that is vague;
@@ -254,7 +274,7 @@ Note: The search is conducted only within 10%, at the beginning of the file."
     ;; is to put the name of the author of the changes at the top
     ;; of the change log entry.
     ("\\(^\\( +\\|\t\\)\\|  \\)\\(Patch\\(es\\)? by\\|Report\\(ed by\\| from\\)\\|Suggest\\(ed by\\|ion from\\)\\)"
-     3 'change-log-acknowledgement-face))
+     3 'change-log-acknowledgement))
   "Additional expressions to highlight in Change Log mode.")
 
 (defvar change-log-mode-map
@@ -531,7 +551,7 @@ non-nil, otherwise in local time."
 	  (forward-line 1)
 	(insert (nth (random (length new-entries))
 		     new-entries)
-		"\n\n")
+		hard-newline hard-newline)
 	(forward-line -1)))
 
     ;; Determine where we should stop searching for a usable
@@ -564,7 +584,7 @@ non-nil, otherwise in local time."
 	   ;; Delete excess empty lines; make just 2.
 	   (while (and (not (eobp)) (looking-at "^\\s *$"))
 	     (delete-region (point) (line-beginning-position 2)))
-	   (insert-char ?\n 2)
+	   (insert hard-newline hard-newline)
 	   (forward-line -2)
 	   (indent-relative-maybe))
 	  (t
@@ -573,7 +593,7 @@ non-nil, otherwise in local time."
 	     (forward-line 1))
 	   (while (and (not (eobp)) (looking-at "^\\s *$"))
 	     (delete-region (point) (line-beginning-position 2)))
-	   (insert-char ?\n 3)
+	   (insert hard-newline hard-newline hard-newline)
 	   (forward-line -2)
 	   (indent-to left-margin)
 	   (insert "* ")
@@ -587,13 +607,13 @@ non-nil, otherwise in local time."
 		  (beginning-of-line 1)
 		  (looking-at "\\s *\\(\\*\\s *\\)?$"))
 	  (insert ": ")
-	  (if version (insert version ?\ )))
+	  (if version (insert version ?\s)))
       ;; Make it easy to get rid of the function name.
       (undo-boundary)
       (unless (save-excursion
 		(beginning-of-line 1)
 		(looking-at "\\s *$"))
-	(insert ?\ ))
+	(insert ?\s))
       ;; See if the prev function name has a message yet or not.
       ;; If not, merge the two items.
       (let ((pos (point-marker)))
@@ -613,7 +633,7 @@ non-nil, otherwise in local time."
 	  (insert "("))
 	(set-marker pos nil))
       (insert defun "): ")
-      (if version (insert version ?\ )))))
+      (if version (insert version ?\s)))))
 
 ;;;###autoload
 (defun add-change-log-entry-other-window (&optional whoami file-name)
@@ -806,31 +826,28 @@ Has a preference of looking backwards."
 		 ;; If the desired position is within the defun we found,
 		 ;; find the function name.
 		 (when (< location (point))
+		   ;; Move back over function body.
 		   (backward-sexp 1)
-		   (let (beg tem)
-
+		   (let (beg)
+		     ;; Skip back over typedefs and arglist.
+		     ;; Stop at the function definition itself
+		     ;; or at the line that follows end of function doc string.
 		     (forward-line -1)
-		     ;; Skip back over typedefs of arglist.
 		     (while (and (not (bobp))
-				 (looking-at "[ \t\n]"))
+				 (looking-at "[ \t\n]")
+				 (not (looking-back "[*]/)\n" (- (point) 4))))
 		       (forward-line -1))
-		     ;; See if this is using the DEFUN macro used in Emacs,
-		     ;; or the DEFUN macro used by the C library:
-		     (if (condition-case nil
-			     (and (save-excursion
-				    (end-of-line)
-				    (while (= (preceding-char) ?\\)
-				      (end-of-line 2))
-				    (backward-sexp 1)
-				    (beginning-of-line)
-				    (setq tem (point))
-				    (looking-at "DEFUN\\b"))
-				  (>= location tem))
-			   (error nil))
+		     ;; If we found a doc string, this must be the DEFUN macro
+		     ;; used in Emacs.  Move back to the DEFUN line.
+		     (when (looking-back "[*]/)\n" (- (point) 4))
+		       (backward-sexp 1)
+		       (beginning-of-line))
+		     ;; Is this a DEFUN construct?  And is LOCATION in it?
+		     (if (and (looking-at "DEFUN\\b")
+			      (>= location (point)))
                          ;; DEFUN ("file-name-directory", Ffile_name_directory, Sfile_name_directory, ...) ==> Ffile_name_directory
                          ;; DEFUN(POSIX::STREAM-LOCK, stream lockp &key BLOCK SHARED START LENGTH) ==> POSIX::STREAM-LOCK
 			 (progn
-			   (goto-char tem)
 			   (down-list 1)
 			   (when (= (char-after (point)) ?\")
                              (forward-sexp 1)
@@ -843,6 +860,7 @@ Has a preference of looking backwards."
                                    (skip-syntax-backward " ")
 				   (point))))
 		       (if (looking-at "^[+-]")
+			   ;; Objective-C
 			   (change-log-get-method-definition)
 			 ;; Ordinary C function syntax.
 			 (setq beg (point))
@@ -883,6 +901,13 @@ Has a preference of looking backwards."
 			       ;; precede the name.
 			       (setq middle (point))
 			       (forward-word -1)
+			       ;; Is this C++ method?
+			       (when (and (< 2 middle)
+					  (string= (buffer-substring (- middle 2)
+								     middle)
+						   "::"))
+				 ;; Include "classname::".
+				 (setq middle (point)))
 			       ;; Ignore these subparts of a class decl
 			       ;; and move back to the class name itself.
 			       (while (looking-at "public \\|private ")
@@ -956,7 +981,7 @@ Has a preference of looking backwards."
   (goto-char (match-end 0)))
 
 (defun change-log-get-method-definition ()
-"For objective C, return the method name if we are in a method."
+"For Objective C, return the method name if we are in a method."
   (let ((change-log-get-method-definition-md "["))
     (save-excursion
       (if (re-search-backward "^@implementation\\s-*\\([A-Za-z_]*\\)" nil t)
@@ -1002,7 +1027,7 @@ Point is assumed to be at the start of the entry."
 
 ;;;###autoload
 (defun change-log-merge (other-log)
-  "Merge the contents of ChangeLog file OTHER-LOG with this buffer.
+  "Merge the contents of change log file OTHER-LOG with this buffer.
 Both must be found in Change Log mode (since the merging depends on
 the appropriate motion commands).  OTHER-LOG can be either a file name
 or a buffer.
@@ -1041,7 +1066,7 @@ old-style time formats for entries are supported."
 			(and (= ?\n (char-before))
 			     (or (<= (1- (point)) (point-min))
 				 (= ?\n (char-before (1- (point)))))))
-	      (insert "\n"))
+	      (insert hard-newline))
 	    ;; Move to the end of it to terminate outer loop.
 	    (with-current-buffer other-buf
 	      (goto-char (point-max)))

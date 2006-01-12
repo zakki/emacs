@@ -1,7 +1,7 @@
 ;;; menu-bar.el --- define a default menu bar
 
-;; Copyright (C) 1993, 1994, 1995, 2000, 2001, 2002, 2003, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1995, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: RMS
 ;; Maintainer: FSF
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;; Avishai Yacobi suggested some menu rearrangements.
 
@@ -99,13 +99,15 @@ A large number or nil slows down menu responsiveness."
 	      :help "Open a new frame"))
 
 (define-key menu-bar-file-menu [one-window]
-  '(menu-item "Unsplit Windows" delete-other-windows
+  '(menu-item "Remove Splits" delete-other-windows
 	      :enable (not (one-window-p t nil))
-	      :help "Make selected window fill its frame"))
+	      :help "Selected window grows to fill the whole frame"))
 
 (define-key menu-bar-file-menu [split-window]
   '(menu-item "Split Window" split-window-vertically
-	      :help "Split selected window in two"))
+	      :enable (and (menu-bar-menu-frame-live-and-visible-p)
+			   (menu-bar-non-minibuffer-window-p))
+	      :help "Split selected window in two windows"))
 
 (define-key menu-bar-file-menu [separator-window]
   '(menu-item "--"))
@@ -116,6 +118,7 @@ A large number or nil slows down menu responsiveness."
 	      :help "Pretty-print marked region in black and white to PostScript printer"))
 (define-key menu-bar-file-menu [ps-print-buffer]
   '(menu-item "Postscript Print Buffer (B+W)" ps-print-buffer
+	      :enable (menu-bar-menu-frame-live-and-visible-p)
 	      :help "Pretty-print current buffer in black and white to PostScript printer"))
 (define-key menu-bar-file-menu [ps-print-region-faces]
   '(menu-item "Postscript Print Region" ps-print-region-with-faces
@@ -123,6 +126,7 @@ A large number or nil slows down menu responsiveness."
 	      :help "Pretty-print marked region to PostScript printer"))
 (define-key menu-bar-file-menu [ps-print-buffer-faces]
   '(menu-item "Postscript Print Buffer" ps-print-buffer-with-faces
+	      :enable (menu-bar-menu-frame-live-and-visible-p)
 	      :help "Pretty-print current buffer to PostScript printer"))
 (define-key menu-bar-file-menu [print-region]
   '(menu-item "Print Region" print-region
@@ -130,6 +134,7 @@ A large number or nil slows down menu responsiveness."
 	      :help "Print region between mark and current position"))
 (define-key menu-bar-file-menu [print-buffer]
   '(menu-item "Print Buffer" print-buffer
+	      :enable (menu-bar-menu-frame-live-and-visible-p)
 	      :help "Print current buffer with page headings"))
 
 (define-key menu-bar-file-menu [separator-print]
@@ -159,45 +164,51 @@ A large number or nil slows down menu responsiveness."
 					 (current-buffer))))))
 	      :help "Re-read current buffer from its file"))
 (define-key menu-bar-file-menu [write-file]
-  '(menu-item "Save Buffer As..." write-file
-	      :enable (not (window-minibuffer-p
-			    (frame-selected-window menu-updating-frame)))
+  '(menu-item "Save As..." write-file
+	      :enable (and (menu-bar-menu-frame-live-and-visible-p)
+			   (menu-bar-non-minibuffer-window-p))
 	      :help "Write current buffer to another file"))
 (define-key menu-bar-file-menu [save-buffer]
-  '(menu-item "Save (current buffer)" save-buffer
+  '(menu-item "Save" save-buffer
 	      :enable (and (buffer-modified-p)
 			   (buffer-file-name)
-			   (not (window-minibuffer-p
-				 (frame-selected-window menu-updating-frame))))
+			   (menu-bar-non-minibuffer-window-p))
 	      :help "Save current buffer to its file"))
 
 (define-key menu-bar-file-menu [separator-save]
   '(menu-item "--"))
 
+(defun menu-find-file-existing ()
+  "Edit the existing file FILENAME."
+  (interactive)
+  (let* ((mustmatch (not (and (fboundp 'x-uses-old-gtk-dialog)
+			      (x-uses-old-gtk-dialog))))
+	 (filename (car (find-file-read-args "Find file: " mustmatch))))
+    (if mustmatch
+	(find-file-existing filename)
+      (find-file filename))))
+
+
 (define-key menu-bar-file-menu [kill-buffer]
-  '(menu-item "Close (current buffer)" kill-this-buffer
+  '(menu-item "Close" kill-this-buffer
 	      :enable (kill-this-buffer-enabled-p)
-	      :help "Discard current buffer"))
+	      :help "Discard (kill) current buffer"))
 (define-key menu-bar-file-menu [insert-file]
   '(menu-item "Insert File..." insert-file
-	      :enable (not (window-minibuffer-p
-			    (frame-selected-window menu-updating-frame)))
+	      :enable (menu-bar-non-minibuffer-window-p)
 	      :help "Insert another file into current buffer"))
 (define-key menu-bar-file-menu [dired]
   '(menu-item "Open Directory..." dired
-	      :enable (not (window-minibuffer-p
-			    (frame-selected-window menu-updating-frame)))
-	      :help "Read a directory, operate on its files"))
+	      :enable (menu-bar-non-minibuffer-window-p)
+	      :help "Read a directory, to operate on its files"))
 (define-key menu-bar-file-menu [open-file]
-  '(menu-item "Open File..." find-file-existing
-	      :enable (not (window-minibuffer-p
-			    (frame-selected-window menu-updating-frame)))
+  '(menu-item "Open File..." menu-find-file-existing
+	      :enable (menu-bar-non-minibuffer-window-p)
 	      :help "Read an existing file into an Emacs buffer"))
 (define-key menu-bar-file-menu [new-file]
-  '(menu-item "New File..." find-file
-	      :enable (not (window-minibuffer-p
-			    (frame-selected-window menu-updating-frame)))
-	      :help "Read or create a file and edit it"))
+  '(menu-item "Visit New File..." find-file
+	      :enable (menu-bar-non-minibuffer-window-p)
+	      :help "Specify a new file's name, to edit the file"))
 
 
 ;; The "Edit" menu items
@@ -481,7 +492,7 @@ A large number or nil slows down menu responsiveness."
 	      :enable (and (not buffer-read-only)
 			   (not (eq t buffer-undo-list))
 			   (if (eq last-command 'undo)
-			       pending-undo-list
+			       (listp pending-undo-list)
 			     (consp buffer-undo-list)))
 	      :help "Undo last operation"))
 
@@ -606,7 +617,7 @@ PROPS are additional properties."
   `(progn
      (defun ,name (&optional interactively)
        ,(concat "Toggle whether to " (downcase (substring help 0 1))
-		(substring help 1) ".\
+		(substring help 1) ".
 In an interactive call, record this option as a candidate for saving
 by \"Save Options\" in Custom buffers.")
        (interactive "p")
@@ -641,7 +652,7 @@ by \"Save Options\" in Custom buffers.")
     ;; put on a customized-value property.
     (dolist (elt '(line-number-mode column-number-mode size-indication-mode
 		   cua-mode show-paren-mode transient-mark-mode
-		   global-font-lock-mode blink-cursor-mode))
+		   blink-cursor-mode display-time-mode display-battery-mode))
       (and (customize-mark-to-save elt)
 	   (setq need-save t)))
     ;; These are set with `customize-set-variable'.
@@ -649,8 +660,8 @@ by \"Save Options\" in Custom buffers.")
 		   debug-on-quit debug-on-error
 		   tooltip-mode menu-bar-mode tool-bar-mode
 		   save-place uniquify-buffer-name-style fringe-mode
-		   fringe-indicators case-fold-search
-		   display-time-mode auto-compression-mode
+		   indicate-empty-lines indicate-buffer-boundaries
+		   case-fold-search
 		   current-language-environment default-input-method
 		   ;; Saving `text-mode-hook' is somewhat questionable,
 		   ;; as we might get more than we bargain for, if
@@ -700,10 +711,16 @@ by \"Save Options\" in Custom buffers.")
 (define-key menu-bar-showhide-menu [linecolumn-separator]
   '("--"))
 
+(define-key menu-bar-showhide-menu [showhide-battery]
+  (menu-bar-make-mm-toggle display-battery-mode
+			   "Battery Status"
+			   "Display battery status information in mode line"))
+
 (define-key menu-bar-showhide-menu [showhide-date-time]
   (menu-bar-make-mm-toggle display-time-mode
-			   "Date, Time and Mail"
-			   "Display date, time, mail status in mode line"))
+			   "Time, Load and Mail"
+			   "Display time, system load averages and \
+mail status in mode line"))
 
 (define-key menu-bar-showhide-menu [datetime-separator]
   '("--"))
@@ -717,88 +734,92 @@ by \"Save Options\" in Custom buffers.")
 			      (frame-visible-p
 			       (symbol-value 'speedbar-frame))))))
 
+(defvar menu-bar-showhide-fringe-menu (make-sparse-keymap "Fringe"))
 
-(defvar menu-bar-showhide-fringe-ind-menu (make-sparse-keymap "Indicators"))
+(defvar menu-bar-showhide-fringe-ind-menu
+  (make-sparse-keymap "Buffer boundaries"))
 
-;; The real definition is in fringe.el.
-;; This is to prevent errors in the :radio conditions below.
-(setq fringe-indicators nil)
-
-(defun menu-bar-showhide-fringe-ind-empty ()
-  "Display empty line indicators in the left or right fringe."
+(defun menu-bar-showhide-fringe-ind-customize ()
+  "Show customization buffer for `indicate-buffer-boundaries'."
   (interactive)
-  (require 'fringe)
-  (customize-set-variable 'fringe-indicators 'empty))
+  (customize-variable 'indicate-buffer-boundaries))
 
-(define-key menu-bar-showhide-fringe-ind-menu [empty]
-  '(menu-item "Empty lines only" menu-bar-showhide-fringe-ind-empty
-	      :help "Show empty line indicators in fringe"
-	      :visible (display-graphic-p)
-	      :button (:radio . (eq fringe-indicators 'empty))))
+(define-key menu-bar-showhide-fringe-ind-menu [customize]
+  '(menu-item "Other (Customize)"
+	      menu-bar-showhide-fringe-ind-customize
+	      :help "Additional choices available through Custom buffer"
+	      :visible (display-graphic-p)))
 
 (defun menu-bar-showhide-fringe-ind-mixed ()
-  "Display top and bottom indicators in opposite fringes, arrow in right."
+  "Display top and bottom indicators in opposite fringes, arrows in right."
   (interactive)
-  (require 'fringe)
-  (customize-set-variable 'fringe-indicators 'mixed))
+  (customize-set-variable 'indicate-buffer-boundaries
+			  '((t . right) (top . left))))
 
 (define-key menu-bar-showhide-fringe-ind-menu [mixed]
-  '(menu-item "Opposite, arrows right" menu-bar-showhide-fringe-ind-mixed
-	      :help "Show top/bottom indicators in opposite fringes, arrows in right"
+  '(menu-item "Opposite, Arrows Right" menu-bar-showhide-fringe-ind-mixed
+	      :help
+	      "Show top/bottom indicators in opposite fringes, arrows in right"
 	      :visible (display-graphic-p)
-	      :button (:radio . (eq fringe-indicators 'mixed))))
+	      :button (:radio . (eq indicate-buffer-boundaries
+				    '((t . right) (top . left))))))
 
 (defun menu-bar-showhide-fringe-ind-box ()
   "Display top and bottom indicators in opposite fringes."
   (interactive)
-  (require 'fringe)
-  (customize-set-variable 'fringe-indicators 'box))
+  (customize-set-variable 'indicate-buffer-boundaries
+			  '((top . left) (bottom . right))))
 
 (define-key menu-bar-showhide-fringe-ind-menu [box]
-  '(menu-item "Opposite, no arrows" menu-bar-showhide-fringe-ind-box
+  '(menu-item "Opposite, No Arrows" menu-bar-showhide-fringe-ind-box
 	      :help "Show top/bottom indicators in opposite fringes, no arrows"
 	      :visible (display-graphic-p)
-	      :button (:radio . (eq fringe-indicators 'box))))
+	      :button (:radio . (eq indicate-buffer-boundaries
+				    '((top . left) (bottom . right))))))
 
 (defun menu-bar-showhide-fringe-ind-right ()
-  "Display fringe indicators in the right fringe."
+  "Display buffer boundaries and arrows in the right fringe."
   (interactive)
-  (require 'fringe)
-  (customize-set-variable 'fringe-indicators 'right))
+  (customize-set-variable 'indicate-buffer-boundaries 'right))
 
 (define-key menu-bar-showhide-fringe-ind-menu [right]
-  '(menu-item "In right fringe" menu-bar-showhide-fringe-ind-right
-	      :help "Show indicators in right fringe"
+  '(menu-item "In Right Fringe" menu-bar-showhide-fringe-ind-right
+	      :help "Show buffer boundaries and arrows in right fringe"
 	      :visible (display-graphic-p)
-	      :button (:radio . (eq fringe-indicators 'right))))
+	      :button (:radio . (eq indicate-buffer-boundaries 'right))))
 
 (defun menu-bar-showhide-fringe-ind-left ()
-  "Display fringe indicators in the left fringe."
+  "Display buffer boundaries and arrows in the left fringe."
   (interactive)
-  (require 'fringe)
-  (customize-set-variable 'fringe-indicators 'left))
+  (customize-set-variable 'indicate-buffer-boundaries 'left))
 
 (define-key menu-bar-showhide-fringe-ind-menu [left]
-  '(menu-item "In left fringe" menu-bar-showhide-fringe-ind-left
-	      :help "Show indicators in left fringe"
+  '(menu-item "In Left Fringe" menu-bar-showhide-fringe-ind-left
+	      :help "Show buffer boundaries and arrows in left fringe"
 	      :visible (display-graphic-p)
-	      :button (:radio . (eq fringe-indicators 'left))))
+	      :button (:radio . (eq indicate-buffer-boundaries 'left))))
 
 (defun menu-bar-showhide-fringe-ind-none ()
-  "Do not display any fringe indicators."
+  "Do not display any buffer boundary indicators."
   (interactive)
-  (require 'fringe)
-  (customize-set-variable 'fringe-indicators nil))
+  (customize-set-variable 'indicate-buffer-boundaries nil))
 
 (define-key menu-bar-showhide-fringe-ind-menu [none]
-  '(menu-item "No indicators" menu-bar-showhide-fringe-ind-none
-	      :help "Hide all fringe indicators"
+  '(menu-item "No Indicators" menu-bar-showhide-fringe-ind-none
+	      :help "Hide all buffer boundary indicators and arrows"
 	      :visible (display-graphic-p)
-	      :button (:radio . (eq fringe-indicators nil))))
+	      :button (:radio . (eq indicate-buffer-boundaries nil))))
 
+(define-key menu-bar-showhide-fringe-menu [showhide-fringe-ind]
+  (list 'menu-item "Buffer Boundaries" menu-bar-showhide-fringe-ind-menu
+	:visible `(display-graphic-p)
+	:help "Indicate buffer boundaries in fringe"))
 
-
-(defvar menu-bar-showhide-fringe-menu (make-sparse-keymap "Fringe"))
+(define-key menu-bar-showhide-fringe-menu [indicate-empty-lines]
+  (menu-bar-make-toggle toggle-indicate-empty-lines indicate-empty-lines
+			"Empty Line Indicators"
+			"Indicating of empty lines %s"
+			"Indicate trailing empty lines in fringe"))
 
 (defun menu-bar-showhide-fringe-menu-customize ()
   "Show customization buffer for `fringe-mode'."
@@ -806,7 +827,7 @@ by \"Save Options\" in Custom buffers.")
   (customize-variable 'fringe-mode))
 
 (define-key menu-bar-showhide-fringe-menu [customize]
-  '(menu-item "Customize" menu-bar-showhide-fringe-menu-customize
+  '(menu-item "Customize Fringe" menu-bar-showhide-fringe-menu-customize
 	      :help "Detailed customization of fringe"
 	      :visible (display-graphic-p)))
 
@@ -815,32 +836,11 @@ by \"Save Options\" in Custom buffers.")
   (interactive)
   (customize-set-variable 'fringe-mode nil))
 
-(define-key menu-bar-showhide-fringe-menu [showhide-fringe-ind]
-  (list 'menu-item "Indicators" menu-bar-showhide-fringe-ind-menu
-	:visible `(display-graphic-p)
-	:help "Select fringe mode"))
-
-;; The real definition is in fringe.el.
-;; This is to prevent errors in the :radio conditions below.
-(setq fringe-mode nil)
-
 (define-key menu-bar-showhide-fringe-menu [default]
   '(menu-item "Default" menu-bar-showhide-fringe-menu-customize-reset
 	      :help "Default width fringe on both left and right side"
 	      :visible (display-graphic-p)
 	      :button (:radio . (eq fringe-mode nil))))
-
-(defun menu-bar-showhide-fringe-menu-customize-left ()
-  "Display fringes only on the left of each window."
-  (interactive)
-  (require 'fringe)
-  (customize-set-variable 'fringe-mode '(nil . 0)))
-
-(define-key menu-bar-showhide-fringe-menu [left]
-  '(menu-item "On the Left" menu-bar-showhide-fringe-menu-customize-left
-	      :help "Fringe only on the left side"
-	      :visible (display-graphic-p)
-	      :button (:radio . (equal fringe-mode '(nil . 0)))))
 
 (defun menu-bar-showhide-fringe-menu-customize-right ()
   "Display fringes only on the right of each window."
@@ -853,6 +853,18 @@ by \"Save Options\" in Custom buffers.")
 	      :help "Fringe only on the right side"
 	      :visible (display-graphic-p)
 	      :button (:radio . (equal fringe-mode '(0 . nil)))))
+
+(defun menu-bar-showhide-fringe-menu-customize-left ()
+  "Display fringes only on the left of each window."
+  (interactive)
+  (require 'fringe)
+  (customize-set-variable 'fringe-mode '(nil . 0)))
+
+(define-key menu-bar-showhide-fringe-menu [left]
+  '(menu-item "On the Left" menu-bar-showhide-fringe-menu-customize-left
+	      :help "Fringe only on the left side"
+	      :visible (display-graphic-p)
+	      :button (:radio . (equal fringe-mode '(nil . 0)))))
 
 (defun menu-bar-showhide-fringe-menu-customize-disable ()
   "Do not display window fringes."
@@ -975,13 +987,6 @@ by \"Save Options\" in Custom buffers.")
 (define-key menu-bar-options-menu [cursor-separator]
   '("--"))
 
-(define-key menu-bar-options-menu [toggle-auto-compression]
-  '(menu-item "Automatic File De/compression"
-	      auto-compression-mode
-	      :help "Transparently decompress compressed files"
-	      :button (:toggle . (rassq 'jka-compr-handler
-					file-name-handler-alist))))
-
 (define-key menu-bar-options-menu [save-place]
   (menu-bar-make-toggle toggle-save-place-globally save-place
 			"Save Place in Files between Sessions"
@@ -1007,8 +1012,17 @@ by \"Save Options\" in Custom buffers.")
   '("--"))
 (define-key menu-bar-options-menu [cua-mode]
   (menu-bar-make-mm-toggle cua-mode
-			   "C-x/C-c/C-v cut and paste (CUA)"
-			   "Use C-z/C-x/C-c/C-v keys for undo/cut/copy/paste"))
+			   "C-x/C-c/C-v Cut and Paste (CUA)"
+			   "Use C-z/C-x/C-c/C-v keys for undo/cut/copy/paste"
+			   (:visible (or (not (boundp 'cua-enable-cua-keys))
+					 cua-enable-cua-keys))))
+
+(define-key menu-bar-options-menu [cua-emulation-mode]
+  (menu-bar-make-mm-toggle cua-mode
+			   "Shift movement mark region (CUA)"
+			   "Use shifted movement keys to set and extend the region."
+			   (:visible (and (boundp 'cua-enable-cua-keys)
+					  (not cua-enable-cua-keys)))))
 
 (define-key menu-bar-options-menu [case-fold-search]
   (menu-bar-make-toggle toggle-case-fold-search case-fold-search
@@ -1035,7 +1049,8 @@ by \"Save Options\" in Custom buffers.")
   '(menu-item "Truncate Long Lines in this Buffer"
 	      toggle-truncate-lines
 	      :help "Truncate long lines on the screen"
-	      :button (:toggle . truncate-lines)))
+	      :button (:toggle . truncate-lines)
+	      :enable (menu-bar-menu-frame-live-and-visible-p)))
 
 (define-key menu-bar-options-menu [highlight-separator]
   '("--"))
@@ -1048,10 +1063,6 @@ by \"Save Options\" in Custom buffers.")
 			   "Active Region Highlighting"
 			   "Make text in active region stand out in color (Transient Mark mode)"
 			   (:enable (not cua-mode))))
-(define-key menu-bar-options-menu [toggle-global-lazy-font-lock-mode]
-  (menu-bar-make-mm-toggle global-font-lock-mode
-			   "Syntax Highlighting"
-			   "Colorize text based on language syntax (Global Font Lock mode)"))
 
 
 ;; The "Tools" menu items
@@ -1099,7 +1110,7 @@ by \"Save Options\" in Custom buffers.")
 	      :help "Move snake around avoiding collisions"))
 (define-key menu-bar-games-menu [mult]
   '(menu-item "Multiplication Puzzle"  mpuz
-	      :help "Excercise brain with multiplication"))
+	      :help "Exercise brain with multiplication"))
 (define-key menu-bar-games-menu [life]
   '(menu-item "Life"  life
 	      :help "Watch how John Conway's cellular automaton evolves"))
@@ -1239,7 +1250,7 @@ by \"Save Options\" in Custom buffers.")
 
 (define-key menu-bar-describe-menu [list-keybindings]
   '(menu-item "List Key Bindings" describe-bindings
-	      :help "Display a list of all current keybindings"))
+	      :help "Display all current keybindings (keyboard shortcuts)"))
 (define-key menu-bar-describe-menu [describe-current-display-table]
   '(menu-item "Describe Display Table" describe-current-display-table
 	      :help "Describe the current display table"))
@@ -1253,15 +1264,10 @@ by \"Save Options\" in Custom buffers.")
   '(menu-item "Describe Function..." describe-function
 	      :help "Display documentation of function/command"))
 (define-key menu-bar-describe-menu [describe-key-1]
-  '(menu-item "Describe Key..." describe-key
+  '(menu-item "Describe Key or Mouse Operation..." describe-key
 	      ;; Users typically don't identify keys and menu items...
 	      :help "Display documentation of command bound to a \
-key (or menu-item)"))
-(define-key menu-bar-describe-menu [describe-key]
-  '(menu-item "What's This? " describe-key
-	      ;; Users typically don't identify keys and menu items...
-	      :help "Display documentation of command bound to a \
-key (or menu-item)"))
+key, a click, or a menu-item"))
 (define-key menu-bar-describe-menu [describe-mode]
   '(menu-item "Describe Buffer Modes" describe-mode
 	      :help "Describe this buffer's major and minor mode"))
@@ -1351,7 +1357,7 @@ key (or menu-item)"))
 	      :help "Display manual section that describes a key"))
 
 (define-key menu-bar-help-menu [eliza]
-  '(menu-item "Emacs Psychiatrist" doctor
+  '(menu-item "Emacs Psychotherapist" doctor
 	      :help "Our doctor will help you feel better"))
 (define-key menu-bar-help-menu [sep4]
   '("--"))
@@ -1365,9 +1371,8 @@ key (or menu-item)"))
   '(menu-item "Getting New Versions" describe-distribution
 	      :help "How to get latest versions of Emacs"))
 (define-key menu-bar-help-menu [more]
-  '(menu-item "Find Extra Packages"
-	      menu-bar-help-extra-packages
-	      :help "Where to find some extra packages and possible updates"))
+  '(menu-item "External Packages" menu-bar-help-extra-packages
+	      :help "Lisp packages distributed separately for use in Emacs"))
 (defun menu-bar-help-extra-packages ()
   "Display help about some additional packages available for Emacs."
   (interactive)
@@ -1421,7 +1426,22 @@ key (or menu-item)"))
   '(menu-item "Emacs Tutorial" help-with-tutorial
 	      :help "Learn how to use Emacs"))
 
-(defun kill-this-buffer ()	; for the menubar
+(defun menu-bar-menu-frame-live-and-visible-p ()
+  "Return non-nil if the menu frame is alive and visible.
+The menu frame is the frame for which we are updating the menu."
+  (let ((menu-frame (or menu-updating-frame (selected-frame))))
+    (and (frame-live-p menu-frame)
+	 (frame-visible-p menu-frame))))
+
+(defun menu-bar-non-minibuffer-window-p ()
+  "Return non-nil if selected window of the menu frame is not a minibuf window.
+
+See the documentation of `menu-bar-menu-frame-live-and-visible-p'
+for the definition of the menu frame."
+  (let ((menu-frame (or menu-updating-frame (selected-frame))))
+    (not (window-minibuffer-p (frame-selected-window menu-frame)))))
+
+(defun kill-this-buffer ()	; for the menu bar
   "Kill the current buffer."
   (interactive)
   (kill-buffer (current-buffer)))
@@ -1433,11 +1453,10 @@ key (or menu-item)"))
       (or (string-match "^ " (buffer-name (car buffers)))
 	  (setq count (1+ count)))
       (setq buffers (cdr buffers)))
-    (and (not (window-minibuffer-p (frame-selected-window menu-updating-frame)))
+    (and (menu-bar-non-minibuffer-window-p)
 	 (> count 1))))
 
-(put 'dired 'menu-enable
-     '(not (window-minibuffer-p (frame-selected-window menu-updating-frame))))
+(put 'dired 'menu-enable '(menu-bar-non-minibuffer-window-p))
 
 ;; Permit deleting frame if it would leave a visible or iconified frame.
 (defun delete-frame-enabled-p ()
@@ -1652,10 +1671,10 @@ Buffers menu is regenerated."
 			     "Next Buffer"
 			     'next-buffer
 			     :help "Switch to the \"next\" buffer in a cyclic order")
-		       (list 'prev-buffer
+		       (list 'previous-buffer
 			     'menu-item
 			     "Previous Buffer"
-			     'prev-buffer
+			     'previous-buffer
 			     :help "Switch to the \"previous\" buffer in a cyclic order")
 		       (list 'select-named-buffer
 			     'menu-item
@@ -1726,7 +1745,7 @@ Buffers menu is regenerated."
 	  :help "Terminate input and exit minibuffer")))
 
 ;;;###autoload
-;; This comment is taken from toolbar/tool-bar.el near
+;; This comment is taken from tool-bar.el near
 ;; (put 'tool-bar-mode ...)
 ;; We want to pretend the menu bar by standard is on, as this will make
 ;; customize consider disabling the menu bar a customization, and save

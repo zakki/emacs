@@ -3,7 +3,7 @@
 ;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.28
+;; Version: VERSIONTAG
 
 ;; This file is part of GNU Emacs.
 
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -98,6 +98,10 @@ No active TAGS table is required."
     (reftex-access-scan-info current-prefix-arg)
     (tags-query-replace from to (or delimited current-prefix-arg)
                         (list 'reftex-all-document-files))))
+
+(eval-when-compile
+  (defvar TeX-master)
+  (defvar isearch-next-buffer-function))
 
 (defun reftex-find-duplicate-labels ()
   "Produce a list of all duplicate labels in the document."

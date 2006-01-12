@@ -1,9 +1,10 @@
 ;;; f90.el --- Fortran-90 mode (free format)
 
-;; Copyright (C) 1995, 1996, 1997, 2000, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1996, 1997, 2000, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Torbj\"orn Einarsson <Torbjorn.Einarsson@era.ericsson.se>
-;; Maintainer: Glenn Morris <gmorris@ast.cam.ac.uk>
+;; Maintainer: Glenn Morris <rgm@gnu.org>
 ;; Keywords: fortran, f90, languages
 
 ;; This file is part of GNU Emacs.
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -163,6 +164,7 @@
 
 (defgroup f90 nil
   "Major mode for editing free format Fortran 90,95 code."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'languages)
 
 (defgroup f90-indent nil
@@ -275,7 +277,7 @@ The options are 'downcase-word, 'upcase-word, 'capitalize-word and nil."
 		"target" "then" "type" "use" "where" "while" "write"
 		;; F95 keywords.
 		"elemental" "pure") 'words)
-  "Regexp for F90 keywords.")
+  "Regexp used by the function `f90-change-keywords'.")
 
 (defconst f90-keywords-level-3-re
   (regexp-opt
@@ -369,7 +371,8 @@ subroutine\\)\\|use\\|call\\)\\>[ \t]*\\(\\sw+\\)?"
    (list
     ;; Variable declarations (avoid the real function call).
     '("^[ \t0-9]*\\(real\\|integer\\|c\\(haracter\\|omplex\\)\\|\
-logical\\|type[ \t]*(\\sw+)\\)\\(.*::\\|[ \t]*(.*)\\)?\\([^&!\n]*\\)"
+logical\\|double[ \t]*precision\\|*type[ \t]*(\\sw+)\\)\
+\\(.*::\\|[ \t]*(.*)\\)?\\([^&!\n]*\\)"
       (1 font-lock-type-face t) (4 font-lock-variable-name-face t))
     ;; do, if, select, where, and forall constructs.
     '("\\<\\(end[ \t]*\\(do\\|if\\|select\\|forall\\|where\\)\\)\\>\
@@ -380,7 +383,7 @@ do\\([ \t]*while\\)?\\|select[ \t]*case\\|where\\|forall\\)\\)\\>"
       (2 font-lock-constant-face nil t) (3 font-lock-keyword-face))
     ;; Implicit declaration.
     '("\\<\\(implicit\\)[ \t]*\\(real\\|integer\\|c\\(haracter\\|omplex\\)\
-\\|logical\\|type[ \t]*(\\sw+)\\|none\\)[ \t]*"
+\\|logical\\|double[ \t]*precision\\|type[ \t]*(\\sw+)\\|none\\)[ \t]*"
       (1 font-lock-keyword-face) (2 font-lock-type-face))
     '("\\<\\(namelist\\|common\\)[ \t]*\/\\(\\sw+\\)?\/"
       (1 font-lock-keyword-face) (2 font-lock-constant-face nil t))
@@ -697,6 +700,7 @@ Used in the F90 entry in `hs-special-modes-alist'.")
        ("`de"  "deallocate"   )
        ("`df"  "define"       )
        ("`di"  "dimension"    )
+       ("`dp"  "double precision")
        ("`dw"  "do while"     )
        ("`el"  "else"         )
        ("`eli" "else if"      )
@@ -795,8 +799,6 @@ Variables controlling indentation style and extra features:
   The possibilities are 'downcase-word, 'upcase-word, 'capitalize-word.
 `f90-leave-line-no'
   Do not left-justify line numbers (default nil).
-`f90-keywords-re'
-  List of keywords used for highlighting/upcase-keywords etc.
 
 Turning on F90 mode calls the value of the variable `f90-mode-hook'
 with no args, if that value is non-nil."
@@ -1766,7 +1768,7 @@ Leave point at the end of line."
                            (buffer-substring
                             (line-beginning-position)
                             (line-end-position)))
-                (sit-for 1)))
+                (sit-for blink-matching-delay)))
           (setq beg-block (car matching-beg)
                 beg-name (car (cdr matching-beg)))
           (goto-char end-point)
@@ -1790,7 +1792,8 @@ Any other key combination is executed normally."
   (let (char event)
     (if (fboundp 'next-command-event) ; XEmacs
         (setq event (next-command-event)
-              char (event-to-character event))
+              char (and (fboundp 'event-to-character)
+			(event-to-character event)))
       (setq event (read-event)
             char event))
     ;; Insert char if not equal to `?', or if abbrev-mode is off.

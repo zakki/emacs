@@ -1,10 +1,10 @@
 ;;; calendar.el --- calendar functions
 
 ;; Copyright (C) 1988, 1989, 1990, 1991, 1992, 1993, 1994, 1995, 1997,
-;;	2000, 2001, 2003, 2004, 2005  Free Software Foundation, Inc.
+;;   2000, 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 ;; Author: Edward M. Reingold <reingold@cs.uiuc.edu>
-;; Maintainer: Glenn Morris <gmorris@ast.cam.ac.uk>
+;; Maintainer: Glenn Morris <rgm@gnu.org>
 ;; Keywords: calendar
 ;; Human-Keywords: calendar, Gregorian calendar, diary, holidays
 
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -164,35 +164,6 @@ be overridden by the value of `calendar-setup'."
   :group 'diary)
 
 ;;;###autoload
-(defcustom number-of-diary-entries 1
-  "*Specifies how many days of diary entries are to be displayed initially.
-This variable affects the diary display when the command \\[diary] is used,
-or if the value of the variable `view-diary-entries-initially' is t.  For
-example, if the default value 1 is used, then only the current day's diary
-entries will be displayed.  If the value 2 is used, then both the current
-day's and the next day's entries will be displayed.
-
-The value can also be a vector such as [0 2 2 2 2 4 1]; this value
-says to display no diary entries on Sunday, the display the entries
-for the current date and the day after on Monday through Thursday,
-display Friday through Monday's entries on Friday, and display only
-Saturday's entries on Saturday.
-
-This variable does not affect the diary display with the `d' command
-from the calendar; in that case, the prefix argument controls the
-number of days of diary entries displayed."
-  :type '(choice (integer :tag "Entries")
-		 (vector :value [0 0 0 0 0 0 0]
-			 (integer :tag "Sunday")
-			 (integer :tag "Monday")
-			 (integer :tag "Tuesday")
-			 (integer :tag "Wednesday")
-			 (integer :tag "Thursday")
-			 (integer :tag "Friday")
-			 (integer :tag "Saturday")))
-  :group 'diary)
-
-;;;###autoload
 (defcustom mark-diary-entries-in-calendar nil
   "*Non-nil means mark dates with diary entries, in the calendar window.
 The marking symbol is specified by the variable `diary-entry-marker'."
@@ -206,9 +177,9 @@ If nil, make an icon of the frame.  If non-nil, delete the frame."
   :type 'boolean
   :group 'view)
 
-(defvar diary-face 'diary-face
+(defvar diary-face 'diary
   "Face name to use for diary entries.")
-(defface diary-face
+(defface diary
   '((((min-colors 88) (class color) (background light))
      :foreground "red1")
     (((class color) (background light))
@@ -221,13 +192,17 @@ If nil, make an icon of the frame.  If non-nil, delete the frame."
      :weight bold))
   "Face for highlighting diary entries."
   :group 'diary)
+;; backward-compatibility alias
+(put 'diary-face 'face-alias 'diary)
 
-(defface calendar-today-face
+(defface calendar-today
   '((t (:underline t)))
   "Face for indicating today's date."
   :group 'diary)
+;; backward-compatibility alias
+(put 'calendar-today-face 'face-alias 'calendar-today)
 
-(defface holiday-face
+(defface holiday
   '((((class color) (background light))
      :background "pink")
     (((class color) (background dark))
@@ -236,17 +211,19 @@ If nil, make an icon of the frame.  If non-nil, delete the frame."
      :inverse-video t))
   "Face for indicating dates that have holidays."
   :group 'diary)
+;; backward-compatibility alias
+(put 'holiday-face 'face-alias 'holiday)
 
 (eval-after-load "facemenu"
   '(progn
-     (add-to-list 'facemenu-unlisted-faces 'diary-face)
-     (add-to-list 'facemenu-unlisted-faces 'calendar-today-face)
-     (add-to-list 'facemenu-unlisted-faces 'holiday-face)))
+     (add-to-list 'facemenu-unlisted-faces 'diary)
+     (add-to-list 'facemenu-unlisted-faces 'calendar-today)
+     (add-to-list 'facemenu-unlisted-faces 'holiday)))
 
 (defcustom diary-entry-marker
   (if (not (display-color-p))
       "+"
-    'diary-face)
+    'diary)
   "*How to mark dates that have diary entries.
 The value can be either a single-character string or a face."
   :type '(choice string face)
@@ -255,7 +232,7 @@ The value can be either a single-character string or a face."
 (defcustom calendar-today-marker
   (if (not (display-color-p))
       "="
-    'calendar-today-face)
+    'calendar-today)
   "*How to mark today's date in the calendar.
 The value can be either a single-character string or a face.
 Marking today's date is done only if you set up `today-visible-calendar-hook'
@@ -266,7 +243,7 @@ to request that."
 (defcustom calendar-holiday-marker
   (if (not (display-color-p))
       "*"
-    'holiday-face)
+    'holiday)
   "*How to mark notable dates in the calendar.
 The value can be either a single-character string or a face."
   :type '(choice string face)
@@ -387,7 +364,7 @@ functions that move by days and weeks."
 
 For example,
 
-  (add-hook 'calendar-move-hook (lambda () (view-diary-entries 1)))
+  (add-hook 'calendar-move-hook (lambda () (diary-view-entries 1)))
 
 redisplays the diary for whatever date the cursor is moved to."
   :type 'hook
@@ -1329,6 +1306,7 @@ A negative YR is interpreted as BC; -1 being 1 BC, and so on."
 
 (defmacro calendar-for-loop (var from init to final do &rest body)
   "Execute a for loop."
+  (declare (debug (symbolp "from" form "to" form "do" body)))
   `(let ((,var (1- ,init)))
     (while (>= ,final (setq ,var (1+ ,var)))
       ,@body)))
@@ -1645,10 +1623,7 @@ to be replaced by asterisks to highlight it whenever it is in the window."
     (increment-calendar-month month year (- calendar-offset))
     (generate-calendar-window month year)
     (if (and view-diary-entries-initially (calendar-date-is-visible-p date))
-        (view-diary-entries
-         (if (vectorp number-of-diary-entries)
-             (aref number-of-diary-entries (calendar-day-of-week date))
-           number-of-diary-entries))))
+        (diary-view-entries)))
   (let* ((diary-buffer (get-file-buffer diary-file))
          (diary-window (if diary-buffer (get-buffer-window diary-buffer)))
          (split-height-threshold (if diary-window 2 1000)))
@@ -1656,7 +1631,7 @@ to be replaced by asterisks to highlight it whenever it is in the window."
         (list-calendar-holidays)))
   (run-hooks 'initial-calendar-window-hook))
 
-(autoload 'view-diary-entries "diary-lib"
+(autoload 'diary-view-entries "diary-lib"
   "Prepare and display a buffer with diary entries.
 Searches your diary file for entries that match ARG days starting with
 the date indicated by the cursor position in the displayed three-month
@@ -1812,7 +1787,7 @@ Driven by the variable `calendar-date-display-form'.")
   t)
 
 (autoload 'calendar-goto-hebrew-date "cal-hebrew"
-  "Move cursor to Hebrew date date."
+  "Move cursor to Hebrew date."
   t)
 
 (autoload 'calendar-print-hebrew-date "cal-hebrew"
@@ -1824,7 +1799,7 @@ Driven by the variable `calendar-date-display-form'.")
   t)
 
 (autoload 'calendar-goto-coptic-date "cal-coptic"
-   "Move cursor to Coptic date date."
+   "Move cursor to Coptic date."
    t)
 
 (autoload 'calendar-print-coptic-date "cal-coptic"
@@ -1836,7 +1811,7 @@ Driven by the variable `calendar-date-display-form'.")
   t)
 
 (autoload 'calendar-goto-ethiopic-date "cal-coptic"
-   "Move cursor to Ethiopic date date."
+   "Move cursor to Ethiopic date."
    t)
 
 (autoload 'calendar-print-ethiopic-date "cal-coptic"
@@ -1848,7 +1823,7 @@ Driven by the variable `calendar-date-display-form'.")
   t)
 
 (autoload 'calendar-goto-persian-date "cal-persia"
-   "Move cursor to Persian date date."
+   "Move cursor to Persian date."
    t)
 
 (autoload 'calendar-print-persian-date "cal-persia"
@@ -2199,9 +2174,11 @@ movement commands will not work correctly."
 				 calendar-mode-map global-map)
       (setq l (cdr l))))
   (define-key calendar-mode-map "-"     'negative-argument)
+  (define-key calendar-mode-map ">"     'scroll-calendar-right)
   (define-key calendar-mode-map "\C-x>" 'scroll-calendar-right)
   (define-key calendar-mode-map [prior] 'scroll-calendar-right-three-months)
   (define-key calendar-mode-map "\ev"   'scroll-calendar-right-three-months)
+  (define-key calendar-mode-map "<"     'scroll-calendar-left)
   (define-key calendar-mode-map "\C-x<" 'scroll-calendar-left)
   (define-key calendar-mode-map [next]  'scroll-calendar-left-three-months)
   (define-key calendar-mode-map "\C-v"  'scroll-calendar-left-three-months)
@@ -2264,7 +2241,7 @@ movement commands will not work correctly."
   (define-key calendar-mode-map "x"   'mark-calendar-holidays)
   (define-key calendar-mode-map "u"   'calendar-unmark)
   (define-key calendar-mode-map "m"   'mark-diary-entries)
-  (define-key calendar-mode-map "d"   'view-diary-entries)
+  (define-key calendar-mode-map "d"   'diary-view-entries)
   (define-key calendar-mode-map "D"   'view-other-diary-entries)
   (define-key calendar-mode-map "s"   'show-all-diary-entries)
   (define-key calendar-mode-map "pd"  'calendar-print-day-of-year)
@@ -2441,7 +2418,6 @@ For a complete description, type \
 \\<calendar-mode-map>\\[calendar-goto-info-node] from within the calendar.
 
 \\<calendar-mode-map>\\{calendar-mode-map}"
-
   (kill-all-local-variables)
   (setq major-mode 'calendar-mode)
   (setq mode-name "Calendar")
@@ -2454,7 +2430,8 @@ For a complete description, type \
   (make-local-variable 'displayed-month);;  Month in middle of window.
   (make-local-variable 'displayed-year)	;;  Year in middle of window.
   (set (make-local-variable 'font-lock-defaults)
-       '(calendar-font-lock-keywords t)))
+       '(calendar-font-lock-keywords t))
+  (run-mode-hooks 'calendar-mode-hook))
 
 (defun calendar-string-spread (strings char length)
   "Concatenate list of STRINGS separated with copies of CHAR to fill LENGTH.
@@ -2485,8 +2462,7 @@ the STRINGS are just concatenated and the result truncated."
 (defun update-calendar-mode-line ()
   "Update the calendar mode line with the current date and date style."
   (if (bufferp (get-buffer calendar-buffer))
-      (save-excursion
-        (set-buffer calendar-buffer)
+      (with-current-buffer calendar-buffer
         (setq mode-line-format
               (calendar-string-spread
                (let ((date (condition-case nil
@@ -2581,13 +2557,14 @@ ERROR is t, otherwise just returns nil."
           (list month
                 (string-to-number (buffer-substring (1+ (point)) (+ 4 (point))))
                 year))
-      (if (looking-at "\\*")
-          (save-excursion
-            (re-search-backward "[^*]")
-            (if (looking-at ".\\*\\*")
-                (list month calendar-starred-day year)
-              (if error (error "Not on a date!"))))
+      (if (and (looking-at "\\*")
+               (save-excursion
+                 (re-search-backward "[^*]")
+                 (looking-at ".\\*\\*")))
+          (list month calendar-starred-day year)
         (if error (error "Not on a date!"))))))
+
+(add-to-list 'debug-ignored-errors "Not on a date!")
 
 ;; The following version of calendar-gregorian-from-absolute is preferred for
 ;; reasons of clarity, BUT it's much slower than the version that follows it.
@@ -2923,43 +2900,50 @@ interpreted as BC; -1 being 1 BC, and so on."
 MARK is a single-character string, a list of face attributes/values, or a face.
 MARK defaults to `diary-entry-marker'."
   (if (calendar-date-is-legal-p date)
-      (save-excursion
-        (set-buffer calendar-buffer)
-        (calendar-cursor-to-visible-date date)
-        (let ((mark (or (and (stringp mark) (= (length mark) 1) mark) ; single-char
-                        (and (listp mark) (> (length mark) 0) mark) ; attr list
-                        (and (facep mark) mark) ; face-name
-                        diary-entry-marker)))
-          (if (facep mark)
-              (progn      ; face or an attr-list that contained a face
-                (overlay-put
-                 (make-overlay (1- (point)) (1+ (point))) 'face mark))
-            (if (and (stringp mark)
-                     (= (length mark) 1)) ; single-char
-                (let ((buffer-read-only nil))
-                  (forward-char 1)
-                  (delete-char 1)
-                  (insert mark)
-                  (forward-char -2))
-              (let                      ; attr list
-                  ((temp-face
-                    (make-symbol (apply 'concat "temp-face-"
-                                        (mapcar '(lambda (sym)
-                                                   (cond ((symbolp sym) (symbol-name sym))
-                                                         ((numberp sym) (int-to-string sym))
-                                                         (t sym))) mark))))
-                   (faceinfo mark))
-                (make-face temp-face)
-                ;; Remove :face info from the mark, copy the face info into temp-face
-                (while (setq faceinfo (memq :face faceinfo))
-                  (copy-face (read (nth 1 faceinfo)) temp-face)
-                  (setcar faceinfo nil)
-                  (setcar (cdr faceinfo) nil))
-                (setq mark (delq nil mark))
-                ;; Apply the font aspects
-                (apply 'set-face-attribute temp-face nil mark)
-                (overlay-put
-                 (make-overlay (1- (point)) (1+ (point))) 'face temp-face))))))))
+      (with-current-buffer calendar-buffer
+        (save-excursion
+          (calendar-cursor-to-visible-date date)
+          (setq mark
+                (or (and (stringp mark) (= (length mark) 1) mark) ; single-char
+                    (and (listp mark) (> (length mark) 0) mark)   ; attr list
+                    (and (facep mark) mark)                       ; face-name
+                    diary-entry-marker))
+          (cond
+           ;; face or an attr-list that contained a face
+           ((facep mark)
+            (overlay-put
+             (make-overlay (1- (point)) (1+ (point))) 'face mark))
+           ;; single-char
+           ((and (stringp mark) (= (length mark) 1))
+            (let ((inhibit-read-only t))
+              (forward-char 1)
+              ;; Insert before delete so as to better preserve markers.
+              (insert mark)
+              (delete-char 1)
+              (forward-char -2)))
+           (t ;; attr list
+            (let ((temp-face
+                   (make-symbol
+                    (apply 'concat "temp-"
+                           (mapcar (lambda (sym)
+                                     (cond
+                                      ((symbolp sym) (symbol-name sym))
+                                      ((numberp sym) (number-to-string sym))
+                                      (t sym)))
+                                   mark))))
+                  (faceinfo mark))
+              (make-face temp-face)
+              ;; Remove :face info from the mark, copy the face info into
+              ;; temp-face
+              (while (setq faceinfo (memq :face faceinfo))
+                (copy-face (read (nth 1 faceinfo)) temp-face)
+                (setcar faceinfo nil)
+                (setcar (cdr faceinfo) nil))
+              (setq mark (delq nil mark))
+              ;; Apply the font aspects
+              (apply 'set-face-attribute temp-face nil mark)
+              (overlay-put
+               (make-overlay (1- (point)) (1+ (point))) 'face temp-face))))))))
 
 (defun calendar-star-date ()
   "Replace the date under the cursor in the calendar window with asterisks.
@@ -3063,8 +3047,7 @@ Defaults to today's date if DATE is not given."
   "Show dates on other calendars for date under the cursor."
   (interactive)
   (let* ((date (calendar-cursor-to-date t)))
-    (save-excursion
-      (set-buffer (get-buffer-create other-calendars-buffer))
+    (with-current-buffer (get-buffer-create other-calendars-buffer)
       (setq buffer-read-only nil)
       (calendar-set-mode-line
        (concat (calendar-date-string date) " (Gregorian)"))
@@ -3130,9 +3113,9 @@ Defaults to today's date if DATE is not given."
 
 (provide 'calendar)
 
-;;; Local variables:
-;;; byte-compile-dynamic: t
-;;; End:
+;; Local variables:
+;; byte-compile-dynamic: t
+;; End:
 
-;;; arch-tag: 19c61596-c8fb-4c69-bcf1-7dd739919cd8
+;; arch-tag: 19c61596-c8fb-4c69-bcf1-7dd739919cd8
 ;;; calendar.el ends here

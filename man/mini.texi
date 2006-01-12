@@ -1,6 +1,6 @@
 @c This is part of the Emacs manual.
-@c Copyright (C) 1985, 86, 87, 93, 94, 95, 97, 00, 2001
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 2000, 2001,
+@c   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @node Minibuffer, M-x, Basic, Top
 @chapter The Minibuffer
@@ -22,7 +22,7 @@ derived from the name of the command that the argument is for.  The
 prompt normally ends with a colon.
 
 @cindex default argument
-  Sometimes a @dfn{default argument} appears in parentheses after the
+  Sometimes a @dfn{default argument} appears in parentheses before the
 colon; it too is part of the prompt.  The default will be used as the
 argument value if you enter an empty argument (that is, just type
 @key{RET}).  For example, commands that read buffer names always show a
@@ -105,10 +105,14 @@ Find File: /u2/emacs/src//etc/termcap
 @cindex // in file name
 @cindex double slash in file name
 @cindex slashes repeated in file name
+@findex file-name-shadow-mode
 GNU Emacs gives a special meaning to a double slash (which is not
-normally a useful thing to write): it means, ``ignore everything before
-the second slash in the pair.''  Thus, @samp{/u2/emacs/src/} is ignored
-in the example above, and you get the file @file{/etc/termcap}.
+normally a useful thing to write): it means, ``ignore everything
+before the second slash in the pair.''  Thus, @samp{/u2/emacs/src/} is
+ignored in the example above, and you get the file
+@file{/etc/termcap}.  The ignored part of the file name is dimmed if
+the terminal allows it; to disable this, turn off
+@code{file-name-shadow-mode} minor mode.
 
   If you set @code{insert-default-directory} to @code{nil}, the default
 directory is not inserted in the minibuffer.  This way, the minibuffer
@@ -194,14 +198,16 @@ into a longer string that it stands for, by matching it against a set of
 argument.  @kbd{?} is defined to display a list of possible completions
 of what you have inserted.
 
-  For example, when @kbd{M-x} uses the minibuffer to read the name of a
-command, it provides a list of all available Emacs command names to
+  For example, when @kbd{M-x} uses the minibuffer to read the name of
+a command, it provides a list of all available Emacs command names to
 complete against.  The completion keys match the minibuffer text
 against all the command names, find any additional name characters
 implied by the ones already present in the minibuffer, and add those
 characters to the ones you have given.  This is what makes it possible
 to type @kbd{M-x ins @key{SPC} b @key{RET}} instead of @kbd{M-x
-insert-buffer @key{RET}} (for example).
+insert-buffer @key{RET}} (for example).  (@key{SPC} does not do
+completion in reading file names, because it is common to use spaces
+in file names on some systems.)
 
   Case is normally significant in completion, because it is significant
 in most of the names that you can complete (buffer names, file names and
@@ -256,8 +262,10 @@ when completion is available.
 Complete the text before point in the minibuffer as much as possible
 (@code{minibuffer-complete}).
 @item @key{SPC}
-Complete the minibuffer text before point, but don't go beyond one word
-(@code{minibuffer-complete-word}).
+Complete the minibuffer text before point, but don't go beyond one
+word (@code{minibuffer-complete-word}).  @key{SPC} for completion is
+not available when entering a file name, since some users often put
+spaces in filenames.
 @item @key{RET}
 Submit the text in the minibuffer as the argument, possibly completing
 first as described
@@ -270,7 +278,7 @@ Completion}.
 @end ifnottex
 @item ?
 Display a list of all possible completions of the text in the minibuffer
-(@code{minibuffer-list-completions}).
+(@code{minibuffer-completion-help}).
 @end table
 
 @kindex SPC

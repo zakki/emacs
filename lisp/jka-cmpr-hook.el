@@ -1,6 +1,7 @@
 ;;; jka-cmpr-hook.el --- preloaded code to enable jka-compr.el
 
-;; Copyright (C) 1993, 1994, 1995, 1997, 1999, 2000, 2003, 2004, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1995, 1997, 1999, 2000, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: jka@ece.cmu.edu (Jay K. Adams)
 ;; Maintainer: FSF
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -32,15 +33,15 @@
 ;;; Code:
 
 (defgroup compression nil
-  "Data compression utilities"
+  "Data compression utilities."
   :group 'data)
 
 (defgroup jka-compr nil
-  "jka-compr customization"
+  "jka-compr customization."
   :group 'compression)
 
-;;; I have this defined so that .Z files are assumed to be in unix
-;;; compress format; and .gz files, in gzip format, and .bz2 files in bzip fmt.
+;; I have this defined so that .Z files are assumed to be in unix
+;; compress format; and .gz files, in gzip format, and .bz2 files in bzip fmt.
 (defcustom jka-compr-compression-info-list
   ;;[regexp
   ;; compr-message  compr-prog  compr-args
@@ -157,7 +158,7 @@ invoked."
    jka-compr-compression-info-list
    "\\|"))
 
-;;; Functions for accessing the return value of jka-compr-get-compression-info
+;; Functions for accessing the return value of jka-compr-get-compression-info
 (defun jka-compr-info-regexp               (info)  (aref info 0))
 (defun jka-compr-info-compress-message     (info)  (aref info 1))
 (defun jka-compr-info-compress-program     (info)  (aref info 2))
@@ -191,48 +192,38 @@ and `inhibit-first-line-modes-suffixes'."
   (setq jka-compr-file-name-handler-entry
 	(cons (jka-compr-build-file-regexp) 'jka-compr-handler))
 
-  (setq file-name-handler-alist (cons jka-compr-file-name-handler-entry
-				      file-name-handler-alist))
+  (push jka-compr-file-name-handler-entry file-name-handler-alist)
 
-  (setq jka-compr-added-to-file-coding-system-alist nil)
+  (dolist (x jka-compr-compression-info-list)
+    ;; Don't do multibyte encoding on the compressed files.
+    (let ((elt (cons (jka-compr-info-regexp x)
+                     '(no-conversion . no-conversion))))
+      (push elt file-coding-system-alist)
+      (push elt jka-compr-added-to-file-coding-system-alist))
 
-  (mapcar
-   (function (lambda (x)
-	       ;; Don't do multibyte encoding on the compressed files.
-	       (let ((elt (cons (jka-compr-info-regexp x)
-				 '(no-conversion . no-conversion))))
-		 (setq file-coding-system-alist
-		       (cons elt file-coding-system-alist))
-		 (setq jka-compr-added-to-file-coding-system-alist
-		       (cons elt jka-compr-added-to-file-coding-system-alist)))
-
-	       (and (jka-compr-info-strip-extension x)
-		    ;; Make entries in auto-mode-alist so that modes
-		    ;; are chosen right according to the file names
-		    ;; sans `.gz'.
-		    (setq auto-mode-alist
-			  (cons (list (jka-compr-info-regexp x)
-				      nil 'jka-compr)
-				auto-mode-alist))
-		    ;; Also add these regexps to
-		    ;; inhibit-first-line-modes-suffixes, so that a
-		    ;; -*- line in the first file of a compressed tar
-		    ;; file doesn't override tar-mode.
-		    (setq inhibit-first-line-modes-suffixes
-			  (cons (jka-compr-info-regexp x)
-				inhibit-first-line-modes-suffixes)))))
-   jka-compr-compression-info-list)
+    (and (jka-compr-info-strip-extension x)
+         ;; Make entries in auto-mode-alist so that modes
+         ;; are chosen right according to the file names
+         ;; sans `.gz'.
+         (push (list (jka-compr-info-regexp x) nil 'jka-compr) auto-mode-alist)
+         ;; Also add these regexps to
+         ;; inhibit-first-line-modes-suffixes, so that a
+         ;; -*- line in the first file of a compressed tar
+         ;; file doesn't override tar-mode.
+         (push (jka-compr-info-regexp x)
+               inhibit-first-line-modes-suffixes)))
   (setq auto-mode-alist
 	(append auto-mode-alist jka-compr-mode-alist-additions))
 
   ;; Make sure that (load "foo") will find /bla/foo.el.gz.
   (setq load-suffixes
 	(apply 'append
-	       (mapcar (lambda (suffix)
-			 (cons suffix
-			       (mapcar (lambda (ext) (concat suffix ext))
-				       jka-compr-load-suffixes)))
-		       load-suffixes))))
+	       (append (mapcar (lambda (suffix)
+                               (cons suffix
+                                     (mapcar (lambda (ext) (concat suffix ext))
+                                             jka-compr-load-suffixes)))
+                             load-suffixes)
+                       (list jka-compr-load-suffixes)))))
 
 
 (defun jka-compr-installed-p ()
@@ -253,7 +244,7 @@ The return value is the entry in `file-name-handler-alist' for jka-compr."
   "Toggle automatic file compression and uncompression.
 With prefix argument ARG, turn auto compression on if positive, else off.
 Returns the new status of auto compression (non-nil means on)."
-  :global t :group 'jka-compr
+  :global t :init-value t :group 'jka-compr :version "22.1"
   (let* ((installed (jka-compr-installed-p))
 	 (flag auto-compression-mode))
     (cond
@@ -276,16 +267,16 @@ Returns the new status of auto compression (non-nil means on)."
 (put 'with-auto-compression-mode 'lisp-indent-function 0)
 
 
-;;; This is what we need to know about jka-compr-handler
-;;; in order to decide when to call it.
+;; This is what we need to know about jka-compr-handler
+;; in order to decide when to call it.
 
 (put 'jka-compr-handler 'safe-magic t)
-(put 'jka-compr-handler 'operations '(jka-compr-byte-compiler-base-file-name
+(put 'jka-compr-handler 'operations '(byte-compiler-base-file-name
 				      write-region insert-file-contents
 				      file-local-copy load))
 
-;;; Turn on the mode.
-(auto-compression-mode 1)
+;; Turn on the mode.
+(when auto-compression-mode (auto-compression-mode 1))
 
 (provide 'jka-cmpr-hook)
 

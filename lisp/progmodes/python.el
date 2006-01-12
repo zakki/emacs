@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -67,10 +67,9 @@
 (eval-when-compile
   (require 'compile)
   (autoload 'info-lookup-maybe-add-help "info-look"))
-(autoload 'compilation-start "compile")
 
 (defgroup python nil
-  "Silly walks in the Python language"
+  "Silly walks in the Python language."
   :group 'languages
   :version "22.1"
   :link '(emacs-commentary-link "python"))
@@ -949,6 +948,7 @@ See `python-check-command' for the default."
 				    (if name
 					(file-name-nondirectory name))))))))
   (setq python-saved-check-command command)
+  (require 'compile)                    ;To define compilation-* variables.
   (save-some-buffers (not compilation-ask-about-save) nil)
   (let ((compilation-error-regexp-alist
 	 (cons '("(\\([^,]+\\), line \\([0-9]+\\))" 1 2)
@@ -1066,7 +1066,7 @@ For running multiple processes in multiple buffers, see `python-buffer'.
   ;; Still required by `comint-redirect-send-command', for instance
   ;; (and we need to match things like `>>> ... >>> '):
   (set (make-local-variable 'comint-prompt-regexp)
-       (rx (and line-start (1+ (and (repeat 3 (any ">.")) ?\ )))))
+       (rx (and line-start (1+ (and (repeat 3 (any ">.")) ?\s)))))
   (set (make-local-variable 'compilation-error-regexp-alist)
        python-compilation-regexp-alist)
   (compilation-shell-minor-mode 1))
@@ -1341,9 +1341,9 @@ don't support `help'."
 			nil nil symbol))))
   (if (equal symbol "") (error "No symbol"))
   (let* ((func `(lambda ()
-		  (comint-redirect-send-command (format "emacs.ehelp(%S)\n"
-							,symbol)
-						"*Help*" nil))))
+		  (comint-redirect-send-command
+		   (format "emacs.ehelp(%S, globals(), locals())\n" ,symbol)
+		   "*Help*" nil))))
     ;; Ensure we have a suitable help buffer.
     ;; Fixme: Maybe process `Related help topics' a la help xrefs and
     ;; allow C-c C-f in help buffer.
@@ -1652,7 +1652,7 @@ Repeating the command scrolls the completion window."
 		(t
 		 (message "Making completion list...")
 		 (with-output-to-temp-buffer "*Completions*"
-		   (display-completion-list completions))
+		   (display-completion-list completions symbol))
 		 (message "Making completion list...%s" "done"))))))))
 
 (eval-when-compile (require 'hippie-exp))

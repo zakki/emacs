@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -2439,7 +2439,7 @@ Interactively, prompts for a hex string giving the code."
 The ISO 8859 characters sets overlap, e.g. 8859-1 (Latin-1) and
 8859-15 (Latin-9) differ only in a few characters.  Emacs normally
 distinguishes equivalent characters from those ISO-8859 character sets
-which are built in to Emacs.  This behaviour is essentially inherited
+which are built in to Emacs.  This behavior is essentially inherited
 from the European-originated international standards.  Treating them
 equivalently, by translating to and from a single representation is
 called `unification'.  (The `utf-8' coding system treats the
@@ -2499,8 +2499,8 @@ See also command `unify-8859-on-encoding-mode' and the user option
 ;; normal-mode and minibuffer-setup-hook.
 (defun ucs-set-table-for-input (&optional buffer)
   "Set up an appropriate `translation-table-for-input' for BUFFER.
-BUFFER defaults to the current buffer.
-This function is automatically called directly at the end of `get-buffer-create'."
+BUFFER defaults to the current buffer.  This function is
+automatically called directly at the end of `get-buffer-create'."
   (when (and unify-8859-on-encoding-mode
              (not unify-8859-on-decoding-mode)
 	     (char-table-p translation-table-for-input))
@@ -2523,9 +2523,9 @@ This function is automatically called directly at the end of `get-buffer-create'
 	(when (char-table-p table)
 	  (if buffer
 	      (with-current-buffer buffer
-		(set (make-variable-buffer-local 'translation-table-for-input)
+		(set (make-local-variable 'translation-table-for-input)
 		     table))
-	    (set (make-variable-buffer-local 'translation-table-for-input)
+	    (set (make-local-variable 'translation-table-for-input)
 		 table)))))))
 
 ;; The minibuffer needs to acquire a `buffer-file-coding-system' for

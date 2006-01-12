@@ -1,7 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2004
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2002, 2003,
+@c   2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/windows
 @node Windows, Frames, Buffers, Top
@@ -30,6 +30,7 @@ displayed in windows.
 * Size of Window::          Accessing the size of a window.
 * Resizing Windows::        Changing the size of a window.
 * Coordinates and Windows:: Converting coordinates to windows.
+* Window Tree::             The layout and sizes of all windows in a frame.
 * Window Configurations::   Saving and restoring the state of the screen.
 * Window Hooks::            Hooks for scrolling, window size changes,
                               redisplay going past a certain point,
@@ -267,7 +268,7 @@ Now the screen looks like this:
 @end smallexample
 
 Normally, Emacs indicates the border between two side-by-side windows
-with a scroll bar (@pxref{Window Frame Parameters,Scroll Bars}) or @samp{|}
+with a scroll bar (@pxref{Layout Parameters,Scroll Bars}) or @samp{|}
 characters.  The display table can specify alternative border
 characters; see @ref{Display Tables}.
 @end deffn
@@ -463,8 +464,8 @@ The return value is @var{window}.
 @defmac save-selected-window forms@dots{}
 This macro records the selected frame, as well as the selected window
 of each frame, executes @var{forms} in sequence, then restores the
-earlier selected frame and windows It returns the value of the last
-form in @var{forms}.
+earlier selected frame and windows.  It also saves and restores the
+current buffer.  It returns the value of the last form in @var{forms}.
 
 This macro does not save or restore anything about the sizes,
 arrangement or contents of windows; therefore, if the @var{forms}
@@ -478,16 +479,16 @@ the end of @var{forms} remains selected.
 @defmac with-selected-window window forms@dots{}
 This macro selects @var{window} (without changing the buffer list),
 executes @var{forms} in sequence, then restores the previously
-selected window (unless that window is no longer alive).  It is similar
-to @code{save-selected-window} except that it explicitly selects
-@var{window}, without altering the buffer list sequence.
+selected window and current buffer.  It is just like
+@code{save-selected-window}, except that it explicitly selects
+@var{window}, also without altering the buffer list sequence.
 @end defmac
 
 @cindex finding windows
   The following functions choose one of the windows on the screen,
 offering various criteria for the choice.
 
-@defun get-lru-window &optional frame
+@defun get-lru-window &optional frame dedicated
 This function returns the window least recently ``used'' (that is,
 selected).  If any full-width windows are present, it only considers
 these.  The selected window is always the most recently used window.
@@ -495,7 +496,8 @@ these.  The selected window is always the most recently used window.
 The selected window can be the least recently used window if it is the
 only window.  A newly created window becomes the least recently used
 window until it is selected.  A minibuffer window is never a
-candidate.  Dedicated windows are never candidates, and if all
+candidate.  Dedicated windows are never candidates unless the
+@var{dedicated} argument is non-@code{nil}, so if all
 existing windows are dedicated, the value is @code{nil}.
 
 The argument @var{frame} controls which windows are considered.
@@ -514,11 +516,12 @@ If it is a frame, consider windows on that frame.
 @end itemize
 @end defun
 
-@defun get-largest-window &optional frame
+@defun get-largest-window &optional frame dedicated
 This function returns the window with the largest area (height times
 width).  If there are no side-by-side windows, then this is the window
 with the most lines.  A minibuffer window is never a candidate.
-Dedicated windows are never candidates, and if all existing windows
+Dedicated windows are never candidates unless the
+@var{dedicated} argument is non-@code{nil}, so if all existing windows
 are dedicated, the value is @code{nil}.
 
 If there are two candidate windows of the same size, this function
@@ -716,6 +719,12 @@ based on the local variables of @var{buffer}.  However, if
 @var{keep-margins} is non-@code{nil}, the display margins and fringe
 widths of @var{window} remain unchanged.  @xref{Fringes}.
 @end defun
+
+@defvar buffer-display-count
+This buffer-local variable records the number of times a buffer is
+displayed in a window.  It is incremented each time
+@code{set-window-buffer} is called for the buffer.
+@end defvar
 
 @defun window-buffer &optional window
 This function returns the buffer that @var{window} is displaying.  If
@@ -1207,6 +1216,9 @@ forms.  But that value is hard to find.
 @defun set-window-point window position
 This function positions point in @var{window} at position
 @var{position} in @var{window}'s buffer.  It returns @var{position}.
+
+If @var{window} is selected, and its buffer is current,
+this simply does @code{goto-char}.
 @end defun
 
 @node Window Start
@@ -1523,9 +1535,12 @@ does not work with @code{scroll-margin}.  The default value is zero.
 @end defopt
 
 @defopt scroll-preserve-screen-position
-If this option is non-@code{nil}, the scroll functions move point so
-that the vertical position of the cursor is unchanged, when that is
-possible.
+If this option is @code{t}, scrolling which would move the current
+point position out of the window chooses the new position of point
+so that the vertical position of the cursor is unchanged, if possible.
+
+If it is non-@code{nil} and not @code{t}, then the scrolling functions
+always preserve the vertical position of point, if possible.
 @end defopt
 
 @defopt next-screen-context-lines
@@ -1690,19 +1705,9 @@ scrolling value explicitly.  The value you specify serves as a lower
 bound for automatic scrolling, i.e. automatic scrolling will not
 scroll a window to a column less than the specified one.
 
-@deffn Command scroll-left &optional count
+@deffn Command scroll-left &optional count set-minimum
 This function scrolls the selected window @var{count} columns to the
 left (or to the right if @var{count} is negative).  The default
-for @var{count} is the window width, minus 2.
-
-The return value is the total amount of leftward horizontal scrolling in
-effect after the change---just like the value returned by
-@code{window-hscroll} (below).
-@end deffn
-
-@deffn Command scroll-right &optional count
-This function scrolls the selected window @var{count} columns to the
-right (or to the left if @var{count} is negative).  The default
 for @var{count} is the window width, minus 2.
 
 The return value is the total amount of leftward horizontal scrolling in
@@ -1712,6 +1717,19 @@ effect after the change---just like the value returned by
 Once you scroll a window as far right as it can go, back to its normal
 position where the total leftward scrolling is zero, attempts to scroll
 any farther right have no effect.
+
+If @var{set-minimum} is non-@code{nil}, the new scroll amount becomes
+the lower bound for automatic scrolling; that is, automatic scrolling
+will not scroll a window to a column less than the value returned by
+this function.  Interactive calls pass non-@code{nil} for
+@var{set-minimum}.
+@end deffn
+
+@deffn Command scroll-right &optional count set-minimum
+This function scrolls the selected window @var{count} columns to the
+right (or to the left if @var{count} is negative).  The default
+for @var{count} is the window width, minus 2.  Aside from the direction
+of scrolling, this works just like @code{scroll-left}.
 @end deffn
 
 @defun window-hscroll &optional window
@@ -1948,7 +1966,7 @@ that change the size of windows and low-level functions that access
 window size.  Emacs does not permit overlapping windows or gaps between
 windows, so resizing one window affects other windows.
 
-@deffn Command enlarge-window size &optional horizontal preserve-before
+@deffn Command enlarge-window size &optional horizontal
 This function makes the selected window @var{size} lines taller,
 stealing lines from neighboring windows.  It takes the lines from one
 window at a time until that window is used up, then takes from another.
@@ -1971,11 +1989,6 @@ other windows are ``robbed.''  If it would be necessary to alter the
 size of a fixed-size window, @code{enlarge-window} gets an error
 instead.
 
-If @var{preserve-before} is non-@code{nil}, this function does not
-change the size of the siblings above or to the left of the selected
-window.  Only the size of the siblings below or to the right of the
-selected window are changed.
-
 If @var{size} is negative, this function shrinks the window by
 @minus{}@var{size} lines or columns.  If that makes the window smaller
 than the minimum size (@code{window-min-height} and
@@ -1997,7 +2010,7 @@ It could be defined as follows:
 @end example
 @end deffn
 
-@deffn Command shrink-window size &optional horizontal preserve-before
+@deffn Command shrink-window size &optional horizontal
 This function is like @code{enlarge-window} but negates the argument
 @var{size}, making the selected window smaller by giving lines (or
 columns) to the other windows.  If the window shrinks below
@@ -2019,6 +2032,14 @@ It could be defined as follows:
 @end group
 @end example
 @end deffn
+
+@defun adjust-window-trailing-edge window delta horizontal
+This function makes the selected window @var{delta} lines taller or
+@var{delta} columns wider, by moving the bottom or right edge.  This
+function does not delete other windows; if it cannot make the
+requested size adjustment, it signals an error.  On success, this
+function returns @code{nil}.
+@end defun
 
 @defun fit-window-to-buffer &optional window max-height min-height
 This function makes @var{window} the right height to display its
@@ -2156,6 +2177,32 @@ The coordinates are not in any part of @var{window}.
 
 The function @code{coordinates-in-window-p} does not require a frame as
 argument because it always uses the frame that @var{window} is on.
+@end defun
+
+@node Window Tree
+@section The Window Tree
+@cindex window tree
+
+  A @dfn{window tree} specifies the layout, size, and relationship
+between all windows in one frame.
+
+@defun window-tree &optional frame
+This function returns the window tree for frame @var{frame}.
+If @var{frame} is omitted, the selected frame is used.
+
+The return value is a list of the form @code{(@var{root} @var{mini})},
+where @var{root} represents the window tree of the frame's
+root window, and @var{mini} is the frame's minibuffer window.
+
+If the root window is not split, @var{root} is the root window itself.
+Otherwise, @var{root} is a list @code{(@var{dir} @var{edges} @var{w1}
+@var{w2} ...)} where @var{dir} is @code{nil} for a horisontal split,
+and @code{t} for a vertical split, @var{edges} gives the combined size and
+position of the subwindows in the split, and the rest of the elements
+are the subwindows in the split.  Each of the subwindows may again be
+a window or a list representing a window split, and so on.  The
+@var{edges} element is a list @code{(@var{left}@var{ top}@var{ right}@var{ bottom})}
+similar to the value returned by @code{window-edges}.
 @end defun
 
 @node Window Configurations

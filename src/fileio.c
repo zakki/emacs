@@ -1,6 +1,7 @@
 /* File IO for GNU Emacs.
-   Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995, 1996, 1997, 1998,
-     1999, 2000, 2001, 2003, 2004, 2005  Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1988, 1993, 1994, 1995, 1996,
+                 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+                 2005, 2006 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 
@@ -223,6 +224,11 @@ int vms_stmlf_recfm;
 /* On NT, specifies the directory separator character, used (eg.) when
    expanding file names.  This can be bound to / or \. */
 Lisp_Object Vdirectory_sep_char;
+
+#ifdef HAVE_FSYNC
+/* Nonzero means skip the call to fsync in Fwrite-region.  */
+int write_region_inhibit_fsync;
+#endif
 
 extern Lisp_Object Vuser_login_name;
 
@@ -1055,6 +1061,7 @@ See also the function `substitute-in-file-name'.  */)
 #endif /* DOS_NT */
   int length;
   Lisp_Object handler, result;
+  int multibyte;
 
   CHECK_STRING (name);
 
@@ -1132,6 +1139,7 @@ See also the function `substitute-in-file-name'.  */)
 
   name = FILE_SYSTEM_CASE (name);
   nm = SDATA (name);
+  multibyte = STRING_MULTIBYTE (name);
 
 #ifdef DOS_NT
   /* We will force directory separators to be either all \ or /, so make
@@ -1297,8 +1305,7 @@ See also the function `substitute-in-file-name'.  */)
 	  if (index (nm, '/'))
 	    {
 	      nm = sys_translate_unix (nm);
-	      return make_specified_string (nm, -1, strlen (nm),
-					    STRING_MULTIBYTE (name));
+	      return make_specified_string (nm, -1, strlen (nm), multibyte);
 	    }
 #endif /* VMS */
 #ifdef DOS_NT
@@ -1310,8 +1317,7 @@ See also the function `substitute-in-file-name'.  */)
 	  if (IS_DIRECTORY_SEP (nm[1]))
 	    {
 	      if (strcmp (nm, SDATA (name)) != 0)
-		name = make_specified_string (nm, -1, strlen (nm),
-					      STRING_MULTIBYTE (name));
+		name = make_specified_string (nm, -1, strlen (nm), multibyte);
 	    }
 	  else
 #endif
@@ -1320,8 +1326,7 @@ See also the function `substitute-in-file-name'.  */)
 	    {
 	      char temp[] = " :";
 
-	      name = make_specified_string (nm, -1, p - nm,
-					    STRING_MULTIBYTE (name));
+	      name = make_specified_string (nm, -1, p - nm, multibyte);
 	      temp[0] = DRIVE_LETTER (drive);
 	      name = concat2 (build_string (temp), name);
 	    }
@@ -1329,8 +1334,7 @@ See also the function `substitute-in-file-name'.  */)
 #else /* not DOS_NT */
 	  if (nm == SDATA (name))
 	    return name;
-	  return make_specified_string (nm, -1, strlen (nm),
-					STRING_MULTIBYTE (name));
+	  return make_specified_string (nm, -1, strlen (nm), multibyte);
 #endif /* not DOS_NT */
 	}
     }
@@ -1442,6 +1446,7 @@ See also the function `substitute-in-file-name'.  */)
       && !newdir)
     {
       newdir = SDATA (default_directory);
+      multibyte |= STRING_MULTIBYTE (default_directory);
 #ifdef DOS_NT
       /* Note if special escape prefix is present, but remove for now.  */
       if (newdir[0] == '/' && newdir[1] == ':')
@@ -1639,8 +1644,7 @@ See also the function `substitute-in-file-name'.  */)
 	{
 	  *o++ = *p++;
 	}
-      else if (IS_DIRECTORY_SEP (p[0])
-	       && p[1] == '.'
+      else if (p[1] == '.'
 	       && (IS_DIRECTORY_SEP (p[2])
 		   || p[2] == 0))
 	{
@@ -1650,7 +1654,7 @@ See also the function `substitute-in-file-name'.  */)
 	    *o++ = *p;
 	  p += 2;
 	}
-      else if (IS_DIRECTORY_SEP (p[0]) && p[1] == '.' && p[2] == '.'
+      else if (p[1] == '.' && p[2] == '.'
 	       /* `/../' is the "superroot" on certain file systems.
 		  Turned off on DOS_NT systems because they have no
 		  "superroot" and because this causes us to produce
@@ -1670,14 +1674,9 @@ See also the function `substitute-in-file-name'.  */)
 	    ++o;
 	  p += 3;
 	}
-      else if (p > target
-	       && IS_DIRECTORY_SEP (p[0]) && IS_DIRECTORY_SEP (p[1]))
-	{
-	  /* Collapse multiple `/' in a row.  */
-	  *o++ = *p++;
-	  while (IS_DIRECTORY_SEP (*p))
-	    ++p;
-	}
+      else if (p > target && IS_DIRECTORY_SEP (p[1]))
+	/* Collapse multiple `/' in a row.  */
+	p++;
       else
 	{
 	  *o++ = *p++;
@@ -1707,8 +1706,7 @@ See also the function `substitute-in-file-name'.  */)
   CORRECT_DIR_SEPS (target);
 #endif /* DOS_NT */
 
-  result = make_specified_string (target, -1, o - target,
-                                  STRING_MULTIBYTE (name));
+  result = make_specified_string (target, -1, o - target, multibyte);
 
   /* Again look to see if the file name has special constructs in it
      and perhaps call the corresponding file handler.  This is needed
@@ -2406,7 +2404,7 @@ barf_or_query_if_file_exists (absname, querystring, interactive, statptr, quick)
   return;
 }
 
-DEFUN ("copy-file", Fcopy_file, Scopy_file, 2, 5,
+DEFUN ("copy-file", Fcopy_file, Scopy_file, 2, 6,
        "fCopy file: \nGCopy %s to file: \np\nP",
        doc: /* Copy FILE to NEWNAME.  Both args must be strings.
 If NEWNAME names a directory, copy FILE there.
@@ -2426,9 +2424,13 @@ for an existing file with the same name.  If MUSTBENEW is `excl',
 that means to get an error if the file already exists; never overwrite.
 If MUSTBENEW is neither nil nor `excl', that means ask for
 confirmation before overwriting, but do go ahead and overwrite the file
-if the user confirms.  */)
-  (file, newname, ok_if_already_exists, keep_time, mustbenew)
+if the user confirms.
+
+If PRESERVE-UID-GID is non-nil, we try to transfer the
+uid and gid of FILE to NEWNAME.  */)
+  (file, newname, ok_if_already_exists, keep_time, mustbenew, preserve_uid_gid)
      Lisp_Object file, newname, ok_if_already_exists, keep_time, mustbenew;
+     Lisp_Object preserve_uid_gid;
 {
   int ifd, ofd, n;
   char buf[16 * 1024];
@@ -2517,7 +2519,7 @@ if the user confirms.  */)
      copyable by us. */
   input_file_statable_p = (fstat (ifd, &st) >= 0);
 
-#if !defined (DOS_NT) || __DJGPP__ > 1
+#if !defined (MSDOS) || __DJGPP__ > 1
   if (out_st.st_mode != 0
       && st.st_dev == out_st.st_dev && st.st_ino == out_st.st_ino)
     {
@@ -2570,6 +2572,17 @@ if the user confirms.  */)
       report_file_error ("I/O error", Fcons (newname, Qnil));
   immediate_quit = 0;
 
+#ifndef MSDOS
+  /* Preserve the original file modes, and if requested, also its
+     owner and group.  */
+  if (input_file_statable_p)
+    {
+      if (! NILP (preserve_uid_gid))
+	fchown (ofd, st.st_uid, st.st_gid);
+      fchmod (ofd, st.st_mode & 07777);
+    }
+#endif	/* not MSDOS */
+
   /* Closing the output clobbers the file times on some systems.  */
   if (emacs_close (ofd) < 0)
     report_file_error ("I/O error", Fcons (newname, Qnil));
@@ -2587,22 +2600,22 @@ if the user confirms.  */)
 		     Fcons (build_string ("Cannot set file date"),
 			    Fcons (newname, Qnil)));
 	}
-#ifndef MSDOS
-      chmod (SDATA (encoded_newname), st.st_mode & 07777);
-#else /* MSDOS */
+    }
+
+  emacs_close (ifd);
+
 #if defined (__DJGPP__) && __DJGPP__ > 1
+  if (input_file_statable_p)
+    {
       /* In DJGPP v2.0 and later, fstat usually returns true file mode bits,
          and if it can't, it tells so.  Otherwise, under MSDOS we usually
          get only the READ bit, which will make the copied file read-only,
          so it's better not to chmod at all.  */
       if ((_djstat_flags & _STFAIL_WRITEBIT) == 0)
 	chmod (SDATA (encoded_newname), st.st_mode & 07777);
-#endif /* DJGPP version 2 or newer */
-#endif /* MSDOS */
     }
-
-  emacs_close (ifd);
-#endif /* WINDOWSNT */
+#endif /* DJGPP version 2 or newer */
+#endif /* not WINDOWSNT */
 
   /* Discard the unwind protects.  */
   specpdl_ptr = specpdl + count;
@@ -2711,8 +2724,10 @@ int
 internal_delete_file (filename)
      Lisp_Object filename;
 {
-  return NILP (internal_condition_case_1 (Fdelete_file, filename,
-					  Qt, internal_delete_file_1));
+  Lisp_Object tem;
+  tem = internal_condition_case_1 (Fdelete_file, filename,
+				   Qt, internal_delete_file_1);
+  return NILP (tem);
 }
 
 DEFUN ("rename-file", Frename_file, Srename_file, 2, 3,
@@ -2782,11 +2797,12 @@ This is what happens in interactive use with M-x.  */)
                                  NILP (ok_if_already_exists) ? Qnil : Qt);
           else
 #endif
-            Fcopy_file (file, newname,
-                        /* We have already prompted if it was an integer,
-                           so don't have copy-file prompt again.  */
-                        NILP (ok_if_already_exists) ? Qnil : Qt,
-			Qt, Qnil);
+	    Fcopy_file (file, newname,
+			/* We have already prompted if it was an integer,
+			   so don't have copy-file prompt again.  */
+			NILP (ok_if_already_exists) ? Qnil : Qt,
+			Qt, Qnil, Qt);
+
 	  Fdelete_file (file);
 	}
       else
@@ -3372,8 +3388,10 @@ searchable directory.  */)
 }
 
 DEFUN ("file-regular-p", Ffile_regular_p, Sfile_regular_p, 1, 1, 0,
-       doc: /* Return t if file FILENAME is the name of a regular file.
-This is the sort of file that holds an ordinary stream of data bytes.  */)
+       doc: /* Return t if FILENAME names a regular file.
+This is the sort of file that holds an ordinary stream of data bytes.
+Symbolic links to regular files count as regular files.
+See `file-symlink-p' to distinguish symlinks.  */)
      (filename)
      Lisp_Object filename;
 {
@@ -4530,6 +4548,8 @@ actually used.  */)
 #endif
       Vdeactivate_mark = old_Vdeactivate_mark;
     }
+  else
+    Vdeactivate_mark = Qt;
 
   /* Make the text read part of the buffer.  */
   GAP_SIZE -= inserted;
@@ -5281,7 +5301,7 @@ This does code conversion according to the value of
      Disk full in NFS may be reported here.  */
   /* mib says that closing the file will try to write as fast as NFS can do
      it, and that means the fsync here is not crucial for autosave files.  */
-  if (!auto_saving && fsync (desc) < 0)
+  if (!auto_saving && !write_region_inhibit_fsync && fsync (desc) < 0)
     {
       /* If fsync fails with EINTR, don't treat that as serious.  */
       if (errno != EINTR)
@@ -5752,6 +5772,8 @@ auto_save_error (error)
   Lisp_Object args[3], msg;
   int i, nbytes;
   struct gcpro gcpro1;
+  char *msgbuf;
+  USE_SAFE_ALLOCA;
 
   ring_bell ();
 
@@ -5761,16 +5783,19 @@ auto_save_error (error)
   msg = Fformat (3, args);
   GCPRO1 (msg);
   nbytes = SBYTES (msg);
+  SAFE_ALLOCA (msgbuf, char *, nbytes);
+  bcopy (SDATA (msg), msgbuf, nbytes);
 
   for (i = 0; i < 3; ++i)
     {
       if (i == 0)
-	message2 (SDATA (msg), nbytes, STRING_MULTIBYTE (msg));
+	message2 (msgbuf, nbytes, STRING_MULTIBYTE (msg));
       else
-	message2_nolog (SDATA (msg), nbytes, STRING_MULTIBYTE (msg));
+	message2_nolog (msgbuf, nbytes, STRING_MULTIBYTE (msg));
       Fsleep_for (make_number (1), Qnil);
     }
 
+  SAFE_FREE ();
   UNGCPRO;
   return Qnil;
 }
@@ -5802,13 +5827,13 @@ auto_save_1 ()
 }
 
 static Lisp_Object
-do_auto_save_unwind (stream)  /* used as unwind-protect function */
-     Lisp_Object stream;
+do_auto_save_unwind (arg)  /* used as unwind-protect function */
+     Lisp_Object arg;
 {
+  FILE *stream = (FILE *) XSAVE_VALUE (arg)->pointer;
   auto_saving = 0;
-  if (!NILP (stream))
-    fclose ((FILE *) (XFASTINT (XCAR (stream)) << 16
-		      | XFASTINT (XCDR (stream))));
+  if (stream != NULL)
+    fclose (stream);
   return Qnil;
 }
 
@@ -5853,8 +5878,7 @@ A non-nil CURRENT-ONLY argument means save only current buffer.  */)
   int auto_saved = 0;
   int do_handled_files;
   Lisp_Object oquit;
-  FILE *stream;
-  Lisp_Object lispstream;
+  FILE *stream = NULL;
   int count = SPECPDL_INDEX ();
   int orig_minibuffer_auto_raise = minibuffer_auto_raise;
   int old_message_p = 0;
@@ -5906,24 +5930,10 @@ A non-nil CURRENT-ONLY argument means save only current buffer.  */)
 	}
 
       stream = fopen (SDATA (listfile), "w");
-      if (stream != NULL)
-	{
-	  /* Arrange to close that file whether or not we get an error.
-	     Also reset auto_saving to 0.  */
-	  lispstream = Fcons (Qnil, Qnil);
-	  XSETCARFASTINT (lispstream, (EMACS_UINT)stream >> 16);
-	  XSETCDRFASTINT (lispstream, (EMACS_UINT)stream & 0xffff);
-	}
-      else
-	lispstream = Qnil;
-    }
-  else
-    {
-      stream = NULL;
-      lispstream = Qnil;
     }
 
-  record_unwind_protect (do_auto_save_unwind, lispstream);
+  record_unwind_protect (do_auto_save_unwind,
+			 make_save_value (stream, 0));
   record_unwind_protect (do_auto_save_unwind_1,
 			 make_number (minibuffer_auto_raise));
   minibuffer_auto_raise = 0;
@@ -6222,13 +6232,17 @@ DEFUN ("read-file-name-internal", Fread_file_name_internal, Sread_file_name_inte
 #endif
 	{
 	  /* Must do it the hard (and slow) way.  */
+	  Lisp_Object tem;
 	  GCPRO3 (all, comp, specdir);
 	  count = SPECPDL_INDEX ();
 	  record_unwind_protect (read_file_name_cleanup, current_buffer->directory);
 	  current_buffer->directory = realdir;
 	  for (comp = Qnil; CONSP (all); all = XCDR (all))
-	    if (!NILP (call1 (Vread_file_name_predicate, XCAR (all))))
-	      comp = Fcons (XCAR (all), comp);
+	    {
+	      tem = call1 (Vread_file_name_predicate, XCAR (all));
+	      if (!NILP (tem))
+		comp = Fcons (XCAR (all), comp);
+	    }
 	  unbind_to (count, Qnil);
 	  UNGCPRO;
 	}
@@ -6737,6 +6751,14 @@ This variable is initialized automatically from `auto-save-list-file-prefix'
 shortly after Emacs reads your `.emacs' file, if you have not yet given it
 a non-nil value.  */);
   Vauto_save_list_file_name = Qnil;
+
+#ifdef HAVE_FSYNC
+  DEFVAR_BOOL ("write-region-inhibit-fsync", &write_region_inhibit_fsync,
+	       doc: /* *Non-nil means don't call fsync in `write-region'.
+This variable affects calls to `write-region' as well as save commands.
+A non-nil value may result in data loss!  */);
+  write_region_inhibit_fsync = 0;
+#endif
 
   defsubr (&Sfind_file_name_handler);
   defsubr (&Sfile_name_directory);

@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;; Created: Feb. 11. 2003
 
@@ -103,7 +103,7 @@
 ;;;###autoload
 (defun malayalam-composition-function (from to pattern  &optional string)
   "Compose Malayalam characters in REGION, or STRING if specified.
-Assume that the REGION or STRING must fully match the composable 
+Assume that the REGION or STRING must fully match the composable
 PATTERN regexp."
   (if string (malayalam-compose-syllable-string string)
     (malayalam-compose-syllable-region from to))
@@ -239,7 +239,7 @@ PATTERN regexp."
     ("$,1@H@m@E(B" . "$,47Y(B")
     ("$,1@H@m@Q(B" . "$,47b(B")
     ("$,1@H@a(B" . "$,47k(B")
-    ("$,1@H@m@H@a(B" . "$,47l(B") 
+    ("$,1@H@m@H@a(B" . "$,47l(B")
 
     ("$,1@J(B" . "$,46=(B")
     ("$,1@J@m@J(B" . "$,478(B") ;; duplicate
@@ -401,7 +401,7 @@ PATTERN regexp."
                (apply
                 'nconc
                 (mapcar
-                 (function 
+                 (function
                   (lambda (x) (list '(5 . 3) x))) ;; default ref. point.
                  glyph-str))))
         (compose-region from to glyph-str)))))

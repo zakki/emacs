@@ -1,6 +1,7 @@
 ;;; align.el --- align text to a specific column, by regexp
 
-;; Copyright (C) 1999, 2000, 2002 Free Sofware Foundation
+;; Copyright (C) 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@gnu.org>
 ;; Keywords: convenience languages lisp
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -383,9 +384,6 @@ The possible settings for `align-region-separate' are:
 			   regexp function)))))))
   "The `type' form for any `align-rules-list' variable.")
 
-(unless (functionp 'c-guess-basic-syntax)
-  (autoload 'c-guess-basic-syntax "cc-engine"))
-
 (defcustom align-rules-list
   `((lisp-second-arg
      (regexp   . "\\(^\\s-+[^( \t\n]\\|(\\(\\S-+\\)\\s-+\\)\\S-+\\(\\s-+\\)")
@@ -561,7 +559,7 @@ The possible settings for `align-region-separate' are:
     ;; With a numeric prefix argument, or C-u, space delimited text
     ;; tables will be aligned.
     (text-column
-     (regexp   . "\\(^\\|\\S-\\)\\(\\s-+\\)\\(\\S-\\|$\\)")
+     (regexp   . "\\(^\\|\\S-\\)\\([ \t]+\\)\\(\\S-\\|$\\)")
      (group    . 2)
      (modes    . align-text-modes)
      (repeat   . t)
@@ -933,8 +931,7 @@ using a REGEXP like \"(\". All you would have to do is to mark the
 region, call `align-regexp' and type in that regular expression."
   (interactive
    (append
-    (list (min (point) (mark))
-	  (max (point) (mark)))
+    (list (region-beginning) (region-end))
     (if current-prefix-arg
 	(list (read-string "Complex align using regexp: "
 			   "\\(\\s-*\\)")
@@ -990,8 +987,7 @@ list of rules (see `align-rules-list'), it can be used to override the
 default alignment rules that would have been used to identify the text
 to be colored."
   (interactive
-   (list (min (mark) (point))
-	 (max (mark) (point))
+   (list (region-beginning) (region-end)
 	 (completing-read
 	  "Title of rule to highlight: "
 	  (mapcar

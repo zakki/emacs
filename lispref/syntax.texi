@@ -1,7 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2004, 2005
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2002, 2003,
+@c   2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/syntax
 @node Syntax Tables, Abbrevs, Searching and Matching, Top
@@ -256,7 +256,7 @@ English text has no comment characters.  In Lisp, the semicolon
 @deffn {Syntax class} @w{inherit}
 This syntax class does not specify a particular syntax.  It says to look
 in the standard syntax table to find the syntax of this character.  The
-designator for this syntax code is @samp{@@}.
+designator for this syntax class is @samp{@@}.
 @end deffn
 
 @deffn {Syntax class} @w{generic comment delimiter}
@@ -385,7 +385,7 @@ nestable.
 @samp{p} identifies an additional ``prefix character'' for Lisp syntax.
 These characters are treated as whitespace when they appear between
 expressions.  When they appear within an expression, they are handled
-according to their usual syntax codes.
+according to their usual syntax classes.
 
 The function @code{backward-prefix-chars} moves back over these
 characters, as well as over characters whose primary syntax class is
@@ -512,7 +512,7 @@ This function returns the current syntax table, which is the table for
 the current buffer.
 @end defun
 
-@defmac with-syntax-table @var{table} @var{body}...
+@defmac with-syntax-table @var{table} @var{body}@dots{}
 @tindex with-syntax-table
 This macro executes @var{body} using @var{table} as the current syntax
 table.  It returns the value of the last form in @var{body}, after
@@ -566,7 +566,7 @@ have certain syntax classes.
 
 @defun skip-syntax-forward syntaxes &optional limit
 This function moves point forward across characters having syntax
-classes mentioned in @var{syntaxes} (a string of syntax code
+classes mentioned in @var{syntaxes} (a string of syntax class
 characters).  It stops when it encounters the end of the buffer, or
 position @var{limit} (if specified), or a character it is not supposed
 to skip.
@@ -730,6 +730,37 @@ This function is most often used to compute indentation for languages
 that have nested parentheses.
 @end defun
 
+@defun syntax-ppss &optional pos
+This function returns the state that the parser would have at position
+@var{pos}, if it were started with a default start state at the
+beginning of the buffer.  Thus, it is equivalent to
+@code{(parse-partial-sexp (point-min) @var{pos})}, except that
+@code{syntax-ppss} uses a cache to speed up the computation.  Also,
+the 2nd value (previous complete subexpression) and 6th value (minimum
+parenthesis depth) of the returned state are not meaningful.
+@end defun
+
+@defun syntax-ppss-flush-cache beg
+This function flushes the cache used by @code{syntax-ppss}, starting at
+position @var{beg}.
+
+When @code{syntax-ppss} is called, it automatically hooks itself
+to @code{before-change-functions} to keep its cache consistent.
+But this can fail if @code{syntax-ppss} is called while
+@code{before-change-functions} is temporarily let-bound, or if the
+buffer is modified without obeying the hook, such as when using
+@code{inhibit-modification-hooks}.  For this reason, it is sometimes
+necessary to flush the cache manually.
+@end defun
+
+@defvar syntax-begin-function
+If this is non-@code{nil}, it should be a function that moves to an
+earlier buffer position where the parser state is equivalent to
+@code{nil}---in other words, a position outside of any comment,
+string, or parenthesis.  @code{syntax-ppss} uses it to supplement its
+cache.
+@end defvar
+
 @defun scan-lists from count depth
 This function scans forward @var{count} balanced parenthetical groupings
 from position @var{from}.  It returns the position where the scan stops.
@@ -779,7 +810,7 @@ whitespace by the functions in this section and by @code{forward-sexp}.
 @end defopt
 
 @vindex parse-sexp-lookup-properties
-The behaviour of @code{parse-partial-sexp} is also affected by
+The behavior of @code{parse-partial-sexp} is also affected by
 @code{parse-sexp-lookup-properties} (@pxref{Syntax Properties}).
 
 You can use @code{forward-comment} to move forward or backward over
@@ -852,7 +883,7 @@ a character to match was specified.
   This table gives the value of @var{syntax-code} which corresponds
 to each syntactic type.
 
-@multitable @columnfractions .05 .3 .3 .3
+@multitable @columnfractions .05 .3 .3 .31
 @item
 @tab
 @i{Integer} @i{Class}

@@ -1,6 +1,6 @@
 ;;; cal-bahai.el --- calendar functions for the Baha'i calendar.
 
-;; Copyright (C) 2001 Free Software Foundation, Inc.
+;; Copyright (C) 2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@gnu.org>
 ;; Keywords: calendar
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -53,6 +53,12 @@
 ;; the first day of Ayyam-i-Ha, in the year 157 BE.
 
 ;;; Code:
+
+(defvar date)
+(defvar displayed-month)
+(defvar displayed-year)
+(defvar number)
+(defvar original-date)
 
 (require 'cal-julian)
 
@@ -215,7 +221,7 @@ calendar.  This function is provided for use with the
             (mark (regexp-quote diary-nonmarking-symbol)))
         (calendar-for-loop i from 1 to number do
            (let* ((d diary-date-forms)
-                  (bdate (calendar-bahai-from-absolute 
+                  (bdate (calendar-bahai-from-absolute
                           (calendar-absolute-from-gregorian gdate)))
                   (month (extract-calendar-month bdate))
                   (day (extract-calendar-day bdate))
@@ -460,7 +466,7 @@ Prefix arg will make the entry nonmarking."
     (make-diary-entry
      (concat
       bahai-diary-entry-symbol
-      (calendar-date-string 
+      (calendar-date-string
        (calendar-bahai-from-absolute
         (calendar-absolute-from-gregorian
          (calendar-cursor-to-date t)))
@@ -478,7 +484,7 @@ Prefix arg will make the entry nonmarking."
     (make-diary-entry
      (concat
       bahai-diary-entry-symbol
-      (calendar-date-string 
+      (calendar-date-string
        (calendar-bahai-from-absolute
         (calendar-absolute-from-gregorian
          (calendar-cursor-to-date t)))))
@@ -497,7 +503,7 @@ Prefix arg will make the entry nonmarking."
     (make-diary-entry
      (concat
       bahai-diary-entry-symbol
-      (calendar-date-string 
+      (calendar-date-string
        (calendar-bahai-from-absolute
         (calendar-absolute-from-gregorian
          (calendar-cursor-to-date t)))))

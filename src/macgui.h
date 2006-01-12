@@ -1,5 +1,6 @@
 /* Definitions and headers for communication on the Mac OS.
-   Copyright (C) 2000, 2001 Free Software Foundation, Inc.
+   Copyright (C) 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Contributed by Andrew Choi (akochoi@mac.com).  */
 
@@ -86,15 +87,28 @@ typedef GWorldPtr Pixmap;
 
 #define FACE_DEFAULT (~0)
 
+#if !TARGET_API_MAC_CARBON
+#define GetPixDepth(pmh) ((*(pmh))->pixelSize)
+#endif
+
+
+#ifndef USE_CG_TEXT_DRAWING
+#if USE_ATSUI && MAC_OS_X_VERSION_MAX_ALLOWED >= 1030
+#define USE_CG_TEXT_DRAWING 1
+#endif
+#endif
 
 /* Emulate XCharStruct.  */
 typedef struct _XCharStruct
 {
-  int rbearing;
-  int lbearing;
-  int width;
-  int ascent;
-  int descent;
+  short	lbearing;		/* origin to left edge of raster */
+  short	rbearing;		/* origin to right edge of raster */
+  short	width;			/* advance to next char's origin */
+  short	ascent;			/* baseline to top edge of raster */
+  short	descent;		/* baseline to bottom edge of raster */
+#if 0
+  unsigned short attributes;	/* per char flags (not predefined) */
+#endif
 } XCharStruct;
 
 #define STORE_XCHARSTRUCT(xcs, w, bds)			\
@@ -103,6 +117,18 @@ typedef struct _XCharStruct
    (xcs).rbearing = (bds).right,			\
    (xcs).ascent = -(bds).top,				\
    (xcs).descent = (bds).bottom)
+
+typedef struct
+{
+  char valid_bits[0x100 / 8];
+  XCharStruct per_char[0x100];
+} XCharStructRow;
+
+#define XCHARSTRUCTROW_CHAR_VALID_P(row, byte2) \
+  ((row)->valid_bits[(byte2) / 8] & (1 << (byte2) % 8))
+
+#define XCHARSTRUCTROW_SET_CHAR_VALID(row, byte2) \
+  ((row)->valid_bits[(byte2) / 8] |= (1 << (byte2) % 8))
 
 struct MacFontStruct {
   char *full_name;
@@ -115,19 +141,13 @@ struct MacFontStruct {
 #else
   short mac_scriptcode;  /* Mac OS script code for font used */
 #endif
-
-#if 0
-  SInt16 mFontNum;  /* font number of font used in this window */
-  short mScriptCode;  /* Mac OS script code for font used */
-  int mFontSize;  /* size of font */
-  Style mFontFace;  /* plain, bold, italics, etc. */
-  int mHeight;  /* height of one line of text in pixels */
-  int mWidth;  /* width of one character in pixels */
-  int mAscent;
-  int mDescent;
-  int mLeading;
-  char mTwoByte;  /* true for two-byte font */
-#endif /* 0 */
+#if USE_ATSUI
+  ATSUStyle mac_style;		/* NULL if QuickDraw Text is used */
+#if USE_CG_TEXT_DRAWING
+  CGFontRef cg_font;		/* NULL if ATSUI text drawing is used */
+  CGGlyph *cg_glyphs;		/* Likewise  */
+#endif
+#endif
 
 /* from Xlib.h */
 #if 0
@@ -147,7 +167,10 @@ struct MacFontStruct {
 #endif /* 0 */
   XCharStruct min_bounds;  /* minimum bounds over all existing char */
   XCharStruct max_bounds;  /* maximum bounds over all existing char */
-  XCharStruct *per_char;   /* first_char to last_char information */
+  union {
+    XCharStruct *per_char; /* first_char to last_char information */
+    XCharStructRow **rows; /* first row to last row information */
+  } bounds;
   int ascent;              /* logical extent above baseline for spacing */
   int descent;             /* logical decent below baseline for spacing */
 };
@@ -180,15 +203,37 @@ typedef struct _XGCValues
   XFontStruct *font;
 } XGCValues;
 
-typedef XGCValues *GC;
+typedef struct _XGC
+{
+  /* Original value.  */
+  XGCValues xgcv;
 
-extern XGCValues *
-XCreateGC (void *, Window, unsigned long, XGCValues *);
+  /* Cached data members follow.  */
 
-#define GCForeground 0x01
-#define GCBackground 0x02
-#define GCFont 0x03
-#define GCGraphicsExposures 0
+  /* QuickDraw foreground color.  */
+  RGBColor fore_color;
+
+  /* QuickDraw background color.  */
+  RGBColor back_color;
+
+#define MAX_CLIP_RECTS 2
+  /* QuickDraw clipping region.  */
+  RgnHandle clip_region;
+
+#if defined (MAC_OSX) && USE_ATSUI
+  /* Number of clipping rectangles used in Quartz 2D drawing.  */
+  int n_clip_rects;
+
+  /* Clipping rectangles used in Quartz 2D drawing.  The y-coordinate
+     is in QuickDraw's.  */
+  CGRect clip_rects[MAX_CLIP_RECTS];
+#endif
+} *GC;
+
+#define GCForeground            (1L<<2)
+#define GCBackground            (1L<<3)
+#define GCFont 			(1L<<14)
+#define GCGraphicsExposures	0
 
 /* Bit Gravity */
 
@@ -247,8 +292,6 @@ typedef struct {
 #define PAspect		(1L << 7) /* program specified min and max aspect ratios */
 #define PBaseSize	(1L << 8) /* program specified base for incrementing */
 #define PWinGravity	(1L << 9) /* program specified window gravity */
-
-extern int XParseGeometry ();
 
 typedef struct {
     int x, y;

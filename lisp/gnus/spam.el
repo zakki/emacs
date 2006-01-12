@@ -1,4 +1,5 @@
 ;;; spam.el --- Identifying spam
+
 ;; Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Lars Magne Ingebrigtsen <larsi@gnus.org>
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -300,7 +301,7 @@ All unmarked article in such group receive the spam mark on group entry."
   :type '(radio (const nil) regexp)
   :group 'spam)
 
-(defface spam-face
+(defface spam
   '((((class color) (type tty) (background dark))
      (:foreground "gray80" :background "gray50"))
     (((class color) (type tty) (background light))
@@ -312,8 +313,10 @@ All unmarked article in such group receive the spam mark on group entry."
     (t :inverse-video t))
   "Face for spam-marked articles."
   :group 'spam)
+;; backward-compatibility alias
+(put 'spam-face 'face-alias 'spam)
 
-(defcustom spam-face 'spam-face
+(defcustom spam-face 'spam
   "Face for spam-marked articles."
   :type 'face
   :group 'spam)
@@ -464,28 +467,14 @@ spamoracle database."
   "Logical exclusive `or'."
   (and (or a b) (not (and a b))))
 
-(defun spam-group-ham-mark-p (group mark &optional spam)
-  (when (stringp group)
-    (let* ((marks (spam-group-ham-marks group spam))
-	   (marks (if (symbolp mark)
-		      marks
-		    (mapcar 'symbol-value marks))))
-      (memq mark marks))))
-
-(defun spam-group-spam-mark-p (group mark)
-  (spam-group-ham-mark-p group mark t))
-
 (defun spam-group-ham-marks (group &optional spam)
   (when (stringp group)
-    (let* ((marks (if spam
-		      (gnus-parameter-spam-marks group)
-		    (gnus-parameter-ham-marks group)))
-	   (marks (car marks))
-	   (marks (if (listp (car marks)) (car marks) marks)))
-      marks)))
-
-(defun spam-group-spam-marks (group)
-  (spam-group-ham-marks group t))
+    (let ((marks (car (if spam
+			  (gnus-parameter-spam-marks group)
+			(gnus-parameter-ham-marks group)))))
+      (if (listp (car marks))
+	  (car marks)
+	marks))))
 
 (defun spam-group-spam-contents-p (group)
   (if (stringp group)
@@ -1047,23 +1036,12 @@ functions")
       (nth 2 flist))))
 
 (defun spam-list-articles (articles classification)
-  (let ((mark-check (if (eq classification 'spam)
-			'spam-group-spam-mark-p
-		      'spam-group-ham-mark-p))
-	list mark-cache-yes mark-cache-no)
+  (let ((marks (mapcar 'eval (spam-group-ham-marks gnus-newsgroup-name
+						   (eq classification 'spam))))
+	list)
     (dolist (article articles)
-      (let ((mark (gnus-summary-article-mark article)))
-	(unless (memq mark mark-cache-no)
-	  (if (memq mark mark-cache-yes)
-	      (push article list)
-	    ;; else, we have to actually check the mark
-	    (if (funcall mark-check
-			 gnus-newsgroup-name
-			 mark)
-		(progn
-		  (push article list)
-		  (push mark mark-cache-yes))
-	      (push mark mark-cache-no))))))
+      (if (memq (gnus-summary-article-mark article) marks)
+	  (push article list)))
     list))
 
 (defun spam-register-routine (classification
@@ -1805,8 +1783,8 @@ REMOVE not nil, remove the ADDRESSES."
   "Install the spam.el hooks and do other initialization"
   (interactive)
   (setq spam-install-hooks t)
-  ;; TODO: How do we redo this every time spam-face is customized?
-  (push '((eq mark gnus-spam-mark) . spam-face)
+  ;; TODO: How do we redo this every time the `spam' face is customized?
+  (push '((eq mark gnus-spam-mark) . spam)
 	gnus-summary-highlight)
   ;; Add hooks for loading and saving the spam stats
   (add-hook 'gnus-save-newsrc-hook 'spam-maybe-spam-stat-save)

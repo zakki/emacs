@@ -1,6 +1,7 @@
 ;;; format.el --- read and save files in multiple formats
 
-;; Copyright (c) 1994, 1995, 1997, 1999, 2004 Free Software Foundation
+;; Copyright (C) 1994, 1995, 1997, 1999, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Boris Goldowsky <boris@gnu.org>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -315,7 +316,7 @@ If the format is not specified, this function attempts to guess.
 `buffer-file-format' is set to the format used, and any mode-functions
 for the format are called."
   (interactive
-   (list (format-read "Translate buffer from format (default: guess): ")))
+   (list (format-read "Translate buffer from format (default guess): ")))
   (save-excursion
     (goto-char (point-min))
     (format-decode format (buffer-size) t)))
@@ -326,7 +327,7 @@ Arg FORMAT is optional; if omitted the format will be determined by looking
 for identifying regular expressions at the beginning of the region."
   (interactive
    (list (region-beginning) (region-end)
-	 (format-read "Translate region from format (default: guess): ")))
+	 (format-read "Translate region from format (default guess): ")))
   (save-excursion
     (goto-char from)
     (format-decode format (- to from) nil)))

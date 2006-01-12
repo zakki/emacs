@@ -1,6 +1,7 @@
 ;;; asm-mode.el --- mode for editing assembler code
 
-;; Copyright (C) 1991, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 1991, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Eric S. Raymond <esr@snark.thyrsus.com>
 ;; Maintainer: FSF
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -51,6 +52,7 @@
 
 (defgroup asm nil
   "Mode for editing assembler code."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'languages)
 
 (defcustom asm-comment-char ?\;
@@ -81,19 +83,21 @@
   "Keymap for Asm mode.")
 
 (defconst asm-font-lock-keywords
- '(("^\\(\\(\\sw\\|\\s_\\)+\\)\\>:?[ \t]*\\(\\sw+\\(\\.\\sw+\\)*\\)?"
-    (1 font-lock-function-name-face) (3 font-lock-keyword-face nil t))
-   ;; label started from ".".
-   ("^\\(\\.\\(\\sw\\|\\s_\\)+\\)\\>:"
-    1 font-lock-function-name-face)
-   ("^\\((\\sw+)\\)?\\s +\\(\\(\\.?\\sw\\|\\s_\\)+\\(\\.\\sw+\\)*\\)"
-    2 font-lock-keyword-face)
-   ;; directive started from ".".
-   ("^\\(\\.\\(\\sw\\|\\s_\\)+\\)\\>[^:]?"
-    1 font-lock-keyword-face)
-   ;; %register
-   ("%\\sw+" . font-lock-variable-name-face))
- "Additional expressions to highlight in Assembler mode.")
+  (append 
+   '(("^\\(\\(\\sw\\|\\s_\\)+\\)\\>:?[ \t]*\\(\\sw+\\(\\.\\sw+\\)*\\)?"
+      (1 font-lock-function-name-face) (3 font-lock-keyword-face nil t))
+     ;; label started from ".".
+     ("^\\(\\.\\(\\sw\\|\\s_\\)+\\)\\>:"
+      1 font-lock-function-name-face)
+     ("^\\((\\sw+)\\)?\\s +\\(\\(\\.?\\sw\\|\\s_\\)+\\(\\.\\sw+\\)*\\)"
+      2 font-lock-keyword-face)
+     ;; directive started from ".".
+     ("^\\(\\.\\(\\sw\\|\\s_\\)+\\)\\>[^:]?"
+      1 font-lock-keyword-face)
+     ;; %register
+     ("%\\sw+" . font-lock-variable-name-face))
+   cpp-font-lock-keywords)
+  "Additional expressions to highlight in Assembler mode.")
 
 ;;;###autoload
 (defun asm-mode ()
@@ -204,7 +208,8 @@ repeatedly until you are satisfied with the kind of comment."
   (let (comempty comment)
     (save-excursion
       (beginning-of-line)
-      (setq comment (comment-search-forward (line-end-position) t))
+      (with-no-warnings
+	(setq comment (comment-search-forward (line-end-position) t)))
       (setq comempty (looking-at "[ \t]*$")))
 
   (cond

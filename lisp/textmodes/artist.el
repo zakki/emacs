@@ -1,6 +1,7 @@
 ;;; artist.el --- draw ascii graphics with your mouse
 
-;; Copyright (C) 2000, 2001, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author:       Tomas Abrahamsson <tab@lysator.liu.se>
 ;; Maintainer:   Tomas Abrahamsson <tab@lysator.liu.se>
@@ -23,8 +24,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -198,6 +199,7 @@
 (defconst artist-version "1.2.6")
 (defconst artist-maintainer-address "tab@lysator.liu.se")
 
+(defvar x-pointer-crosshair)
 
 (eval-and-compile
  (condition-case ()
@@ -403,7 +405,7 @@ Example:
   :type 'integer)
 
 
-(defvar artist-spray-chars '(?\  ?. ?- ?+ ?m ?% ?* ?#)
+(defvar artist-spray-chars '(?\s ?. ?- ?+ ?m ?% ?* ?#)
   ;; This is a defvar, not a defcustom, since the custom
   ;; package shows lists of characters as a lists of integers,
   ;; which is confusing
@@ -502,7 +504,18 @@ This variable is initialized by the artist-make-prev-next-op-alist function.")
 (if artist-picture-compatibility
     (require 'picture))
 
-
+;; Variables that are made local in artist-mode-init
+(defvar artist-key-is-drawing nil)
+(defvar artist-key-endpoint1 nil)
+(defvar artist-key-poly-point-list nil)
+(defvar artist-key-shape nil)
+(defvar artist-key-draw-how nil)
+(defvar artist-popup-menu-table nil)
+(defvar artist-key-compl-table nil)
+(defvar artist-rb-save-data nil)
+(defvar artist-arrow-point-1 nil)
+(defvar artist-arrow-point-2 nil)
+
 (defvar artist-mode-map
   (let ((map (make-sparse-keymap)))
     (setq artist-mode-map (make-sparse-keymap))
@@ -1370,21 +1383,6 @@ Keymap summary
 		minor-mode-map-alist)))
 
 
-
-(eval-when-compile
-  ;; Variables that are made local in artist-mode-init
-  (defvar artist-key-is-drawing nil)
-  (defvar artist-key-endpoint1 nil)
-  (defvar artist-key-poly-point-list nil)
-  (defvar artist-key-shape nil)
-  (defvar artist-key-draw-how nil)
-  (defvar artist-popup-menu-table nil)
-  (defvar artist-key-compl-table nil)
-  (defvar artist-rb-save-data nil)
-  (defvar artist-arrow-point-1 nil)
-  (defvar artist-arrow-point-2 nil))
-
-
 ;; Init and exit
 (defun artist-mode-init ()
   "Init Artist mode.  This will call the hook `artist-mode-init-hook'."
@@ -1392,9 +1390,9 @@ Keymap summary
     (while (< i 256)
       (aset artist-replacement-table i i)
       (setq i (1+ i))))
-  (aset artist-replacement-table ?\n ?\ )
-  (aset artist-replacement-table ?\t ?\ )
-  (aset artist-replacement-table 0 ?\ )
+  (aset artist-replacement-table ?\n ?\s)
+  (aset artist-replacement-table ?\t ?\s)
+  (aset artist-replacement-table 0 ?\s)
   (make-local-variable 'artist-key-is-drawing)
   (make-local-variable 'artist-key-endpoint1)
   (make-local-variable 'artist-key-poly-point-list)
@@ -2016,7 +2014,7 @@ With optional argument SEE-THRU, set to non-nil, text in the buffer
 	(blink-matching-paren nil))
     (while char-list
       (let ((c (car char-list)))
-	(if (and see-thru (= (aref artist-replacement-table c) ?\ ))
+	(if (and see-thru (= (aref artist-replacement-table c) ?\s))
 	    (artist-move-to-xy (1+ (artist-current-column))
 			       (artist-current-line))
 	  (artist-replace-char c)))
@@ -2865,9 +2863,9 @@ Returns a list of strings."
   "Read any extra arguments for figlet."
   (interactive)
   (let* ((avail-fonts  (artist-figlet-get-font-list))
-	 (font (completing-read (concat "Select font: (default "
+	 (font (completing-read (concat "Select font (default "
 					artist-figlet-default-font
-					") ")
+					"): ")
 				(mapcar
 				 (lambda (font) (cons font font))
 				 avail-fonts))))
@@ -2875,7 +2873,7 @@ Returns a list of strings."
 
 (defun artist-figlet-get-extra-args ()
   "Read any extra arguments for figlet."
-  (let ((extra-args (read-input "Extra args to figlet: ")))
+  (let ((extra-args (read-string "Extra args to figlet: ")))
     (if (string= extra-args "")
 	nil
       extra-args)))
@@ -2916,7 +2914,7 @@ This is done by calling the function specified by `artist-text-renderer',
 which must return a list of strings, to be inserted in the buffer.
 
 Text already in the buffer ``shines thru'' blanks in the rendered text."
-  (let* ((input-text (read-input "Type text to render: "))
+  (let* ((input-text (read-string "Type text to render: "))
 	 (rendered-text (artist-funcall artist-text-renderer input-text)))
     (artist-text-insert-see-thru x y rendered-text)))
 
@@ -2927,7 +2925,7 @@ This is done by calling the function specified by `artist-text-renderer',
 which must return a list of strings, to be inserted in the buffer.
 
 Blanks in the rendered text overwrites any text in the buffer."
-  (let* ((input-text (read-input "Type text to render: "))
+  (let* ((input-text (read-string "Type text to render: "))
 	 (rendered-text (artist-funcall artist-text-renderer input-text)))
     (artist-text-insert-overwrite x y rendered-text)))
 
@@ -3072,26 +3070,26 @@ An endpoint is a cons pair, (ENDPOINT-X . ENDPOINT-Y)."
 (defun artist-vap-find-endpoints-horiz (x y)
   "Find endpoints for a horizontal line through X, Y.
 An endpoint is a cons pair, (ENDPOINT-X . ENDPOINT-Y)."
-  (list (artist-vap-find-endpoint x y  1 0 '(?- ?+) '(?  ))
-	(artist-vap-find-endpoint x y -1 0 '(?- ?+) '(?  ))))
+  (list (artist-vap-find-endpoint x y  1 0 '(?- ?+) '(?\s))
+	(artist-vap-find-endpoint x y -1 0 '(?- ?+) '(?\s))))
 
 (defun artist-vap-find-endpoints-vert (x y)
   "Find endpoints for a vertical line through X, Y.
 An endpoint is a cons pair, (ENDPOINT-X . ENDPOINT-Y)."
-  (list (artist-vap-find-endpoint x y 0  1 '(?| ?+) '(?  ))
-	(artist-vap-find-endpoint x y 0 -1 '(?| ?+) '(?  ))))
+  (list (artist-vap-find-endpoint x y 0  1 '(?| ?+) '(?\s))
+	(artist-vap-find-endpoint x y 0 -1 '(?| ?+) '(?\s))))
 
 (defun artist-vap-find-endpoints-swne (x y)
   "Find endpoints for a diagonal line (made by /'s) through X, Y.
 An endpoint is a cons pair, (ENDPOINT-X . ENDPOINT-Y)."
-  (list (artist-vap-find-endpoint x y  1 -1 '(?/ ?X) '(?  ))
-	(artist-vap-find-endpoint x y -1  1 '(?/ ?X) '(?  ))))
+  (list (artist-vap-find-endpoint x y  1 -1 '(?/ ?X) '(?\s))
+	(artist-vap-find-endpoint x y -1  1 '(?/ ?X) '(?\s))))
 
 (defun artist-vap-find-endpoints-nwse (x y)
   "Find endpoints for a diagonal line (made by \\'s) through X, Y.
 An endpoint is a cons pair, (ENDPOINT-X . ENDPOINT-Y)."
-  (list (artist-vap-find-endpoint x y  1  1 '(?\\ ?X) '(?  ))
-	(artist-vap-find-endpoint x y -1 -1 '(?\\ ?X) '(?  ))))
+  (list (artist-vap-find-endpoint x y  1  1 '(?\\ ?X) '(?\s))
+	(artist-vap-find-endpoint x y -1 -1 '(?\\ ?X) '(?\s))))
 
 
 (defun artist-vap-find-endpoints (x y)
@@ -3381,7 +3379,7 @@ The POINT-LIST is expected to cover the first quadrant."
     ;; that look like:    \           /  instead we get:   (           )
     ;;                     \         /                      \         /
     ;;                      ---------                        ---------
-    (let ((last-coord  (last point-list)))
+    (let ((last-coord (car (last point-list))))
       (if (= (artist-coord-get-new-char last-coord) ?/)
 	  (artist-coord-set-new-char last-coord artist-ellipse-right-char)))
 
@@ -3850,8 +3848,8 @@ Optional argument STATE can be used to set state (default is nil)."
 	 (x2    (artist-endpoint-get-x ep2))
 	 (y2    (artist-endpoint-get-y ep2))
 	 (dir1  (artist-find-direction x2 y2 x1 y1))
-	 (epn   (artist-last point-list))
-	 (epn-1 (artist-last point-list 2))
+	 (epn   (car (last point-list)))
+	 (epn-1 (car (last point-list 2)))
 	 (xn    (artist-endpoint-get-x epn))
 	 (yn    (artist-endpoint-get-y epn))
 	 (xn-1  (artist-endpoint-get-x epn-1))
@@ -4164,7 +4162,7 @@ If optional argument THIS-IS-LAST-POINT is non-nil, this point is the last."
 	  (setq artist-key-is-drawing t)
 
 	  ;; Feedback
-	  (message (substitute-command-keys
+	  (message "%s" (substitute-command-keys
 		    (concat "First point set. "
 			    "Set next with \\[artist-key-set-point], "
 			    "set last with C-u \\[artist-key-set-point]"))))
@@ -4457,7 +4455,7 @@ If N is negative, move backward."
 (defun artist-select-erase-char (c)
   "Set current erase character to be C."
   (interactive "cType char to use when erasing (type RET for normal): ")
-  (cond ((eq c ?\r) (setq artist-erase-char ?\ )
+  (cond ((eq c ?\r) (setq artist-erase-char ?\s)
 		    (message "Normal erasing"))
 	(t	    (setq artist-erase-char c)
 		    (message "Erasing with \"%c\"" c)))

@@ -1,6 +1,6 @@
 /* Record indices of function doc strings stored in a file.
-   Copyright (C) 1985, 86,93,94,95,97,98,99,2000,04
-             Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1993, 1994, 1995, 1997, 1998, 1999, 2000, 2001,
+                 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -56,6 +56,8 @@ Lisp_Object Qfunction_documentation;
 static Lisp_Object Vbuild_files;
 
 extern Lisp_Object Voverriding_local_map;
+
+extern Lisp_Object Qremap;
 
 /* For VMS versions with limited file name syntax,
    convert the name to something VMS will allow.  */
@@ -733,15 +735,18 @@ the same file name is found in the `doc-directory'.  */)
 DEFUN ("substitute-command-keys", Fsubstitute_command_keys,
        Ssubstitute_command_keys, 1, 1, 0,
        doc: /* Substitute key descriptions for command names in STRING.
-Return a new string which is STRING with substrings of the form \\=\\[COMMAND]
-replaced by either:  a keystroke sequence that will invoke COMMAND,
-or "M-x COMMAND" if COMMAND is not on any keys.
+Substrings of the form \\=\\[COMMAND] replaced by either: a keystroke
+sequence that will invoke COMMAND, or "M-x COMMAND" if COMMAND is not
+on any keys.
 Substrings of the form \\=\\{MAPVAR} are replaced by summaries
 \(made by describe-bindings) of the value of MAPVAR, taken as a keymap.
 Substrings of the form \\=\\<MAPVAR> specify to use the value of MAPVAR
 as the keymap for future \\=\\[COMMAND] substrings.
 \\=\\= quotes the following character and is discarded;
-thus, \\=\\=\\=\\= puts \\=\\= into the output, and \\=\\=\\=\\[ puts \\=\\[ into the output.  */)
+thus, \\=\\=\\=\\= puts \\=\\= into the output, and \\=\\=\\=\\[ puts \\=\\[ into the output.
+
+Returns original STRING if no substitutions were made.  Othwerwise,
+a new string, without any text properties, is returned.  */)
      (string)
      Lisp_Object string;
 {
@@ -812,6 +817,7 @@ thus, \\=\\=\\=\\= puts \\=\\= into the output, and \\=\\=\\=\\[ puts \\=\\[ int
       else if (strp[0] == '\\' && strp[1] == '[')
 	{
 	  int start_idx;
+	  int follow_remap = 1;
 
 	  changed = 1;
 	  strp += 2;		/* skip \[ */
@@ -830,10 +836,20 @@ thus, \\=\\=\\=\\= puts \\=\\= into the output, and \\=\\=\\=\\[ puts \\=\\[ int
 	  idx = strp - SDATA (string);
 	  name = Fintern (make_string (start, length_byte), Qnil);
 
+	do_remap:
 	  /* Ignore remappings unless there are no ordinary bindings. */
  	  tem = Fwhere_is_internal (name, keymap, Qt, Qnil, Qt);
  	  if (NILP (tem))
 	    tem = Fwhere_is_internal (name, keymap, Qt, Qnil, Qnil);
+
+	  if (VECTORP (tem) && XVECTOR (tem)->size > 1
+	      && EQ (AREF (tem, 0), Qremap) && SYMBOLP (AREF (tem, 1))
+	      && follow_remap)
+	    {
+	      name = AREF (tem, 1);
+	      follow_remap = 0;
+	      goto do_remap;
+	    }
 
 	  /* Note the Fwhere_is_internal can GC, so we have to take
 	     relocation of string contents into account.  */

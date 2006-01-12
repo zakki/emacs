@@ -4,7 +4,8 @@
 ;; Created: Sun Nov 10 1996
 ;; Keywords: convenience
 ;;
-;; Copyright (C) 1996, 2000 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; This file is part of GNU Emacs.
 
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 ;;
@@ -606,7 +607,7 @@ the name is considered already unique; only the second substitution
 			    completion-setup-hook)))
 		    )
 		(with-output-to-temp-buffer file-cache-completions-buffer
-		  (display-completion-list completion-list))
+		  (display-completion-list completion-list string))
 		)
 	      )
 	  (setq file-cache-string (file-cache-file-name completion-string))
@@ -699,7 +700,7 @@ the name is considered already unique; only the second substitution
 	   )
 	  (t
 	   (with-output-to-temp-buffer "*Completions*"
-	     (display-completion-list all))
+	     (display-completion-list all pattern))
 	   ))
     ))
 

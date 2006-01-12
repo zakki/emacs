@@ -20,8 +20,8 @@ dnl  GNU General Public License for more details.
 dnl
 dnl  You should have received a copy of the GNU General Public License
 dnl  along with GNU Emacs; see the file COPYING.  If not, write to the
-dnl  Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-dnl  Boston, MA 02111-1307, USA.
+dnl  Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+dnl  Boston, MA 02110-1301, USA.
 
 AC_PREREQ(2.54)dnl
 AC_INIT(src/lisp.h)
@@ -240,6 +240,7 @@ case "${canonical}" in
     case "${canonical}" in
       alpha*-*-freebsd*)	machine=alpha ;;
       i[3456]86-*-freebsd*)	machine=intel386 ;;
+      amd64-*-freebsd*|x86_64-*-freebsd*) machine=amdx86-64 ;;
     esac
   ;;
 
@@ -281,6 +282,15 @@ dnl see the `changequote' comment above.
       ns32k-*-openbsd*)	machine=ns32000 ;;
       sparc-*-openbsd*)	machine=sparc ;;
       vax-*-openbsd*)	machine=vax ;;
+    esac
+  ;;
+
+  ## LynxOS ports
+  *-*-lynxos* )
+    opsys=lynxos
+    case "${canonical}" in
+      i[3456]86-*-lynxos*) machine=intel386 ;;
+      powerpc-*-lynxos*) machine=powerpc ;;
     esac
   ;;
 
@@ -1082,7 +1092,9 @@ dnl see the `changequote' comment above.
     machine=intel386
     case "${canonical}" in
       *-cygwin )                opsys=cygwin ;;
-      *-lynxos* )               opsys=lynxos ;;
+      *-darwin* )               opsys=darwin
+                                CPP="${CC-cc} -E -no-cpp-precomp"
+ 				;;
       *-isc1.* | *-isc2.[01]* )	opsys=386-ix ;;
       *-isc2.2* )		opsys=isc2-2 ;;
       *-isc4.0* )		opsys=isc4-0 ;;
@@ -1251,6 +1263,19 @@ then
   CC="$CC $NON_GCC_TEST_OPTIONS"
 fi
 
+### Use -Wno-pointer-sign if the compiler supports it
+AC_MSG_CHECKING([whether gcc understands -Wno-pointer-sign])
+SAVE_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Wno-pointer-sign"
+AC_TRY_COMPILE([], [], has_option=yes, has_option=no,)
+if test $has_option = yes; then
+   C_WARNINGS_SWITCH="-Wno-pointer-sign $C_WARNINGS_SWITCH"
+fi
+AC_MSG_RESULT($has_option)
+CFLAGS="$SAVE_CFLAGS"
+unset has_option
+unset SAVE_CFLAGS
+
 #### Some other nice autoconf tests.
 
 dnl checks for programs
@@ -1263,6 +1288,8 @@ fi
 AC_PATH_PROG(INSTALL_INFO, install-info)
 AC_PATH_PROG(INSTALL_INFO, install-info,, /usr/sbin)
 AC_PATH_PROG(INSTALL_INFO, install-info,:, /sbin)
+dnl Don't use GZIP, which is used by gzip for additional parameters.
+AC_PATH_PROG(GZIP_PROG, gzip)
 
 dnl Add our options to ac_link now, after it is set up.
 
@@ -1289,7 +1316,7 @@ else
   LDFLAGS="$LDFLAGS -znocombreloc"
 fi
 
-AC_MSG_CHECKING([For -znocombreloc])
+AC_MSG_CHECKING([for -znocombreloc])
 AC_LINK_IFELSE([main(){return 0;}],
   [AC_MSG_RESULT(yes)],
   LDFLAGS=$late_LDFLAGS
@@ -1382,6 +1409,10 @@ configure___ use_mmap_for_buffers=no
 #endif
 #endif
 
+#ifndef C_WARNINGS_SWITCH
+#define C_WARNINGS_SWITCH ${C_WARNINGS_SWITCH}
+#endif
+
 #ifndef LD_SWITCH_MACHINE
 #define LD_SWITCH_MACHINE
 #endif
@@ -1410,7 +1441,7 @@ configure___ CFLAGS=C_DEBUG_SWITCH '${SPECIFIED_CFLAGS}'
 
 /* Get the CFLAGS for real compilation.  */
 #ifdef __GNUC__
-configure___ REAL_CFLAGS=C_DEBUG_SWITCH C_OPTIMIZE_SWITCH '${SPECIFIED_CFLAGS}'
+configure___ REAL_CFLAGS=C_DEBUG_SWITCH C_OPTIMIZE_SWITCH C_WARNINGS_SWITCH '${SPECIFIED_CFLAGS}'
 #else
 configure___ REAL_CFLAGS=C_DEBUG_SWITCH '${SPECIFIED_CFLAGS}'
 #endif
@@ -1659,6 +1690,20 @@ else
   fi
 fi
 
+HAVE_CARBON=no
+if test "${with_carbon}" != no; then
+  AC_CHECK_HEADER(Carbon/Carbon.h, HAVE_CARBON=yes)
+fi
+if test "${window_system}" = x11 && test "${HAVE_CARBON}" = yes; then
+  if test "${with_carbon+set}" != set \
+     && test "${carbon_appdir_x+set}" != set; then
+    HAVE_CARBON=no
+  fi
+fi
+if test "${HAVE_CARBON}" = yes; then
+  window_system=mac
+fi
+
 case "${window_system}" in
   x11 )
     HAVE_X_WINDOWS=yes
@@ -1677,7 +1722,7 @@ dnl make this decision later: use the toolkit if we have X11R5 or newer.
       * ) USE_X_TOOLKIT=maybe ;;
     esac
   ;;
-  none )
+  mac | none )
     HAVE_X_WINDOWS=no
     HAVE_X11=no
     USE_X_TOOLKIT=none
@@ -1704,13 +1749,6 @@ if test "${opsys}" = "hpux9shr"; then
       opsysfile="s/hpux9shxr4.h"
       ;;
   esac
-fi
-
-HAVE_CARBON=no
-if test "${HAVE_X11}" != "yes"; then
-  if test "${with_carbon}" != "no"; then
-     AC_CHECK_HEADER(Carbon/Carbon.h, HAVE_CARBON=yes)
-  fi
 fi
 
 ### Compute the unexec source name from the object name.
@@ -2372,7 +2410,6 @@ AC_CHECK_HEADER(malloc/malloc.h, AC_DEFINE(HAVE_MALLOC_MALLOC_H, 1, [Define to 1
 ### Use Mac OS X Carbon API to implement GUI.
 if test "${HAVE_CARBON}" = "yes"; then
   AC_DEFINE(HAVE_CARBON, 1, [Define to 1 if you are using the Carbon API on Mac OS X.])
-  window_system=mac
   ## Specify the install directory
   carbon_appdir=
   if test "${carbon_appdir_x}" != ""; then
@@ -2383,6 +2420,15 @@ if test "${HAVE_CARBON}" = "yes"; then
   fi
   # We also have mouse menus.
   HAVE_MENUS=yes
+
+  tmp_CFLAGS="$CFLAGS"
+  CFLAGS="$CFLAGS -framework Carbon"
+  AC_CHECK_FUNC(CancelMenuTracking, have_cmt=yes, have_cmt=no)
+  if test "$have_cmt" = yes; then
+    AC_DEFINE(HAVE_CANCELMENUTRACKING, 1,
+              [Define to 1 if CancelMenuTracking is available (Mac OSX).])
+  fi
+  CFLAGS="$tmp_CFLAGS"
 fi
 
 ### Use session management (-lSM -lICE) if available
@@ -2440,7 +2486,7 @@ AC_CHECK_FUNCS(touchlock)
 AC_CHECK_HEADERS(maillock.h)
 
 AC_CHECK_FUNCS(gethostname getdomainname dup2 \
-rename closedir mkdir rmdir sysinfo getrusage \
+rename closedir mkdir rmdir sysinfo getrusage get_current_dir_name \
 random lrand48 bcopy bcmp logb frexp fmod rint cbrt ftime res_init setsid \
 strerror fpathconf select mktime euidaccess getpagesize tzset setlocale \
 utimes setrlimit setpgid getcwd getwd shutdown getaddrinfo \
@@ -2459,6 +2505,15 @@ fi
 AC_FUNC_GETLOADAVG
 
 AC_FUNC_FSEEKO
+
+# Configure getopt.
+m4_include([m4/getopt.m4])
+gl_GETOPT_IFELSE([
+  gl_GETOPT_SUBSTITUTE_HEADER
+  gl_PREREQ_GETOPT
+  GETOPTOBJS='getopt.o getopt1.o'
+])
+AC_SUBST(GETOPTOBJS)
 
 AC_FUNC_GETPGRP
 
@@ -2839,8 +2894,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to the
-Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 /* No code in Emacs #includes config.h twice, but some bits of code

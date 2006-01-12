@@ -1,6 +1,6 @@
 """Definitions used by commands sent to inferior Python in python.el."""
 
-# Copyright (C) 2004  Free Software Foundation, Inc.
+# Copyright (C) 2004, 2005 Free Software Foundation, Inc.
 # Author: Dave Love <d.love@dl.ac.uk>
 
 # This file is part of GNU Emacs.
@@ -17,8 +17,8 @@
 
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs; see the file COPYING.  If not, write to the
-# Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-# Boston, MA 02111-1307, USA.
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
 
 import os, sys, traceback, inspect, rlcompleter, __main__
 
@@ -82,11 +82,11 @@ def complete (text, namespace = None):
     except:
         print '_emacs_out ()'
 
-def ehelp (name):
-    """Get help on string NAME.
+def ehelp (name, g, l):
+    """Get help on string NAME using globals G and locals L.
     First try to eval name for, e.g. user definitions where we need
     the object.  Otherwise try the string form."""
-    try: help (eval (name))
+    try: help (eval (name, g, l))
     except: help (name)
 
 def eimport (mod, dir):

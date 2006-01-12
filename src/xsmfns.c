@@ -1,6 +1,6 @@
 /* Session management module for systems which understand the X Session
    management protocol.
-   Copyright (C) 2002, 2003, 2004 Free Software Foundation, Inc.
+   Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 
@@ -45,17 +45,12 @@ Boston, MA 02111-1307, USA.  */
 #include <sys/param.h>
 #include <stdio.h>
 
+#include "lisp.h"
 #include "systime.h"
 #include "sysselect.h"
-#include "lisp.h"
 #include "termhooks.h"
 #include "termopts.h"
 #include "xterm.h"
-
-#ifndef MAXPATHLEN
-#define MAXPATHLEN 1024
-#endif /* not MAXPATHLEN */
-
 
 /* The user login name.  */
 
@@ -205,7 +200,7 @@ smc_save_yourself_CB (smcConn,
   int val_idx = 0;
   int props_idx = 0;
 
-  char cwd[MAXPATHLEN+1];
+  char *cwd = NULL;
   char *smid_opt;
 
   /* How to start a new instance of Emacs.  */
@@ -259,12 +254,9 @@ smc_save_yourself_CB (smcConn,
   props[props_idx]->vals[0].value = SDATA (Vuser_login_name);
   ++props_idx;
 
-  /* The current directory property, not mandatory.  */
-#ifdef HAVE_GETCWD
-  if (getcwd (cwd, MAXPATHLEN+1) != 0)
-#else
-  if (getwd (cwd) != 0)
-#endif
+  cwd = get_current_dir_name ();
+
+  if (cwd)
     {
       props[props_idx] = &prop_ptr[props_idx];
       props[props_idx]->name = SmCurrentDirectory;
@@ -280,6 +272,9 @@ smc_save_yourself_CB (smcConn,
   SmcSetProperties (smcConn, props_idx, props);
 
   xfree (smid_opt);
+
+  if (cwd)
+    free (cwd);
 
   /* See if we maybe shall interact with the user.  */
   if (interactStyle != SmInteractStyleAny

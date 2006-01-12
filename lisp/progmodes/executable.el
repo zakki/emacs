@@ -1,6 +1,7 @@
 ;;; executable.el --- base functionality for executable interpreter scripts -*- byte-compile-dynamic: t -*-
 
-;; Copyright (C) 1994, 1995, 1996, 2000, 2003, 2004 by Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 1996, 2000, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Daniel Pfeiffer <occitan@esperanto.org>
 ;; Keywords: languages, unix
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -53,7 +54,7 @@
 ;;; Code:
 
 (defgroup executable nil
-  "Base functionality for executable interpreter scripts"
+  "Base functionality for executable interpreter scripts."
   :group 'processes)
 
 ;; This used to default to `other', but that doesn't seem to have any
@@ -230,7 +231,7 @@ executable."
 	    (and (goto-char (match-beginning 1))
 		 ;; If the line ends in a space,
 		 ;; don't offer to change it.
-		 (not (= (char-after (1- (match-end 1))) ?\ ))
+		 (not (= (char-after (1- (match-end 1))) ?\s))
 		 (not (string= argument
 			       (buffer-substring (point) (match-end 1))))
 		 (if (or (not executable-query) no-query-flag

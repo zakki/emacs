@@ -1,6 +1,7 @@
 ;;; calc-store.el --- value storage functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -70,7 +71,7 @@
                                       (if (not (cdr var)) "")
                                       (if (not (cdr var)) 1))))
                (message (concat "Stored to variable \"%s\"" msg)
-                        (calc-var-name var)))
+                        (calc-var-name (car (car var)))))
 	     (setq var (cdr var))))))))
 
 (defun calc-store-plus (&optional var)
@@ -429,7 +430,7 @@
   (calc-wrapper
    (or var (setq var (calc-read-var-name
 		      (if calc-last-edited-variable
-			  (format "Edit: (default %s) "
+			  (format "Edit (default %s): "
 				  (calc-var-name calc-last-edited-variable))
 			"Edit: "))))
    (or var (setq var calc-last-edited-variable))
@@ -586,7 +587,7 @@
 (defun calc-permanent-variable (&optional var)
   (interactive)
   (calc-wrapper
-   (or var (setq var (calc-read-var-name "Save variable (default=all): ")))
+   (or var (setq var (calc-read-var-name "Save variable (default all): ")))
    (let (calc-pv-pos)
      (and var (or (and (boundp var) (symbol-value var))
 		  (error "No such variable")))

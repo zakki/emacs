@@ -1,6 +1,7 @@
 /* Buffer manipulation primitives for GNU Emacs.
-   Copyright (C) 1985, 86, 87, 88, 89, 93, 94, 95, 97, 98, 99,
-     2000, 01, 02, 03, 04, 2005 Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994,
+                 1995, 1997, 1998, 1999, 2000, 2001, 2002,
+                 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 
@@ -31,10 +32,6 @@ Boston, MA 02111-1307, USA.  */
 extern int errno;
 #endif
 
-#ifndef MAXPATHLEN
-/* in 4.1 [probably SunOS? -stef] , param.h fails to define this. */
-#define MAXPATHLEN 1024
-#endif /* not MAXPATHLEN */
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -488,7 +485,7 @@ static void
 clone_per_buffer_values (from, to)
      struct buffer *from, *to;
 {
-  Lisp_Object to_buffer, tem;
+  Lisp_Object to_buffer;
   int offset;
 
   XSETBUFFER (to_buffer, to);
@@ -1362,7 +1359,8 @@ with SIGHUP.  */)
     /* First run the query functions; if any query is answered no,
        don't kill the buffer.  */
     arglist[0] = Qkill_buffer_query_functions;
-    if (NILP (Frun_hook_with_args_until_failure (1, arglist)))
+    tem = Frun_hook_with_args_until_failure (1, arglist);
+    if (NILP (tem))
       return unbind_to (count, Qnil);
 
     /* Then run the hooks.  */
@@ -1725,9 +1723,6 @@ do not put this buffer at the front of the list of recently selected ones.  */)
 	}
     }
   Fset_buffer (buf);
-  if (NILP (norecord))
-    /* Why bother ?  Fselect_window will do it for us anyway.  -stef  */
-    record_buffer (buf);
   Fselect_window (Fdisplay_buffer (buf, other_window, Qnil), norecord);
   return buf;
 }
@@ -3557,10 +3552,12 @@ DEFUN ("make-overlay", Fmake_overlay, Smake_overlay, 2, 5, 0,
        doc: /* Create a new overlay with range BEG to END in BUFFER.
 If omitted, BUFFER defaults to the current buffer.
 BEG and END may be integers or markers.
-The fourth arg FRONT-ADVANCE, if non-nil, makes the
-front delimiter advance when text is inserted there.
-The fifth arg REAR-ADVANCE, if non-nil, makes the
-rear delimiter advance when text is inserted there.  */)
+The fourth arg FRONT-ADVANCE, if non-nil, makes the marker
+for the front of the overlay advance when text is inserted there
+(which means the text *is not* included in the overlay).
+The fifth arg REAR-ADVANCE, if non-nil, makes the marker
+for the rear of the overlay advance when text is inserted there
+(which means the text *is* included in the overlay).  */)
      (beg, end, buffer, front_advance, rear_advance)
      Lisp_Object beg, end, buffer;
      Lisp_Object front_advance, rear_advance;
@@ -5112,11 +5109,9 @@ init_buffer_once ()
 void
 init_buffer ()
 {
-  char buf[MAXPATHLEN + 1];
   char *pwd;
-  struct stat dotstat, pwdstat;
   Lisp_Object temp;
-  int rc;
+  int len;
 
 #ifdef USE_MMAP_FOR_BUFFERS
  {
@@ -5135,40 +5130,28 @@ init_buffer ()
   if (NILP (buffer_defaults.enable_multibyte_characters))
     Fset_buffer_multibyte (Qnil);
 
-  /* If PWD is accurate, use it instead of calling getwd.  PWD is
-     sometimes a nicer name, and using it may avoid a fatal error if a
-     parent directory is searchable but not readable.  */
-  if ((pwd = getenv ("PWD")) != 0
-      && (IS_DIRECTORY_SEP (*pwd) || (*pwd && IS_DEVICE_SEP (pwd[1])))
-      && stat (pwd, &pwdstat) == 0
-      && stat (".", &dotstat) == 0
-      && dotstat.st_ino == pwdstat.st_ino
-      && dotstat.st_dev == pwdstat.st_dev
-      && strlen (pwd) < MAXPATHLEN)
-    strcpy (buf, pwd);
-#ifdef HAVE_GETCWD
-  else if (getcwd (buf, MAXPATHLEN+1) == 0)
-    fatal ("`getcwd' failed: %s\n", strerror (errno));
-#else
-  else if (getwd (buf) == 0)
-    fatal ("`getwd' failed: %s\n", buf);
-#endif
+  pwd = get_current_dir_name ();
+
+  if (!pwd)
+    fatal ("`get_current_dir_name' failed: %s\n", strerror (errno));
 
 #ifndef VMS
   /* Maybe this should really use some standard subroutine
      whose definition is filename syntax dependent.  */
-  rc = strlen (buf);
-  if (!(IS_DIRECTORY_SEP (buf[rc - 1])))
+  len = strlen (pwd);
+  if (!(IS_DIRECTORY_SEP (pwd[len - 1])))
     {
-      buf[rc] = DIRECTORY_SEP;
-      buf[rc + 1] = '\0';
+      /* Grow buffer to add directory separator and '\0'.  */
+      pwd = (char *) xrealloc (pwd, len + 2);
+      pwd[len] = DIRECTORY_SEP;
+      pwd[len + 1] = '\0';
     }
 #endif /* not VMS */
 
-  current_buffer->directory = make_unibyte_string (buf, strlen (buf));
+  current_buffer->directory = make_unibyte_string (pwd, strlen (pwd));
   if (! NILP (buffer_defaults.enable_multibyte_characters))
-    /* At this momemnt, we still don't know how to decode the
-       direcotry name.  So, we keep the bytes in multibyte form so
+    /* At this moment, we still don't know how to decode the
+       directory name.  So, we keep the bytes in multibyte form so
        that ENCODE_FILE correctly gets the original bytes.  */
     current_buffer->directory
       = string_to_multibyte (current_buffer->directory);
@@ -5187,6 +5170,8 @@ init_buffer ()
 
   temp = get_minibuffer (0);
   XBUFFER (temp)->directory = current_buffer->directory;
+
+  free (pwd);
 }
 
 /* initialize the buffer routines */
@@ -5727,7 +5712,7 @@ that fraction of the window's height from the bottom of the window.
 When the value is 0.0, point goes at the bottom line, which in the simple
 case that you moved off with C-f means scrolling just one line.  1.0 means
 point goes at the top, so that in that simple case, the window
-window scrolls by a full window height.  Meaningful values are
+scrolls by a full window height.  Meaningful values are
 between 0.0 and 1.0, inclusive.  */);
 
   DEFVAR_PER_BUFFER ("scroll-down-aggressively",
@@ -5740,7 +5725,7 @@ that fraction of the window's height from the top of the window.
 When the value is 0.0, point goes at the top line, which in the simple
 case that you moved off with C-b means scrolling just one line.  1.0 means
 point goes at the bottom, so that in that simple case, the window
-window scrolls by a full window height.  Meaningful values are
+scrolls by a full window height.  Meaningful values are
 between 0.0 and 1.0, inclusive.  */);
 
 /*DEFVAR_LISP ("debug-check-symbol", &Vcheck_symbol,
@@ -5928,15 +5913,15 @@ is a member of the list.  */);
      doc: /* Cursor to use when this buffer is in the selected window.
 Values are interpreted as follows:
 
-  t 		 use the cursor specified for the frame
-  nil		 don't display a cursor
-  box		 display a filled box cursor
-  hollow	 display a hollow box cursor
-  bar		 display a vertical bar cursor with default width
-  (bar . WIDTH)	 display a vertical bar cursor with width WIDTH
-  hbar		 display a horizontal bar cursor with default width
-  (hbar . WIDTH) display a horizontal bar cursor with width WIDTH
-  ANYTHING ELSE	 display a hollow box cursor.
+  t 		  use the cursor specified for the frame
+  nil		  don't display a cursor
+  box		  display a filled box cursor
+  hollow	  display a hollow box cursor
+  bar		  display a vertical bar cursor with default width
+  (bar . WIDTH)	  display a vertical bar cursor with width WIDTH
+  hbar		  display a horizontal bar cursor with default height
+  (hbar . HEIGHT) display a horizontal bar cursor with height HEIGHT
+  ANYTHING ELSE	  display a hollow box cursor
 
 When the buffer is displayed in a nonselected window,
 this variable has no effect; the cursor appears as a hollow box.  */);

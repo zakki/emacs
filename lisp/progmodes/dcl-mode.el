@@ -1,6 +1,7 @@
 ;;; dcl-mode.el --- major mode for editing DCL command files
 
-;; Copyright (c) 1997 Free Software Foundation, Inc.
+;; Copyright (c) 1997, 2001, 2002, 2003, 2004, 2005
+;; Free Software Foundation, Inc.
 
 ;; Author: Odd Gripenstam <gripenstamol@decus.se>
 ;; Maintainer: Odd Gripenstam <gripenstamol@decus.se>
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -94,6 +95,7 @@ Presently this includes some syntax, .OP.erators, and \"f$\" lexicals.")
 
 (defgroup dcl nil
   "Major mode for editing DCL command files."
+  :link '(custom-group-link :tag "Font Lock Faces group" font-lock-faces)
   :group 'languages)
 
 (defcustom dcl-basic-offset 4

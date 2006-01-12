@@ -1,6 +1,7 @@
 ;;; goto-addr.el --- click to browse URL or to send to e-mail address
 
-;; Copyright (C) 1995, 2000, 2001, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1995, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Eric Ding <ericding@alum.mit.edu>
 ;; Maintainer: FSF
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -104,12 +105,18 @@ A value of t means there is no limit--fontify regardless of the size."
   "A regular expression probably matching an e-mail address.")
 
 (defvar goto-address-url-regexp
-  (concat "\\<\\("
-	  (mapconcat 'identity
-		     (delete "mailto:" (copy-sequence thing-at-point-uri-schemes))
-		     "\\|")
-	  "\\)"
-          thing-at-point-url-path-regexp)
+  (concat
+   "\\<\\("
+   (mapconcat 'identity
+              (delete "mailto:"
+		      ;; Remove `data:', as it's not terribly useful to follow
+		      ;; those.  Leaving them causes `use Data::Dumper;' to be
+		      ;; fontified oddly in Perl files.
+                      (delete "data:"
+                              (copy-sequence thing-at-point-uri-schemes)))
+              "\\|")
+   "\\)"
+   thing-at-point-url-path-regexp)
   ;; (concat "\\b\\(s?https?\\|ftp\\|file\\|gopher\\|news\\|"
   ;; 	  "telnet\\|wais\\):\\(//[-a-zA-Z0-9_.]+:"
   ;; 	  "[0-9]*\\)?[-a-zA-Z0-9_=?#$@~`%&*+|\\/.,]*"
@@ -122,7 +129,7 @@ A value of t means there is no limit--fontify regardless of the size."
       'goto-address-at-point)
     (define-key m (kbd "C-c RET") 'goto-address-at-point)
     m)
-  "keymap to hold goto-addr's mouse key defs under highlighted URLs.")
+  "Keymap to hold goto-addr's mouse key defs under highlighted URLs.")
 
 (defcustom goto-address-url-face 'bold
   "Face to use for URLs."
@@ -167,6 +174,7 @@ and `goto-address-fontify-p'."
                 (overlay-put this-overlay 'evaporate t)
 		(overlay-put this-overlay
                              'mouse-face goto-address-url-mouse-face)
+		(overlay-put this-overlay 'follow-link t)
 		(overlay-put this-overlay
 			     'help-echo "mouse-2, C-c RET: follow URL")
 		(overlay-put this-overlay
@@ -182,6 +190,7 @@ and `goto-address-fontify-p'."
                 (overlay-put this-overlay 'evaporate t)
                 (overlay-put this-overlay 'mouse-face
                              goto-address-mail-mouse-face)
+		(overlay-put this-overlay 'follow-link t)
 		(overlay-put this-overlay
 			     'help-echo "mouse-2, C-c RET: mail this address")
                 (overlay-put this-overlay
@@ -203,7 +212,7 @@ Send mail to address at point.  See documentation for
 there, then load the URL at or before point."
   (interactive (list last-input-event))
   (save-excursion
-    (if event (mouse-set-point event))
+    (if event (posn-set-point (event-end event)))
     (let ((address (save-excursion (goto-address-find-address-at-point))))
       (if (and address
 	       (save-excursion
@@ -233,7 +242,8 @@ address.  If no e-mail address found, return nil."
   "Sets up goto-address functionality in the current buffer.
 Allows user to use mouse/keyboard command to click to go to a URL
 or to send e-mail.
-By default, goto-address binds to mouse-2 and C-c RET.
+By default, goto-address binds `goto-address-at-point' to mouse-2 and C-c RET
+only on URLs and e-mail addresses.
 
 Also fontifies the buffer appropriately (see `goto-address-fontify-p' and
 `goto-address-highlight-p' for more information)."

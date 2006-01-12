@@ -23,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -43,6 +43,8 @@
 ;; encoders/decoders, and for help in debugging this code.
 
 ;;; Code:
+
+(defvar dos-unsupported-char-glyph)
 
 (defun cp-coding-system-for-codepage-1 (coding mnemonic iso-name
 					       decoder encoder)
@@ -660,7 +662,7 @@ read/written by MS-DOS software, or for display on the MS-DOS terminal."
   (interactive
    (let ((completion-ignore-case t)
 	 (candidates (cp-supported-codepages)))
-     (list (completing-read "Setup DOS Codepage: (default 437) " candidates
+     (list (completing-read "Setup DOS Codepage (default 437): " candidates
 			    nil t nil nil "437"))))
   (let* ((cp (format "cp%s" codepage))
 	 (cp-defined (intern-soft cp)))

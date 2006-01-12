@@ -1,6 +1,6 @@
 @c This is part of the Emacs manual.
-@c Copyright (C) 1985, 86, 87, 93, 94, 95, 97,
-@c   2001, 03, 04, 2005 Free Software Foundation, Inc.
+@c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 2001, 2002,
+@c   2003, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @node Emacs Invocation, X Resources, GNU Free Documentation License, Top
 @appendix Command Line Arguments for Emacs Invocation
@@ -118,6 +118,10 @@ Load a Lisp library named @var{file} with the function @code{load}.
 the library can be found either in the current directory, or in the
 Emacs library search path as specified with @env{EMACSLOADPATH}
 (@pxref{General Variables}).
+
+@strong{Warning:} If previous command-line arguments have visited
+files, the current directory is the directory of the last file
+visited.
 
 @item -L @var{dir}
 @opindex -L
@@ -474,10 +478,15 @@ This variable defaults to @file{~/.bash_history} if you use Bash, to
 otherwise.
 @item HOME
 The location of the user's files in the directory tree; used for
-expansion of file names starting with a tilde (@file{~}).  On MS-DOS, it
-defaults to the directory from which Emacs was started, with @samp{/bin}
-removed from the end if it was present.  On Windows, the default value
-of @env{HOME} is @file{C:/}, the root directory of drive @file{C:}.
+expansion of file names starting with a tilde (@file{~}).  On MS-DOS,
+it defaults to the directory from which Emacs was started, with
+@samp{/bin} removed from the end if it was present.  On Windows, the
+default value of @env{HOME} is the @file{Application Data}
+subdirectory of the user profile directory (normally, this is
+@file{C:/Documents and Settings/@var{username}/Application Data},
+where @var{username} is your user name), though for backwards
+compatibility @file{C:/} will be used instead if a @file{.emacs} file
+is found there.
 @item HOSTNAME
 The name of the machine that Emacs is running on.
 @item INCPATH
@@ -1164,12 +1173,12 @@ If you have many clients running at once, you can avoid cluttering up
 the screen by iconifying most of the clients.
 
 @table @samp
-@item -i
-@opindex -i
-@itemx --icon-type
-@opindex --icon-type
+@item -nbi
+@opindex -nbi
+@itemx --no-bitmap-icon
+@opindex --no-bitmap-icon
 @cindex Emacs icon, a gnu
-Use a picture of a gnu as the Emacs icon.
+Do not use a picture of a gnu as the Emacs icon.
 
 @item -iconic
 @opindex --iconic
@@ -1178,8 +1187,8 @@ Use a picture of a gnu as the Emacs icon.
 Start Emacs in iconified state.
 @end table
 
-  The @samp{-i} or @samp{--icon-type} option tells Emacs to use an icon
-window containing a picture of the GNU gnu.  If omitted, Emacs lets the
+  By default Emacs uses an icon window containing a picture of the GNU gnu.
+The @samp{-nbi} or @samp{--no-bitmap-icon} option tells Emacs to let the
 window manager choose what sort of icon to use---usually just a small
 rectangle containing the frame's title.
 

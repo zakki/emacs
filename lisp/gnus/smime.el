@@ -1,5 +1,7 @@
 ;;; smime.el --- S/MIME support library
-;; Copyright (c) 2000, 2001, 2003 Free Software Foundation, Inc.
+
+;; Copyright (C) 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Simon Josefsson <simon@josefsson.org>
 ;; Keywords: SMIME X.509 PEM OpenSSL
@@ -18,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -339,9 +341,10 @@ KEYFILE should contain a PEM encoded key and certificate."
 		 keyfile
 	       (smime-get-key-with-certs-by-email
 		(completing-read
-		 (concat "Sign using which key? "
-			 (if smime-keys (concat "(default " (caar smime-keys) ") ")
-			   ""))
+		 (concat "Sign using key"
+			 (if smime-keys
+			     (concat " (default " (caar smime-keys) "): ")
+			   ": "))
 		 smime-keys nil nil (car-safe (car-safe smime-keys))))))
       (error "Signing failed"))))
 
@@ -470,9 +473,9 @@ in the buffer specified by `smime-details-buffer'."
       (or keyfile
 	  (smime-get-key-by-email
 	   (completing-read
-	    (concat "Decipher using which key? "
-		    (if smime-keys (concat "(default " (caar smime-keys) ") ")
-		      ""))
+	    (concat "Decipher using key"
+		    (if smime-keys (concat " (default " (caar smime-keys) "): ")
+		      ": "))
 	    smime-keys nil nil (car-safe (car-safe smime-keys)))))))))
 
 ;; Various operations
@@ -596,7 +599,8 @@ The following commands are available:
   (use-local-map smime-mode-map)
   (buffer-disable-undo)
   (setq truncate-lines t)
-  (setq buffer-read-only t))
+  (setq buffer-read-only t)
+  (gnus-run-mode-hooks 'smime-mode-hook))
 
 (defun smime-certificate-info (certfile)
   (interactive "fCertificate file: ")

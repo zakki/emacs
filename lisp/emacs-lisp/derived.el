@@ -1,7 +1,8 @@
 ;;; derived.el --- allow inheritance of major modes
-;;; (formerly mode-clone.el)
+;; (formerly mode-clone.el)
 
-;; Copyright (C) 1993, 1994, 1999, 2003 Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1999, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Megginson (dmeggins@aix1.uottawa.ca)
 ;; Maintainer: FSF
@@ -21,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -96,7 +97,7 @@
 ;;; PRIVATE: defsubst must be defined before they are first used
 
 (defsubst derived-mode-hook-name (mode)
-  "Construct the mode hook name based on mode name MODE."
+  "Construct a mode-hook name based on a MODE name."
   (intern (concat (symbol-name mode) "-hook")))
 
 (defsubst derived-mode-map-name (mode)
@@ -193,13 +194,25 @@ See Info node `(elisp)Derived Modes' for more details."
 		     parent child docstring syntax abbrev))
 
     `(progn
-       (defvar ,hook nil ,(format "Hook run when entering %s mode." name))
+       (unless (get  ',hook 'variable-documentation)
+	 (put ',hook 'variable-documentation
+	      ,(format "Hook run when entering %s mode.
+No problems result if this variable is not bound.
+`add-hook' automatically binds it.  (This is true for all hook variables.)"
+		       name)))
+       (unless (boundp ',map)
+	 (put ',map 'definition-name ',child))
        (defvar ,map (make-sparse-keymap))
        ,(if declare-syntax
-	    `(defvar ,syntax (make-syntax-table)))
+	    `(progn
+	       (unless (boundp ',syntax)
+		 (put ',syntax 'definition-name ',child))
+	       (defvar ,syntax (make-syntax-table))))
        ,(if declare-abbrev
-	    `(defvar ,abbrev
-	       (progn (define-abbrev-table ',abbrev nil) ,abbrev)))
+	    `(progn
+	       (put ',abbrev 'definition-name ',child)
+	       (defvar ,abbrev
+		 (progn (define-abbrev-table ',abbrev nil) ,abbrev))))
        (put ',child 'derived-mode-parent ',parent)
        ,(if group `(put ',child 'custom-mode-group ,group))
 
@@ -221,6 +234,12 @@ See Info node `(elisp)Derived Modes' for more details."
 			 (get (quote ,parent) 'mode-class)))
 					; Set up maps and tables.
 		(unless (keymap-parent ,map)
+                  ;; It would probably be better to set the keymap's parent
+                  ;; at the toplevel rather than inside the mode function,
+                  ;; but this is not easy for at least the following reasons:
+                  ;; - the parent (and its keymap) may not yet be loaded.
+                  ;; - the parent's keymap name may be called something else
+                  ;;   than <parent>-mode-map.
 		  (set-keymap-parent ,map (current-local-map)))
 		,(when declare-syntax
 		   `(let ((parent (char-table-parent ,syntax)))
@@ -314,7 +333,7 @@ which more-or-less shadow %s's corresponding tables."
 
 ;;;###autoload
 (defun derived-mode-init-mode-variables (mode)
-  "Initialise variables for a new MODE.
+  "Initialize variables for a new MODE.
 Right now, if they don't already exist, set up a blank keymap, an
 empty syntax table, and an empty abbrev table -- these will be merged
 the first time the mode is used."
@@ -376,18 +395,11 @@ Always merge its parent into it, since the merge is non-destructive."
     (derived-mode-merge-abbrev-tables old-table new-table)
     (setq local-abbrev-table new-table)))
 
-;;;(defun derived-mode-run-setup-function (mode)
-;;;  "Run the setup function if it exists."
-
-;;;  (let ((fname (derived-mode-setup-function-name mode)))
-;;;    (if (fboundp fname)
-;;;	(funcall fname))))
-
 (defun derived-mode-run-hooks (mode)
-  "Run the mode hook for MODE."
-  (let ((hooks-name (derived-mode-hook-name mode)))
-    (if (boundp hooks-name)
-	(run-hooks hooks-name))))
+   "Run the mode hook for MODE."
+   (let ((hooks-name (derived-mode-hook-name mode)))
+     (if (boundp hooks-name)
+         (run-hooks hooks-name))))
 
 ;; Functions to merge maps and tables.
 
@@ -440,5 +452,5 @@ Where the new table already has an entry, nothing is copied from the old one."
 
 (provide 'derived)
 
-;;; arch-tag: 630be248-47d1-4f02-afa0-8207de0ebea0
+;; arch-tag: 630be248-47d1-4f02-afa0-8207de0ebea0
 ;;; derived.el ends here

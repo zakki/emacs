@@ -1,5 +1,6 @@
 @c This is part of the Emacs manual.
-@c Copyright (C) 1985,86,87,93,94,95,1997,2001 Free Software Foundation, Inc.
+@c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 2001, 2002,
+@c   2003, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @node Mark, Killing, Help, Top
 @chapter The Mark and the Region
@@ -382,10 +383,12 @@ C-@key{SPC}} (or @kbd{C-u C-@@}); this is the command
 where the mark was, and restores the mark from the ring of former
 marks.
 
-  If you repeat the character @kbd{C-@key{SPC}}, after typing @kbd{C-u
-C-@key{SPC}}, each repetition moves point to a previous mark position
-from the ring.  The mark positions you move through in this way are
-not lost; they go to the end of the ring.
+@vindex set-mark-command-repeat-pop
+  If you set @code{set-mark-command-repeat-pop} to non-@code{nil},
+then when you repeat the character @kbd{C-@key{SPC}} after typing
+@kbd{C-u C-@key{SPC}}, each repetition moves point to a previous mark
+position from the ring.  The mark positions you move through in this
+way are not lost; they go to the end of the ring.
 
   Each buffer has its own mark ring.  All editing commands use the current
 buffer's mark ring.  In particular, @kbd{C-u C-@key{SPC}} always stays in

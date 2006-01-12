@@ -1,7 +1,7 @@
 ;;; url.el --- Uniform Resource Locator retrieval tool
 
-;; Copyright (c) 1996, 1997, 1998, 1999, 2001, 2004, 2005
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2001, 2004,
+;;   2005, 2006  Free Software Foundation, Inc.
 
 ;; Author: Bill Perry <wmperry@gnu.org>
 ;; Keywords: comm, data, processes, hypermedia
@@ -20,8 +20,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -30,16 +30,6 @@
 ;;; Code:
 
 (eval-when-compile (require 'cl))
-;; Don't require CL at runtime if we can avoid it (Emacs 21).
-;; Otherwise we need it for hashing functions.  `puthash' was never
-;; defined in the Emacs 20 cl.el for some reason.
-(if (fboundp 'puthash)
-    nil					; internal or CL is loaded
-  (defalias 'puthash 'cl-puthash)
-  (autoload 'cl-puthash "cl")
-  (autoload 'gethash "cl")
-  (autoload 'maphash "cl")
-  (autoload 'make-hash-table "cl"))
 
 (eval-when-compile
   (require 'mm-decode)
@@ -56,9 +46,12 @@
 (require 'url-parse)
 (require 'url-util)
 
-;; Fixme: customize? convert-standard-filename? 
-;;;###autoload
-(defvar url-configuration-directory "~/.url")
+;; Fixme: customize? convert-standard-filename?
+(defvar url-configuration-directory
+  (cond
+   ((file-directory-p "~/.url") "~/.url")
+   ((file-directory-p "~/.emacs.d") "~/.emacs.d/url")
+   (t "~/.url")))
 
 (defun url-do-setup ()
   "Setup the url package.
@@ -71,7 +64,7 @@ Emacs."
 
     (mailcap-parse-mailcaps)
     (mailcap-parse-mimetypes)
-    
+
     ;; Register all the authentication schemes we can handle
     (url-register-auth-scheme "basic" nil 4)
     (url-register-auth-scheme "digest" nil 7)
@@ -79,11 +72,11 @@ Emacs."
     (setq url-cookie-file
 	  (or url-cookie-file
 	      (expand-file-name "cookies" url-configuration-directory)))
-    
+
     (setq url-history-file
 	  (or url-history-file
 	      (expand-file-name "history" url-configuration-directory)))
-  
+
     ;; Parse the global history file if it exists, so that it can be used
     ;; for URL completion, etc.
     (url-history-parse-history)
@@ -121,11 +114,17 @@ Emacs."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Retrieval functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;###autoload
 (defun url-retrieve (url callback &optional cbargs)
   "Retrieve URL asynchronously and call CALLBACK with CBARGS when finished.
-The callback is called when the object has been completely retrieved, with
+URL is either a string or a parsed URL.
+
+CALLBACK is called when the object has been completely retrieved, with
 the current buffer containing the object, and any MIME headers associated
-with it.  URL is either a string or a parsed URL.
+with it.  Normally it gets the arguments in the list CBARGS.
+However, if what we find is a redirect, CALLBACK is given
+two additional args, `:redirect' and the redirected URL,
+followed by CBARGS.
 
 Return the buffer URL will load into, or nil if the process has
 already completed."
@@ -153,9 +152,11 @@ already completed."
       (if buffer
 	  (with-current-buffer buffer
 	    (apply callback cbargs))))
-    (url-history-update-url url (current-time))
+    (if url-history-track
+	(url-history-update-url url (current-time)))
     buffer))
 
+;;;###autoload
 (defun url-retrieve-synchronously (url)
   "Retrieve URL synchronously.
 Return the buffer containing the data, or nil if there are no data
@@ -170,21 +171,33 @@ no further processing).  URL is either a string or a parsed URL."
 			      (url-debug 'retrieval "Synchronous fetching done (%S)" (current-buffer))
 			      (setq retrieval-done t
 				    asynch-buffer (current-buffer)))))
-    (let ((proc (and asynch-buffer (get-buffer-process asynch-buffer))))
-      (if (null proc)
-	  ;; We do not need to do anything, it was a mailto or something
-	  ;; similar that takes processing completely outside of the URL
-	  ;; package.
-	  nil
+    (if (null asynch-buffer)
+        ;; We do not need to do anything, it was a mailto or something
+        ;; similar that takes processing completely outside of the URL
+        ;; package.
+        nil
+      (let ((proc (get-buffer-process asynch-buffer)))
+	;; If the access method was synchronous, `retrieval-done' should
+	;; hopefully already be set to t.  If it is nil, and `proc' is also
+	;; nil, it implies that the async process is not running in
+	;; asynch-buffer.  This happens e.g. for FTP files.  In such a case
+	;; url-file.el should probably set something like a `url-process'
+	;; buffer-local variable so we can find the exact process that we
+	;; should be waiting for.  In the mean time, we'll just wait for any
+	;; process output.
 	(while (not retrieval-done)
 	  (url-debug 'retrieval
 		     "Spinning in url-retrieve-synchronously: %S (%S)"
 		     retrieval-done asynch-buffer)
-	  (if (memq (process-status proc) '(closed exit signal failed))
+	  (if (and proc (memq (process-status proc)
+                              '(closed exit signal failed))
+                   ;; Make sure another process hasn't been started, as can
+                   ;; happen with http redirections.
+		   (eq proc (or (get-buffer-process asynch-buffer) proc)))
 	      ;; FIXME: It's not clear whether url-retrieve's callback is
 	      ;; guaranteed to be called or not.  It seems that url-http
 	      ;; decides sometimes consciously not to call it, so it's not
-	      ;; clear that it's a bug, but even if we need to decide how
+	      ;; clear that it's a bug, but even then we need to decide how
 	      ;; url-http can then warn us that the download has completed.
               ;; In the mean time, we use this here workaround.
               (setq retrieval-done t)
@@ -193,7 +206,7 @@ no further processing).  URL is either a string or a parsed URL."
             ;; interrupt it before it got a chance to handle process input.
             ;; `sleep-for' was tried but it lead to other forms of
             ;; hanging.  --Stef
-            (unless (accept-process-output proc)
+            (unless (or (accept-process-output proc) (null proc))
               ;; accept-process-output returned nil, maybe because the process
               ;; exited (and may have been replaced with another).
               (setq proc (get-buffer-process asynch-buffer))))))
@@ -201,9 +214,9 @@ no further processing).  URL is either a string or a parsed URL."
 
 (defun url-mm-callback (&rest ignored)
   (let ((handle (mm-dissect-buffer t)))
-    (save-excursion
-      (url-mark-buffer-as-dead (current-buffer))
-      (set-buffer (generate-new-buffer (url-recreate-url url-current-object)))
+    (url-mark-buffer-as-dead (current-buffer))
+    (with-current-buffer
+        (generate-new-buffer (url-recreate-url url-current-object))
       (if (eq (mm-display-part handle) 'external)
 	  (progn
 	    (set-process-sentinel
@@ -215,13 +228,17 @@ no further processing).  URL is either a string or a parsed URL."
 	    (message "Viewing externally")
 	    (kill-buffer (current-buffer)))
 	(display-buffer (current-buffer))
-	(add-hook 'kill-buffer-hook 
+	(add-hook 'kill-buffer-hook
 		  `(lambda () (mm-destroy-parts ',handle))
 		  nil
 		  t)))))
 
 (defun url-mm-url (url)
   "Retrieve URL and pass to the appropriate viewing application."
+  ;; These requires could advantageously be moved to url-mm-callback or
+  ;; turned into autoloads, but I suspect that it would introduce some bugs
+  ;; because loading those files from a process sentinel or filter may
+  ;; result in some undesirable carner cases.
   (require 'mm-decode)
   (require 'mm-view)
   (url-retrieve url 'url-mm-callback nil))

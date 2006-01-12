@@ -1,7 +1,7 @@
 ;;; debug.el --- debuggers and related commands for Emacs
 
-;; Copyright (C) 1985, 1986, 1994, 2001, 2003, 2005
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1985, 1986, 1994, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: lisp, tools, maint
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -88,6 +88,8 @@ This is to optimize `debugger-make-xrefs'.")
 (defvar debugger-outer-standard-output)
 (defvar debugger-outer-inhibit-redisplay)
 (defvar debugger-outer-cursor-in-echo-area)
+(defvar debugger-will-be-back nil
+  "Non-nil if we expect to get back in the debugger soon.")
 
 (defvar inhibit-debug-on-entry nil
   "Non-nil means that debug-on-entry is disabled.")
@@ -96,6 +98,8 @@ This is to optimize `debugger-make-xrefs'.")
   "Non-nil means that debug-on-entry is disabled.
 This variable is used by `debugger-jump', `debugger-step-through',
 and `debugger-reenable' to temporarily disable debug-on-entry.")
+
+(defvar inhibit-trace)                  ;Not yet implemented.
 
 ;;;###autoload
 (setq debugger 'debug)
@@ -121,6 +125,7 @@ first will be printed into the backtrace buffer."
 			     (get-buffer-create "*Backtrace*")))
 	  (debugger-old-buffer (current-buffer))
 	  (debugger-step-after-exit nil)
+          (debugger-will-be-back nil)
 	  ;; Don't keep reading from an executing kbd macro!
 	  (executing-kbd-macro nil)
 	  ;; Save the outer values of these vars for the `e' command
@@ -145,7 +150,8 @@ first will be printed into the backtrace buffer."
 	  (debugger-outer-standard-input standard-input)
 	  (debugger-outer-standard-output standard-output)
 	  (debugger-outer-inhibit-redisplay inhibit-redisplay)
-	  (debugger-outer-cursor-in-echo-area cursor-in-echo-area))
+	  (debugger-outer-cursor-in-echo-area cursor-in-echo-area)
+	  (debugger-with-timeout-suspend (with-timeout-suspend)))
       ;; Set this instead of binding it, so that `q'
       ;; will not restore it.
       (setq overriding-terminal-local-map nil)
@@ -178,7 +184,7 @@ first will be printed into the backtrace buffer."
 		  ;; Place an extra debug-on-exit for macro's.
 		  (when (eq 'lambda (car-safe (cadr (backtrace-frame 4))))
 		    (backtrace-debug 5 t)))
-		(pop-to-buffer debugger-buffer)
+                (pop-to-buffer debugger-buffer)
 		(debugger-mode)
 		(debugger-setup-buffer debugger-args)
 		(when noninteractive
@@ -210,13 +216,27 @@ first will be printed into the backtrace buffer."
 	      ;; Still visible despite the save-window-excursion?  Maybe it
 	      ;; it's in a pop-up frame.  It would be annoying to delete and
 	      ;; recreate it every time the debugger stops, so instead we'll
-	      ;; erase it and hide it but keep it alive.
+	      ;; erase it (and maybe hide it) but keep it alive.
 	      (with-current-buffer debugger-buffer
 		(erase-buffer)
 		(fundamental-mode)
 		(with-selected-window (get-buffer-window debugger-buffer 0)
-		  (bury-buffer)))
+                  (when (and (window-dedicated-p (selected-window))
+                             (not debugger-will-be-back))
+                    ;; If the window is not dedicated, burying the buffer
+                    ;; will mean that the frame created for it is left
+                    ;; around showing some random buffer, and next time we
+                    ;; pop to the debugger buffer we'll create yet
+                    ;; another frame.
+                    ;; If debugger-will-be-back is non-nil, the frame
+                    ;; would need to be de-iconified anyway immediately
+                    ;; after when we re-enter the debugger, so iconifying it
+                    ;; here would cause flashing.
+                    ;; Use quit-window rather than bury-buffer to quieten
+                    ;; Drew Adams.  --Stef
+                    (quit-window))))
 	    (kill-buffer debugger-buffer))
+	  (with-timeout-unsuspend debugger-with-timeout-suspend)
 	  (set-match-data debugger-outer-match-data)))
       ;; Put into effect the modified values of these variables
       ;; in case the user set them with the `e' command.
@@ -294,11 +314,17 @@ That buffer should be current already."
   ;; After any frame that uses eval-buffer,
   ;; insert a line that states the buffer position it's reading at.
   (save-excursion
-    (while (re-search-forward "^  eval-buffer(" nil t)
-      (end-of-line)
-      (insert (format "\n  ;;; Reading at buffer position %d"
-		      (with-current-buffer (nth 2 (backtrace-frame (debugger-frame-number)))
-			(point))))))
+    (let ((tem eval-buffer-list))
+      (while (and tem
+		  (re-search-forward "^  eval-\\(buffer\\|region\\)(" nil t))
+	(end-of-line)
+	(insert (format "  ; Reading at buffer position %d"
+			;; This will get the wrong result
+			;; if there are two nested eval-region calls
+			;; for the same buffer.  That's not a very useful case.
+			(with-current-buffer (car tem)
+			  (point))))
+	(pop tem))))
   (debugger-make-xrefs))
 
 (defun debugger-make-xrefs (&optional buffer)
@@ -307,7 +333,7 @@ That buffer should be current already."
   (save-excursion
     (set-buffer (or buffer (current-buffer)))
     (setq buffer (current-buffer))
-    (let ((buffer-read-only nil)
+    (let ((inhibit-read-only t)
 	  (old-end (point-min)) (new-end (point-min)))
       ;; If we saved an old backtrace, find the common part
       ;; between the new and the old.
@@ -327,9 +353,10 @@ That buffer should be current already."
 		  (forward-line -1)
 		  (setq new-start (point)))
 		(if (not (zerop
-			  (compare-buffer-substrings
-			   (current-buffer) old-start old-end
-			   buffer new-start new-end)))
+                          (let ((case-fold-search nil))
+                            (compare-buffer-substrings
+                             (current-buffer) old-start old-end
+                             buffer new-start new-end))))
 		    (setq all-match nil))))
 	    ;; Now new-end is the position of the start of the
 	    ;; unchanged part in the current buffer, and old-end is
@@ -377,6 +404,7 @@ Enter another debugger on next entry to eval, apply or funcall."
   (interactive)
   (setq debugger-step-after-exit t)
   (setq debugger-jumping-flag t)
+  (setq debugger-will-be-back t)
   (add-hook 'post-command-hook 'debugger-reenable)
   (message "Proceeding, will debug on next eval or call.")
   (exit-recursive-edit))
@@ -387,6 +415,12 @@ Enter another debugger on next entry to eval, apply or funcall."
   (unless debugger-may-continue
     (error "Cannot continue"))
   (message "Continuing.")
+  (save-excursion
+    ;; Check to see if we've flagged some frame for debug-on-exit, in which
+    ;; case we'll probably come back to the debugger soon.
+    (goto-char (point-min))
+    (if (re-search-forward "^\\* " nil t)
+        (setq debugger-will-be-back t)))
   (exit-recursive-edit))
 
 (defun debugger-return-value (val)
@@ -397,6 +431,12 @@ will be used, such as in a debug on exit from a frame."
   (setq debugger-value val)
   (princ "Returning " t)
   (prin1 debugger-value)
+  (save-excursion
+    ;; Check to see if we've flagged some frame for debug-on-exit, in which
+    ;; case we'll probably come back to the debugger soon.
+    (goto-char (point-min))
+    (if (re-search-forward "^\\* " nil t)
+        (setq debugger-will-be-back t)))
   (exit-recursive-edit))
 
 (defun debugger-jump ()
@@ -406,6 +446,7 @@ will be used, such as in a debug on exit from a frame."
   (setq debugger-jumping-flag t)
   (add-hook 'post-command-hook 'debugger-reenable)
   (message "Continuing through this frame")
+  (setq debugger-will-be-back t)
   (exit-recursive-edit))
 
 (defun debugger-reenable ()
@@ -454,7 +495,7 @@ Applies to the frame whose line point is on in the backtrace."
   (beginning-of-line)
   (backtrace-debug (debugger-frame-number) t)
   (if (= (following-char) ? )
-      (let ((buffer-read-only nil))
+      (let ((inhibit-read-only t))
 	(delete-char 1)
 	(insert ?*)))
   (beginning-of-line))
@@ -470,7 +511,7 @@ Applies to the frame whose line point is on in the backtrace."
   (beginning-of-line)
   (backtrace-debug (debugger-frame-number) nil)
   (if (= (following-char) ?*)
-      (let ((buffer-read-only nil))
+      (let ((inhibit-read-only t))
 	(delete-char 1)
 	(insert ? )))
   (beginning-of-line))
@@ -559,34 +600,9 @@ Applies to the frame whose line point is on in the backtrace."
     (define-key map "e" 'debugger-eval-expression)
     (define-key map " " 'next-line)
     (define-key map "R" 'debugger-record-expression)
-    (define-key map "\C-m" 'help-follow)
+    (define-key map "\C-m" 'debug-help-follow)
     (define-key map [mouse-2] 'push-button)
     map))
-
-(defcustom debugger-record-buffer "*Debugger-record*"
-  "*Buffer name for expression values, for \\[debugger-record-expression]."
-  :type 'string
-  :group 'debugger
-  :version "20.3")
-
-(defun debugger-record-expression  (exp)
-  "Display a variable's value and record it in `*Backtrace-record*' buffer."
-  (interactive
-   (list (read-from-minibuffer
-	  "Record Eval: "
-	  nil
-	  read-expression-map t
-	  'read-expression-history)))
-  (let* ((buffer (get-buffer-create debugger-record-buffer))
-	 (standard-output buffer))
-    (princ (format "Debugger Eval (%s): " exp))
-    (princ (debugger-eval-expression exp))
-    (terpri))
-
-  (with-current-buffer (get-buffer debugger-record-buffer)
-    (message "%s" 
-	     (buffer-substring (line-beginning-position 0)
-			       (line-end-position 0)))))
 
 (put 'debugger-mode 'mode-class 'special)
 
@@ -613,6 +629,54 @@ Complete list of commands:
   (use-local-map debugger-mode-map)
   (run-mode-hooks 'debugger-mode-hook))
 
+(defcustom debugger-record-buffer "*Debugger-record*"
+  "*Buffer name for expression values, for \\[debugger-record-expression]."
+  :type 'string
+  :group 'debugger
+  :version "20.3")
+
+(defun debugger-record-expression  (exp)
+  "Display a variable's value and record it in `*Backtrace-record*' buffer."
+  (interactive
+   (list (read-from-minibuffer
+	  "Record Eval: "
+	  nil
+	  read-expression-map t
+	  'read-expression-history)))
+  (let* ((buffer (get-buffer-create debugger-record-buffer))
+	 (standard-output buffer))
+    (princ (format "Debugger Eval (%s): " exp))
+    (princ (debugger-eval-expression exp))
+    (terpri))
+
+  (with-current-buffer (get-buffer debugger-record-buffer)
+    (message "%s"
+	     (buffer-substring (line-beginning-position 0)
+			       (line-end-position 0)))))
+
+(defun debug-help-follow (&optional pos)
+  "Follow cross-reference at POS, defaulting to point.
+
+For the cross-reference format, see `help-make-xrefs'."
+  (interactive "d")
+  (require 'help-mode)
+  ;; Ideally we'd just do (call-interactively 'help-follow) except that this
+  ;; assumes we're already in a *Help* buffer and reuses it, so it ends up
+  ;; incorrectly "reusing" the *Backtrace* buffer to show the help info.
+  (unless pos
+    (setq pos (point)))
+  (unless (push-button pos)
+    ;; check if the symbol under point is a function or variable
+    (let ((sym
+	   (intern
+	    (save-excursion
+	      (goto-char pos) (skip-syntax-backward "w_")
+	      (buffer-substring (point)
+				(progn (skip-syntax-forward "w_")
+				       (point)))))))
+      (when (or (boundp sym) (fboundp sym) (facep sym))
+        (help-xref-interned sym)))))
+
 ;; When you change this, you may also need to change the number of
 ;; frames that the debugger skips.
 (defun implement-debug-on-entry ()
@@ -623,25 +687,50 @@ functions to break on entry."
       nil
     (funcall debugger 'debug)))
 
+(defun debugger-special-form-p (symbol)
+  "Return whether SYMBOL is a special form."
+  (and (fboundp symbol)
+       (subrp (symbol-function symbol))
+       (eq (cdr (subr-arity (symbol-function symbol))) 'unevalled)))
+
 ;;;###autoload
 (defun debug-on-entry (function)
   "Request FUNCTION to invoke debugger each time it is called.
-If you tell the debugger to continue, FUNCTION's execution proceeds.
-This works by modifying the definition of FUNCTION,
-which must be written in Lisp, not predefined.
+
+When called interactively, prompt for FUNCTION in the minibuffer.
+
+This works by modifying the definition of FUNCTION.  If you tell the
+debugger to continue, FUNCTION's execution proceeds.  If FUNCTION is a
+normal function or a macro written in Lisp, you can also step through
+its execution.  FUNCTION can also be a primitive that is not a special
+form, in which case stepping is not possible.  Break-on-entry for
+primitive functions only works when that function is called from Lisp.
+
 Use \\[cancel-debug-on-entry] to cancel the effect of this command.
 Redefining FUNCTION also cancels it."
-  (interactive "aDebug on entry (to function): ")
-  (when (and (subrp (symbol-function function)) 
-	     (eq (cdr (subr-arity (symbol-function function))) 'unevalled))
+  (interactive
+   (let ((fn (function-called-at-point)) val)
+     (when (debugger-special-form-p fn)
+       (setq fn nil))
+     (setq val (completing-read
+		(if fn
+		    (format "Debug on entry to function (default %s): " fn)
+		  "Debug on entry to function: ")
+		obarray
+		#'(lambda (symbol)
+		    (and (fboundp symbol)
+			 (not (debugger-special-form-p symbol))))
+		t nil nil (symbol-name fn)))
+     (list (if (equal val "") fn (intern val)))))
+  (when (debugger-special-form-p function)
     (error "Function %s is a special form" function))
-  (if (or (symbolp (symbol-function function)) 
+  (if (or (symbolp (symbol-function function))
 	  (subrp (symbol-function function)))
       ;; The function is built-in or aliased to another function.
       ;; Create a wrapper in which we can add the debug call.
       (fset function `(lambda (&rest debug-on-entry-args)
 			,(interactive-form (symbol-function function))
-			(apply ',(symbol-function function) 
+			(apply ',(symbol-function function)
 			       debug-on-entry-args)))
     (when (eq (car-safe (symbol-function function)) 'autoload)
       ;; The function is autoloaded.  Load its real definition.
@@ -662,14 +751,19 @@ Redefining FUNCTION also cancels it."
 ;;;###autoload
 (defun cancel-debug-on-entry (&optional function)
   "Undo effect of \\[debug-on-entry] on FUNCTION.
-If argument is nil or an empty string, cancel for all functions."
+If FUNCTION is nil, cancel debug-on-entry for all functions.
+When called interactively, prompt for FUNCTION in the minibuffer.
+To specify a nil argument interactively, exit with an empty minibuffer."
   (interactive
    (list (let ((name
-		(completing-read "Cancel debug on entry (to function): "
-				 (mapcar 'symbol-name debug-function-list)
-				 nil t nil)))
-	   (if name (intern name)))))
-  (if (and function (not (string= function "")))
+		(completing-read
+		 "Cancel debug on entry to function (default all functions): "
+		 (mapcar 'symbol-name debug-function-list) nil t)))
+	   (when name
+	     (unless (string= name "")
+	       (intern name))))))
+  (if (and function
+	   (not (string= function ""))) ; Pre 22.1 compatibility test.
       (progn
 	(let ((defn (debug-on-entry-1 function nil)))
 	  (condition-case nil
@@ -709,7 +803,7 @@ If argument is nil or an empty string, cancel for all functions."
 (defun debug-on-entry-1 (function flag)
   (let* ((defn (symbol-function function))
 	 (tail defn))
-    (when (eq (car-safe tail) 'macro) 
+    (when (eq (car-safe tail) 'macro)
       (setq tail (cdr tail)))
     (if (not (eq (car-safe tail) 'lambda))
 	;; Only signal an error when we try to set debug-on-entry.

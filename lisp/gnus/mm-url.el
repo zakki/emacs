@@ -1,5 +1,6 @@
 ;;; mm-url.el --- a wrapper of url functions/commands for Gnus
-;; Copyright (C) 2001, 2002, 2003 Free Software Foundation, Inc.
+
+;; Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Shenghuo Zhu <zsh@cs.rochester.edu>
 
@@ -17,8 +18,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -42,6 +43,10 @@
       (require 'timer-funcs)
     (require 'timer)))
 
+(defvar url-current-object)
+(defvar url-package-name)
+(defvar url-package-version)
+
 (defgroup mm-url nil
   "A wrapper of url package and external url command for Gnus."
   :group 'gnus)
@@ -59,7 +64,7 @@
   '((wget "wget" "--user-agent=mm-url" "-q" "-O" "-")
     (w3m  "w3m" "-dump_source")
     (lynx "lynx" "-source")
-    (curl "curl" "--silent")))
+    (curl "curl" "--silent" "--user-agent mm-url" "--location")))
 
 (defcustom mm-url-program
   (cond
@@ -271,7 +276,10 @@ This is taken from RFC 2396.")
 (defun mm-url-load-url ()
   "Load `url-insert-file-contents'."
   (unless (condition-case ()
-	      (require 'url-handlers)
+	      (progn
+		(require 'url-handlers)
+		(require 'url-parse)
+		(require 'url-vars))
 	    (error nil))
     ;; w3-4.0pre0.46 or earlier version.
     (require 'w3-vars)
@@ -360,7 +368,7 @@ If FOLLOW-REFRESH is non-nil, redirect refresh url in META."
 (defun mm-url-decode-entities ()
   "Decode all HTML entities."
   (goto-char (point-min))
-  (while (re-search-forward "&\\(#[0-9]+\\|[a-z]+\\);" nil t)
+  (while (re-search-forward "&\\(#[0-9]+\\|[a-z]+[0-9]*\\);" nil t)
     (let ((elem (if (eq (aref (match-string 1) 0) ?\#)
 			(let ((c
 			       (string-to-number (substring

@@ -4,8 +4,10 @@
 @settitle GNU Emacs Lisp Reference Manual
 @c %**end of header
 
-@c Versino of the manual.
-@set VERSION 2.9
+@c Version of the manual and of Emacs.
+@c Please remember to update the edition number in README as well.
+@set VERSION  2.9
+@set EMACSVER 22.0.50
 
 @dircategory Emacs
 @direntry
@@ -24,79 +26,62 @@
 @c We use the "type index" to index new functions and variables.
 @c @syncodeindex tp fn
 
-@ifnottex
-This Info file contains edition @value{VERSION} of the GNU Emacs Lisp
-Reference Manual, corresponding to Emacs version 22.1.
-@c Please REMEMBER to update edition number in *four* places in this file
-@c                 and also in *one* place in intro.texi and *one* in README.
+@copying
+This is edition @value{VERSION} of the GNU Emacs Lisp
+Reference Manual, corresponding to Emacs version @value{EMACSVER}.
 
-Published by the Free Software Foundation
-59 Temple Place, Suite 330
-Boston, MA  02111-1307  USA
+Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 1999,
+              2000, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
-Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998, 1999, 2005,@*
-              2000, 2002 Free Software Foundation, Inc.
-
+@quotation
 Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
+under the terms of the GNU Free Documentation License, Version 1.2 or
 any later version published by the Free Software Foundation; with the
-Invariant Sections being ``GNU General Public License'', with the Front-Cover texts being
-``A GNU Manual'', and with the Back-Cover Texts as in (a) below.  A copy
-of the license is included in the section entitled ``GNU Free
-Documentation License''.
+Invariant Sections being ``GNU General Public License'', with the
+Front-Cover texts being ``A GNU Manual'', and with the Back-Cover
+Texts as in (a) below.  A copy of the license is included in the
+section entitled ``GNU Free Documentation License''.
 
 (a) The FSF's Back-Cover Text is: ``You have freedom to copy and modify
 this GNU Manual, like GNU software.  Copies published by the Free
 Software Foundation raise funds for GNU development.''
-@end ifnottex
+@end quotation
+@end copying
 
 @titlepage
 @title GNU Emacs Lisp Reference Manual
-@subtitle For Emacs Version 22
-@c The edition number appears in several places in this file
-@c and also in the file intro.texi.
+@subtitle For Emacs Version @value{EMACSVER}
 @subtitle Revision @value{VERSION}, January 2002
 
 @author by Bil Lewis, Dan LaLiberte, Richard Stallman
 @author and the GNU Manual Group
 @page
 @vskip 0pt plus 1filll
-Copyright @copyright{} 1990, 1991, 1992, 1993, 1994, 1995, 1996, 1998,@*
-1999, 2000, 2002 Free Software Foundation, Inc.
+@insertcopying
 
-@sp 2
-Edition @value{VERSION} @*
-Revised for Emacs Version 22.1,@*
-January 2002.@*
-@sp 2
+@sp 1
+Published by the Free Software Foundation @*
+51 Franklin St, Fifth Floor @*
+Boston, MA 02110-1301 @*
+USA @*
 ISBN 1-882114-73-6
 
-@sp 2
-Published by the Free Software Foundation @*
-59 Temple Place, Suite 330@*
-Boston, MA  02111-1307  USA
-
-Permission is granted to copy, distribute and/or modify this document
-under the terms of the GNU Free Documentation License, Version 1.1 or
-any later version published by the Free Software Foundation; with the
-Invariant Sections being ``Copying'', with the Front-Cover texts being
-``A GNU Manual'', and with the Back-Cover Texts as in (a) below.  A copy
-of the license is included in the section entitled ``GNU Free
-Documentation License''.
-
-(a) The FSF's Back-Cover Text is: ``You have freedom to copy and modify
-this GNU Manual, like GNU software.  Copies published by the Free
-Software Foundation raise funds for GNU development.''
-
+@sp 1
 Cover art by Etienne Suvasa.
 @end titlepage
-@page
 
-@node Top, Introduction, (dir), (dir)
+
+@c Print the tables of contents
+@summarycontents
+@contents
+
 
 @ifnottex
+@node Top, Introduction, (dir), (dir)
+@top Emacs Lisp 
+
 This Info file contains edition @value{VERSION} of the GNU Emacs Lisp
-Reference Manual, corresponding to GNU Emacs version 22.1.
+Reference Manual, corresponding to GNU Emacs version @value{EMACSVER}.
 @end ifnottex
 
 @menu
@@ -156,7 +141,7 @@ Reference Manual, corresponding to GNU Emacs version 22.1.
 
 Appendices
 
-* Antinews::                Info for users downgrading to Emacs 20.
+* Antinews::                Info for users downgrading to Emacs 21.
 * GNU Free Documentation License:: The license for this documentation
 * GPL::                     Conditions for copying and changing GNU Emacs.
 * Tips::                    Advice and coding conventions for Emacs Lisp.
@@ -171,9 +156,10 @@ Appendices
 * Index::                   Index including concepts, functions, variables,
                               and other terms.
 
-* New Symbols::             New functions and variables in Emacs 22.
+* New Symbols::             New functions and variables in Emacs @value{EMACSVER}.
 
-      --- The Detailed Node Listing ---
+Detailed Node Listing
+---------------------
 
 Here are other nodes that are inferiors of those already listed,
 mentioned here so you can get to them in one step:
@@ -288,6 +274,7 @@ Lists
 * Modifying Lists::         Storing new pieces into an existing list.
 * Sets And Lists::          A list can represent a finite mathematical set.
 * Association Lists::       A list can represent a finite relation or mapping.
+* Rings::                   Managing a fixed-size ring of objects.
 
 Modifying Existing List Structure
 
@@ -514,7 +501,7 @@ Edebug
 * Edebug Execution Modes::  Execution modes, stopping more or less often.
 * Jumping::		    Commands to jump to a specified place.
 * Edebug Misc::		    Miscellaneous commands.
-* Breakpoints::		    Setting breakpoints to make the program stop.
+* Breaks::		    Setting breakpoints to make the program stop.
 * Trapping Errors::	    Trapping errors with Edebug.
 * Edebug Views::	    Views inside and outside of Edebug.
 * Edebug Eval::		    Evaluating expressions within Edebug.
@@ -524,7 +511,7 @@ Edebug
 * Trace Buffer::	    How to produce trace output in a buffer.
 * Coverage Testing::	    How to test evaluation coverage.
 * The Outside Context::	    Data that Edebug saves and restores.
-* Instrumenting Macro Calls:: Specifying how to handle macro calls.
+* Edebug and Macros::       Specifying how to handle macro calls.
 * Edebug Options::	    Option variables for customizing Edebug.
 
 Debugging Invalid Lisp Syntax
@@ -556,6 +543,10 @@ Minibuffers
 * Yes-or-No Queries::       Asking a question with a simple answer.
 * Multiple Queries::	    Asking a series of similar questions.
 * Reading a Password::	    Reading a password from the terminal.
+* Minibuffer Commands::     Commands used as key bindings in minibuffers.
+* Minibuffer Contents::     How such commands access the minibuffer text.
+* Minibuffer Windows::      Operating on the special minibuffer windows.
+* Recursive Mini::          Whether recursive entry to minibuffer is allowed.
 * Minibuffer Misc::         Various customization hooks and variables.
 
 Completion
@@ -921,13 +912,13 @@ Non-ASCII Characters
 Searching and Matching
 
 * String Search::           Search for an exact match.
+* Searching and Case::      Case-independent or case-significant searching.
 * Regular Expressions::     Describing classes of strings.
 * Regexp Search::           Searching for a match for a regexp.
 * POSIX Regexps::           Searching POSIX-style for the longest match.
-* Search and Replace::	    Internals of @code{query-replace}.
-* Match Data::              Finding out which part of the text matched
-                              various parts of a regexp, after regexp search.
-* Searching and Case::      Case-independent or case-significant searching.
+* Match Data::              Finding out which part of the text matched,
+                              after a string or regexp search.
+* Search and Replace::	    Commands that loop, searching and replacing.
 * Standard Regexps::        Useful regexps for finding sentences, pages,...
 
 Regular Expressions
@@ -983,6 +974,8 @@ Processes
 * Datagrams::               UDP network connections.
 * Low-Level Network::       Lower-level but more general function
                               to create connections and servers.
+* Misc Network::            Additional relevant functions for network connections.
+* Byte Packing::            Using bindat to pack and unpack binary data.
 
 Receiving Output from Processes
 
@@ -996,11 +989,10 @@ Emacs Display
 * Refresh Screen::          Clearing the screen and redrawing everything on it.
 * Forcing Redisplay::       Forcing redisplay.
 * Truncation::              Folding or wrapping long text lines.
-* The Echo Area::           Where messages are displayed.
+* The Echo Area::           Displaying messages at the bottom of the screen.
 * Warnings::                Displaying warning messages for the user.
-* Progress::                Informing user about progress of a long operation.
 * Invisible Text::          Hiding part of the buffer text.
-* Selective Display::       Hiding part of the buffer text.
+* Selective Display::       Hiding part of the buffer text (the old way).
 * Temporary Displays::      Displays that go away automatically.
 * Overlays::		    Use overlays to highlight parts of the buffer.
 * Width::                   How wide a character or string is on the screen.
@@ -1014,7 +1006,6 @@ Emacs Display
 * Images::                  Displaying images in Emacs buffers.
 * Buttons::                 Adding clickable buttons to Emacs buffers.
 * Blinking::                How Emacs shows the matching open parenthesis.
-* Inverse Video::	    Specifying how the screen looks.
 * Usual Display::	    The usual conventions for displaying nonprinting chars.
 * Display Tables::	    How to specify other conventions.
 * Beeping::                 Audible signal to the user.
@@ -1029,6 +1020,8 @@ Operating System Interface
 * Time of Day::		    Getting the current time.
 * Time Conversion::         Converting a time from numeric form to a string, or
                               to calendrical data (or vice versa).
+* Time Parsing::            Converting a time from numeric form to text
+                              and vice versa.
 * Processor Run Time::      Getting the run time used by Emacs.
 * Time Calculations::       Adding, subtracting, comparing times, etc.
 * Timers::		    Setting a timer to call a function at a certain time.
@@ -1055,7 +1048,10 @@ Getting out of Emacs
 Tips and Conventions
 
 * Coding Conventions::      Conventions for clean and robust programs.
-* Compilation Tips::        Making compiled code run fast.
+* Key Binding Conventions::   Which keys should be bound by which programs.
+* Programming Tips::          Making Emacs code fit smoothly in Emacs.
+* Compilation Tips::          Making compiled code run fast.
+* Warning Tips::              Turning off compiler warnings.
 * Documentation Tips::      Writing readable documentation strings.
 * Comment Tips::	    Conventions for writing comments.
 * Library Headers::         Standard headers for library packages.
@@ -1147,11 +1143,6 @@ Object Internals
 @unnumbered New Symbols Since the Previous Edition
 
 @printindex tp
-
-@c Print the tables of contents
-@summarycontents
-@contents
-@c That's all
 
 @bye
 

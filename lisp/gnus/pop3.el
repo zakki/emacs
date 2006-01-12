@@ -1,8 +1,7 @@
 ;;; pop3.el --- Post Office Protocol (RFC 1460) interface
 
-;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003, 2004,
-;; 2005
-;;        Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Richard L. Pieri <ratinox@peorth.gweep.net>
 ;; Maintainer: FSF
@@ -22,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -39,7 +38,7 @@
 (require 'mail-utils)
 
 (defgroup pop3 nil
-  "Post Office Protocol"
+  "Post Office Protocol."
   :group 'mail
   :group 'mail-source)
 
@@ -385,7 +384,7 @@ If NOW, use that time instead."
   (pop3-send-command process (format "USER %s" user))
   (let ((response (pop3-read-response process t)))
     (if (not (and response (string-match "+OK" response)))
-	(error (format "USER %s not valid" user)))))
+	(error "USER %s not valid" user))))
 
 (defun pop3-pass (process)
   "Send authentication information to the server."

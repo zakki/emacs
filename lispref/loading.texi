@@ -1,8 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999,
-@c 2003, 2004, 2005
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2003,
+@c   2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/loading
 @node Loading, Byte Compilation, Customization, Top
@@ -292,7 +291,8 @@ tells @code{locate-library} to display the file name in the echo area.
 @defvar load-suffixes
 This variable is a list of suffixes (strings) that @code{load} should
 try adding to the specified file name.  The default value is
-@code{(".elc" ".el")}.  There is no need to include the null suffix.
+@code{(".elc" ".elc.gz" ".el" ".el.gz" ".gz")}.  There is no need to
+include the null suffix.
 @end defvar
 
 @node Loading Non-ASCII
@@ -481,17 +481,22 @@ autoloading with a magic comment:
 Here's what that produces in @file{loaddefs.el}:
 
 @smallexample
-(autoload 'doctor "doctor" "\
-Switch to *doctor* buffer and start giving psychotherapy."
-  t)
+(autoload (quote doctor) "doctor" "\
+Switch to *doctor* buffer and start giving psychotherapy.
+
+\(fn)" t nil)
 @end smallexample
 
 @noindent
+@cindex @code{fn} in function's documentation string
 The backslash and newline immediately following the double-quote are a
 convention used only in the preloaded uncompiled Lisp files such as
 @file{loaddefs.el}; they tell @code{make-docfile} to put the
 documentation string in the @file{etc/DOC} file.  @xref{Building Emacs}.
-See also the commentary in @file{lib-src/make-docfile.c}.
+See also the commentary in @file{lib-src/make-docfile.c}.  @samp{(fn)}
+in the usage part of the documentation string is replaced with the
+function's name when the various help functions (@pxref{Help
+Functions}) display it.
 
   If you write a function definition with an unusual macro that is not
 one of the known and recognized function definition methods, use of an
@@ -732,23 +737,21 @@ If @var{type} is @code{nil}, then any kind of definition is
 acceptable.  If @var{type} is @code{defun} or @code{defvar}, that
 specifies function definition only or variable definition only.
 
-The value is the file name as it was specified to @code{load}:
-either an absolute file name, or a library name
-(with no directory name and no @samp{.el} or @samp{.elc} at the end).
-It can also be @code{nil}, if the definition is not associated with any file.
+The value is normally an absolute file name.  It can also be
+@code{nil}, if the definition is not associated with any file.
 @end defun
 
   The basis for @code{symbol-file} is the data in the variable
 @code{load-history}.
 
 @defvar load-history
-This variable's value is an alist connecting library names with the
+This variable's value is an alist connecting library file names with the
 names of functions and variables they define, the features they provide,
 and the features they require.
 
 Each element is a list and describes one library.  The @sc{car} of the
-list is the name of the library, as a string.  The rest of the list
-elements have these forms:
+list is the absolute file name of the library, as a string.  The rest
+of the list elements have these forms:
 
 @table @code
 @item @var{var}

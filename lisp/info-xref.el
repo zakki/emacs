@@ -1,6 +1,6 @@
 ;;; info-xref.el --- check external references in an Info document
 
-;; Copyright (C) 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Kevin Ryde <user42@zip.com.au>
 ;; Keywords: docs
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -138,19 +138,25 @@ should open up the purported top file and see what subfiles it says."
 ;; Some dynamic variables are used to share information with sub-functions
 ;; below.
 ;;
-;; info-xref-filename - current top-level filename, eg. /usr/info/foo.info.gz
-;;
 ;; info-xref-filename-header - a heading message for the current top-level
 ;;     filename, or "" when it's been printed.
 ;;
+(defvar info-xref-xfile-alist)
+;;
 ;; info-xref-good - count of good cross references.
 ;;
+(defvar info-xref-good)
+;;
 ;; info-xref-bad - count of bad cross references.
+;;
+(defvar info-xref-bad)
 ;;
 ;; info-xref-xfile-alist - indexed by "(foo)" with value nil or t according
 ;;     to whether "(foo)" exists or not.  This is used to suppress duplicate
 ;;     messages about foo not being available.  (Duplicates within one
 ;;     top-level file that is.)
+;;
+(defvar info-xref-filename-heading)
 
 (defun info-xref-check-list (filename-list)
   "Check external references in info documents in FILENAME-LIST."

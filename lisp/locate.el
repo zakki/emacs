@@ -1,6 +1,7 @@
 ;;; locate.el --- interface to the locate command
 
-;; Copyright (C) 1996, 1998, 2001 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1998, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Peter Breton <pbreton@cs.umb.edu>
 ;; Keywords: unix files
@@ -19,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -143,12 +144,12 @@
 
 (defcustom locate-fcodes-file nil
   "*File name for the database of file names."
-  :type '(choice file (const nil))
+  :type '(choice (const :tag "None" nil) file)
   :group 'locate)
 
 (defcustom locate-header-face nil
   "*Face used to highlight the locate header."
-  :type 'face
+  :type '(choice (const :tag "None" nil) face)
   :group 'locate)
 
 ;;;###autoload
@@ -208,7 +209,7 @@ With prefix arg, prompt for the locate command to run."
 	       (input
 		(read-from-minibuffer
 		 (if  (> (length default) 0)
-		     (format "Locate (default `%s'): " default)
+		     (format "Locate (default %s): " default)
 		   (format "Locate: "))
 		 nil nil nil 'locate-history-list default t)))
 	       (and (equal input "") default
@@ -228,7 +229,8 @@ With prefix arg, prompt for the locate command to run."
     (save-window-excursion
       (set-buffer (get-buffer-create locate-buffer-name))
       (locate-mode)
-      (let ((inhibit-read-only t))
+      (let ((inhibit-read-only t)
+	    (buffer-undo-list t))
 	(erase-buffer)
 
 	(setq locate-current-filter filter)
@@ -375,13 +377,13 @@ do not work in subdirectories.
   (set (make-local-variable 'dired-directory) "/")
   (set (make-local-variable 'dired-subdir-switches) locate-ls-subdir-switches)
   (setq dired-switches-alist nil)
-  (make-local-variable 'dired-move-to-filename-regexp)
+  (make-local-variable 'directory-listing-before-filename-regexp)
   ;; This should support both Unix and Windoze style names
-  (setq dired-move-to-filename-regexp
+  (setq directory-listing-before-filename-regexp
 	(concat "^."
 		(make-string (1- locate-filename-indentation) ?\ )
 		"\\(/\\|[A-Za-z]:\\)\\|"
-		(default-value 'dired-move-to-filename-regexp)))
+		(default-value 'directory-listing-before-filename-regexp)))
   (make-local-variable 'dired-actual-switches)
   (setq dired-actual-switches "")
   (make-local-variable 'dired-permission-flags-regexp)

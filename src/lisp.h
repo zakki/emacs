@@ -1,6 +1,6 @@
 /* Fundamental definitions for GNU Emacs Lisp interpreter.
    Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 1998, 1999, 2000,
-   2001, 2002, 2003, 2004, 2005  Free Software Foundation, Inc.
+                 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #ifndef EMACS_LISP_H
 #define EMACS_LISP_H
@@ -29,7 +29,7 @@ Boston, MA 02111-1307, USA.  */
 #define P_(proto) ()
 #endif
 
-#if 1
+#if 0
 /* Define this temporarily to hunt a bug.  If defined, the size of
    strings is redundantly recorded in sdata structures so that it can
    be compared to the sizes recorded in Lisp strings.  */
@@ -253,7 +253,7 @@ LISP_MAKE_RVALUE (Lisp_Object o)
 /* If union type is not wanted, define Lisp_Object as just a number.  */
 
 #ifdef NO_UNION_TYPE
-#define Lisp_Object EMACS_INT
+typedef EMACS_INT Lisp_Object;
 #define LISP_MAKE_RVALUE(o) (0+(o))
 #endif /* NO_UNION_TYPE */
 
@@ -454,7 +454,7 @@ enum pvec_type
 extern Lisp_Object make_number P_ ((EMACS_INT));
 #endif
 
-#define EQ(x, y) ((x).s.val == (y).s.val && (x).s.type == (y).s.type)
+#define EQ(x, y) ((x).i == (y).i)
 
 #endif /* NO_UNION_TYPE */
 
@@ -600,9 +600,19 @@ struct Lisp_Cons
     /* Please do not use the names of these elements in code other
        than the core lisp implementation.  Use XCAR and XCDR below.  */
 #ifdef HIDE_LISP_IMPLEMENTATION
-    Lisp_Object car_, cdr_;
+    Lisp_Object car_;
+    union
+    {
+      Lisp_Object cdr_;
+      struct Lisp_Cons *chain;
+    } u;
 #else
-    Lisp_Object car, cdr;
+    Lisp_Object car;
+    union
+    {
+      Lisp_Object cdr;
+      struct Lisp_Cons *chain;
+    } u;
 #endif
   };
 
@@ -615,10 +625,10 @@ struct Lisp_Cons
    invalidated at arbitrary points.)  */
 #ifdef HIDE_LISP_IMPLEMENTATION
 #define XCAR_AS_LVALUE(c) (XCONS ((c))->car_)
-#define XCDR_AS_LVALUE(c) (XCONS ((c))->cdr_)
+#define XCDR_AS_LVALUE(c) (XCONS ((c))->u.cdr_)
 #else
 #define XCAR_AS_LVALUE(c) (XCONS ((c))->car)
-#define XCDR_AS_LVALUE(c) (XCONS ((c))->cdr)
+#define XCDR_AS_LVALUE(c) (XCONS ((c))->u.cdr)
 #endif
 
 /* Use these from normal code.  */
@@ -1275,17 +1285,21 @@ union Lisp_Misc
 /* Lisp floating point type */
 struct Lisp_Float
   {
+    union
+    {
 #ifdef HIDE_LISP_IMPLEMENTATION
-    double data_;
+      double data_;
 #else
-    double data;
+      double data;
 #endif
+      struct Lisp_Float *chain;
+    } u;
   };
 
 #ifdef HIDE_LISP_IMPLEMENTATION
-#define XFLOAT_DATA(f)	(XFLOAT (f)->data_)
+#define XFLOAT_DATA(f)	(XFLOAT (f)->u.data_)
 #else
-#define XFLOAT_DATA(f)	(XFLOAT (f)->data)
+#define XFLOAT_DATA(f)	(XFLOAT (f)->u.data)
 #endif
 
 /* A character, declared with the following typedef, is a member
@@ -1797,7 +1811,7 @@ extern int interrupt_input_pending;
         Lisp_Object flag = Vquit_flag;			\
 	Vquit_flag = Qnil;				\
 	if (EQ (Vthrow_on_input, flag))			\
-	  Fthrow (Vthrow_on_input, Qnil);		\
+	  Fthrow (Vthrow_on_input, Qt);			\
 	Fsignal (Qquit, Qnil);				\
       }							\
     else if (interrupt_input_pending)			\
@@ -1813,7 +1827,7 @@ extern int interrupt_input_pending;
         Lisp_Object flag = Vquit_flag;			\
 	Vquit_flag = Qnil;				\
 	if (EQ (Vthrow_on_input, flag))			\
-	  Fthrow (Vthrow_on_input, Qnil);		\
+	  Fthrow (Vthrow_on_input, Qt);			\
 	Fsignal (Qquit, Qnil);				\
       }							\
   } while (0)
@@ -1876,9 +1890,13 @@ extern Lisp_Object Vascii_canon_table, Vascii_eqv_table;
 
 extern int consing_since_gc;
 
-/* Threshold for doing another gc.  */
+/* Thresholds for doing another gc.  */
 
 extern EMACS_INT gc_cons_threshold;
+
+extern EMACS_INT gc_relative_threshold;
+
+extern EMACS_INT memory_full_cons_threshold;
 
 /* Structure for recording stack slots that need marking.  */
 
@@ -2545,6 +2563,7 @@ extern void init_alloc_once P_ ((void));
 extern void init_alloc P_ ((void));
 extern void syms_of_alloc P_ ((void));
 extern struct buffer * allocate_buffer P_ ((void));
+extern int valid_lisp_object_p P_ ((Lisp_Object));
 
 /* Defined in print.c */
 extern Lisp_Object Vprin1_to_string_buffer;
@@ -2662,6 +2681,7 @@ extern Lisp_Object call6 P_ ((Lisp_Object, Lisp_Object, Lisp_Object, Lisp_Object
 EXFUN (Fdo_auto_save, 2);
 extern Lisp_Object apply_lambda P_ ((Lisp_Object, Lisp_Object, int));
 extern Lisp_Object internal_catch P_ ((Lisp_Object, Lisp_Object (*) (Lisp_Object), Lisp_Object));
+extern Lisp_Object internal_lisp_condition_case P_ ((Lisp_Object, Lisp_Object, Lisp_Object));
 extern Lisp_Object internal_condition_case P_ ((Lisp_Object (*) (void), Lisp_Object, Lisp_Object (*) (Lisp_Object)));
 extern Lisp_Object internal_condition_case_1 P_ ((Lisp_Object (*) (Lisp_Object), Lisp_Object, Lisp_Object, Lisp_Object (*) (Lisp_Object)));
 extern Lisp_Object internal_condition_case_2 P_ ((Lisp_Object (*) (int, Lisp_Object *), int, Lisp_Object *, Lisp_Object, Lisp_Object (*) (Lisp_Object)));
@@ -2768,6 +2788,7 @@ EXFUN (Fbuffer_disable_undo, 1);
 EXFUN (Fbuffer_enable_undo, 1);
 EXFUN (Ferase_buffer, 0);
 extern Lisp_Object Qoverlayp;
+extern Lisp_Object Qevaporate;
 extern Lisp_Object get_truename_buffer P_ ((Lisp_Object));
 extern struct buffer *all_buffers;
 EXFUN (Fprevious_overlay_change, 1);
@@ -2835,11 +2856,12 @@ extern void syms_of_abbrev P_ ((void));
 /* defined in search.c */
 extern void shrink_regexp_cache P_ ((void));
 EXFUN (Fstring_match, 3);
-extern void restore_match_data P_ ((void));
-EXFUN (Fmatch_data, 2);
-EXFUN (Fset_match_data, 1);
+extern void restore_search_regs P_ ((void));
+EXFUN (Fmatch_data, 3);
+EXFUN (Fset_match_data, 2);
 EXFUN (Fmatch_beginning, 1);
 EXFUN (Fmatch_end, 1);
+extern void record_unwind_save_match_data P_ ((void));
 EXFUN (Flooking_at, 1);
 extern int fast_string_match P_ ((Lisp_Object, Lisp_Object));
 extern int fast_c_string_match_ignore_case P_ ((Lisp_Object, const char *));
@@ -2954,7 +2976,7 @@ extern Lisp_Object do_switch_frame P_ ((Lisp_Object, int, int));
 extern Lisp_Object get_frame_param P_ ((struct frame *, Lisp_Object));
 extern Lisp_Object frame_buffer_predicate P_ ((Lisp_Object));
 EXFUN (Fframep, 1);
-EXFUN (Fselect_frame, 2);
+EXFUN (Fselect_frame, 1);
 EXFUN (Fselected_frame, 0);
 EXFUN (Fwindow_frame, 1);
 EXFUN (Fframe_root_window, 1);
@@ -3022,12 +3044,9 @@ extern int wait_reading_process_output P_ ((int, int, int, int,
 					    Lisp_Object,
 					    struct Lisp_Process *,
 					    int));
-extern void deactivate_process P_ ((Lisp_Object));
 extern void add_keyboard_wait_descriptor P_ ((int));
 extern void delete_keyboard_wait_descriptor P_ ((int));
 extern void close_process_descs P_ ((void));
-extern void status_notify P_ ((void));
-extern int read_process_output P_ ((Lisp_Object, int));
 extern void init_process P_ ((void));
 extern void syms_of_process P_ ((void));
 extern void setup_process_coding_systems P_ ((Lisp_Object));
@@ -3103,6 +3122,9 @@ EXFUN (Fx_popup_dialog, 3);
 extern void syms_of_xmenu P_ ((void));
 
 /* defined in sysdep.c */
+#ifndef HAVE_GET_CURRENT_DIR_NAME
+extern char *get_current_dir_name P_ ((void));
+#endif
 extern void stuff_char P_ ((char c));
 extern void init_sigio P_ ((int));
 extern void request_sigio P_ ((void));

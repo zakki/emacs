@@ -1,13 +1,14 @@
 @c This is part of the Emacs manual.
-@c Copyright (C)  2005 Free Software Foundation, Inc.
+@c Copyright (C) 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 
 @node Antinews, Mac OS, X Resources, Top
-@appendix Emacs 22.1 Antinews
+@appendix Emacs 21 Antinews
 
   For those users who live backwards in time, here is information about
 downgrading to Emacs version 21.4.  We hope you will enjoy the greater
-simplicity that results from the absence of many Emacs 22 features.
+simplicity that results from the absence of many Emacs @value{EMACSVER}
+features.
 
 @itemize @bullet
 
@@ -17,7 +18,10 @@ the mode line, where they can be more easily seen.
 
 @item
 The mode line of the selected window is no longer displayed with a
-special face.  All mode lines are created equal.
+special face.  All mode lines are created equal.  Meanwhile, you can
+use the variable @code{mode-line-inverse-video} to control whether
+mode lines are highlighted at all---@code{nil} means don't highlight
+them.
 
 @item
 Clicking on a link with the left mouse button (@kbd{mouse-1}) will
@@ -59,9 +63,10 @@ the @samp{-f} option will not read arguments for interactive
 functions.
 
 @item
-Emacs now looks for @file{.emacs} and @file{.emacs_SHELL} in one
-standard location---your home directory.  Don't put these files in
-@file{~/.emacs.d}; they won't be found.
+We have standardized on one location for the user init file: the file
+named @file{.emacs} in your home directory.  Emacs will not look for
+the init file in @file{~/.emacs.d/init.el}.  Similarly, don't try
+putting @file{.emacs_SHELL} in @file{~/.emacs.d}; Emacs won't find it.
 
 @item
 Emacs will not read @file{~/.abbrev_defs} automatically.  If you want
@@ -150,9 +155,8 @@ The variable @code{fill-nobreak-predicate} is no longer customizable,
 and it can only hold a single function.
 
 @item
-Non-breaking spaces and hyphens are displayed just like normal
-characters.  The user option @code{show-nonbreak-escape} is therefore
-obsolete, and has been removed.
+Nobreak spaces and hyphens are displayed just like normal characters,
+and the user option @code{nobreak-char-display} has been removed.
 
 @item
 @kbd{C-w} in an incremental search always grabs an entire word

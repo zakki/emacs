@@ -1,7 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2004
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2002, 2003,
+@c   2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/files
 @node Files, Backups and Auto-Saving, Documentation, Top
@@ -98,9 +98,9 @@ new buffer and reading the file into it.  It also returns that buffer.
 Aside from some technical details, the body of the @code{find-file}
 function is basically equivalent to:
 
-@example
+@smallexample
 (switch-to-buffer (find-file-noselect filename nil nil wildcards))
-@end example
+@end smallexample
 
 @noindent
 (See @code{switch-to-buffer} in @ref{Displaying Buffers}.)
@@ -341,10 +341,10 @@ The optional @var{pred} argument controls which buffers to ask about
 If it is @code{nil}, that means to ask only about file-visiting buffers.
 If it is @code{t}, that means also offer to save certain other non-file
 buffers---those that have a non-@code{nil} buffer-local value of
-@code{buffer-offer-save}.  (A user who says @samp{yes} to saving a
-non-file buffer is asked to specify the file name to use.)  The
-@code{save-buffers-kill-emacs} function passes the value @code{t} for
-@var{pred}.
+@code{buffer-offer-save} (@pxref{Killing Buffers}).  A user who says
+@samp{yes} to saving a non-file buffer is asked to specify the file
+name to use.  The @code{save-buffers-kill-emacs} function passes the
+value @code{t} for @var{pred}.
 
 If @var{pred} is neither @code{t} nor @code{nil}, then it should be
 a function of no arguments.  It will be called in each buffer to decide
@@ -625,7 +625,7 @@ feature is useful for programs that use files for internal purposes,
 files that the user does not need to know about.
 @end deffn
 
-@defmac with-temp-file file body...
+@defmac with-temp-file file body@dots{}
 @anchor{Definition of with-temp-file}
 The @code{with-temp-file} macro evaluates the @var{body} forms with a
 temporary buffer as the current buffer; then, at the end, it writes the
@@ -2580,7 +2580,9 @@ Here are the operations that a magic file name handler gets to handle:
 @code{get-file-buffer},
 @code{insert-directory},
 @code{insert-file-contents},@*
-@code{load}, @code{make-directory},
+@code{load},
+@code{make-auto-save-file-name},
+@code{make-directory},
 @code{make-directory-internal},
 @code{make-symbolic-link},@*
 @code{rename-file}, @code{set-file-modes}, @code{set-file-times},
@@ -2704,11 +2706,13 @@ The operation for which certain handlers are presently inhibited.
 @end defvar
 
 @defun find-file-name-handler file operation
-This function returns the handler function for file name @var{file}, or
-@code{nil} if there is none.  The argument @var{operation} should be the
-operation to be performed on the file---the value you will pass to the
-handler as its first argument when you call it.  The operation is needed
-for comparison with @code{inhibit-file-name-operation}.
+This function returns the handler function for file name @var{file},
+or @code{nil} if there is none.  The argument @var{operation} should
+be the operation to be performed on the file---the value you will pass
+to the handler as its first argument when you call it.  If
+@var{operation} equals @code{inhibit-file-name-operation}, or if it is
+not found in the @code{operations} property of the handler, this
+function returns @code{nil}.
 @end defun
 
 @defun file-local-copy filename
@@ -2731,9 +2735,9 @@ This function tests whether @var{filename} is a remote file.  If
 If @var{filename} is indeed remote, the return value is a string that
 identifies the remote system.
 
-This identifier string may include a host name, a user name, and
-characters designating the method used to access the remote system.
-For example, the remote identifier string for the filename
+This identifier string can include a host name and a user name, as
+well as characters designating the method used to access the remote
+system.  For example, the remote identifier string for the filename
 @code{/ssh:user@@host:/some/file} is @code{/ssh:user@@host:}.
 
 If @code{file-remote-p} returns the same identifier for two different

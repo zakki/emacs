@@ -1,6 +1,7 @@
 ;;; pp.el --- pretty printer for Emacs Lisp
 
-;; Copyright (C) 1989, 1993, 2001, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 1989, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Randal Schwartz <merlyn@stonehenge.com>
 ;; Keywords: lisp
@@ -19,12 +20,14 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
 ;;; Code:
+
+(defvar font-lock-verbose)
 
 (defgroup pp nil
   "Pretty printer for Emacs Lisp."
@@ -67,7 +70,7 @@ to make output that `read' can handle, whenever this is possible."
       (save-excursion
         (backward-char 1)
         (skip-chars-backward "'`#^")
-        (when (and (not (bobp)) (memq (char-before) '(?\ ?\t ?\n)))
+        (when (and (not (bobp)) (memq (char-before) '(?\s ?\t ?\n)))
           (delete-region
            (point)
            (progn (skip-chars-backward " \t\n") (point)))

@@ -1,6 +1,6 @@
 ;;; url-http.el --- HTTP retrieval routines
 
-;; Copyright (c) 1999, 2001, 2004  Free Software Foundation, Inc.
+;; Copyright (C) 1999, 2001, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Bill Perry <wmperry@gnu.org>
 ;; Keywords: comm, data, processes
@@ -19,16 +19,16 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl)
-  (defvar url-http-extra-headers))
+(eval-when-compile (require 'cl))
+(defvar url-http-extra-headers)
+(defvar url-http-target-url)
 (require 'url-gw)
 (require 'url-util)
 (require 'url-parse)
@@ -156,8 +156,7 @@ request.
 		       (let ((url-basic-auth-storage
 			      'url-http-proxy-basic-auth-storage))
 			 (url-get-authentication url nil 'any nil))))
-	 (real-fname (if proxy-obj (url-recreate-url proxy-obj)
-		       (url-filename url)))
+	 (real-fname (url-filename (or proxy-obj url)))
 	 (host (url-host (or proxy-obj url)))
 	 (auth (if (cdr-safe (assoc "Authorization" url-request-extra-headers))
 		   nil
@@ -194,77 +193,92 @@ request.
 	(setq extra-headers (concat extra-headers "\r\n")))
 
     ;; This was done with a call to `format'.  Concatting parts has
-    ;; the advantage of keeping the parts of each header togther and
+    ;; the advantage of keeping the parts of each header together and
     ;; allows us to elide null lines directly, at the cost of making
     ;; the layout less clear.
     (setq request
-	  (concat
-	   ;; The request
-	   (or url-request-method "GET") " " real-fname " HTTP/" url-http-version "\r\n"
-	   ;; Version of MIME we speak
-	   "MIME-Version: 1.0\r\n"
-	   ;; (maybe) Try to keep the connection open
-	   "Connection: " (if (or proxy-obj
-				  (not url-http-attempt-keepalives))
-			      "close" "keep-alive") "\r\n"
-	   ;; HTTP extensions we support
-	   (if url-extensions-header
-	       (format
-		"Extension: %s\r\n" url-extensions-header))
-	   ;; Who we want to talk to
-	   (if (/= (url-port (or proxy-obj url))
-		   (url-scheme-get-property
-		    (url-type (or proxy-obj url)) 'default-port))
-	       (format
-		"Host: %s:%d\r\n" host (url-port (or proxy-obj url)))
-	     (format "Host: %s\r\n" host))
-	   ;; Who its from
-	   (if url-personal-mail-address
-	       (concat
-		"From: " url-personal-mail-address "\r\n"))
-	   ;; Encodings we understand
-	   (if url-mime-encoding-string
-	       (concat
-		"Accept-encoding: " url-mime-encoding-string "\r\n"))
-	   (if url-mime-charset-string
-	       (concat
-		"Accept-charset: " url-mime-charset-string "\r\n"))
-	   ;; Languages we understand
-	   (if url-mime-language-string
-	       (concat
-		"Accept-language: " url-mime-language-string "\r\n"))
-	   ;; Types we understand
-	   "Accept: " (or url-mime-accept-string "*/*") "\r\n"
-	   ;; User agent
-	   (url-http-user-agent-string)
-	   ;; Proxy Authorization
-	   proxy-auth
-	   ;; Authorization
-	   auth
-	   ;; Cookies
-	   (url-cookie-generate-header-lines host real-fname
-					     (equal "https" (url-type url)))
-	   ;; If-modified-since
-	   (if (and (not no-cache)
-		    (member url-request-method '("GET" nil)))
-	       (let ((tm (url-is-cached (or proxy-obj url))))
-		 (if tm
-		     (concat "If-modified-since: "
-			     (url-get-normalized-date tm) "\r\n"))))
-	   ;; Whence we came
-	   (if ref-url (concat
-			"Referer: " ref-url "\r\n"))
-	   extra-headers
-	   ;; Length of data
-	   (if url-request-data
-	       (concat
-		"Content-length: " (number-to-string
-				    (length url-request-data))
-		"\r\n"))
-	   ;; End request
-	   "\r\n"
-	   ;; Any data
-	   url-request-data))
+          ;; We used to concat directly, but if one of the strings happens
+          ;; to being multibyte (even if it only contains pure ASCII) then
+          ;; every string gets converted with `string-MAKE-multibyte' which
+          ;; turns the 127-255 codes into things like latin-1 accented chars
+          ;; (it would work right if it used `string-TO-multibyte' instead).
+          ;; So to avoid the problem we force every string to be unibyte.
+          (mapconcat
+           ;; FIXME: Instead of `string-AS-unibyte' we'd want
+           ;; `string-to-unibyte', so as to properly signal an error if one
+           ;; of the strings contains a multibyte char.
+           'string-as-unibyte
+           (delq nil
+            (list
+             ;; The request
+             (or url-request-method "GET") " "
+             (if proxy-obj (url-recreate-url proxy-obj) real-fname)
+             " HTTP/" url-http-version "\r\n"
+             ;; Version of MIME we speak
+             "MIME-Version: 1.0\r\n"
+             ;; (maybe) Try to keep the connection open
+             "Connection: " (if (or proxy-obj
+                                    (not url-http-attempt-keepalives))
+                                "close" "keep-alive") "\r\n"
+                                ;; HTTP extensions we support
+             (if url-extensions-header
+                 (format
+                  "Extension: %s\r\n" url-extensions-header))
+             ;; Who we want to talk to
+             (if (/= (url-port (or proxy-obj url))
+                     (url-scheme-get-property
+                      (url-type (or proxy-obj url)) 'default-port))
+                 (format
+                  "Host: %s:%d\r\n" host (url-port (or proxy-obj url)))
+               (format "Host: %s\r\n" host))
+             ;; Who its from
+             (if url-personal-mail-address
+                 (concat
+                  "From: " url-personal-mail-address "\r\n"))
+             ;; Encodings we understand
+             (if url-mime-encoding-string
+                 (concat
+                  "Accept-encoding: " url-mime-encoding-string "\r\n"))
+             (if url-mime-charset-string
+                 (concat
+                  "Accept-charset: " url-mime-charset-string "\r\n"))
+             ;; Languages we understand
+             (if url-mime-language-string
+                 (concat
+                  "Accept-language: " url-mime-language-string "\r\n"))
+             ;; Types we understand
+             "Accept: " (or url-mime-accept-string "*/*") "\r\n"
+             ;; User agent
+             (url-http-user-agent-string)
+             ;; Proxy Authorization
+             proxy-auth
+             ;; Authorization
+             auth
+             ;; Cookies
+             (url-cookie-generate-header-lines host real-fname
+                                               (equal "https" (url-type url)))
+             ;; If-modified-since
+             (if (and (not no-cache)
+                      (member url-request-method '("GET" nil)))
+                 (let ((tm (url-is-cached (or proxy-obj url))))
+                   (if tm
+                       (concat "If-modified-since: "
+                               (url-get-normalized-date tm) "\r\n"))))
+             ;; Whence we came
+             (if ref-url (concat
+                          "Referer: " ref-url "\r\n"))
+             extra-headers
+             ;; Length of data
+             (if url-request-data
+                 (concat
+                  "Content-length: " (number-to-string
+                                      (length url-request-data))
+                  "\r\n"))
+             ;; End request
+             "\r\n"
+             ;; Any data
+             url-request-data))
+           ""))
     (url-http-debug "Request is: \n%s" request)
     request))
 
@@ -305,16 +319,9 @@ This allows us to use `mail-fetch-field', etc."
 		  " authentication.  If you'd like to write it,"
 		  " send it to " url-bug-address ".<hr>")
 	  (setq status t))
-      (let* ((args auth)
-	     (ctr (1- (length args)))
-	     auth)
-	(while (/= 0 ctr)
-	  (if (char-equal ?, (aref args ctr))
-	      (aset args ctr ?\;))
-	  (setq ctr (1- ctr)))
-	(setq args (url-parse-args args)
-	      auth (url-get-authentication url (cdr-safe (assoc "realm" args))
-					   type t args))
+      (let* ((args (url-parse-args (subst-char-in-string ?, ?\; auth)))
+	     (auth (url-get-authentication url (cdr-safe (assoc "realm" args))
+					   type t args)))
 	(if (not auth)
 	    (setq success t)
 	  (push (cons (if proxy "Proxy-Authorization" "Authorization") auth)
@@ -343,7 +350,7 @@ The buffer must already be narrowed to the headers, so mail-fetch-field will
 work correctly."
   (let ((cookies (mail-fetch-field "Set-Cookie" nil nil t))
 	(cookies2 (mail-fetch-field "Set-Cookie2" nil nil t))
-	(url-current-object url-http-cookies-sources))
+	(url-current-object url-http-target-url))
     (and cookies (url-http-debug "Found %d Set-Cookie headers" (length cookies)))
     (and cookies2 (url-http-debug "Found %d Set-Cookie2 headers" (length cookies2)))
     (while cookies
@@ -495,13 +502,17 @@ should be shown to the user."
 	   ;; non-fully-qualified URL (ie: /), which royally confuses
 	   ;; the URL library.
 	   (if (not (string-match url-nonrelative-link redirect-uri))
-	       (setq redirect-uri (url-expand-file-name redirect-uri)))
-	   (let ((url-request-method url-http-method)
+               ;; Be careful to use the real target URL, otherwise we may
+               ;; compute the redirection relative to the URL of the proxy.
+	       (setq redirect-uri
+		     (url-expand-file-name redirect-uri url-http-target-url)))
+           (let ((url-request-method url-http-method)
 		 (url-request-data url-http-data)
 		 (url-request-extra-headers url-http-extra-headers))
 	     (url-retrieve redirect-uri url-callback-function
-			   (cons redirect-uri
-				 (cdr url-callback-arguments)))
+			   (cons :redirect
+				 (cons redirect-uri
+				       url-callback-arguments)))
 	     (url-mark-buffer-as-dead (current-buffer))))))
       (4				; Client error
        ;; 400 Bad Request
@@ -711,8 +722,7 @@ should be shown to the user."
   (url-http-debug "url-http-end-of-document-sentinel in buffer (%s)"
 		  (process-buffer proc))
   (url-http-idle-sentinel proc why)
-  (save-excursion
-    (set-buffer (process-buffer proc))
+  (with-current-buffer (process-buffer proc)
     (goto-char (point-min))
     (if (not (looking-at "HTTP/"))
 	;; HTTP/0.9 just gets passed back no matter what
@@ -824,9 +834,7 @@ the end of the document."
 				 (list 'start-open t
 				       'end-open t
 				       'chunked-encoding t
-				       'face (if (featurep 'xemacs)
-						 'text-cursor
-					       'cursor)
+				       'face 'cursor
 				       'invisible t))
 	    (setq url-http-chunked-length (string-to-number (buffer-substring
                                                              (match-beginning 1)
@@ -1025,8 +1033,7 @@ CBARGS as the arguments."
 	  (setq buffer nil)
 	  (error "Could not create connection to %s:%d" (url-host url)
 		 (url-port url)))
-      (save-excursion
-	(set-buffer buffer)
+      (with-current-buffer buffer
 	(mm-disable-multibyte)
 	(setq url-current-object url
 	      mode-line-format "%b [%s]")
@@ -1046,7 +1053,7 @@ CBARGS as the arguments."
 		       url-http-method
 		       url-http-extra-headers
 		       url-http-data
-		       url-http-cookies-sources))
+		       url-http-target-url))
 	  (set (make-local-variable var) nil))
 
 	(setq url-http-method (or url-request-method "GET")
@@ -1059,9 +1066,9 @@ CBARGS as the arguments."
 	      url-callback-function callback
 	      url-callback-arguments cbargs
 	      url-http-after-change-function 'url-http-wait-for-headers-change-function
-	      url-http-cookies-sources (if (boundp 'proxy-object)
-					   proxy-object
-					 url-current-object))
+	      url-http-target-url (if (boundp 'proxy-object)
+                                      proxy-object
+                                    url-current-object))
 
 	(set-process-buffer connection buffer)
 	(set-process-sentinel connection 'url-http-end-of-document-sentinel)
@@ -1082,8 +1089,7 @@ CBARGS as the arguments."
   (declare (special url-http-after-change-function))
   (and (process-buffer proc)
        (/= (length data) 0)
-       (save-excursion
-	 (set-buffer (process-buffer proc))
+       (with-current-buffer (process-buffer proc)
 	 (url-http-debug "Calling after change function `%s' for `%S'" url-http-after-change-function proc)
 	 (funcall url-http-after-change-function
 		  (point-max)
@@ -1100,8 +1106,7 @@ CBARGS as the arguments."
     (defun url-http-symbol-value-in-buffer (symbol buffer
 						   &optional unbound-value)
       "Return the value of SYMBOL in BUFFER, or UNBOUND-VALUE if it is unbound."
-      (save-excursion
-	(set-buffer buffer)
+      (with-current-buffer buffer
 	(if (not (boundp symbol))
 	    unbound-value
 	  (symbol-value symbol))))
@@ -1184,10 +1189,9 @@ p3p
     (when (and buffer (= 2 (/ (url-http-symbol-value-in-buffer
 			       'url-http-response-status buffer 0) 100)))
       ;; Only parse the options if we got a 2xx response code!
-      (save-excursion
+      (with-current-buffer buffer
 	(save-restriction
 	  (save-match-data
-	    (set-buffer buffer)
 	    (mail-narrow-to-head)
 
 	    ;; Figure out what methods are supported.

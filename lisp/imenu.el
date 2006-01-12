@@ -1,7 +1,7 @@
 ;;; imenu.el --- framework for mode-specific buffer indexes
 
-;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 2003, 2004
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Ake Stenhoff <etxaksf@aom.ericsson.se>
 ;;         Lars Lindberg <lli@sypro.cap.se>
@@ -23,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -877,7 +877,7 @@ Return one of the entries in index-alist or nil."
 	 (if (not imenu-space-replacement) index-alist
 	   (mapcar
 	    (lambda (item)
-	      (cons (subst-char-in-string ?\ (aref imenu-space-replacement 0)
+	      (cons (subst-char-in-string ?\s (aref imenu-space-replacement 0)
 					  (car item))
 		    (cdr item)))
 	    index-alist))))

@@ -1,7 +1,7 @@
 ;;; buff-menu.el --- buffer menu main function and support functions -*- coding:utf-8 -*-
 
 ;; Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 2000, 2001, 2002, 2003,
-;;   2004, 2005  Free Software Foundation, Inc.
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: FSF
 ;; Keywords: convenience
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -74,11 +74,10 @@
   :type 'boolean
   :group 'Buffer-menu)
 
-(defface Buffer-menu-buffer-face
+(defface Buffer-menu-buffer
   '((t (:weight bold)))
   "Face used to highlight buffer name."
-  :group 'Buffer-menu
-  :group 'font-lock-highlighting-faces)
+  :group 'Buffer-menu)
 
 (defcustom Buffer-menu-buffer+size-width 26
   "*How wide to jointly make the buffer name and size columns."
@@ -90,9 +89,19 @@
   :type 'number
   :group 'Buffer-menu)
 
+(defcustom Buffer-menu-use-frame-buffer-list t
+  "If non-nil, the Buffer Menu uses the selected frame's buffer list.
+Buffers that were never selected in that frame are listed at the end.
+If the value is nil, the Buffer Menu uses the global buffer list.
+This variable matters if the Buffer Menu is sorted by visited order,
+as it is by default."
+  :type 'boolean
+  :group 'Buffer-menu
+  :version "22.1")
+
 ;; This should get updated & resorted when you click on a column heading
 (defvar Buffer-menu-sort-column nil
-  "*2 for sorting by buffer names.  5 for sorting by file names.
+  "2 for sorting by buffer names.  5 for sorting by file names.
 nil for default sorting by visited order.")
 
 (defconst Buffer-menu-buffer-column 4)
@@ -211,7 +220,12 @@ Letters do not insert themselves; instead, they are commands.
 	(prop (point-min))
 	;; do not make undo records for the reversion.
 	(buffer-undo-list t))
-    (list-buffers-noselect Buffer-menu-files-only)
+    ;; We can be called by Auto Revert Mode with the "*Buffer Menu*"
+    ;; temporarily the current buffer.  Make sure that the
+    ;; interactively current buffer is correctly identified with a `.'
+    ;; by `list-buffers-noselect'.
+    (with-current-buffer (window-buffer)
+      (list-buffers-noselect Buffer-menu-files-only))
     (if oline
 	(while (setq prop (next-single-property-change prop 'buffer))
 	  (when (eq (get-text-property prop 'buffer) oline)
@@ -303,7 +317,7 @@ For more information, see the function `buffer-menu'."
 
 (defun Buffer-menu-unmark (&optional backup)
   "Cancel all requested operations on buffer on this line and move down.
-Optional ARG means move up."
+Optional prefix arg means move up."
   (interactive "P")
   (when (Buffer-menu-no-header)
     (let* ((buf (Buffer-menu-buffer t))
@@ -367,10 +381,10 @@ and then move up one line.  Prefix arg means move that many lines."
   (save-excursion
    (beginning-of-line)
    (forward-char 2)
-   (if (= (char-after) (if arg ?  ?*))
+   (if (= (char-after) (if arg ?\s ?*))
        (let ((buffer-read-only nil))
 	 (delete-char 1)
-	 (insert (if arg ?* ? ))))))
+	 (insert (if arg ?* ?\s))))))
 
 (defun Buffer-menu-beginning ()
   (goto-char (point-min))
@@ -390,7 +404,7 @@ and then move up one line.  Prefix arg means move that many lines."
 	  (setq modp (buffer-modified-p)))
 	(let ((buffer-read-only nil))
 	  (delete-char -1)
-	  (insert (if modp ?* ? ))))))
+	  (insert (if modp ?* ?\s))))))
   (save-excursion
     (Buffer-menu-beginning)
     (let ((buff-menu-buffer (current-buffer))
@@ -403,7 +417,7 @@ and then move up one line.  Prefix arg means move that many lines."
 	      (save-excursion (kill-buffer buf)))
 	  (if (and buf (buffer-name buf))
 	    (progn (delete-char 1)
-		   (insert ? ))
+		   (insert ?\s))
 	  (delete-region (point) (progn (forward-line 1) (point)))
 	    (unless (bobp)
 	      (forward-char -1))))))))
@@ -423,7 +437,7 @@ in the selected frame."
       (setq tem (Buffer-menu-buffer t))
       (let ((buffer-read-only nil))
 	(delete-char -1)
-	(insert ?\ ))
+	(insert ?\s))
       (or (eq tem buff) (memq tem others) (setq others (cons tem others))))
     (setq others (nreverse others)
 	  tem (/ (1- (frame-height)) (1+ (length others))))
@@ -519,7 +533,7 @@ The current window remains selected."
     (save-excursion
       (set-buffer (Buffer-menu-buffer t))
       (vc-toggle-read-only)
-      (setq char (if buffer-read-only ?% ? )))
+      (setq char (if buffer-read-only ?% ?\s)))
     (save-excursion
       (beginning-of-line)
       (forward-char 1)
@@ -592,7 +606,7 @@ For more information, see the function `buffer-menu'."
 	  (make-string (- Buffer-menu-buffer+size-width
 			  (length name)
 			  (length size))
-		       ? )
+		       ?\s)
 	  size))
 
 (defun Buffer-menu-sort (column)
@@ -633,35 +647,40 @@ For more information, see the function `buffer-menu'."
 	    (insert m2)))
 	(forward-line)))))
 
+(defun Buffer-menu-sort-by-column (&optional e)
+  "Sort the buffer menu by the column clicked on."
+  (interactive (list last-input-event))
+  (if e (mouse-select-window e))
+  (let* ((pos (event-start e))
+	 (obj (posn-object pos))
+	 (col (if obj
+		  (get-text-property (cdr obj) 'column (car obj))
+		(get-text-property (posn-point pos) 'column))))
+    (Buffer-menu-sort col)))
+
+(defvar Buffer-menu-sort-button-map
+  (let ((map (make-sparse-keymap)))
+    ;; This keymap handles both nil and non-nil values for
+    ;; Buffer-menu-use-header-line.
+    (define-key map [header-line mouse-1] 'Buffer-menu-sort-by-column)
+    (define-key map [header-line mouse-2] 'Buffer-menu-sort-by-column)
+    (define-key map [mouse-2] 'Buffer-menu-sort-by-column)
+    (define-key map [follow-link] 'mouse-face)
+    (define-key map "\C-m" 'Buffer-menu-sort-by-column)
+    map)
+  "Local keymap for Buffer menu sort buttons.")
+
 (defun Buffer-menu-make-sort-button (name column)
   (if (equal column Buffer-menu-sort-column) (setq column nil))
   (propertize name
-	      'help-echo (if column
-			     (if Buffer-menu-use-header-line
-				 (concat "mouse-2: sort by " (downcase name))
-			       (concat "mouse-2, RET: sort by "
-				       (downcase name)))
-			   (if Buffer-menu-use-header-line
-			       "mouse-2: sort by visited order"
-			     "mouse-2, RET: sort by visited order"))
+	      'column column
+	      'help-echo (concat
+			  (if Buffer-menu-use-header-line
+			      "mouse-1, mouse-2: sort by "
+			    "mouse-2, RET: sort by ")
+			  (if column (downcase name) "visited order"))
 	      'mouse-face 'highlight
-	      'keymap (let ((map (make-sparse-keymap)))
-			(if Buffer-menu-use-header-line
-			    (define-key map [header-line mouse-2]
-			      `(lambda (e)
-				 (interactive "e")
-				 (save-window-excursion
-				   (if e (mouse-select-window e))
-				   (Buffer-menu-sort ,column))))
-			  (define-key map [mouse-2]
-			    `(lambda (e)
-			       (interactive "e")
-			       (if e (mouse-select-window e))
-			       (Buffer-menu-sort ,column)))
-			  (define-key map "\C-m"
-			    `(lambda () (interactive)
-			       (Buffer-menu-sort ,column))))
-			map)))
+	      'keymap Buffer-menu-sort-button-map))
 
 (defun list-buffers-noselect (&optional files-only buffer-list)
   "Create and return a buffer with a list of names of existing buffers.
@@ -675,7 +694,7 @@ it means list those buffers and no others.
 For more information, see the function `buffer-menu'."
   (let* ((old-buffer (current-buffer))
 	 (standard-output standard-output)
-	 (mode-end (make-string (- Buffer-menu-mode-width 2) ? ))
+	 (mode-end (make-string (- Buffer-menu-mode-width 2) ?\s))
 	 (header (concat "CRM "
 			 (Buffer-menu-buffer+size
 			  (Buffer-menu-make-sort-button "Buffer" 2)
@@ -710,10 +729,13 @@ For more information, see the function `buffer-menu'."
 	  (insert header
 		  (apply 'string
 			 (mapcar (lambda (c)
-				   (if (memq c '(?\n ?\ )) c underline))
+				   (if (memq c '(?\n ?\s)) c underline))
 				 header)))))
       ;; Collect info for every buffer we're interested in.
-      (dolist (buffer (or buffer-list (buffer-list)))
+      (dolist (buffer (or buffer-list
+			  (buffer-list
+			   (when Buffer-menu-use-frame-buffer-list
+			     (selected-frame)))))
 	(with-current-buffer buffer
 	  (let ((name (buffer-name))
 		(file buffer-file-name))
@@ -730,17 +752,17 @@ For more information, see the function `buffer-menu'."
 				      (format-mode-line mode-line-process
 							nil nil buffer))))
 		    (bits (string
-			   (if (eq buffer old-buffer) ?. ?\ )
+			   (if (eq buffer old-buffer) ?. ?\s)
 			   ;; Handle readonly status.  The output buffer
 			   ;; is special cased to appear readonly; it is
 			   ;; actually made so at a later date.
 			   (if (or (eq buffer standard-output)
 				   buffer-read-only)
-			       ?% ?\ )
+			       ?% ?\s)
 			   ;; Identify modified buffers.
-			   (if (buffer-modified-p) ?* ?\ )
+			   (if (buffer-modified-p) ?* ?\s)
 			   ;; Space separator.
-			   ?\ )))
+			   ?\s)))
 		(unless file
 		  ;; No visited file.  Check local value of
 		  ;; list-buffers-directory.
@@ -773,7 +795,7 @@ For more information, see the function `buffer-menu'."
 					 (int-to-string (nth 3 buffer))
 					 `(buffer-name ,(nth 2 buffer)
 					   buffer ,(car buffer)
-					   font-lock-face Buffer-menu-buffer-face
+					   font-lock-face Buffer-menu-buffer
 					   mouse-face highlight
 					   help-echo "mouse-2: select this buffer"))
 		"  "

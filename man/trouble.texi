@@ -1,5 +1,6 @@
 @c This is part of the Emacs manual.
-@c Copyright (C) 1985,86,87,93,94,95,1997,2001,2004 Free Software Foundation, Inc.
+@c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 2001, 2002,
+@c   2003, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @iftex
 @chapter Dealing with Common Problems
@@ -303,26 +304,27 @@ the following in your @file{.emacs} file:
 
   When flow control is enabled, you must type @kbd{C-\} to get the
 effect of a @kbd{C-s}, and type @kbd{C-^} to get the effect of a
-@kbd{C-q}.  (These aliases work by means of keyboard translations; see
-@ref{Keyboard Translations}.)
+@kbd{C-q}.
 
 @node Memory Full
 @subsection Running out of Memory
 @cindex memory full
 @cindex out of memory
 
-  If you get the error message @samp{Virtual memory exceeded}, save your
-modified buffers with @kbd{C-x s}.  This method of saving them has the
-smallest need for additional memory.  Emacs keeps a reserve of memory
-which it makes available when this error happens; that should be enough
-to enable @kbd{C-x s} to complete its work.
+  If you get the error message @samp{Virtual memory exceeded}, save
+your modified buffers with @kbd{C-x s}.  This method of saving them
+has the smallest need for additional memory.  Emacs keeps a reserve of
+memory which it makes available when this error happens; that should
+be enough to enable @kbd{C-x s} to complete its work.  When the
+reserve has been used, @samp{!MEM FULL!} appears at the beginning of
+the mode line, indicating there is no more reserve.
 
-  Once you have saved your modified buffers, you can exit this Emacs job
-and start another, or you can use @kbd{M-x kill-some-buffers} to free
-space in the current Emacs job.  If you kill buffers containing a
-substantial amount of text, you can safely go on editing.  Emacs refills
-its memory reserve automatically when it sees sufficient free space
-available, in case you run out of memory another time.
+  Once you have saved your modified buffers, you can exit this Emacs
+session and start another, or you can use @kbd{M-x kill-some-buffers}
+to free space in the current Emacs job.  If this frees up sufficient
+space, Emacs will refill its memory reserve, and @samp{!MEM FULL!}
+will disappear from the mode line.  That means you can safely go on
+editing in the same Emacs session.
 
   Do not use @kbd{M-x buffer-menu} to save or kill buffers when you run
 out of memory, because the buffer menu needs a fair amount of memory
@@ -368,7 +370,7 @@ available.  For each buffer, it lists a buffer number.  To save a
 buffer, use @code{ysave-buffer}; you specify the buffer number, and
 the file name to write that buffer into.  You should use a file name
 which does not already exist; if the file does exist, the script does
-not make make a backup of its old contents.
+not make a backup of its old contents.
 
 @node Emergency Escape
 @subsection Emergency Escape
@@ -595,8 +597,8 @@ or machine-readable media to this address:
 @format
 GNU Emacs Bugs
 Free Software Foundation
-59 Temple Place, Suite 330
-Boston, MA 02111-1307 USA
+51 Franklin Street, Fifth Floor
+Boston, MA 02110-1301 USA
 @end format
 
   We do not promise to fix the bug; but if the bug is serious,

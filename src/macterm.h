@@ -1,5 +1,6 @@
 /* Display module for Mac OS.
-   Copyright (C) 2000, 2001 Free Software Foundation, Inc.
+   Copyright (C) 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 /* Contributed by Andrew Choi (akochoi@mac.com).  */
 
@@ -38,13 +39,8 @@ Boston, MA 02111-1307, USA.  */
 #define BLACK_PIX_DEFAULT(f) RGB_TO_ULONG(0,0,0)
 #define WHITE_PIX_DEFAULT(f) RGB_TO_ULONG(255,255,255)
 
-/* A black pixel in a mask bitmap/pixmap means ``draw a source
-   pixel''.  A white pixel means ``retain the current pixel''. */
-#define PIX_MASK_DRAW(f) BLACK_PIX_DEFAULT(f)
-#define PIX_MASK_RETAIN(f) WHITE_PIX_DEFAULT(f)
-
-#define FONT_WIDTH(f)   ((f)->max_bounds.width)
-#define FONT_HEIGHT(f)  ((f)->ascent + (f)->descent)
+#define FONT_WIDTH(f)	((f)->max_bounds.width)
+#define FONT_HEIGHT(f)	((f)->ascent + (f)->descent)
 #define FONT_BASE(f)    ((f)->ascent)
 #define FONT_DESCENT(f) ((f)->descent)
 
@@ -83,19 +79,11 @@ struct mac_display_info
   /* Number of planes on this screen.  */
   int n_planes;
 
-  /* Whether the screen supports color */ 
+  /* Whether the screen supports color */
   int color_p;
-
-#if 0
-  /* Number of bits per pixel on this screen.  */
-  int n_cbits;
-#endif
 
   /* Dimensions of this screen.  */
   int height, width;
-#if 0
-  int height_in,width_in;
-#endif
 
   /* Mask of things that cause the mouse to be grabbed.  */
   int grabbed;
@@ -115,32 +103,11 @@ struct mac_display_info
   /* Resource data base */
   XrmDatabase xrdb;
 
-#if 0
-  /* color palette information.  */
-  int has_palette;
-  struct w32_palette_entry * color_list;
-  unsigned num_colors;
-  HPALETTE palette;
-
-  /* deferred action flags checked when starting frame update.  */
-  int regen_palette;
-
-  /* Keystroke that has been faked by Emacs and will be ignored when
-     received; value is reset after key is received.  */
-  int faked_key;
-
-#endif
-
   /* A table of all the fonts we have already loaded.  */
   struct font_info *font_table;
 
   /* The current capacity of font_table.  */
   int font_table_size;
-
-  /* The number of fonts actually stored in the font table.
-     font_table[n] is used and valid iff 0 <= n < n_fonts. 0 <=
-     n_fonts <= font_table_size. and font_table[i].name != 0. */
-  int n_fonts;
 
   /* Minimum width over all characters in all fonts in font_table.  */
   int smallest_char_width;
@@ -149,10 +116,10 @@ struct mac_display_info
   int smallest_font_height;
 
   /* Reusable Graphics Context for drawing a cursor in a non-default face. */
-  XGCValues *scratch_cursor_gc;
+  GC scratch_cursor_gc;
 
   /* These variables describe the range of text currently shown in its
-     mouse-face, together with the window they apply to. As long as
+     mouse-face, together with the window they apply to.  As long as
      the mouse stays within this range, we need not redraw anything on
      its account.  Rows and columns are glyph matrix positions in
      MOUSE_FACE_WINDOW.  */
@@ -172,7 +139,6 @@ struct mac_display_info
   /* FRAME and X, Y position of mouse when last checked for
      highlighting.  X and Y can be negative or out of range for the frame.  */
   struct frame *mouse_face_mouse_frame;
-
   int mouse_face_mouse_x, mouse_face_mouse_y;
 
   /* Nonzero means defer mouse-motion highlighting.  */
@@ -184,6 +150,11 @@ struct mac_display_info
   int mouse_face_image_state;
 
   char *mac_id_name;
+
+  /* The number of fonts actually stored in the font table.
+     font_table[n] is used and valid iff 0 <= n < n_fonts.  0 <=
+     n_fonts <= font_table_size and font_table[i].name != 0.  */
+  int n_fonts;
 
   /* Pointer to bitmap records.  */
   struct mac_bitmap_record *bitmaps;
@@ -241,7 +212,7 @@ extern int unibyte_display_via_language_environment;
 extern struct x_display_info *x_display_info_for_display P_ ((Display *));
 extern struct x_display_info *x_display_info_for_name P_ ((Lisp_Object));
 
-extern struct mac_display_info *mac_term_init ();
+extern struct mac_display_info *mac_term_init P_ ((Lisp_Object, char *, char *));
 
 extern Lisp_Object x_list_fonts P_ ((struct frame *, Lisp_Object, int, int));
 extern struct font_info *x_get_font_info P_ ((struct frame *f, int));
@@ -266,32 +237,7 @@ struct mac_output {
   /* Menubar "widget" handle.  */
   int menubar_widget;
 
-  Window mWP;			/* pointer to QuickDraw window */
   FRAME_PTR mFP;		/* points back to the frame struct */
-
-#if 0
-  int mNumCols;			/* number of characters per column */
-  int mNumRows;			/* number of characters per row */
-  int mLineHeight;		/* height of one line of text in pixels */
-  int mCharWidth;		/* width of one character in pixels */
-  int mHomeX;			/* X pixel coordinate of lower left
-				   corner of character at (0, 0) */
-  int mHomeY;			/* Y pixel coordinate of lower left
-				   corner of character at (0, 0) */
-  int mHighlight;		/* current highlight state (0 = off). */
-  int mTermWinSize;		/* num of lines from top of window
-				   affected by ins_del_lines; set by
-				   set_terminal_window. */
-#endif /* 0 */
-
-#if 0
-  /* stuffs used by xfaces.c */
-  struct face **param_faces;
-  int n_param_faces;
-  struct face **computed_faces;
-  int n_computed_faces;
-  int size_computed_faces;
-#endif
 
   /* Here are the Graphics Contexts for the default font.  */
   GC normal_gc;				/* Normal video */
@@ -326,6 +272,7 @@ struct mac_output {
   unsigned long mouse_pixel;
   unsigned long cursor_foreground_pixel;
 
+#if 0
   /* Foreground color for scroll bars.  A value of -1 means use the
      default (black for non-toolkit scroll bars).  */
   unsigned long scroll_bar_foreground_pixel;
@@ -334,6 +281,7 @@ struct mac_output {
      default (background color of the frame for non-toolkit scroll
      bars).  */
   unsigned long scroll_bar_background_pixel;
+#endif
 
   /* Descriptor for the cursor in use for this window.  */
   Cursor text_cursor;
@@ -361,10 +309,6 @@ struct mac_output {
   ControlRef hourglass_control;
 #endif
 
-#if 0
-  DWORD dwStyle;
-#endif
-
   /* This is the Emacs structure for the display this frame is on.  */
   /* struct w32_display_info *display_info; */
 
@@ -378,17 +322,10 @@ struct mac_output {
   /* Nonzero means menubar is currently active.  */
   char menubar_active;
 
-  /* Nonzero means a menu command is being processed.  */
-  char menu_command_in_progress;
-
-  /* Nonzero means menubar is about to become active, but should be
-     brought up to date first.  */
-  volatile char pending_menu_activation;
-
   /* Relief GCs, colors etc.  */
   struct relief
   {
-    XGCValues *gc;
+    GC gc;
     unsigned long pixel;
     int allocated_p;
   }
@@ -408,8 +345,8 @@ typedef struct mac_output mac_output;
 #define FRAME_X_OUTPUT(f) ((f)->output_data.mac)
 
 /* Return the Mac window used for displaying data in frame F.  */
-#define FRAME_MAC_WINDOW(f) ((f)->output_data.mac->mWP)
-#define FRAME_X_WINDOW(f) ((f)->output_data.mac->mWP)
+#define FRAME_MAC_WINDOW(f) ((f)->output_data.mac->window_desc)
+#define FRAME_X_WINDOW(f) ((f)->output_data.mac->window_desc)
 
 #define FRAME_FOREGROUND_PIXEL(f) ((f)->output_data.x->foreground_pixel)
 #define FRAME_BACKGROUND_PIXEL(f) ((f)->output_data.x->background_pixel)
@@ -535,7 +472,7 @@ struct scroll_bar {
 
 /* Return the inside width of a vertical scroll bar, given the outside
    width.  */
-#define VERTICAL_SCROLL_BAR_INSIDE_WIDTH(f,width) \
+#define VERTICAL_SCROLL_BAR_INSIDE_WIDTH(f, width) \
   ((width) \
    - VERTICAL_SCROLL_BAR_LEFT_BORDER \
    - VERTICAL_SCROLL_BAR_RIGHT_BORDER \
@@ -601,6 +538,8 @@ EXFUN (Fx_display_color_p, 1);
 EXFUN (Fx_display_grayscale_p, 1);
 EXFUN (Fx_display_planes, 1);
 extern void x_free_gcs P_ ((struct frame *));
+extern int XParseGeometry P_ ((char *, int *, int *, unsigned int *,
+			       unsigned int *));
 
 /* Defined in macterm.c.  */
 
@@ -614,17 +553,23 @@ extern Pixmap XCreatePixmapFromBitmapData P_ ((Display *, WindowPtr, char *,
 					       unsigned long, unsigned long,
 					       unsigned int));
 extern void XFreePixmap P_ ((Display *, Pixmap));
+extern GC XCreateGC P_ ((Display *, Window, unsigned long, XGCValues *));
 extern void XSetForeground P_ ((Display *, GC, unsigned long));
 extern void XSetBackground P_ ((Display *, GC, unsigned long));
 extern void XSetWindowBackground P_ ((Display *, WindowPtr, unsigned long));
 extern void mac_draw_line_to_pixmap P_ ((Display *, Pixmap, GC, int, int,
 					 int, int));
+extern void mac_clear_area P_ ((struct frame *, int, int,
+				unsigned int, unsigned int));
 extern void mac_unload_font P_ ((struct mac_display_info *, XFontStruct *));
 extern OSErr install_window_handler P_ ((WindowPtr));
 extern void remove_window_handler P_ ((WindowPtr));
+extern Lisp_Object mac_make_lispy_event_code P_ ((int));
 
 #define FONT_TYPE_FOR_UNIBYTE(font, ch) 0
 #define FONT_TYPE_FOR_MULTIBYTE(font, ch) 0
+
+#define TYPE_FILE_NAME 'fNam'
 
 /* Defined in macselect.c */
 
@@ -632,13 +577,17 @@ extern void x_clear_frame_selections P_ ((struct frame *));
 
 /* Defined in mac.c.  */
 
-extern OSErr posix_pathname_to_fsspec P_ ((const char *, FSSpec *));
-extern OSErr fsspec_to_posix_pathname P_ ((const FSSpec *, char *, int));
 extern void mac_clear_font_name_table P_ ((void));
+extern Lisp_Object mac_aedesc_to_lisp P_ ((AEDesc *));
 #if TARGET_API_MAC_CARBON
+extern OSErr create_apple_event_from_event_ref P_ ((EventRef, UInt32,
+						    EventParamName *,
+						    EventParamType *,
+						    AppleEvent *));
 extern CFStringRef cfstring_create_with_utf8_cstring P_ ((const char *));
 extern CFStringRef cfstring_create_with_string P_ ((Lisp_Object));
 extern Lisp_Object cfdata_to_lisp P_ ((CFDataRef));
+extern Lisp_Object cfstring_to_lisp_nodecode P_ ((CFStringRef));
 extern Lisp_Object cfstring_to_lisp P_ ((CFStringRef));
 extern Lisp_Object cfnumber_to_lisp P_ ((CFNumberRef));
 extern Lisp_Object cfdate_to_lisp P_ ((CFDateRef));
@@ -649,6 +598,7 @@ extern Lisp_Object cfproperty_list_to_lisp P_ ((CFPropertyListRef, int, int));
 extern void xrm_merge_string_database P_ ((XrmDatabase, char *));
 extern Lisp_Object xrm_get_resource P_ ((XrmDatabase, char *, char *));
 extern XrmDatabase xrm_get_preference_database P_ ((char *));
+EXFUN (Fmac_get_preference, 4);
 
 /* arch-tag: 6b4ca125-5bef-476d-8ee8-31ed808b7e79
    (do not change this comment) */

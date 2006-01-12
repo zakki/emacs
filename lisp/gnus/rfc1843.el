@@ -1,5 +1,7 @@
 ;;; rfc1843.el --- HZ (rfc1843) decoding
-;; Copyright (c) 1998, 1999, 2000, 2003 Free Software Foundation, Inc.
+
+;; Copyright (C) 1998, 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Shenghuo Zhu <zsh@cs.rochester.edu>
 ;; Keywords: news HZ HZ+ mail i18n
@@ -18,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -34,6 +36,10 @@
 
 (eval-when-compile (require 'cl))
 (require 'mm-util)
+
+(defvar gnus-decode-encoded-word-function)
+(defvar gnus-decode-header-function)
+(defvar gnus-newsgroup-name)
 
 (defvar rfc1843-word-regexp
   "~\\({\\([\041-\167][\041-\176]\\| \\)+\\)\\(~}\\|$\\)")

@@ -1,7 +1,7 @@
 #### Makefile for the Emacs Manual and other documentation.
 
-# Copyright (C) 1994, 1996, 1997, 1998, 1999, 2000, 2001, 2003, 2004
-#  Free Software Foundation, Inc.
+# Copyright (C) 1994, 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
+#   2004, 2005 Free Software Foundation, Inc.
 
 # This file is part of GNU Emacs.
 
@@ -17,8 +17,8 @@
 
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs; see the file COPYING.  If not, write to
-# the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-# Boston, MA 02111-1307, USA.
+# the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
 
 # Where to find the source code.  $(srcdir) will be the man
 # subdirectory of the source tree.  This is
@@ -42,7 +42,7 @@ INFO_TARGETS = ../info/emacs ../info/emacs-xtra ../info/ccmode ../info/cl \
 		../info/idlwave ../info/eudc ../info/ebrowse ../info/pcl-cvs \
 		../info/woman ../info/eshell ../info/org ../info/url \
 		../info/speedbar ../info/tramp ../info/ses ../info/smtpmail \
-		../info/flymake
+		../info/flymake ../info/newsticker
 DVI_TARGETS = 	emacs.dvi calc.dvi cc-mode.dvi cl.dvi dired-x.dvi \
 		 ediff.dvi forms.dvi gnus.dvi message.dvi emacs-mime.dvi \
                  gnus.dvi message.dvi sieve.dvi pgg.dvi mh-e.dvi \
@@ -50,7 +50,7 @@ DVI_TARGETS = 	emacs.dvi calc.dvi cc-mode.dvi cl.dvi dired-x.dvi \
 		 ada-mode.dvi autotype.dvi idlwave.dvi eudc.dvi ebrowse.dvi \
 		 pcl-cvs.dvi woman.dvi eshell.dvi org.dvi url.dvi \
 		 speedbar.dvi tramp.dvi ses.dvi smtpmail.dvi flymake.dvi \
-                 emacs-xtra.dvi
+                 newsticker.dvi emacs-xtra.dvi
 INFOSOURCES = info.texi
 
 # The following rule does not work with all versions of `make'.
@@ -321,6 +321,11 @@ smtpmail.dvi: smtpmail.texi
 	cd $(srcdir); $(MAKEINFO) flymake.texi
 flymake.dvi: flymake.texi
 	$(ENVADD) $(TEXI2DVI) ${srcdir}/flymake.texi
+
+../info/newsticker: newsticker.texi
+	cd $(srcdir); $(MAKEINFO) newsticker.texi
+newsticker.dvi: newsticker.texi
+	$(ENVADD) $(TEXI2DVI) ${srcdir}/newsticker.texi
 
 mostlyclean:
 	rm -f *.log *.cp *.fn *.ky *.pg *.vr core *.tp *.core gnustmp.*

@@ -1,4 +1,5 @@
 ;;; spam-report.el --- Reporting spam
+
 ;; Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Teodor Zlatanov <tzz@lifelogs.com>
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -46,12 +47,6 @@ or the gnus-group-spam-exit-processor-report-gmane group/topic parameter
 instead."
   :type '(radio (const nil)
 		(regexp :value "^nntp\+.*:gmane\."))
-  :group 'spam-report)
-
-(defcustom spam-report-gmane-spam-header
-  "^X-Report-Spam: http://\\([^/]+\\)\\(.*\\)$"
-  "String matching Gmane spam-reporting header.  Two match groups are needed."
-  :type 'regexp
   :group 'spam-report)
 
 (defcustom spam-report-gmane-use-article-number t
@@ -95,26 +90,49 @@ undo that change.")
 		   (string-match spam-report-gmane-regex gnus-newsgroup-name)))
       (gnus-message 6 "Reporting spam article %d to spam.gmane.org..." article)
       (if spam-report-gmane-use-article-number
-	  (spam-report-url-ping 
+	  (spam-report-url-ping
 	   "spam.gmane.org"
 	   (format "/%s:%d"
 		   (gnus-group-real-name gnus-newsgroup-name)
 		   article))
 	(with-current-buffer nntp-server-buffer
 	  (gnus-request-head article gnus-newsgroup-name)
-	  (goto-char (point-min))
-	  (if (re-search-forward spam-report-gmane-spam-header nil t)
-	      (let* ((host (match-string 1))
-		     (report (match-string 2))
-		     (url (format "http://%s%s" host report)))
-		(gnus-message 7 "Reporting spam through URL %s..." url)
-		(spam-report-url-ping host report))
-	    (gnus-message 3 "Could not find X-Report-Spam in article %d..."
-			  article)))))))
+	  (let ((case-fold-search t)
+		field host report url)
+	    ;; First check for X-Report-Spam because it's more specific to
+	    ;; spam reporting than Archived-At.  OTOH, all new articles on
+	    ;; Gmane don't have X-Report-Spam anymore (unless Lars changes his
+	    ;; mind :-)).
+	    ;;
+	    ;; There might be more than one Archived-At header so we need to
+	    ;; find (and transform) the one related to Gmane.
+	    (setq field (or (gnus-fetch-field "X-Report-Spam")
+			    (gnus-fetch-field "Archived-At")))
+	    (setq host (progn
+			 (string-match
+			  (concat "http://\\([a-z]+\\.gmane\\.org\\)"
+				  "\\(/[^:/]+[:/][0-9]+\\)")
+			  field)
+			 (match-string 1 field)))
+	    (setq report (match-string 2 field))
+	    (when (string-equal "permalink.gmane.org" host)
+	      (setq host "spam.gmane.org")
+	      (setq report (gnus-replace-in-string
+			    report "/\\([0-9]+\\)$" ":\\1")))
+	    (setq url (format "http://%s%s" host report))
+	    (if (not (and host report url))
+		(gnus-message
+		 3 "Could not find a spam report header in article %d..."
+		 article)
+	      (gnus-message 7 "Reporting spam through URL %s..." url)
+	      (spam-report-url-ping host report))))))))
 
 (defun spam-report-url-ping (host report)
   "Ping a host through HTTP, addressing a specific GET resource using
 the function specified by `spam-report-url-ping-function'."
+  ;; Example:
+  ;; host: "spam.gmane.org"
+  ;; report: "/gmane.some.group:123456"
   (funcall spam-report-url-ping-function host report))
 
 (defun spam-report-url-ping-plain (host report)
@@ -132,7 +150,7 @@ the function specified by `spam-report-url-ping-function'."
       (process-send-string
        tcp-connection
        (format "GET %s HTTP/1.1\nUser-Agent: %s (spam-report.el)\nHost: %s\n\n"
-	       report (gnus-emacs-version) host)))))
+	       report (gnus-extended-version) host)))))
 
 ;;;###autoload
 (defun spam-report-process-queue (&optional file keep)

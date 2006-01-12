@@ -1,3 +1,105 @@
+2005-12-30  Eli Zaretskii  <eliz@gnu.org>
+
+	* makefile.w32-in (MOUSE_SUPPORT): Add tooltip.elc.
+	(lisp1): Add rfn-eshadow.elc, international/utf-16.elc, image.elc,
+	international/fontset.elc, dnd.elc, mwheel.elc, and tool-bar.elc.
+	Rearrange the list to be similar to $(shortlisp) in
+	src/Makefile.in.
+	(lisp2): Add language/kannada.el, emacs-lisp/syntax.elc,
+	emacs-lisp/timer.elc, jka-cmpr-hook.elc, font-lock.elc,
+	jit-lock.elc.  Rearrange the list to be similar to $(shortlisp) in
+	src/Makefile.in.
+
+2005-12-22  Richard M. Stallman  <rms@gnu.org>
+
+	* Makefile.in (update-game-score.o): Delete spurious final `\'.
+
+2005-11-18  Hideki IWAMOTO <h-iwamoto@kit.hi-ho.ne.jp>  (tiny change)
+
+	* etags.c (main): Cxref mode writes to stdout: do not close tagf,
+	which was never opened.
+
+2005-10-20  Olli Savia  <ops@iki.fi>  (tiny change)
+
+	* etags.c: Undef STDIN if defined.  (LynxOS defines it in system
+	header files.)
+
+2005-09-27  Francesco Potort,Al(B  <pot@gnu.org>
+
+	* etags.c: Preliminary Forth support.
+	(prolog_pr): Cast strlen to int before comparison.
+	(LOOKING_AT, LOOKING_AT_NOCASE): Let the preprocessor check that
+	the second argument is indeed a literal string.
+	(main): In append mode, sort the tags file after writing it.
+
+2005-09-27  Emanuele Giaquinta  <emanuele.giaquinta@gmail.com>  (tiny change)
+
+	* etags.c (longopts, print_help, main): The -a (--append) option
+	can be used in ctags also; for one, the Linux make file uses it.
+
+2005-09-20  Chong Yidong  <cyd@stupidchicken.com>
+
+	* ebrowse.c (add_sym): Compare namespace names instead of
+	namespace objects.  This prevents the parser from incorrectly
+	treating classes whose superclass is in another namespace.
+
+2005-09-15  Richard M. Stallman  <rms@gnu.org>
+
+	* Makefile.in (update-game-score.o): New target.
+	Compile and link this progranm separately.
+	(update-game-score${EXEEXT}): Use GETOPTDEPTS.
+
+2005-09-11  Jason Rumney  <jasonr@gnu.org>
+
+	* makefile.w32-in (../src/config.h): Don't overwrite. Print a
+	message instead.
+	(../src/paths.h): Removed.
+
+2005-07-27  Juanma Barranquero  <lekktu@gmail.com>
+
+	* .cvsignore: Don't ignore fns-* and fns.el, which are no longer
+	generated.  Ignore also ctags.c and getopt.h.
+
+	* makefile.w32-in (clean): Delete getopt.h.
+	(getopt.h): New rule.
+
+2005-07-26  Paul Eggert  <eggert@cs.ucla.edu>
+
+	Merge gnulib getopt implementation into Emacs.
+
+	* Makefile.in (mostlyclean): Remove getopt.h, getopt.h-t.
+	(GETOPT_H): New macro, from gnulib.
+	(getopt.h): New rule, from gnulib.
+	(GETOPTOBJS): Now autoconfigured.
+	(GETOPTDEPS): getopt.h is now autoconfigured.
+	(getopt.o, getopt1.o): Depend on $(GETOPT_H), not ${srcdir}/getopt.h.
+	(getopt.o): Depend on ${srcdir}/gettext.h.
+	(movemail.o): Depend on $(GETOPT_H).
+	* getopt.c, getopt1.c: Sync from gnulib.
+	* getopt_.h, getopt_int.h, gettext.h: New files, from gnulib.
+	* getopt.h: Removed (now is getopt_.h).
+
+2005-07-13  Ken Raeburn  <raeburn@gnu.org>
+
+	* pop.c: Don't include des.h (or variants thereof); krb.h will do
+	it.
+	(sendline): Add the \r\n to the line in a temporary buffer, and
+	write it all at once.
+
+2005-07-04  Lute Kamstra  <lute@gnu.org>
+
+	Update FSF's address in GPL notices.
+
+2005-06-13  Eli Zaretskii  <eliz@gnu.org>
+
+	* makefile.w32-in ($(DOC)): Fix last change.
+
+2005-06-12  Eli Zaretskii  <eliz@gnu.org>
+
+	* makefile.w32-in ($(DOC)): Depend on make-docfile.exe,
+	temacs.exe, and the preloaded *.elc files.  This avoids
+	unnecessary dumping and DOC rebuilding.
+
 2005-06-04  Eli Zaretskii  <eliz@gnu.org>
 
 	* ntlib.h (fileno): Don't define if already defined.

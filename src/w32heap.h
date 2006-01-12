@@ -1,5 +1,5 @@
 /* Heap management routines (including unexec) for GNU Emacs on Windows NT.
-   Copyright (C) 1994 Free Software Foundation, Inc.
+   Copyright (C) 1994, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +15,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.
 
    Geoff Voelker (voelker@cs.washington.edu)			     7-29-94
 */
@@ -81,15 +81,6 @@ typedef struct file_data {
     HANDLE         file_mapping;
     unsigned char *file_base;
 } file_data;
-
-#define OFFSET_TO_RVA(var,section) \
-	  (section->VirtualAddress + ((DWORD)(var) - section->PointerToRawData))
-
-#define RVA_TO_OFFSET(var,section) \
-	  (section->PointerToRawData + ((DWORD)(var) - section->VirtualAddress))
-
-#define RVA_TO_PTR(var,section,filedata) \
-	  ((void *)(RVA_TO_OFFSET(var,section) + (filedata).file_base))
 
 int open_input_file (file_data *p_file, char *name);
 int open_output_file (file_data *p_file, char *name, unsigned long size);

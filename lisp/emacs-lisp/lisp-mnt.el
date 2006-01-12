@@ -1,6 +1,7 @@
 ;;; lisp-mnt.el --- utility functions for Emacs Lisp maintainers
 
-;; Copyright (C) 1992, 1994, 1997, 2000, 2001, 2003, 2004 Free Software Foundation, Inc.
+;; Copyright (C) 1992, 1994, 1997, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Eric S. Raymond <esr@snark.thyrsus.com>
 ;; Maintainer: FSF
@@ -22,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation,  Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; the Free Software Foundation,  Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -306,7 +307,7 @@ If FILE is nil, execute BODY in the current buffer."
 	     (insert-file-contents ,filesym)
 	     (lisp-mode)
 	     ,@body)
-	 (save-excursion 
+	 (save-excursion
 	   ;; Switching major modes is too drastic, so just switch
 	   ;; temporarily to the Lisp mode syntax table.
 	   (with-syntax-table lisp-mode-syntax-table
@@ -609,7 +610,7 @@ Prompts for bug subject TOPIC.  Leaves you in a mail buffer."
     (if version
 	(insert " version " version))
     (newline 2)
-    (message
+    (message "%s"
      (substitute-command-keys "Type \\[mail-send] to send bug report."))))
 
 (provide 'lisp-mnt)

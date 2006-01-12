@@ -1,6 +1,7 @@
 ;;; url-handlers.el --- file-name-handler stuff for URL loading
 
-;; Copyright (c) 1996, 1997, 1998, 1999, 2004, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2004,
+;;   2005, 2006  Free Software Foundation, Inc.
 
 ;; Keywords: comm, data, processes, hypermedia
 
@@ -18,8 +19,8 @@
 ;;
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -36,7 +37,6 @@
 ;;   after mm-dissect-buffer and defined in the same file.
 ;; The following are autoloaded instead of `require'd to avoid eagerly
 ;; loading all of URL when turning on url-handler-mode in the .emacs.
-(autoload 'url-retrieve-synchronously "url" "Retrieve url synchronously.")
 (autoload 'url-expand-file-name "url-expand" "Convert url to a fully specified url, and canonicalize it.")
 (autoload 'mm-dissect-buffer "mm-decode" "Dissect the current buffer and return a list of MIME handles.")
 (autoload 'url-scheme-get-property "url-methods" "Get property of a URL SCHEME.")
@@ -155,6 +155,9 @@ the arguments that would have been passed to OPERATION."
 ;; These are operations that we do not support yet (DAV!!!)
 (put 'file-writable-p 'url-file-handlers 'ignore)
 (put 'file-symlink-p 'url-file-handlers 'ignore)
+;; Just like for ange-ftp: let's not waste time trying to look for RCS/foo,v
+;; files and such since we can't do anything clever with them anyway.
+(put 'vc-registered 'url-file-handlers 'ignore)
 
 (defun url-handler-expand-file-name (file &optional base)
   (if (file-name-absolute-p file)
@@ -198,6 +201,7 @@ accessible."
 (defun url-insert-file-contents (url &optional visit beg end replace)
   (let ((buffer (url-retrieve-synchronously url))
 	(handle nil)
+	(charset nil)
 	(data nil))
     (if (not buffer)
 	(error "Opening input file: No such file or directory, %s" url))
@@ -211,13 +215,14 @@ accessible."
     (mm-destroy-parts handle)
     (if replace (delete-region (point-min) (point-max)))
     (save-excursion
+      (setq charset (mail-content-type-get (mm-handle-type handle)
+					     'charset))
       (let ((start (point)))
-	(insert data)
-	;; FIXME: for text/plain data, we sometimes receive a `charset'
-	;; annotation which we could use as a hint of the locale in use
-	;; at the remote site.  Not sure how/if that should be done.  --Stef
-	(decode-coding-inserted-region
-	 start (point) url visit beg end replace)))
+	(if charset
+	    (insert (mm-decode-string data (mm-charset-to-coding-system charset)))
+	  (progn
+	    (insert data)
+	    (decode-coding-inserted-region start (point) url visit beg end replace)))))
     (list url (length data))))
 
 (defun url-file-name-completion (url directory)
@@ -242,19 +247,8 @@ accessible."
 (url-handlers-create-wrapper file-writable-p (url))
 (url-handlers-create-wrapper file-directory-p (url))
 (url-handlers-create-wrapper file-executable-p (url))
-
-(if (featurep 'xemacs)
-    (progn
-      ;; XEmacs specific prototypes
-      (url-handlers-create-wrapper
-       directory-files (url &optional full match nosort files-only))
-      (url-handlers-create-wrapper
-       file-truename (url &optional default)))
-  ;; Emacs specific prototypes
-  (url-handlers-create-wrapper
-   directory-files (url &optional full match nosort))
-  (url-handlers-create-wrapper
-   file-truename (url &optional counter prev-dirs)))
+(url-handlers-create-wrapper directory-files (url &optional full match nosort))
+(url-handlers-create-wrapper file-truename (url &optional counter prev-dirs))
 
 (add-hook 'find-file-hook 'url-handlers-set-buffer-mode)
 

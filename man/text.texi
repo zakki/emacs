@@ -1,6 +1,6 @@
 @c This is part of the Emacs manual.
-@c Copyright (C) 1985,86,87,93,94,95,97,2000,2001, 2002, 2004
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1985, 1986, 1987, 1993, 1994, 1995, 1997, 2000, 2001,
+@c   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 @c See file emacs.texi for copying conditions.
 @node Text, Programs, Indentation, Top
 @chapter Commands for Human Languages
@@ -228,7 +228,7 @@ normally similar to the following regexp:
 @end example
 
 @noindent
-This example is explained in the section on regexps.  @xref{Regexps}.
+This example is explained in the section on regexps.  @xref{Regexp Example}.
 
   If you want to use just one space between sentences, you should
 set @code{sentence-end} to this value:
@@ -266,10 +266,11 @@ Put point and mark around this or next paragraph (@code{mark-paragraph}).
   @kbd{M-@{} moves to the beginning of the current or previous
 paragraph, while @kbd{M-@}} moves to the end of the current or next
 paragraph.  Blank lines and text-formatter command lines separate
-paragraphs and are not considered part of any paragraph.  In Indented
-Text mode, but not in Text mode, an indented line also starts a new
-paragraph.  If there is a blank line before the paragraph, @kbd{M-@{}
-moves to the blank line, because that is convenient in practice.
+paragraphs and are not considered part of any paragraph.  In
+Paragraph-Indent Text mode, but not in Text mode, an indented line
+also starts a new paragraph.  If there is a blank line before the
+paragraph, @kbd{M-@{} moves to the blank line, because that is
+convenient in practice.
 
   In major modes for programs, paragraphs begin and end only at blank
 lines.  This makes the paragraph commands continue to be useful even
@@ -745,8 +746,58 @@ never chosen automatically.
 automatically by setting the variable @code{adaptive-fill-function} to a
 function.  This function is called with point after the left margin of a
 line, and it should return the appropriate fill prefix based on that
-line.  If it returns @code{nil}, that means it sees no fill prefix in
-that line.
+line.  If it returns @code{nil}, @code{adaptive-fill-regexp} gets
+a chance to find a prefix.
+
+@node Longlines
+@subsection Long Lines Mode
+@cindex refilling text, word processor style
+@cindex modes, Long Lines
+@cindex word wrap
+@cindex Long Lines minor mode
+
+  Long Lines mode is a minor mode for @dfn{word wrapping}; it lets you
+edit ``unfilled'' text files, which Emacs would normally display as a
+bunch of extremely long lines.  Many text editors, such as those built
+into many web browsers, normally do word wrapping.
+
+@findex longlines-mode
+  To enable Long Lines mode, type @kbd{M-x longlines-mode}.  If the
+text is full of long lines, this will ``wrap'' them
+immediately---i.e., break up to fit in the window.  As you edit the
+text, Long Lines mode automatically re-wraps lines by inserting or
+deleting @dfn{soft newlines} as necessary (@pxref{Hard and Soft
+Newlines}.)  These soft newlines won't show up when you save the
+buffer into a file, or when you copy the text into the kill ring,
+clipboard, or a register.
+
+@findex longlines-auto-wrap
+  Word wrapping is @emph{not} the same as ordinary filling
+(@pxref{Fill Commands}).  It does not contract multiple spaces into a
+single space, recognize fill prefixes (@pxref{Fill Prefix}), or
+perform adaptive filling (@pxref{Adaptive Fill}).  The reason for this
+is that a wrapped line is still, conceptually, a single line.  Each
+soft newline is equivalent to exactly one space in that long line, and
+vice versa.  However, you can still call filling functions such as
+@kbd{M-q}, and these will work as expected, inserting soft newlines
+that won't show up on disk or when the text is copied.  You can even
+rely entirely on the normal fill commands by turning off automatic
+line wrapping, with @kbd{C-u M-x longlines-auto-wrap}.  To turn
+automatic line wrapping back on, type @kbd{M-x longlines-auto-wrap}.
+
+@findex longlines-show-hard-newlines
+  Whenever you type @kbd{RET}, you are inserting a hard newline.  If
+you want to see where all the hard newlines are, type @kbd{M-x
+longlines-show-hard-newlines}.  This will mark each hard newline with
+a special symbol.  The same command with a prefix argument turns this
+display off.
+
+  Long Lines mode does not change normal text files that are already
+filled, since the existing newlines are considered hard newlines.
+Before Long Lines can do anything, you need to transform each
+paragraph into a long line.  One way is to set @code{fill-column} to a
+large number (e.g., @kbd{C-u 9999 C-x f}), re-fill all the paragraphs,
+and then set @code{fill-column} back to its original value.
 
 @node Longlines
 @subsection Long Lines Mode
@@ -2664,7 +2715,7 @@ recognition commands (@pxref{Table Recognition}) are equipped with a
 convenience feature (turned on by default).  During table recognition,
 the contents of a cell are examined to determine which justification
 was originally applied to the cell and then applies this justification
-to the the cell.  This is a speculative algorithm and is therefore not
+to the cell.  This is a speculative algorithm and is therefore not
 perfect, however, the justification is deduced correctly most of the
 time.  If you desire to disable this feature, customize the variable
 @code{table-detect-cell-alignment} to set it to @code{nil}.

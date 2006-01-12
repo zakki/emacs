@@ -1,12 +1,12 @@
 ;;; calc.el --- the GNU Emacs calculator
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
 ;; Keywords: convenience, extensions
-;; Version: 2.02g
+;; Version: 2.1
 
 ;; This file is part of GNU Emacs.
 
@@ -207,7 +207,7 @@
 (require 'calc-macs)
 
 (defgroup calc nil
-  "GNU Calc"
+  "GNU Calc."
   :prefix "calc-"
   :tag    "Calc"
   :group  'applications)
@@ -241,6 +241,23 @@
   :group 'calc
   :type '(regexp))
 
+(defcustom calc-embedded-announce-formula-alist
+  '((c++-mode     . "//Embed\n\\(// .*\n\\)*")
+    (c-mode       . "/\\*Embed\\*/\n\\(/\\* .*\\*/\n\\)*")
+    (f90-mode     . "!Embed\n\\(! .*\n\\)*")
+    (fortran-mode . "C Embed\n\\(C .*\n\\)*")
+    (html-helper-mode . "<!-- Embed -->\n\\(<!-- .* -->\n\\)*")
+    (html-mode    . "<!-- Embed -->\n\\(<!-- .* -->\n\\)*")
+    (nroff-mode   . "\\\\\"Embed\n\\(\\\\\" .*\n\\)*")
+    (pascal-mode  . "{Embed}\n\\({.*}\n\\)*")
+    (sgml-mode    . "<!-- Embed -->\n\\(<!-- .* -->\n\\)*")
+    (xml-mode     . "<!-- Embed -->\n\\(<!-- .* -->\n\\)*")
+    (texinfo-mode . "@c Embed\n\\(@c .*\n\\)*"))
+  "*Alist of major modes with appropriate values for `calc-embedded-announce-formula'."
+  :group 'calc
+  :type '(alist :key-type (symbol :tag "Major mode")
+                :value-type (regexp :tag "Regexp to announce formula")))
+
 (defcustom calc-embedded-open-formula 
   "\\`\\|^\n\\|\\$\\$?\\|\\\\\\[\\|^\\\\begin[^{].*\n\\|^\\\\begin{.*[^x]}.*\n\\|^@.*\n\\|^\\.EQ.*\n\\|\\\\(\\|^%\n\\|^\\.\\\\\"\n"
   "*A regular expression for the opening delimiter of a formula used by calc-embedded."
@@ -253,6 +270,14 @@
   :group 'calc
   :type '(regexp))
 
+(defcustom calc-embedded-open-close-formula-alist
+  nil
+  "*Alist of major modes with pairs of formula delimiters used by calc-embedded."
+  :group 'calc
+  :type '(alist :key-type (symbol :tag "Major mode")
+                :value-type (list (regexp :tag "Opening formula delimiter")
+                                  (regexp :tag "Closing formula delimiter"))))
+
 (defcustom calc-embedded-open-word 
   "^\\|[^-+0-9.eE]"
   "*A regular expression for the opening delimiter of a formula used by calc-embedded-word."
@@ -264,6 +289,14 @@
   "*A regular expression for the closing delimiter of a formula used by calc-embedded-word."
   :group 'calc
   :type '(regexp))
+
+(defcustom calc-embedded-open-close-word-alist
+  nil
+  "*Alist of major modes with pairs of word delimiters used by calc-embedded."
+  :group 'calc
+  :type '(alist :key-type (symbol :tag "Major mode")
+                :value-type (list (regexp :tag "Opening word delimiter")
+                                  (regexp :tag "Closing word delimiter"))))
 
 (defcustom calc-embedded-open-plain 
   "%%% "
@@ -280,6 +313,24 @@ See calc-embedded-open-plain."
   :group 'calc
   :type '(string))
 
+(defcustom calc-embedded-open-close-plain-alist
+  '((c++-mode     "// %% "   " %%\n")
+    (c-mode       "/* %% "   " %% */\n")
+    (f90-mode     "! %% "    " %%\n")
+    (fortran-mode "C %% "    " %%\n")
+    (html-helper-mode "<!-- %% " " %% -->\n")
+    (html-mode "<!-- %% " " %% -->\n")
+    (nroff-mode   "\\\" %% " " %%\n")
+    (pascal-mode  "{%% "    " %%}\n")
+    (sgml-mode     "<!-- %% " " %% -->\n")
+    (xml-mode     "<!-- %% " " %% -->\n")
+    (texinfo-mode "@c %% "   " %%\n"))
+  "*Alist of major modes with pairs of delimiters for \"plain\" formulas."
+  :group 'calc
+  :type '(alist :key-type (symbol :tag "Major mode")
+                :value-type (list (string :tag "Opening \"plain\" delimiter")
+                                  (string :tag "Closing \"plain\" delimiter"))))
+
 (defcustom calc-embedded-open-new-formula 
   "\n\n"
   "*A string which is inserted at front of formula by calc-embedded-new-formula."
@@ -291,6 +342,14 @@ See calc-embedded-open-plain."
   "*A string which is inserted at end of formula by calc-embedded-new-formula."
   :group 'calc
   :type '(string))
+
+(defcustom calc-embedded-open-close-new-formula-alist
+  nil
+  "*Alist of major modes with pairs of new formula delimiters used by calc-embedded."
+  :group 'calc
+  :type '(alist :key-type (symbol :tag "Major mode")
+                :value-type (list (string :tag "Opening new formula delimiter")
+                                  (string :tag "Closing new formula delimiter"))))
 
 (defcustom calc-embedded-open-mode 
   "% "
@@ -305,6 +364,24 @@ This is not required to be present for user-written mode annotations."
 This is not required to be present for user-written mode annotations."
   :group 'calc
   :type '(string))
+
+(defcustom calc-embedded-open-close-mode-alist
+  '((c++-mode     "// "   "\n")
+    (c-mode       "/* "   " */\n")
+    (f90-mode     "! "    "\n")
+    (fortran-mode "C "    "\n")
+    (html-helper-mode "<!-- " " -->\n")
+    (html-mode    "<!-- " " -->\n")
+    (nroff-mode   "\\\" " "\n")
+    (pascal-mode  "{ "    " }\n")
+    (sgml-mode    "<!-- " " -->\n")
+    (xml-mode     "<!-- " " -->\n")
+    (texinfo-mode "@c "   "\n"))
+  "*Alist of major modes with pairs of strings to delimit annotations."
+  :group 'calc
+  :type '(alist :key-type (symbol :tag "Major mode")
+                :value-type (list (string :tag "Opening annotation delimiter")
+                                  (string :tag "Closing annotation delimiter"))))
 
 (defcustom calc-gnuplot-name 
   "gnuplot"
@@ -577,6 +654,7 @@ If nil, computations on numbers always yield numbers where possible.")
 (defcalcmodevar calc-matrix-mode nil
   "If `matrix', variables are assumed to be matrix-valued.
 If a number, variables are assumed to be NxN matrices.
+If `sqmatrix', variables are assumed to be square matrices of an unspecified size.
 If `scalar', variables are assumed to be scalar-valued.
 If nil, symbolic math routines make no assumptions about variables.")
 
@@ -726,13 +804,17 @@ If nil, selections displayed but ignored.")
 (defvar calc-trail-window-hook nil
   "Hook called to create the Calc trail window.")
 
+(defvar calc-embedded-new-buffer-hook nil
+  "Hook run when starting embedded mode in a new buffer.")
+
+(defvar calc-embedded-new-formula-hook nil
+  "Hook run when starting embedded mode in a new formula.")
+
+(defvar calc-embedded-mode-hook nil
+  "Hook run when starting embedded mode.")
+
 ;; Verify that Calc is running on the right kind of system.
 (defvar calc-emacs-type-lucid (not (not (string-match "Lucid" emacs-version))))
-
-;; Set up the standard keystroke (M-#) to run the Calculator, if that key
-;; has not yet been bound to anything.  For best results, the user should
-;; do this before Calc is even loaded, so that M-# can auto-load Calc.
-(or (global-key-binding "\e#") (global-set-key "\e#" 'calc-dispatch))
 
 ;; Set up the autoloading linkage.
 (let ((name (and (fboundp 'calc-dispatch)
@@ -959,14 +1041,20 @@ If nil, selections displayed but ignored.")
 	       ( ?x . calc-quit )
 	       ( ?y . calc-copy-to-buffer )
 	       ( ?z . calc-user-invocation )
-	       ( ?= . calc-embedded-update-formula )
 	       ( ?\' . calc-embedded-new-formula )
 	       ( ?\` . calc-embedded-edit )
 	       ( ?: . calc-grab-sum-down )
 	       ( ?_ . calc-grab-sum-across )
 	       ( ?0 . calc-reset )
+	       ( ?? . calc-dispatch-help )
 	       ( ?# . calc-same-interface )
-	       ( ?? . calc-dispatch-help ) ))
+	       ( ?& . calc-same-interface )
+	       ( ?\\ . calc-same-interface )
+	       ( ?= . calc-same-interface )
+	       ( ?* . calc-same-interface )
+	       ( ?/ . calc-same-interface )
+	       ( ?+ . calc-same-interface )
+	       ( ?- . calc-same-interface ) ))
     map))
 
 ;;;; (Autoloads here)
@@ -1008,7 +1096,7 @@ If nil, selections displayed but ignored.")
     report-calc-bug)))
 
 
-;;;###autoload (global-set-key "\e#" 'calc-dispatch)
+;;;###autoload (define-key ctl-x-map "*" 'calc-dispatch)
 
 ;;;###autoload
 (defun calc-dispatch (&optional arg)
@@ -1465,6 +1553,7 @@ See calc-keypad for details."
 		     (cond ((eq calc-matrix-mode 'matrix) "Matrix ")
 			   ((integerp calc-matrix-mode)
 			    (format "Matrix%d " calc-matrix-mode))
+			   ((eq calc-matrix-mode 'sqmatrix) "SqMatrix ")
 			   ((eq calc-matrix-mode 'scalar) "Scalar ")
 			   (t ""))
 		     (if (eq calc-complex-mode 'polar) "Polar " "")
@@ -1939,6 +2028,10 @@ See calc-keypad for details."
   (calc-slow-wrapper
    (calc-binary-op "/" 'calcFunc-div arg 0 'calcFunc-inv '/)))
 
+(defun calc-left-divide (arg)
+  (interactive "P")
+  (calc-slow-wrapper
+   (calc-binary-op "ldiv" 'calcFunc-ldiv arg 0 nil nil)))
 
 (defun calc-change-sign (arg)
   (interactive "P")
@@ -3026,10 +3119,10 @@ See calc-keypad for details."
     (setq w (cdr off)
 	  off (car off))
     (when (> off 0)
-      (setq c (math-comp-concat (make-string off ? ) c)))
+      (setq c (math-comp-concat (make-string off ?\s) c)))
     (or (equal calc-left-label "")
 	(setq c (math-comp-concat (if (eq a 'top-of-stack)
-				      (make-string (length calc-left-label) ? )
+				      (make-string (length calc-left-label) ?\s)
 				    calc-left-label)
 				  c)))
     (when calc-line-numbering
@@ -3044,7 +3137,7 @@ See calc-keypad for details."
       (require 'calc-ext)
       (setq c (list 'horiz c
 		    (make-string (max (- w (math-comp-width c)
-					 (length calc-right-label)) 0) ? )
+					 (length calc-right-label)) 0) ?\s)
 		    '(break -1)
 		    calc-right-label)))
     (setq s (if (stringp c)
@@ -3442,7 +3535,7 @@ Also looks for the equivalent TeX words, \\gets and \\evalto."
 (defun calc-user-invocation ()
   (interactive)
   (unless calc-invocation-macro
-    (error "Use `Z I' inside Calc to define a `M-# Z' keyboard macro"))
+    (error "Use `Z I' inside Calc to define a `C-x * Z' keyboard macro"))
   (execute-kbd-macro calc-invocation-macro nil))
 
 ;;; User-programmability.

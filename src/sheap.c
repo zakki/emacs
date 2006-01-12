@@ -1,8 +1,7 @@
-/* simulate sbrk() with an array in .bss, for unexec() support for Cygwin;
-   complete rewrite of xemacs Cygwin unexec() code
+/* simulate `sbrk' with an array in .bss, for `unexec' support for Cygwin;
+   complete rewrite of xemacs Cygwin `unexec' code
 
-   Copyright (C) 2004
-   Free Software Foundation, Inc.
+   Copyright (C) 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -18,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 #include <stdio.h>
@@ -28,9 +27,9 @@ Boston, MA 02111-1307, USA.  */
 #include <unistd.h>
 
 #ifdef HAVE_X_WINDOWS
-#define STATIC_HEAP_SIZE	(7 * 1024 * 1024)
+#define STATIC_HEAP_SIZE	(8 * 1024 * 1024)
 #else
-#define STATIC_HEAP_SIZE	(7 * 1024 * 1024)
+#define STATIC_HEAP_SIZE	(8 * 1024 * 1024)
 #endif
 
 int debug_sheap = 0;

@@ -1,5 +1,6 @@
 Debugging GNU Emacs
-Copyright (c) 1985, 2000, 2001, 2005 Free Software Foundation, Inc.
+Copyright (C) 1985, 2000, 2001, 2002, 2003, 2004,
+   2005 Free Software Foundation, Inc.
 
    Permission is granted to anyone to make or distribute verbatim copies
    of this document as received, in any medium, provided that the
@@ -157,11 +158,13 @@ we want the address of the l-value expression near the bottom of
 
   XVECTOR (this_command_keys)->contents[this_command_key_count++] = key;
 
-XVECTOR is a macro, and therefore GDB does not know about it.
-GDB cannot evaluate "p XVECTOR (this_command_keys)".
+XVECTOR is a macro, so GDB only knows about it if Emacs has been compiled with
+preprocessor macro information.  GCC provides this if you specify the options
+`-gdwarf-2' and `-g3'.  In this case, GDB can evaluate expressions like
+"p XVECTOR (this_command_keys)".
 
-However, you can use the xvector command in GDB to get the same
-result.  Here is how:
+When this information isn't available, you can use the xvector command in GDB
+to get the same result.  Here is how:
 
     (gdb) p this_command_keys
     $1 = 1078005760
@@ -575,6 +578,13 @@ rid of the false alarms, you will have to hack the definitions of
 these data structures on the respective headers to remove the `:N'
 bitfield definitions (which will cause each such field to use a full
 int).
+
+** How to recover buffer contents from an Emacs core dump file
+
+The file etc/emacs-buffer.gdb defines a set of GDB commands for
+recovering the contents of Emacs buffers from a core dump file.  You
+might also find those commands useful for displaying the list of
+buffers in human-readable format from within the debugger.
 
 ** Some suggestions for debugging on MS Windows:
 

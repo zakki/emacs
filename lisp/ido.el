@@ -1,6 +1,7 @@
 ;;; ido.el --- interactively do things with buffers and files.
 
-;; Copyright (C) 1996-2004, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Kim F. Storm <storm@cua.dk>
 ;; Based on: iswitchb by Stephen Eglen <stephen@cns.ed.ac.uk>
@@ -20,47 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
-
-;;; Acknowledgements
-
-;; Infinite amounts of gratitude goes to Stephen Eglen <stephen@cns.ed.ac.uk>
-;; who wrote iswitch-buffer mode - from which I ripped off 99% of the code
-;; for ido-switch-buffer and found the inspiration for ido-find-file.
-;; The ido package would never have existed without his work.
-
-;; Also thanks to Klaus Berndl, Rohit Namjoshi, Robert Fenk, Alex
-;; Schroeder, Bill Benedetto, Stephen Eglen, and many others for bug
-;; fixes and improvements.
-
-;;; History
-
-;; Since I discovered Stephen Eglen's excellent iswitchb package, I just
-;; couldn't live without it, but once being addicted to switching buffers
-;; with a minimum of keystrokes, I soon found that opening files in the
-;; old-fashioned way was just too slow - so I decided to write a package
-;; which could open files with the same speed and ease as iswitchb could
-;; switch buffers.
-
-;; I originally wrote a separate ifindf.el package based on a copy of
-;; iswitchb.el, which did for opening files what iswitchb did for
-;; switching buffers.  Along the way, I corrected a few errors in
-;; ifindf which could have found its way back into iswitchb, but since
-;; most of the functionality of the two package was practically
-;; identical, I decided that the proper thing to do was to merge my
-;; ifindf package back into iswitchb.
-;;
-;; This is basically what ido (interactively do) is all about; but I
-;; found it ackward to merge my changes into the "iswitchb-" namespace,
-;; so I invented a common "ido-" namespace for the merged packages.
-;;
-;; This version is based on ido.el version 1.57 released on
-;; gnu.emacs.sources adapted for emacs 22.1 to use command remapping
-;; and optionally hooking the read-buffer and read-file-name functions.
-;;
-;; Prefix matching was added by Klaus Berndl <klaus.berndl@sdm.de> based on
-;; an idea of Yuji Minejima <ggb01164@nifty.ne.jp> and his mcomplete-package.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 
 ;;; Commentary:
@@ -93,23 +55,23 @@
 ;; most recent, when I use ido-switch-buffer, I first of all get
 ;; presented with the list of all the buffers
 ;;
-;;       Buffer:  {123456,123}
+;;       Buffer: {123456 | 123}
 ;;
 ;; If I then press 2:
-;;       Buffer: 2[3]{123456,123}
+;;       Buffer: 2[3]{123456 | 123}
 ;;
 ;; The list in {...} are the matching buffers, most recent first
 ;; (buffers visible in the current frame are put at the end of the
 ;; list by default).  At any time I can select the item at the head of
-;; the list by pressing RET.  I can also bring the put the first
-;; element at the end of the list by pressing C-s or [right], or put
-;; the last element at the head of the list by pressing C-r or [left].
+;; the list by pressing RET.  I can also put the first element at the
+;; end of the list by pressing C-s or [right], or bring the last
+;; element to the head of the list by pressing C-r or [left].
 ;;
 ;; The item in [...] indicates what can be added to my input by
 ;; pressing TAB.  In this case, I will get "3" added to my input.
 
 ;; So, I press TAB:
-;;	 Buffer: 23{123456,123}
+;;	 Buffer: 23{123456 | 123}
 ;;
 ;; At this point, I still have two matching buffers.
 ;; If I want the first buffer in the list, I simply press RET.  If I
@@ -117,13 +79,16 @@
 ;; top of the list and then RET to select it.
 ;;
 ;; However, if I type 4, I only have one match left:
-;;       Buffer: 234[123456] [Matched]
+;;       Buffer: 234[123456]
 ;;
-;; Since there is only one matching buffer left, it is given in [] and we
-;; see the text [Matched] afterwards.  I can now press TAB or RET to go
-;; to that buffer.
+;; Since there is only one matching buffer left, it is given in [] and
+;; it is shown in the `ido-only-match' face (ForestGreen).  I can now
+;; press TAB or RET to go to that buffer.
 ;;
-;; If however, I now type "a":
+;; If I want to create a new buffer named "234", I press C-j instead of
+;; TAB or RET.
+;;
+;; If instead, I type "a":
 ;;       Buffer: 234a [No match]
 ;; There are no matching buffers.  If I press RET or TAB, I can be
 ;; prompted to create a new buffer called "234a".
@@ -210,8 +175,7 @@
 ;; Example:
 ;;
 ;; If you have again two Buffers "123456" and "123" then hitting "2" does
-;; not match because "2" is not a PREFIX in any of the buffer-names. This
-;; is the only difference between the substring and prefix matching.
+;; not match because "2" is not a PREFIX in any of the buffer-names.
 
 ;; Flexible matching
 ;; -----------------
@@ -236,14 +200,10 @@
 ;;
 ;; There is limited provision for regexp matching within ido,
 ;; enabled through `ido-enable-regexp' (toggle with C-t).
-;; This allows you to type `c$' for example and see all file names
-;; ending in `c'.  This facility is quite limited though in two
-;; respects.  First, you can't currently type in expressions like
-;; `[0-9]' directly -- you have to type them in when ido-enable-regexp
-;; is nil and then toggle on the regexp functionality.  Likewise,
-;; don't enter an expression containing `\' in regexp mode.  If you
-;; try, ido gets confused, so just hit C-g and try again.  Secondly,
-;; no completion mechanism is currently offered with regexp searching.
+;; This allows you to type `[ch]$' for example and see all file names
+;; ending in `c' or `h'.
+;;
+;; Note: ido-style completion is inhibited when you enable regexp matching.
 
 
 ;; Customization
@@ -256,7 +216,7 @@
 ;;
 ;;(defun ido-my-keys ()
 ;;  "Add my keybindings for ido."
-;;  (define-key ido-mode-map " " 'ido-next-match)
+;;  (define-key ido-completion-map " " 'ido-next-match)
 ;;  )
 
 ;; Seeing all the matching buffers or files
@@ -299,8 +259,8 @@
 ;; ------------
 
 ;; The highlighting of matching items is controlled via ido-use-faces.
-;; The faces used are ido-first-match-face, ido-only-match-face and
-;; ido-subdir-face.
+;; The faces used are ido-first-match, ido-only-match and
+;; ido-subdir.
 ;; Colouring of the matching item was suggested by
 ;; Carsten Dominik (dominik@strw.leidenuniv.nl).
 
@@ -322,10 +282,51 @@
 ;; can be used by other packages to read a buffer name, a file name,
 ;; or a directory name in the `ido' way.
 
+;;; Acknowledgements
+
+;; Infinite amounts of gratitude goes to Stephen Eglen <stephen@cns.ed.ac.uk>
+;; who wrote iswitch-buffer mode - from which I ripped off 99% of the code
+;; for ido-switch-buffer and found the inspiration for ido-find-file.
+;; The ido package would never have existed without his work.
+
+;; Also thanks to Klaus Berndl, Rohit Namjoshi, Robert Fenk, Alex
+;; Schroeder, Bill Benedetto, Stephen Eglen, and many others for bug
+;; fixes and improvements.
+
+;;; History
+
+;; Since I discovered Stephen Eglen's excellent iswitchb package, I just
+;; couldn't live without it, but once being addicted to switching buffers
+;; with a minimum of keystrokes, I soon found that opening files in the
+;; old-fashioned way was just too slow - so I decided to write a package
+;; which could open files with the same speed and ease as iswitchb could
+;; switch buffers.
+
+;; I originally wrote a separate ifindf.el package based on a copy of
+;; iswitchb.el, which did for opening files what iswitchb did for
+;; switching buffers.  Along the way, I corrected a few errors in
+;; ifindf which could have found its way back into iswitchb, but since
+;; most of the functionality of the two package was practically
+;; identical, I decided that the proper thing to do was to merge my
+;; ifindf package back into iswitchb.
+;;
+;; This is basically what ido (interactively do) is all about; but I
+;; found it ackward to merge my changes into the "iswitchb-" namespace,
+;; so I invented a common "ido-" namespace for the merged packages.
+;;
+;; This version is based on ido.el version 1.57 released on
+;; gnu.emacs.sources adapted for emacs 22.1 to use command remapping
+;; and optionally hooking the read-buffer and read-file-name functions.
+;;
+;; Prefix matching was added by Klaus Berndl <klaus.berndl@sdm.de> based on
+;; an idea of Yuji Minejima <ggb01164@nifty.ne.jp> and his mcomplete-package.
+
 
 ;;; Code:
 
 (provide 'ido)
+
+(defvar cua-inhibit-cua-keys)
 
 ;;; User Variables
 ;;
@@ -345,7 +346,7 @@
 ;;;###autoload
 (defcustom ido-mode nil
   "Determines for which functional group \(buffer and files) ido behavior
-should be enabled. The following values are possible:
+should be enabled.  The following values are possible:
 - `buffer': Turn only on ido buffer behavior \(switching, killing,
   displaying...)
 - `file': Turn only on ido file behavior \(finding, writing, inserting...)
@@ -356,7 +357,7 @@ Setting this variable directly does not take effect;
 use either \\[customize] or the function `ido-mode'."
   :set #'(lambda (symbol value)
 	   (ido-mode value))
-  :initialize 'custom-initialize-default
+  :initialize 'custom-initialize-set
   :require 'ido
   :link '(emacs-commentary-link "ido.el")
   :set-after '(ido-save-directory-list-file)
@@ -371,7 +372,7 @@ use either \\[customize] or the function `ido-mode'."
 Setting this variable directly does not work.  Use `customize' or
 call the function `ido-everywhere'."
   :set #'(lambda (symbol value)
-	   (ido-everywhere value))
+	   (ido-everywhere (if value 1 -1)))
   :initialize 'custom-initialize-default
   :type 'boolean
   :group 'ido)
@@ -414,7 +415,7 @@ This allows the current directory to be opened immediate with `dired'."
   "*List of file extensions specifying preferred order of file selections.
 Each element is either a string with `.' as the first char, an empty
 string matching files without extension, or t which is the default order
-of for files with an unlisted file extension."
+for files with an unlisted file extension."
   :type '(repeat (choice string
 			 (const :tag "Default order" t)))
   :group 'ido)
@@ -453,9 +454,9 @@ Possible values:
 `otherframe'	Show new file in another frame
 `maybe-frame'	If a file is visible in another frame, prompt to ask if you
 		you want to see the file in the same window of the current
-  		frame or in the other frame.
+  		frame or in the other frame
 `always-frame'  If a file is visible in another frame, raise that
-		frame.  Otherwise, visit the file in the same window."
+		frame; otherwise, visit the file in the same window"
     :type '(choice (const samewindow)
 		   (const otherwindow)
 		   (const display)
@@ -466,7 +467,7 @@ Possible values:
 
 (defcustom ido-default-buffer-method  'always-frame
     "*How to switch to new buffer when using `ido-switch-buffer'.
-See ido-default-file-method for details."
+See `ido-default-file-method' for details."
     :type '(choice (const samewindow)
 		   (const otherwindow)
 		   (const display)
@@ -530,7 +531,7 @@ Note that the non-ido equivalent command is recorded."
 (defcustom ido-max-prospects 12
   "*Non-zero means that the prospect list will be limited to than number of items.
 For a long list of prospects, building the full list for the minibuffer can take a
-non-negletable amount of time; setting this variable reduces that time."
+non-negligible amount of time; setting this variable reduces that time."
   :type 'integer
   :group 'ido)
 
@@ -578,8 +579,12 @@ the `ido-work-directory-list' list."
 
 (defcustom ido-use-filename-at-point nil
   "*Non-nil means that ido shall look for a filename at point.
+May use `ffap-guesser' to guess whether text at point is a filename.
 If found, use that as the starting point for filename selection."
-  :type 'boolean
+  :type '(choice
+	  (const :tag "Disabled" nil)
+	  (const :tag "Guess filename" guess)
+	  (other :tag "Use literal filename" t))
   :group 'ido)
 
 
@@ -615,7 +620,7 @@ If zero, ftp directories are not cached."
 (defcustom ido-slow-ftp-hosts nil
   "*List of slow ftp hosts where ido prompting should not be used.
 If an ftp host is on this list, ido automatically switches to the non-ido
-equivalent function, e.g. find-file rather than ido-find-file."
+equivalent function, e.g. `find-file' rather than `ido-find-file'."
   :type '(repeat string)
   :group 'ido)
 
@@ -688,12 +693,17 @@ not provide the normal completion.  To show the completions, use C-a."
   :type 'boolean
   :group 'ido)
 
-(defcustom ido-enter-single-matching-directory 'slash
-  "*Automatically enter sub-directory if it is the only matching item, if non-nil.
-If value is 'slash, only enter if typing final slash, else do it always."
+(defcustom ido-enter-matching-directory 'only
+  "*Additional methods to enter sub-directory of first/only matching item.
+If value is 'first, enter first matching sub-directory when typing a slash.
+If value is 'only, typing a slash only enters the sub-directory if it is
+the only matching item.
+If value is t, automatically enter a sub-directory when it is the only
+matching item, even without typing a slash."
   :type '(choice (const :tag "Never" nil)
-		 (const :tag "When typing /" slash)
-		 (other :tag "Always" t))
+		 (const :tag "Slash enters first directory" first)
+		 (const :tag "Slash enters first and only directory" only)
+		 (other :tag "Always enter unique directory" t))
   :group 'ido)
 
 (defcustom ido-create-new-buffer 'prompt
@@ -706,10 +716,10 @@ ask user whether to create buffer, or 'never to never create new buffer."
   :group 'ido)
 
 (defcustom ido-setup-hook  nil
-  "*Hook run after the ido variables and keymap has been setup.
+  "*Hook run after the ido variables and keymap have been setup.
 The dynamic variable `ido-cur-item' contains the current type of item that
 is read by ido, possible values are file, dir, buffer, and list.
-Additional keys can be defined in `ido-mode-map'."
+Additional keys can be defined in `ido-completion-map'."
   :type 'hook
   :group 'ido)
 
@@ -727,9 +737,9 @@ There are 10 elements in this list:
 4th element is the string inserted at the end of a truncated list of prospects,
 5th and 6th elements are used as brackets around the common match string which
 can be completed using TAB,
-7th element is the string displayed when there are a no matches, and
-8th element is displayed if there is a single match (and faces are not used).
-9th element is displayed when the current directory is non-readable.
+7th element is the string displayed when there are no matches, and
+8th element is displayed if there is a single match (and faces are not used),
+9th element is displayed when the current directory is non-readable,
 10th element is displayed when directory exceeds `ido-max-directory-size'."
   :type '(repeat string)
   :group 'ido)
@@ -740,17 +750,17 @@ subdirs in the alternatives."
   :type 'boolean
   :group 'ido)
 
-(defface ido-first-match-face  '((t (:bold t)))
+(defface ido-first-match  '((t (:bold t)))
   "*Font used by ido for highlighting first match."
   :group 'ido)
 
-(defface ido-only-match-face  '((((class color))
+(defface ido-only-match  '((((class color))
                                  (:foreground "ForestGreen"))
                                 (t (:italic t)))
   "*Font used by ido for highlighting only match."
   :group 'ido)
 
-(defface ido-subdir-face  '((((min-colors 88) (class color))
+(defface ido-subdir  '((((min-colors 88) (class color))
                              (:foreground "red1"))
 			    (((class color))
                              (:foreground "red"))
@@ -758,7 +768,7 @@ subdirs in the alternatives."
   "*Font used by ido for highlighting subdirs in the alternatives."
   :group 'ido)
 
-(defface ido-indicator-face  '((((min-colors 88) (class color))
+(defface ido-indicator  '((((min-colors 88) (class color))
 				(:foreground "yellow1"
 				 :background "red1"
 				 :width condensed))
@@ -768,6 +778,12 @@ subdirs in the alternatives."
 				 :width condensed))
 			       (t (:inverse-video t)))
   "*Font used by ido for highlighting its indicators."
+  :group 'ido)
+
+(defface ido-incomplete-regexp
+  '((t
+     (:inherit font-lock-warning-face)))
+  "Ido face for indicating incomplete regexps."
   :group 'ido)
 
 (defcustom ido-make-file-list-hook  nil
@@ -864,23 +880,41 @@ Must be set before enabling ido mode."
 (defcustom ido-read-file-name-as-directory-commands '()
   "List of commands which uses read-file-name to read a directory name.
 When `ido-everywhere' is non-nil, the commands in this list will read
-the directory using ido-read-directory-name."
+the directory using `ido-read-directory-name'."
   :type '(repeat symbol)
   :group 'ido)
 
 (defcustom ido-read-file-name-non-ido '()
   "List of commands which shall not read file names the ido way.
 When `ido-everywhere' is non-nil, the commands in this list will read
-the file name using normal read-file-name style."
+the file name using normal `read-file-name' style."
   :type '(repeat symbol)
+  :group 'ido)
+
+(defcustom ido-before-fallback-functions '()
+  "List of functions to call before calling a fallback command.
+The fallback command is passed as an argument to the functions."
+  :type 'hook
   :group 'ido)
 
 ;;; Internal Variables
 
 ;; Persistent variables
 
-(defvar ido-mode-map nil
-  "Keymap for `ido-find-file' and `ido-switch-buffer'.")
+(defvar ido-completion-map nil
+  "Currently active keymap for ido commands.")
+
+(defvar ido-common-completion-map nil
+  "Keymap for all ido commands.")
+
+(defvar ido-file-completion-map nil
+  "Keymap for ido file commands.")
+
+(defvar ido-file-dir-completion-map nil
+  "Keymap for ido file and directory commands.")
+
+(defvar ido-buffer-completion-map nil
+  "Keymap for ido buffer commands.")
 
 (defvar  ido-file-history nil
   "History of files selected using `ido-find-file'.")
@@ -895,7 +929,7 @@ See `ido-enable-last-directory-history' for details.")
 (defvar ido-work-directory-list nil
   "List of actual working directory names.
 The current directory is inserted at the front of this list whenever a
-file is opened with ido-find-file and family.")
+file is opened with `ido-find-file' and family.")
 
 (defvar ido-work-file-list nil
   "List of actual work file names.
@@ -909,7 +943,7 @@ Each element in the list is of the form (DIR (MTIME) FILE...).")
 
 (defvar ido-ignore-item-temp-list nil
   "List of items to ignore in current ido invocation.
-Intended to be let-bound by functions which calls ido repeatedly.
+Intended to be let-bound by functions which call ido repeatedly.
 Should never be set permanently.")
 
 ;; Temporary storage
@@ -949,7 +983,7 @@ If equal to `takeprompt', we use the prompt as the file name to be
 selected.")
 
 (defvar ido-current-directory nil
-  "Current directory for ido-find-file.")
+  "Current directory for `ido-find-file'.")
 
 (defvar ido-auto-merge-timer nil
   "Delay timer for auto merge.")
@@ -959,6 +993,8 @@ selected.")
 Is set by ido functions to the current minibuffer-depth, so that
 it doesn't interfere with other minibuffer usage.")
 
+(defvar ido-incomplete-regexp nil
+  "Non-nil if an incomplete regexp is entered.")
 
 ;;; Variables with dynamic bindings.
 ;;; Declared here to keep the byte compiler quiet.
@@ -1063,9 +1099,9 @@ it doesn't interfere with other minibuffer usage.")
 	  (setq truncate-lines t)))))
 
 (defun ido-is-tramp-root (&optional dir)
-  (setq dir (or dir ido-current-directory))
   (and ido-enable-tramp-completion
-       (string-match "\\`/[^/][^/]+:\\([^/:@]+@\\)?\\'" dir)))
+       (string-match "\\`/[^/]+[@:]\\'"
+		     (or dir ido-current-directory))))
 
 (defun ido-is-root-directory (&optional dir)
   (setq dir (or dir ido-current-directory))
@@ -1280,8 +1316,7 @@ Removes badly formatted data and ignored directories."
 	  (while e
 	    (setq d (car e) e (cdr e))
 	    (if (not (consp d))
-		(set-text-properties 0 (length d) nil d))))))
-)
+		(set-text-properties 0 (length d) nil d)))))))
 
 
 (defun ido-kill-emacs-hook ()
@@ -1312,6 +1347,8 @@ This function also adds a hook to the minibuffer."
 	 (t nil)))
 
   (ido-everywhere (if ido-everywhere 1 -1))
+  (when ido-mode
+    (ido-init-completion-maps))
 
   (when ido-mode
     (add-hook 'minibuffer-setup-hook 'ido-minibuffer-setup)
@@ -1320,11 +1357,7 @@ This function also adds a hook to the minibuffer."
 
     (add-hook 'kill-emacs-hook 'ido-kill-emacs-hook)
 
-    (unless ido-minor-mode-map-entry
-      (setq ido-minor-mode-map-entry (cons 'ido-mode (make-sparse-keymap)))
-      (add-to-list 'minor-mode-map-alist ido-minor-mode-map-entry))
-
-    (let ((map (cdr ido-minor-mode-map-entry)))
+    (let ((map (make-sparse-keymap)))
       (when (memq ido-mode '(file both))
 	(define-key map [remap find-file] 'ido-find-file)
 	(define-key map [remap find-file-read-only] 'ido-find-file-read-only)
@@ -1344,10 +1377,17 @@ This function also adds a hook to the minibuffer."
 	(define-key map [remap switch-to-buffer-other-frame] 'ido-switch-buffer-other-frame)
 	(define-key map [remap insert-buffer] 'ido-insert-buffer)
 	(define-key map [remap kill-buffer] 'ido-kill-buffer)
-	(define-key map [remap display-buffer] 'ido-display-buffer)))))
+	(define-key map [remap display-buffer] 'ido-display-buffer))
+
+      (if ido-minor-mode-map-entry
+	  (setcdr ido-minor-mode-map-entry map)
+	(setq ido-minor-mode-map-entry (cons 'ido-mode map))
+	(add-to-list 'minor-mode-map-alist ido-minor-mode-map-entry)))))
+
 
 (defun ido-everywhere (arg)
-  "Enable ido everywhere file and directory names are read."
+  "Toggle using ido speed-ups everywhere file and directory names are read.
+With ARG, turn ido speed-up on if arg is positive, off otherwise."
   (interactive "P")
   (setq ido-everywhere (if arg
 			   (> (prefix-numeric-value arg) 0)
@@ -1368,12 +1408,11 @@ This function also adds a hook to the minibuffer."
 
 
 ;;; IDO KEYMAP
-(defun ido-define-mode-map ()
-  "Set up the keymap for `ido'."
-  (let (map)
-    ;; generated every time so that it can inherit new functions.
+(defun ido-init-completion-maps ()
+  "Set up the completion keymaps used by `ido'."
 
-    (setq map (copy-keymap minibuffer-local-map))
+  ;; Common map
+  (let ((map (make-sparse-keymap)))
     (define-key map "\C-a" 'ido-toggle-ignore)
     (define-key map "\C-c" 'ido-toggle-case)
     (define-key map "\C-e" 'ido-edit-input)
@@ -1386,64 +1425,97 @@ This function also adds a hook to the minibuffer."
     (define-key map "\C-s" 'ido-next-match)
     (define-key map "\C-t" 'ido-toggle-regexp)
     (define-key map "\C-z" 'ido-undo-merge-work-directory)
-    (define-key map [(control ? )] 'ido-restrict-to-matches)
+    (define-key map [(control ?\s)] 'ido-restrict-to-matches)
     (define-key map [(control ?@)] 'ido-restrict-to-matches)
     (define-key map [right] 'ido-next-match)
     (define-key map [left] 'ido-prev-match)
     (define-key map "?" 'ido-completion-help)
-
     ;; Magic commands.
     (define-key map "\C-b" 'ido-magic-backward-char)
     (define-key map "\C-f" 'ido-magic-forward-char)
     (define-key map "\C-d" 'ido-magic-delete-char)
+    (set-keymap-parent map minibuffer-local-map)
+    (setq ido-common-completion-map map))
 
-    (when (memq ido-cur-item '(file dir))
-      (define-key map "\C-x\C-b" (or ido-context-switch-command 'ido-enter-switch-buffer))
-      (define-key map "\C-x\C-f" 'ido-fallback-command)
-      (define-key map "\C-x\C-d" (or (and ido-context-switch-command 'ignore) 'ido-enter-dired))
-      (define-key map [down] 'ido-next-match-dir)
-      (define-key map [up]   'ido-prev-match-dir)
-      (define-key map [(meta up)] 'ido-prev-work-directory)
-      (define-key map [(meta down)] 'ido-next-work-directory)
-      (define-key map [backspace] 'ido-delete-backward-updir)
-      (define-key map "\d"        'ido-delete-backward-updir)
-      (define-key map [(meta backspace)] 'ido-delete-backward-word-updir)
-      (define-key map [(control backspace)] 'ido-up-directory)
-      (define-key map "\C-l" 'ido-reread-directory)
-      (define-key map [(meta ?d)] 'ido-wide-find-dir-or-delete-dir)
-      (define-key map [(meta ?b)] 'ido-push-dir)
-      (define-key map [(meta ?f)] 'ido-wide-find-file-or-pop-dir)
-      (define-key map [(meta ?k)] 'ido-forget-work-directory)
-      (define-key map [(meta ?m)] 'ido-make-directory)
-      (define-key map [(meta ?n)] 'ido-next-work-directory)
-      (define-key map [(meta ?o)] 'ido-prev-work-file)
-      (define-key map [(meta ?O)] 'ido-next-work-file)
-      (define-key map [(meta ?p)] 'ido-prev-work-directory)
-      (define-key map [(meta ?s)] 'ido-merge-work-directories)
-      )
+  ;; File and directory map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-x\C-b" 'ido-enter-switch-buffer)
+    (define-key map "\C-x\C-f" 'ido-fallback-command)
+    (define-key map "\C-x\C-d" 'ido-enter-dired)
+    (define-key map [down] 'ido-next-match-dir)
+    (define-key map [up]   'ido-prev-match-dir)
+    (define-key map [(meta up)] 'ido-prev-work-directory)
+    (define-key map [(meta down)] 'ido-next-work-directory)
+    (define-key map [backspace] 'ido-delete-backward-updir)
+    (define-key map "\d"        'ido-delete-backward-updir)
+    (define-key map [(meta backspace)] 'ido-delete-backward-word-updir)
+    (define-key map [(control backspace)] 'ido-up-directory)
+    (define-key map "\C-l" 'ido-reread-directory)
+    (define-key map [(meta ?d)] 'ido-wide-find-dir-or-delete-dir)
+    (define-key map [(meta ?b)] 'ido-push-dir)
+    (define-key map [(meta ?f)] 'ido-wide-find-file-or-pop-dir)
+    (define-key map [(meta ?k)] 'ido-forget-work-directory)
+    (define-key map [(meta ?m)] 'ido-make-directory)
+    (define-key map [(meta ?n)] 'ido-next-work-directory)
+    (define-key map [(meta ?o)] 'ido-prev-work-file)
+    (define-key map [(meta control ?o)] 'ido-next-work-file)
+    (define-key map [(meta ?p)] 'ido-prev-work-directory)
+    (define-key map [(meta ?s)] 'ido-merge-work-directories)
+    (set-keymap-parent map ido-common-completion-map)
+    (setq ido-file-dir-completion-map map))
 
-    (when (eq ido-cur-item 'file)
-      (define-key map "\C-k" 'ido-delete-file-at-head)
-      (define-key map "\C-o" 'ido-copy-current-word)
-      (define-key map "\C-w" 'ido-copy-current-file-name)
-      (define-key map [(meta ?l)] 'ido-toggle-literal)
-      (define-key map "\C-v" 'ido-toggle-vc)
-      )
+  ;; File only map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-k" 'ido-delete-file-at-head)
+    (define-key map "\C-o" 'ido-copy-current-word)
+    (define-key map "\C-w" 'ido-copy-current-file-name)
+    (define-key map [(meta ?l)] 'ido-toggle-literal)
+    (define-key map "\C-v" 'ido-toggle-vc)
+    (set-keymap-parent map ido-file-dir-completion-map)
+    (setq ido-file-completion-map map))
 
-    (when (eq ido-cur-item 'buffer)
-      (define-key map "\C-x\C-f" (or ido-context-switch-command 'ido-enter-find-file))
-      (define-key map "\C-x\C-b" 'ido-fallback-command)
-      (define-key map "\C-k" 'ido-kill-buffer-at-head)
-      )
+  ;; Buffer map
+  (let ((map (make-sparse-keymap)))
+    (define-key map "\C-x\C-f" 'ido-enter-find-file)
+    (define-key map "\C-x\C-b" 'ido-fallback-command)
+    (define-key map "\C-k" 'ido-kill-buffer-at-head)
+    (set-keymap-parent map ido-common-completion-map)
+    (setq ido-buffer-completion-map map)))
 
-    (when (if (boundp 'viper-mode) viper-mode)
-      (define-key map [remap viper-intercept-ESC-key] 'ignore)
-      (when (memq ido-cur-item '(file dir))
+
+(defun ido-setup-completion-map ()
+  "Set up the keymap for `ido'."
+
+  ;; generated every time so that it can inherit new functions.
+  (let ((map (make-sparse-keymap))
+	(viper-p (if (boundp 'viper-mode) viper-mode)))
+
+    (when viper-p
+      (define-key map [remap viper-intercept-ESC-key] 'ignore))
+
+    (cond
+     ((memq ido-cur-item '(file dir))
+      (when ido-context-switch-command
+	(define-key map "\C-x\C-b" ido-context-switch-command)
+	(define-key map "\C-x\C-d" 'ignore))
+      (when viper-p
 	(define-key map [remap viper-backward-char] 'ido-delete-backward-updir)
 	(define-key map [remap viper-del-backward-char-in-insert] 'ido-delete-backward-updir)
-	(define-key map [remap viper-delete-backward-word] 'ido-delete-backward-word-updir)))
+	(define-key map [remap viper-delete-backward-word] 'ido-delete-backward-word-updir))
+      (set-keymap-parent map
+			 (if (eq ido-cur-item 'file)
+			     ido-file-completion-map
+			   ido-file-dir-completion-map)))
 
-    (setq ido-mode-map map)))
+     ((eq ido-cur-item 'buffer)
+      (when ido-context-switch-command
+	(define-key map "\C-x\C-f" ido-context-switch-command))
+      (set-keymap-parent map ido-buffer-completion-map))
+
+     (t
+      (set-keymap-parent map ido-common-completion-map)))
+
+    (setq ido-completion-map map)))
 
 (defun ido-final-slash (dir &optional fix-it)
   ;; return DIR if DIR has final slash.
@@ -1484,11 +1556,16 @@ This function also adds a hook to the minibuffer."
 
 (defun ido-set-current-directory (dir &optional subdir no-merge)
   ;; Set ido's current directory to DIR or DIR/SUBDIR
-  (setq dir (ido-final-slash dir t))
+  (unless (and ido-enable-tramp-completion
+	       (string-match "\\`/[^/]*@\\'" dir))
+    (setq dir (ido-final-slash dir t)))
   (setq ido-use-merged-list nil
 	ido-try-merged-list (not no-merge))
-  (if subdir
-      (setq dir (ido-final-slash (concat dir subdir) t)))
+  (when subdir
+    (setq dir (concat dir subdir))
+    (unless (and ido-enable-tramp-completion
+		 (string-match "\\`/[^/]*@\\'" dir))
+      (setq dir (ido-final-slash dir t))))
   (if (equal dir ido-current-directory)
       nil
     (ido-trace "cd" dir)
@@ -1610,7 +1687,7 @@ If INITIAL is non-nil, it specifies the initial input string."
        (ido-enable-regexp ido-enable-regexp)
        )
 
-    (ido-define-mode-map)
+    (ido-setup-completion-map)
     (setq ido-text-init initial)
     (setq ido-input-stack nil)
 
@@ -1715,7 +1792,8 @@ If INITIAL is non-nil, it specifies the initial input string."
       (if (and ido-matches (eq ido-try-merged-list 'auto))
 	  (setq ido-try-merged-list t))
       (let
-	  ((minibuffer-local-completion-map ido-mode-map)
+	  ((minibuffer-local-completion-map ido-completion-map)
+	   (minibuffer-local-filename-completion-map ido-completion-map)
 	   (max-mini-window-height (or ido-max-window-height
 				       (and (boundp 'max-mini-window-height) max-mini-window-height)))
 	   (ido-completing-read t)
@@ -1909,7 +1987,10 @@ If INITIAL is non-nil, it specifies the initial input string."
 (defun ido-buffer-internal (method &optional fallback prompt default initial switch-cmd)
   ;; Internal function for ido-switch-buffer and friends
   (if (not ido-mode)
-      (call-interactively (or fallback 'switch-to-buffer))
+      (progn
+	(run-hook-with-args 'ido-before-fallback-functions
+			    (or fallback 'switch-to-buffer))
+	(call-interactively (or fallback 'switch-to-buffer)))
     (let* ((ido-context-switch-command switch-cmd)
 	   (ido-current-directory nil)
 	   (ido-directory-nonreadable nil)
@@ -1928,6 +2009,8 @@ If INITIAL is non-nil, it specifies the initial input string."
 
        ((eq ido-exit 'fallback)
 	(let ((read-buffer-function nil))
+	  (run-hook-with-args 'ido-before-fallback-functions
+			      (or fallback 'switch-to-buffer))
 	  (call-interactively (or fallback 'switch-to-buffer))))
 
        ;; Check buf is non-nil.
@@ -1939,7 +2022,9 @@ If INITIAL is non-nil, it specifies the initial input string."
 	(if (eq method 'insert)
 	    (progn
 	      (ido-record-command 'insert-buffer buf)
-	      (insert-buffer buf))
+	      (with-no-warnings
+		;; we really want to run insert-buffer here
+		(insert-buffer buf)))
 	  (ido-visit-buffer buf method t)))
 
        ;; buffer doesn't exist
@@ -2004,7 +2089,8 @@ If INITIAL is non-nil, it specifies the initial input string."
     (setq item 'file))
   (let ((ido-current-directory (ido-expand-directory default))
 	(ido-context-switch-command switch-cmd)
-        ido-directory-nonreadable ido-directory-too-big
+	ido-directory-nonreadable ido-directory-too-big
+	(minibuffer-completing-file-name t)
 	filename)
 
     (if (or (not ido-mode) (ido-is-slow-ftp-host))
@@ -2031,7 +2117,9 @@ If INITIAL is non-nil, it specifies the initial input string."
 		filename t))
 
 	 ((and ido-use-filename-at-point
-	       (setq fn (ffap-string-at-point))
+	       (setq fn (if (eq ido-use-filename-at-point 'guess)
+			    (with-no-warnings (ffap-guesser))
+			  (ffap-string-at-point)))
 	       (not (string-match "^http:/" fn))
 	       (setq d (file-name-directory fn))
 	       (file-directory-p d))
@@ -2059,6 +2147,8 @@ If INITIAL is non-nil, it specifies the initial input string."
 	;; we don't want to change directory of current buffer.
 	(let ((default-directory ido-current-directory)
 	      (read-file-name-function nil))
+	  (run-hook-with-args 'ido-before-fallback-functions
+			      (or fallback 'find-file))
 	  (call-interactively (or fallback 'find-file))))
 
        ((eq ido-exit 'switch-to-buffer)
@@ -2103,7 +2193,7 @@ If INITIAL is non-nil, it specifies the initial input string."
 	      (ido-record-command method dirname)
 	      (ido-record-work-directory)
 	      (funcall method dirname))
-	     ((y-or-n-p (format "Directory %s does not exist. Create it " filename))
+	     ((y-or-n-p (format "Directory %s does not exist. Create it? " filename))
 	      (ido-record-command method dirname)
 	      (ido-record-work-directory dirname)
 	      (make-directory-internal dirname)
@@ -2125,6 +2215,7 @@ If INITIAL is non-nil, it specifies the initial input string."
 	(setq filename (concat ido-current-directory filename))
 	(ido-record-command fallback filename)
 	(ido-record-work-directory)
+	(run-hook-with-args 'ido-before-fallback-functions fallback)
 	(funcall fallback filename))
 
        ((eq method 'insert)
@@ -2169,6 +2260,9 @@ If INITIAL is non-nil, it specifies the initial input string."
   (interactive)
   (let (res)
     (cond
+     (ido-incomplete-regexp
+      ;; Do nothing
+      )
      ((and (memq ido-cur-item '(file dir))
 	   (string-match "[$]" ido-text))
       (let ((evar (substitute-in-file-name (concat ido-current-directory ido-text))))
@@ -2271,7 +2365,7 @@ If no merge has yet taken place, toggle automatic merging option."
 
 (defun ido-magic-forward-char ()
   "Move forward in user input or perform magic action.
-If no user input is present or at end of input, perform magic actions:
+If no user input is present, or at end of input, perform magic actions:
 C-x C-b ... C-f  switch to ido-find-file.
 C-x C-f ... C-f  fallback to non-ido find-file.
 C-x C-d ... C-f  fallback to non-ido brief dired.
@@ -2393,8 +2487,9 @@ timestamp has not changed (e.g. with ftp or on Windows)."
 (defun ido-exit-minibuffer ()
   "Exit minibuffer, but make sure we have a match if one is needed."
   (interactive)
-  (if (or (not ido-require-match)
-	   (ido-existing-item-p))
+  (if (and (or (not ido-require-match)
+               (ido-existing-item-p))
+           (not ido-incomplete-regexp))
       (exit-minibuffer)))
 
 (defun ido-select-text ()
@@ -2414,13 +2509,13 @@ If no buffer or file exactly matching the prompt exists, maybe create a new one.
   (exit-minibuffer))
 
 (defun ido-enter-find-file ()
-  "Drop into find-file from buffer switching."
+  "Drop into `find-file' from buffer switching."
   (interactive)
   (setq ido-exit 'find-file)
   (exit-minibuffer))
 
 (defun ido-enter-switch-buffer ()
-  "Drop into ido-switch-buffer from file switching."
+  "Drop into `ido-switch-buffer' from file switching."
   (interactive)
   (setq ido-exit 'switch-to-buffer)
   (exit-minibuffer))
@@ -2982,11 +3077,10 @@ for first matching file."
   (let (res)
     (message "Searching for `%s'...." text)
     (condition-case nil
-	(unless (catch 'input-pending-p
-		  (let ((throw-on-input 'input-pending-p))
-		    (setq res (ido-make-merged-file-list-1 text auto wide))
-		    t))
-	  (setq res 'input-pending-p))
+	(if (eq t (setq res
+			(while-no-input
+			  (ido-make-merged-file-list-1 text auto wide))))
+	    (setq res 'input-pending-p))
       (quit
        (setq res t
 	     ido-try-merged-list nil
@@ -3016,7 +3110,7 @@ for first matching file."
 (defun ido-make-buffer-list (default)
   ;; Return the current list of buffers.
   ;; Currently visible buffers are put at the end of the list.
-  ;; The hook `ido-make-buflist-hook' is run after the list has been
+  ;; The hook `ido-make-buffer-list-hook' is run after the list has been
   ;; created to allow the user to further modify the order of the buffer names
   ;; in this list.  If DEFAULT is non-nil, and corresponds to an existing buffer,
   ;; it is put to the start of the list.
@@ -3063,27 +3157,29 @@ for first matching file."
    ((ido-nonreadable-directory-p dir) '())
    ;; do not check (ido-directory-too-big-p dir) here.
    ;; Caller must have done that if necessary.
+
    ((and ido-enable-tramp-completion
-	 (string-match "\\`/\\([^/:]+:\\([^/:@]+@\\)?\\)\\'" dir))
-
-    ;; Trick tramp's file-name-all-completions handler to DTRT, as it
-    ;; has some pretty obscure requirements.  This seems to work...
-    ;; /ftp:		=> (f-n-a-c "/ftp:" "")
-    ;; /ftp:kfs:	=> (f-n-a-c "" "/ftp:kfs:")
-    ;; /ftp:kfs@      => (f-n-a-c "ftp:kfs@" "/")
-    ;; /ftp:kfs@kfs:  => (f-n-a-c "" "/ftp:kfs@kfs:")
-    ;; Currently no attempt is made to handle multi: stuff.
-
-    (let* ((prefix (match-string 1 dir))
-	   (user-flag (match-beginning 2))
-	   (len (and prefix (length prefix)))
-	   compl)
-      (if user-flag
-	  (setq dir (substring dir 1)))
-      (require 'tramp nil t)
-      (ido-trace "tramp complete" dir)
-      (setq compl (file-name-all-completions dir (if user-flag "/" "")))
-      (if (> len 0)
+	 (or (fboundp 'tramp-completion-mode)
+	     (require 'tramp nil t))
+	 (string-match "\\`/[^/]+[:@]\\'" dir))
+    ;; Strip method:user@host: part of tramp completions.
+    ;; Tramp completions do not include leading slash.
+    (let ((len (1- (length dir)))
+	  (compl
+	   (or (file-name-all-completions "" dir)
+	       ;; work around bug in ange-ftp.
+	       ;; /ftp:user@host: => nil
+	       ;; /ftp:user@host:./ => ok
+	       (and
+		(not (string= "/ftp:" dir))
+		(tramp-tramp-file-p dir)
+		(fboundp 'tramp-ftp-file-name-p)
+		(funcall 'tramp-ftp-file-name-p dir)
+		(string-match ":\\'" dir)
+		(file-name-all-completions "" (concat dir "./"))))))
+      (if (and compl
+	       (> (length (car compl)) len)
+	       (string= (substring (car compl) 0 len) (substring dir 1)))
 	  (mapcar (lambda (c) (substring c len)) compl)
 	compl)))
    (t
@@ -3154,13 +3250,14 @@ for first matching file."
 			      (if ido-file-extensions-order
 				  #'ido-file-extension-lessp
 				#'ido-file-lessp)))
-    (let ((default-directory ido-current-directory))
-      (ido-to-end ;; move ftp hosts and visited files to end
-       (delq nil (mapcar
-		  (lambda (x) (if (or (string-match "..:\\'" x)
-				      (and (not (ido-final-slash x))
-					   (get-file-buffer x))) x))
-		  ido-temp-list))))
+    (unless (ido-is-tramp-root ido-current-directory)
+      (let ((default-directory ido-current-directory))
+	(ido-to-end ;; move ftp hosts and visited files to end
+	 (delq nil (mapcar
+		    (lambda (x) (if (or (string-match "..:\\'" x)
+					(and (not (ido-final-slash x))
+					     (get-file-buffer x))) x))
+		    ido-temp-list)))))
     (ido-to-end  ;; move . files to end
      (delq nil (mapcar
 		(lambda (x) (if (string-equal (substring x 0 1) ".") x))
@@ -3274,22 +3371,30 @@ for first matching file."
 	 full-matches
 	 prefix-matches
 	 matches)
-    (mapcar
-     (lambda (item)
-       (let ((name (ido-name item)))
-	 (if (and (or non-prefix-dot
-		      (if (= (aref ido-text 0) ?.)
-			  (= (aref name 0) ?.)
-			(/= (aref name 0) ?.)))
-		  (string-match re name))
-	     (cond
-	      ((and full-re (string-match full-re name))
-	       (setq full-matches (cons item full-matches)))
-	      ((and prefix-re (string-match prefix-re name))
-	       (setq prefix-matches (cons item prefix-matches)))
-	      (t (setq matches (cons item matches))))))
-       t)
-     items)
+    (setq ido-incomplete-regexp nil)
+    (condition-case error
+        (mapcar
+         (lambda (item)
+           (let ((name (ido-name item)))
+             (if (and (or non-prefix-dot
+                          (if (= (aref ido-text 0) ?.)
+                              (= (aref name 0) ?.)
+                            (/= (aref name 0) ?.)))
+                      (string-match re name))
+                 (cond
+                  ((and full-re (string-match full-re name))
+                   (setq full-matches (cons item full-matches)))
+                  ((and prefix-re (string-match prefix-re name))
+                   (setq prefix-matches (cons item prefix-matches)))
+                  (t (setq matches (cons item matches))))))
+           t)
+         items)
+      (invalid-regexp
+       (setq ido-incomplete-regexp t
+             ;; Consider the invalid regexp message internally as a
+             ;; special-case single match, and handle appropriately
+             ;; elsewhere.
+             matches (cdr error))))
     (if prefix-matches
 	(setq matches (nconc prefix-matches matches)))
     (if full-matches
@@ -3321,38 +3426,37 @@ for first matching file."
   (or (member name ido-ignore-item-temp-list)
       (and
        ido-process-ignore-lists re-list
-       (let ((data       (match-data))
-	     (ext-list   (and ignore-ext ido-ignore-extensions
+       (save-match-data
+	 (let ((ext-list (and ignore-ext ido-ignore-extensions
 			      completion-ignored-extensions))
-	     ignorep nextstr
-	     (flen (length name)) slen)
-	 (while ext-list
-	   (setq nextstr (car ext-list))
-	   (if (cond
-		((stringp nextstr)
-		 (and (>= flen (setq slen (length nextstr)))
-		      (string-equal (substring name (- flen slen)) nextstr)))
-		((fboundp nextstr) (funcall nextstr name))
-		(t nil))
-	       (setq ignorep t
-		     ext-list nil
-		     re-list nil)
-	     (setq ext-list (cdr ext-list))))
-	 (while re-list
-	   (setq nextstr (car re-list))
-	   (if (cond
-		((stringp nextstr) (string-match nextstr name))
-		((fboundp nextstr) (funcall nextstr name))
-		(t nil))
-	       (setq ignorep t
-		     re-list nil)
-	     (setq re-list (cdr re-list))))
-	 ;; return the result
-	 (if ignorep
-	     (setq ido-ignored-list (cons name ido-ignored-list)))
-	 (set-match-data data)
-	 ignorep))))
-
+	       (case-fold-search ido-case-fold)
+	       ignorep nextstr
+	       (flen (length name)) slen)
+	   (while ext-list
+	     (setq nextstr (car ext-list))
+	     (if (cond
+		  ((stringp nextstr)
+		   (and (>= flen (setq slen (length nextstr)))
+			(string-equal (substring name (- flen slen)) nextstr)))
+		  ((fboundp nextstr) (funcall nextstr name))
+		  (t nil))
+		 (setq ignorep t
+		       ext-list nil
+		       re-list nil)
+	       (setq ext-list (cdr ext-list))))
+	   (while re-list
+	     (setq nextstr (car re-list))
+	     (if (cond
+		  ((stringp nextstr) (string-match nextstr name))
+		  ((fboundp nextstr) (funcall nextstr name))
+		  (t nil))
+		 (setq ignorep t
+		       re-list nil)
+	       (setq re-list (cdr re-list))))
+	   ;; return the result
+	   (if ignorep
+	       (setq ido-ignored-list (cons name ido-ignored-list)))
+	   ignorep)))))
 
 ;; Private variable used by `ido-word-matching-substring'.
 (defvar ido-change-word-sub)
@@ -3483,7 +3587,7 @@ for first matching file."
 	       (file-exists-p file)
 	       (not (file-directory-p file))
 	       (file-writable-p ido-current-directory)
-	       (yes-or-no-p (concat "Delete " file " ")))
+	       (yes-or-no-p (concat "Delete " file "? ")))
       (delete-file file)
       ;; Check if file still exists.
       (if (file-exists-p file)
@@ -3496,7 +3600,7 @@ for first matching file."
 ;;; VISIT CHOSEN BUFFER
 (defun ido-visit-buffer (buffer method &optional record)
   "Visit file named FILE according to METHOD.
-Record command in command-history if optional RECORD is non-nil."
+Record command in `command-history' if optional RECORD is non-nil."
 
   (let (win newframe)
     (cond
@@ -3569,9 +3673,9 @@ in another frame.
 
 As you type in a string, all of the buffers matching the string are
 displayed if substring-matching is used \(default). Look at
-`ido-enable-prefix' and `ido-toggle-prefix'. When you have found the
-buffer you want, it can then be selected. As you type, most keys have their
-normal keybindings, except for the following: \\<ido-mode-map>
+`ido-enable-prefix' and `ido-toggle-prefix'.  When you have found the
+buffer you want, it can then be selected.  As you type, most keys have
+their normal keybindings, except for the following: \\<ido-buffer-completion-map>
 
 RET Select the buffer at the front of the list of matches.  If the
 list is empty, possibly prompt to create new buffer.
@@ -3654,12 +3758,12 @@ The file is displayed according to `ido-default-file-method' -- the
 default is to show it in the same window, unless it is already
 visible in another frame.
 
-The file name is selected interactively by typing a substring. As you type
-in a string, all of the filenames matching the string are displayed if
-substring-matching is used \(default). Look at `ido-enable-prefix' and
-`ido-toggle-prefix'. When you have found the filename you want, it can
-then be selected. As you type, most keys have their normal keybindings,
-except for the following: \\<ido-mode-map>
+The file name is selected interactively by typing a substring.  As you
+type in a string, all of the filenames matching the string are displayed
+if substring-matching is used \(default).  Look at `ido-enable-prefix' and
+`ido-toggle-prefix'.  When you have found the filename you want, it can
+then be selected.  As you type, most keys have their normal keybindings,
+except for the following: \\<ido-file-completion-map>
 
 RET Select the file at the front of the list of matches.  If the
 list is empty, possibly prompt to create new file.
@@ -3678,7 +3782,7 @@ in a separate window.
 \\[ido-merge-work-directories] search for file in the work directory history.
 \\[ido-forget-work-directory] removes current directory from the work directory history.
 \\[ido-prev-work-file] or \\[ido-next-work-file] cycle through the work file history.
-\\[ido-wide-find-file] and \\[ido-wide-find-dir] prompts and uses find to locate files or directories.
+\\[ido-wide-find-file-or-pop-dir] and \\[ido-wide-find-dir-or-delete-dir] prompts and uses find to locate files or directories.
 \\[ido-make-directory] prompts for a directory to create in current directory.
 \\[ido-fallback-command] Fallback to non-ido version of current command.
 \\[ido-toggle-regexp] Toggle regexp searching.
@@ -3953,12 +4057,13 @@ For details of keybindings, do `\\[describe-function] ido-find-file'."
 	(ido-set-matches)
 	(ido-trace "new    " ido-matches)
 
-	(when (and ido-enter-single-matching-directory
+	(when (and ido-enter-matching-directory
 		   ido-matches
-		   (null (cdr ido-matches))
+		   (or (eq ido-enter-matching-directory 'first)
+		       (null (cdr ido-matches)))
 		   (ido-final-slash (car ido-matches))
 		   (or try-single-dir-match
-		       (eq ido-enter-single-matching-directory t)))
+		       (eq ido-enter-matching-directory t)))
 	  (ido-trace "single match" (car ido-matches))
 	  (ido-set-current-directory
 	   (concat ido-current-directory (car ido-matches)))
@@ -4039,7 +4144,7 @@ For details of keybindings, do `\\[describe-function] ido-find-file'."
 	 first)
 
     (if (and ind ido-use-faces)
-	(put-text-property 0 1 'face 'ido-indicator-face ind))
+	(put-text-property 0 1 'face 'ido-indicator ind))
 
     (if (and ido-use-faces comps)
 	(let* ((fn (ido-name (car comps)))
@@ -4047,8 +4152,10 @@ For details of keybindings, do `\\[describe-function] ido-find-file'."
 	  (setq first (format "%s" fn))
 	  (put-text-property 0 ln 'face
 			     (if (= (length comps) 1)
-				 'ido-only-match-face
-			       'ido-first-match-face)
+                                 (if ido-incomplete-regexp
+                                     'ido-incomplete-regexp
+                                   'ido-only-match)
+			       'ido-first-match)
 			     first)
 	  (if ind (setq first (concat first ind)))
 	  (setq comps (cons first (cdr comps)))))
@@ -4062,14 +4169,22 @@ For details of keybindings, do `\\[describe-function] ido-find-file'."
 	    (ido-report-no-match
 	     (nth 6 ido-decorations))  ;; [No match]
 	    (t "")))
-
+	  (ido-incomplete-regexp
+           (concat " " (car comps)))
 	  ((null (cdr comps))		;one match
-	   (concat (if (> (length (ido-name (car comps))) (length name))
-		       ;; when there is one match, show the matching file name in full
-		       (concat (nth 4 ido-decorations)  ;; [ ... ]
-			       (ido-name (car comps))
-			       (nth 5 ido-decorations))
-		     "")
+	   (concat (if (if (not ido-enable-regexp)
+                           (= (length (ido-name (car comps))) (length name))
+                         ;; We can't rely on the length of the input
+                         ;; for regexps, so explicitly check for a
+                         ;; complete match
+                         (string-match name (ido-name (car comps)))
+                         (string-equal (match-string 0 (ido-name (car comps)))
+                                       (ido-name (car comps))))
+                       ""
+                     ;; when there is one match, show the matching file name in full
+                     (concat (nth 4 ido-decorations)  ;; [ ... ]
+                             (ido-name (car comps))
+                             (nth 5 ido-decorations)))
 		   (if (not ido-use-faces) (nth 7 ido-decorations))))  ;; [Matched]
 	  (t				;multiple matches
 	   (let* ((items (if (> ido-max-prospects 0) (1+ ido-max-prospects) 999))
@@ -4091,7 +4206,7 @@ For details of keybindings, do `\\[describe-function] ido-find-file'."
 				       (if (and ido-use-faces
 						(not (string= str first))
 						(ido-final-slash str))
-					   (put-text-property 0 (length str) 'face 'ido-subdir-face str))
+					   (put-text-property 0 (length str) 'face 'ido-subdir str))
 				       str)))))
 			   comps))))))
 
@@ -4164,6 +4279,7 @@ For details of keybindings, do `\\[describe-function] ido-find-file'."
 
 (put 'dired-do-rename 'ido 'ignore)
 (put 'ibuffer-find-file 'ido 'find-file)
+(put 'dired-other-window 'ido 'dir)
 
 ;;;###autoload
 (defun ido-read-buffer (prompt &optional default require-match)
@@ -4171,7 +4287,7 @@ For details of keybindings, do `\\[describe-function] ido-find-file'."
 Return the name of a buffer selected.
 PROMPT is the prompt to give to the user.  DEFAULT if given is the default
 buffer to be selected, which will go to the front of the list.
-If REQUIRE-MATCH is non-nil, an existing-buffer must be selected."
+If REQUIRE-MATCH is non-nil, an existing buffer must be selected."
   (let* ((ido-current-directory nil)
 	 (ido-directory-nonreadable nil)
 	 (ido-directory-too-big nil)
@@ -4179,6 +4295,7 @@ If REQUIRE-MATCH is non-nil, an existing-buffer must be selected."
 	 (buf (ido-read-internal 'buffer prompt 'ido-buffer-history default require-match)))
     (if (eq ido-exit 'fallback)
 	(let ((read-buffer-function nil))
+	  (run-hook-with-args 'ido-before-fallback-functions 'read-buffer)
 	  (read-buffer prompt default require-match))
       buf)))
 
@@ -4193,7 +4310,9 @@ See `read-file-name' for additional parameters."
 	  (eq (get this-command 'ido) 'dir)
 	  (memq this-command ido-read-file-name-as-directory-commands))
       (setq filename
-	    (ido-read-directory-name prompt dir default-filename mustmatch initial)))
+	    (ido-read-directory-name prompt dir default-filename mustmatch initial))
+      (if (eq ido-exit 'fallback)
+	  (setq filename 'fallback)))
      ((and (not (eq (get this-command 'ido) 'ignore))
 	   (not (memq this-command ido-read-file-name-non-ido))
 	   (or (null predicate) (eq predicate 'file-exists-p)))
@@ -4201,6 +4320,7 @@ See `read-file-name' for additional parameters."
 	     (ido-context-switch-command
 	      (if (eq (get this-command 'ido) 'find-file) nil 'ignore))
 	     (vc-handled-backends (and (boundp 'vc-handled-backends) vc-handled-backends))
+	     (minibuffer-completing-file-name t)
 	     (ido-current-directory (ido-expand-directory dir))
 	     (ido-directory-nonreadable (not (file-readable-p ido-current-directory)))
 	     (ido-directory-too-big (and (not ido-directory-nonreadable)
@@ -4223,6 +4343,7 @@ See `read-file-name' for additional parameters."
       (setq filename 'fallback)))
     (if (eq filename 'fallback)
 	(let ((read-file-name-function nil))
+	  (run-hook-with-args 'ido-before-fallback-functions 'read-file-name)
 	  (read-file-name prompt dir default-filename mustmatch initial predicate))
       filename)))
 
@@ -4232,6 +4353,7 @@ See `read-file-name' for additional parameters."
 Read directory name, prompting with PROMPT and completing in directory DIR.
 See `read-directory-name' for additional parameters."
   (let* (filename
+	 (minibuffer-completing-file-name t)
 	 (ido-context-switch-command 'ignore)
 	 ido-saved-vc-hb
 	 (ido-current-directory (ido-expand-directory dir))

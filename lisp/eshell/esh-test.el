@@ -1,6 +1,7 @@
 ;;; esh-test.el --- Eshell test suite
 
-;; Copyright (C) 1999, 2000 Free Software Foundation
+;; Copyright (C) 1999, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: John Wiegley <johnw@gnu.org>
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 (provide 'esh-test)
 
@@ -42,18 +43,22 @@
 
 ;;; User Variables:
 
-(defface eshell-test-ok-face
+(defface eshell-test-ok
   '((((class color) (background light)) (:foreground "Green" :bold t))
     (((class color) (background dark)) (:foreground "Green" :bold t)))
   "*The face used to highlight OK result strings."
   :group 'eshell-test)
+;; backward-compatibility alias
+(put 'eshell-test-ok-face 'face-alias 'eshell-test-ok)
 
-(defface eshell-test-failed-face
+(defface eshell-test-failed
   '((((class color) (background light)) (:foreground "OrangeRed" :bold t))
     (((class color) (background dark)) (:foreground "OrangeRed" :bold t))
     (t (:bold t)))
   "*The face used to highlight FAILED result strings."
   :group 'eshell-test)
+;; backward-compatibility alias
+(put 'eshell-test-failed-face 'face-alias 'eshell-test-failed)
 
 (defcustom eshell-show-usage-metrics nil
   "*If non-nil, display different usage metrics for each Eshell command."
@@ -108,12 +113,10 @@
 	       (if truth
 		   (progn
 		     (setq str "  OK  ")
-		     (put-text-property 0 6 'face
-					'eshell-test-ok-face str))
+		     (put-text-property 0 6 'face 'eshell-test-ok str))
 		 (setq str "FAILED")
 		 (setq eshell-test-failures (1+ eshell-test-failures))
-		 (put-text-property 0 6 'face
-				    'eshell-test-failed-face str))
+		 (put-text-property 0 6 'face 'eshell-test-failed str))
 	       str) "]")
 	(add-text-properties (line-beginning-position) (point)
 			     (list 'test-func funcsym))

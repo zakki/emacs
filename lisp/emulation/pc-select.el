@@ -2,7 +2,8 @@
 ;;;		     (or MAC GUI or MS-windoze (bah)) look-and-feel
 ;;;		     including key bindings.
 
-;; Copyright (C) 1995, 1996, 1997, 2000, 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1996, 1997, 2000, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: Michael Staats <michael@thp.Uni-Duisburg.DE>
 ;; Keywords: convenience emulation
@@ -22,8 +23,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -99,7 +100,7 @@ errors are suppressed."
 (defcustom pc-select-selection-keys-only nil
   "*Non-nil means only bind the basic selection keys when started.
 Other keys that emulate pc-behavior will be untouched.
-This gives mostly Emacs-like behaviour with only the selection keys enabled."
+This gives mostly Emacs-like behavior with only the selection keys enabled."
   :type 'boolean
   :group 'pc-select)
 
@@ -825,7 +826,7 @@ If the value is non-nil, call the function MODE with an argument of
 
 ;;;###autoload
 (define-minor-mode pc-selection-mode
-  "Change mark behaviour to emulate Motif, MAC or MS-Windows cut and paste style.
+  "Change mark behavior to emulate Motif, MAC or MS-Windows cut and paste style.
 
 This mode enables Delete Selection mode and Transient Mark mode.
 
@@ -971,7 +972,7 @@ but before calling PC Selection mode):
 ;;;###autoload
 (defcustom pc-selection-mode nil
   "Toggle PC Selection mode.
-Change mark behaviour to emulate Motif, MAC or MS-Windows cut and paste style,
+Change mark behavior to emulate Motif, MAC or MS-Windows cut and paste style,
 and cursor movement commands.
 This mode enables Delete Selection mode and Transient Mark mode.
 Setting this variable directly does not take effect;

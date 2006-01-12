@@ -1,6 +1,7 @@
 ;;; url-cache.el --- Uniform Resource Locator retrieval tool
 
-;; Copyright (c) 1996 - 1999 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2004,
+;;   2005, 2006  Free Software Foundation, Inc.
 
 ;; Keywords: comm, data, processes, hypermedia
 
@@ -18,13 +19,14 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
 
 (require 'url-parse)
 (require 'url-util)
+(require 'url)                        ;E.g. for url-configuration-directory.
 
 (defcustom url-cache-directory
   (expand-file-name "cache" url-configuration-directory)
@@ -39,7 +41,7 @@
        (if (file-exists-p file)
            (not (file-directory-p file))
          (file-directory-p (file-name-directory file)))))
-                
+
 (defun url-cache-prepare (file)
   "Makes it possible to cache data in FILE.
 Creates any necessary parent directories, deleting any non-directory files
@@ -64,13 +66,13 @@ FILE can be created or overwritten."
   "Store buffer BUFF in the cache."
   (if (not (and buff (get-buffer buff)))
       nil
-    (save-excursion
+    (save-current-buffer
       (and buff (set-buffer buff))
       (let* ((fname (url-cache-create-filename (url-view-url t))))
 	(if (url-cache-prepare fname)
 	    (let ((coding-system-for-write 'binary))
 	      (write-region (point-min) (point-max) fname nil 5)))))))
-	
+
 ;;;###autoload
 (defun url-is-cached (url)
   "Return non-nil if the URL is cached."
@@ -201,5 +203,5 @@ Very fast if you have an `md5' primitive function, suitably fast otherwise."
 
 (provide 'url-cache)
 
-;;; arch-tag: 95b050a6-8e81-4f23-8e63-191b9d1d657c
+;; arch-tag: 95b050a6-8e81-4f23-8e63-191b9d1d657c
 ;;; url-cache.el ends here

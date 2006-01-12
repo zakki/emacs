@@ -6,7 +6,7 @@
 #### be distributed.  This means that if you add a file with an odd name,
 #### you should make sure that this script will include it.
 
-# Copyright (C) 1995, 1997, 1998, 2000, 2001, 2002, 2005 
+# Copyright (C) 1995, 1997, 1998, 2000, 2001, 2002, 2005
 #   Free Software Foundation, Inc.
 #
 # This file is part of GNU Emacs.
@@ -23,8 +23,8 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with GNU Emacs; see the file COPYING.  If not, write to the
-# Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-# Boston, MA 02111-1307, USA.
+# Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+# Boston, MA 02110-1301, USA.
 
 progname="$0"
 
@@ -218,13 +218,6 @@ then
     echo "${bogosities}"
   fi
   rm -f /tmp/el /tmp/elc
-
-  ### Check for .el files that would overflow the 14-char limit if compiled.
-  long=`find lisp leim -name '[a-zA-Z0-9]??????????*.el' -print`
-  if [ "$long" != "" ]; then
-    echo "The following .el file names are too long:"
-    echo "$long"
-  fi
 fi
 
 ### Make sure configure is newer than configure.in.
@@ -321,10 +314,12 @@ for subdir in lisp site-lisp lispref lispintro \
 	      leim/SKK-DIC leim/ja-dic leim/quail \
 	      src src/m src/s src/bitmaps lib-src oldXMenu lwlib \
 	      nt nt/inc nt/inc/sys nt/inc/arpa nt/inc/netinet nt/icons \
-	      etc etc/e etc/images etc/images/gnus etc/images/smilies \
-	      etc/tree-widget etc/tree-widget/default etc/tree-widget/folder \
-	      info man msdos vms mac mac/inc mac/inc/sys \
-	      mac/src mac/Emacs.app mac/Emacs.app/Contents \
+	      etc etc/e \
+	      etc/images etc/images/ezimage etc/images/gnus etc/images/gud \
+	      etc/images/icons etc/images/low-color etc/images/mail \
+	      etc/images/smilies etc/tree-widget etc/tree-widget/default \
+	      etc/tree-widget/folder info man m4 msdos vms mac mac/inc \
+	      mac/inc/sys mac/src mac/Emacs.app mac/Emacs.app/Contents \
 	      mac/Emacs.app/Contents/MacOS mac/Emacs.app/Contents/Resources \
 	      mac/Emacs.app/Contents/Resources/English.lproj
 do
@@ -487,7 +482,12 @@ echo "Making links to \`lib-src'"
  done
  cd ../${tempdir}/lib-src
  rm -f Makefile.c
+ rm -f getopt.h
  rm -f =* TAGS)
+
+echo "Making links to \`m4'"
+(cd m4
+ ln *.m4 ../${tempdir}/m4)
 
 echo "Making links to \`nt'"
 (cd nt
@@ -594,7 +594,16 @@ echo "Making links to \`etc/e'"
  cd ../../${tempdir}/etc/e
  rm -f *~ \#*\# *,v =* core)
 
-for dir in etc/images/gnus etc/images/smilies \
+echo "Making links to \`etc/images'"
+(cd etc/images
+ for img in [a-zA-Z]*.xpm [a-zA-Z]*.xbm [a-zA-Z]*.pbm; do
+   if [ -f $img ]; then
+     ln $img ../../${tempdir}/etc/images
+   fi
+ done)
+
+for dir in etc/images/ezimage etc/images/gnus etc/images/gud etc/images/icons \
+           etc/images/low-color etc/images/mail etc/images/smilies \
            etc/tree-widget/default etc/tree-widget/folder ; do
     echo "Making links to \`${dir}'"
     (cd ${dir}

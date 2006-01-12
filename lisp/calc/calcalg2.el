@@ -1,6 +1,7 @@
 ;;; calcalg2.el --- more algebraic functions for Calc
 
-;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 1990, 1991, 1992, 1993, 2001, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Gillespie <daveg@synaptics.com>
 ;; Maintainer: Jay Belanger <belanger@truman.edu>
@@ -51,19 +52,21 @@
        (setq expr (list func expr var)))
      (calc-enter-result n "derv" expr))))
 
-(defun calc-integral (var)
-  (interactive "sIntegration variable: ")
-  (calc-slow-wrapper
-   (if (or (equal var "") (equal var "$"))
-       (calc-enter-result 2 "intg" (list 'calcFunc-integ
-					 (calc-top-n 2)
-					 (calc-top-n 1)))
-     (let ((var (math-read-expr var)))
-       (if (eq (car-safe var) 'error)
-	   (error "Bad format in expression: %s" (nth 1 var)))
-       (calc-enter-result 1 "intg" (list 'calcFunc-integ
-					 (calc-top-n 1)
-					 var))))))
+(defun calc-integral (var &optional arg)
+  (interactive "sIntegration variable: \nP")
+  (if arg
+      (calc-tabular-command 'calcFunc-integ "Integration" "intg" nil var nil nil)
+    (calc-slow-wrapper
+     (if (or (equal var "") (equal var "$"))
+         (calc-enter-result 2 "intg" (list 'calcFunc-integ
+                                           (calc-top-n 2)
+                                           (calc-top-n 1)))
+       (let ((var (math-read-expr var)))
+         (if (eq (car-safe var) 'error)
+             (error "Bad format in expression: %s" (nth 1 var)))
+         (calc-enter-result 1 "intg" (list 'calcFunc-integ
+                                           (calc-top-n 1)
+                                           var)))))))
 
 (defun calc-num-integral (&optional varname lowname highname)
   (interactive "sIntegration variable: ")

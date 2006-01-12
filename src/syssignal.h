@@ -1,5 +1,6 @@
 /* syssignal.h - System-dependent definitions for signals.
-   Copyright (C) 1993, 1999 Free Software Foundation, Inc.
+   Copyright (C) 1993, 1999, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 extern void init_signals P_ ((void));
 
@@ -145,7 +146,10 @@ extern SIGMASKTYPE sigprocmask_set;
 #undef SIGINFO
 #endif
 #if defined (SIGIO) && defined (BROKEN_SIGIO)
-#undef SIGIO
+# undef SIGIO
+# if defined (__Lynx__)
+# undef SIGPOLL /* Defined as SIGIO on LynxOS */
+# endif
 #endif
 #if defined (SIGPOLL) && defined (BROKEN_SIGPOLL)
 #undef SIGPOLL

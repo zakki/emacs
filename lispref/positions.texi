@@ -1,7 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2000, 2001
-@c  Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2000, 2001,
+@c   2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/positions
 @node Positions, Markers, Frames, Top
@@ -417,7 +417,7 @@ Here is an example of using @code{count-lines}:
 @defun line-number-at-pos &optional pos
 @cindex line number
 This function returns the line number in the current buffer
-corresponding the buffer position @var{pos}.  If @var{pos} is @code{nil}
+corresponding to the buffer position @var{pos}.  If @var{pos} is @code{nil}
 or omitted, the current buffer position is used.
 @end defun
 
@@ -636,7 +636,7 @@ the end of the accessible portion of the buffer, and pass @var{line} and
 
 When you use @code{compute-motion} for the minibuffer, you need to use
 @code{minibuffer-prompt-width} to get the horizontal position of the
-beginning of the first screen line.  @xref{Minibuffer Misc}.
+beginning of the first screen line.  @xref{Minibuffer Contents}.
 @end defun
 
 @node List Motion
@@ -720,11 +720,11 @@ to 1.
 @end deffn
 
 @defopt defun-prompt-regexp
-If non-@code{nil}, this variable holds a regular expression that
-specifies what text can appear before the open-parenthesis that starts a
-defun.  That is to say, a defun begins on a line that starts with a
-match for this regular expression, followed by a character with
-open-parenthesis syntax.
+If non-@code{nil}, this buffer-local variable holds a regular
+expression that specifies what text can appear before the
+open-parenthesis that starts a defun.  That is to say, a defun begins
+on a line that starts with a match for this regular expression,
+followed by a character with open-parenthesis syntax.
 @end defopt
 
 @defopt open-paren-in-column-0-is-defun-start
@@ -829,13 +829,13 @@ after the completion of the excursion.
 described elsewhere (see @ref{Window Configurations}, and @pxref{Frame
 Configurations}).
 
-@defspec save-excursion forms@dots{}
+@defspec save-excursion body@dots{}
 @cindex mark excursion
 @cindex point excursion
 @cindex current buffer excursion
 The @code{save-excursion} special form saves the identity of the current
 buffer and the values of point and the mark in it, evaluates
-@var{forms}, and finally restores the buffer and its saved values of
+@var{body}, and finally restores the buffer and its saved values of
 point and the mark.  All three saved values are restored even in case of
 an abnormal exit via @code{throw} or error (@pxref{Nonlocal Exits}).
 
@@ -855,8 +855,8 @@ One way to restore these correspondences, and the selected window, is to
 use @code{save-window-excursion} inside @code{save-excursion}
 (@pxref{Window Configurations}).
 
-The value returned by @code{save-excursion} is the result of the last of
-@var{forms}, or @code{nil} if no @var{forms} are given.
+The value returned by @code{save-excursion} is the result of the last
+form in @var{body}, or @code{nil} if no body forms were given.
 
 @example
 @group

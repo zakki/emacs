@@ -1,13 +1,14 @@
 ;;; ediff.el --- a comprehensive visual interface to diff & patch
 
-;; Copyright (C) 1994, 95, 96, 97, 98, 99, 2000, 01, 02, 03, 05 Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Michael Kifer <kifer@cs.stonybrook.edu>
 ;; Created: February 2, 1994
 ;; Keywords: comparing, merging, patching, tools, unix
 
-(defconst ediff-version "2.80" "The current version of Ediff")
-(defconst ediff-date "June 3, 2005" "Date of last update")  
+(defconst ediff-version "2.80.1" "The current version of Ediff")
+(defconst ediff-date "November 25, 2005" "Date of last update")
 
 
 ;; This file is part of GNU Emacs.
@@ -24,8 +25,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -135,7 +136,7 @@
 (require 'ediff-mult)  ; required because of the registry stuff
 
 (defgroup ediff nil
-  "A comprehensive visual interface to diff & patch"
+  "A comprehensive visual interface to diff & patch."
   :tag "Ediff"
   :group 'tools)
 
@@ -1260,13 +1261,13 @@ buffer."
     (setq rev1
 	  (read-string
 	   (format
-	    "Version 1 to merge (default: %s's working version): "
+	    "Version 1 to merge (default %s's working version): "
 	    (if (stringp file)
 		(file-name-nondirectory file) "current buffer")))
 	  rev2
 	  (read-string
 	   (format
-	    "Version 2 to merge (default: %s): "
+	    "Version 2 to merge (default %s): "
 	    (if (stringp file)
 		(file-name-nondirectory file) "current buffer"))))
     (ediff-load-version-control)
@@ -1292,19 +1293,19 @@ buffer."
     (setq rev1
 	  (read-string
 	   (format
-	    "Version 1 to merge (default: %s's working version): "
+	    "Version 1 to merge (default %s's working version): "
 	    (if (stringp file)
 		(file-name-nondirectory file) "current buffer")))
 	  rev2
 	  (read-string
 	   (format
-	    "Version 2 to merge (default: %s): "
+	    "Version 2 to merge (default %s): "
 	    (if (stringp file)
 		(file-name-nondirectory file) "current buffer")))
 	  ancestor-rev
 	  (read-string
 	   (format
-	    "Ancestor version (default: %s's base revision): "
+	    "Ancestor version (default %s's base revision): "
 	    (if (stringp file)
 		(file-name-nondirectory file) "current buffer"))))
     (ediff-load-version-control)
@@ -1357,11 +1358,13 @@ buffer. If odd -- assume it is in a file."
 
 ;;;###autoload
 (defun ediff-patch-buffer (&optional arg patch-buf)
-  "Run Ediff by patching BUFFER-NAME.
-Without prefix argument: asks if the patch is in some buffer and prompts for
-the buffer or a file, depending on the answer.
-With prefix arg=1: assumes the patch is in a file and prompts for the file.
-With prefix arg=2: assumes the patch is in a buffer and prompts for the buffer."
+  "Run Ediff by patching the buffer specified at prompt.
+Without the optional prefix ARG, asks if the patch is in some buffer and
+prompts for the buffer or a file, depending on the answer.
+With ARG=1, assumes the patch is in a file and prompts for the file.
+With ARG=2, assumes the patch is in a buffer and prompts for the buffer.
+PATCH-BUF is an optional argument, which specifies the buffer that contains the
+patch. If not given, the user is prompted according to the prefix argument."
   (interactive "P")
   (require 'ediff-ptch)
   (setq patch-buf
@@ -1408,11 +1411,11 @@ Uses `vc.el' or `rcs.el' depending on `ediff-version-control-package'."
   (let (rev1 rev2)
     (setq rev1
 	  (read-string
-	   (format "Revision 1 to compare (default: %s's latest revision): "
+	   (format "Revision 1 to compare (default %s's latest revision): "
 		   (file-name-nondirectory file)))
 	  rev2
 	  (read-string
-	   (format "Revision 2 to compare (default: %s's current state): "
+	   (format "Revision 2 to compare (default %s's current state): "
 		   (file-name-nondirectory file))))
     (ediff-load-version-control)
     (funcall
@@ -1526,15 +1529,15 @@ With optional NODE, goes to that node."
   (add-to-list 'debug-ignored-errors mess))
 
 
+(require 'ediff-util)
+
+(run-hooks 'ediff-load-hook)
+
 ;;; Local Variables:
 ;;; eval: (put 'ediff-defvar-local 'lisp-indent-hook 'defun)
 ;;; eval: (put 'ediff-with-current-buffer 'lisp-indent-hook 1)
 ;;; eval: (put 'ediff-with-current-buffer 'edebug-form-spec '(form body))
 ;;; End:
-
-(require 'ediff-util)
-
-(run-hooks 'ediff-load-hook)
 
 ;;; arch-tag: 97c71396-db02-4f41-8b48-6a51c3348fcc
 ;;; ediff.el ends here

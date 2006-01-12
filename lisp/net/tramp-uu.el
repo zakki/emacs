@@ -1,9 +1,9 @@
 ;;; -*- coding: iso-2022-7bit; -*-
 ;;; tramp-uu.el --- uuencode in Lisp
 
-;; Copyright (C) 2002, 2005  Free Software Foundation, Inc.
+;; Copyright (C) 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
-;; Author: Kai Gro,A_(Bjohann <Kai.Grossjohann@CS.Uni-Dortmund.DE>
+;; Author: Kai Gro,A_(Bjohann <kai.grossjohann@gmx.net>
 ;; Keywords: comm, terminals
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -18,8 +18,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to
-;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 

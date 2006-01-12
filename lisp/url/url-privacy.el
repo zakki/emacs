@@ -1,6 +1,7 @@
 ;;; url-privacy.el --- Global history tracking for URL package
 
-;; Copyright (c) 1996 - 1999 Free Software Foundation, Inc.
+;; Copyright (C) 1996, 1997, 1998, 1999, 2004,
+;;   2005, 2006 Free Software Foundation, Inc.
 
 ;; Keywords: comm, data, processes, hypermedia
 
@@ -18,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Code:
 
@@ -32,6 +33,7 @@
 
 ;;;###autoload
 (defun url-setup-privacy-info ()
+  "Setup variables that expose info about you and your system."
   (interactive)
   (setq url-system-type
 	(cond
@@ -71,13 +73,11 @@
 	      (and (listp url-privacy-level)
 		   (memq 'os url-privacy-level)))
 	  nil)
-	 ((boundp 'system-configuration)
-	  system-configuration)
-	 ((boundp 'system-type)
-	  (symbol-name system-type))
+	 ((boundp 'system-configuration) system-configuration)
+	 ((boundp 'system-type) (symbol-name system-type))
 	 (t nil))))
 
 (provide 'url-privacy)
 
-;;; arch-tag: fdaf95e4-98f0-4680-94c3-f3eadafabe1d
+;; arch-tag: fdaf95e4-98f0-4680-94c3-f3eadafabe1d
 ;;; url-privacy.el ends here

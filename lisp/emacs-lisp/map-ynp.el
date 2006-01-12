@@ -1,6 +1,7 @@
 ;;; map-ynp.el --- general-purpose boolean question-asker
 
-;; Copyright (C) 1991, 1992, 1993, 1994, 1995, 2000 Free Software Foundation, Inc.
+;; Copyright (C) 1991, 1992, 1993, 1994, 1995, 2000, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Roland McGrath <roland@gnu.org>
 ;; Maintainer: FSF
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -102,15 +103,18 @@ Returns the number of actions taken."
 	(let ((object (if help (capitalize (nth 0 help))))
 	      (objects (if help (capitalize (nth 1 help))))
 	      (action (if help (capitalize (nth 2 help)))))
-	  (setq map `(("Yes" . act) ("No" . skip) ("Quit" . exit)
-		      (,(if help (concat action " " object " And Quit")
-			  "Do it and Quit") . act-and-exit)
+	  (setq map `(("Yes" . act) ("No" . skip)
+		      ,@(mapcar (lambda (elt)
+				  (cons (with-syntax-table
+					    text-mode-syntax-table
+					  (capitalize (nth 2 elt)))
+					(vector (nth 1 elt))))
+				action-alist)
+		      (,(if help (concat action " This But No More")
+			  "Do This But No More") . act-and-exit)
 		      (,(if help (concat action " All " objects)
 			  "Do All") . automatic)
-		      ,@(mapcar (lambda (elt)
-				  (cons (capitalize (nth 2 elt))
-					(vector (nth 1 elt))))
-				action-alist))
+		      ("No For All" . exit))
 		use-menus t
 		mouse-event last-nonmenu-event))
       (setq user-keys (if action-alist

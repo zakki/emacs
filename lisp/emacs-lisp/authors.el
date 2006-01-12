@@ -1,6 +1,6 @@
 ;;; authors.el --- utility for maintaining Emacs' AUTHORS file -*-coding: iso-2022-7bit;-*-
 
-;; Copyright (C) 2000, 2003, 2005 Free Software Foundation, Inc.
+;; Copyright (C) 2000, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Gerd Moellmann <gerd@gnu.org>
 ;; Maintainer: Kim F. Storm <storm@cua.dk>
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -78,6 +78,7 @@ files.")
     ("Jay K. Adams" "jka@ece.cmu.edu" "Jay Adams")
     ("J,Ai(Br,At(Bme Marant" "J,bi(Br,bt(Bme Marant" "Jerome Marant")
     ("Jens-Ulrik Holger Petersen" "Jens-Ulrik Petersen")
+    ("Johan Bockg,Ae(Brd" "Johan Bockgard")
     ("John W. Eaton" "John Eaton")
     ("Jonathan I. Kamens" "Jonathan Kamens")
     ("Joseph Arceneaux" "Joe Arceneaux")
@@ -195,7 +196,7 @@ Changes to files in this list are not listed.")
     ("Michael K. Johnson" :changed "configure.in" "emacs.c" "intel386.h"
      "mem-limits.h" "process.c" "template.h" "sysdep.c" "syssignal.h" "systty.h" "unexec.c"
       "ymakefile" "linux.h")
-    ("Kyle E. Jones" :wrote "mldrag.el")
+    ("Kyle Jones" :wrote "mldrag.el")
     ("Henry Kautz" :wrote "bib-mode.el")
     ("Joseph M. Kelsey" :changed "fileio.c" "vms-pwd.h" "vmsfns.c" "dir.h"
      "uaf.h")

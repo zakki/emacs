@@ -1,6 +1,6 @@
 /* Definitions and headers for communication with X protocol.
-   Copyright (C) 1989, 1993, 1994, 1998, 1999, 2000,01,02,03,04
-   Free Software Foundation, Inc.
+   Copyright (C) 1989, 1993, 1994, 1998, 1999, 2000, 2001, 2002, 2003,
+                 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <X11/Xlib.h>
 #include <X11/cursorfont.h>
@@ -1017,6 +1017,7 @@ extern XtAppContext Xt_app_con;
 extern void x_query_colors P_ ((struct frame *f, XColor *, int));
 extern void x_query_color P_ ((struct frame *f, XColor *));
 extern void x_clear_area P_ ((Display *, Window, int, int, int, int, int));
+extern void set_vertical_scroll_bar P_ ((struct window *));
 
 extern int x_dispatch_event P_ ((XEvent *, Display *));
 
@@ -1049,14 +1050,13 @@ extern int have_menus_p P_ ((void));
 
 #ifdef USE_GTK
 extern int xg_set_icon P_ ((struct frame *, Lisp_Object));
+extern int xg_set_icon_from_xpm_data P_ ((struct frame *, char**));
 #endif /* USE_GTK */
 
 extern void x_real_positions P_ ((struct frame *, int *, int *));
 extern int defined_color P_ ((struct frame *, char *, XColor *, int));
 extern void x_set_border_pixel P_ ((struct frame *, int));
 extern void x_set_menu_bar_lines P_ ((struct frame *, Lisp_Object, Lisp_Object));
-extern unsigned char * x_encode_text P_ ((Lisp_Object, Lisp_Object, int,
-					  int *, int *));
 extern void x_implicitly_set_name P_ ((struct frame *, Lisp_Object, Lisp_Object));
 extern void xic_free_xfontset P_ ((struct frame *));
 extern void create_frame_xic P_ ((struct frame *));

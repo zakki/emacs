@@ -1,6 +1,7 @@
 ;;; strokes.el --- control Emacs through mouse strokes
 
-;; Copyright (C) 1997, 2000, 2002 Free Software Foundation, Inc.
+;; Copyright (C) 1997, 2000, 2002, 2003, 2004,
+;;   2005 Free Software Foundation, Inc.
 
 ;; Author: David Bakhash <cadet@alum.mit.edu>
 ;; Maintainer: FSF
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -208,7 +209,7 @@ static char * stroke_xpm[] = {
 ;;; user variables...
 
 (defgroup strokes nil
-  "Control Emacs through mouse strokes"
+  "Control Emacs through mouse strokes."
   :link '(emacs-commentary-link "strokes")
   :link '(url-link "http://www.mit.edu/people/cadet/strokes-help.html")
   :group 'mouse)
@@ -243,9 +244,9 @@ ones, then strokes should NOT pick the one that came closest."
 
 (defcustom strokes-grid-resolution 9
   "*Integer defining dimensions of the stroke grid.
-The grid is a square grid, where STROKES-GRID-RESOLUTION defaults to
+The grid is a square grid, where `strokes-grid-resolution' defaults to
 `9', making a 9x9 grid whose coordinates go from (0 . 0) on the top
-left to ((STROKES-GRID-RESOLUTION - 1) . (STROKES-GRID-RESOLUTION - 1))
+left to ((strokes-grid-resolution - 1) . (strokes-grid-resolution - 1))
 on the bottom right.  The greater the resolution, the more intricate
 your strokes can be.
 NOTE: This variable should be odd and MUST NOT be less than 3 and need
@@ -259,7 +260,7 @@ WARNING: Changing the value of this variable will gravely affect the
   :group 'strokes)
 
 (defcustom strokes-file (convert-standard-filename "~/.strokes")
-  "*File containing saved strokes for stroke-mode (default is ~/.strokes)."
+  "*File containing saved strokes for Strokes mode (default is ~/.strokes)."
   :type 'file
   :group 'strokes)
 
@@ -284,17 +285,17 @@ This is set properly in the function `strokes-update-window-configuration'.")
   "Last stroke entered by the user.
 Its value gets set every time the function
 `strokes-fill-stroke' gets called,
-since that is the best time to set the variable")
+since that is the best time to set the variable.")
 
 (defvar strokes-global-map '()
   "Association list of strokes and their definitions.
 Each entry is (STROKE . COMMAND) where STROKE is itself a list of
 coordinates (X . Y) where X and Y are lists of positions on the
 normalized stroke grid, with the top left at (0 . 0).  COMMAND is the
-corresponding interactive function")
+corresponding interactive function.")
 
 (defvar strokes-load-hook nil
-  "Function or functions to be called when `strokes' is loaded.")
+  "Functions to be called when Strokes is loaded.")
 
 ;;; ### NOT IMPLEMENTED YET ###
 ;;(defvar edit-strokes-menu
@@ -473,10 +474,10 @@ Compare `strokes-global-set-stroke'."
 
 (defun strokes-get-grid-position (stroke-extent position &optional grid-resolution)
   "Map POSITION to a new grid position.
-Do so  based on its STROKE-EXTENT and GRID-RESOLUTION.
+Do so based on its STROKE-EXTENT and GRID-RESOLUTION.
 STROKE-EXTENT as a list \(\(XMIN . YMIN\) \(XMAX . YMAX\)\).
 If POSITION is a `strokes-lift', then it is itself returned.
-Optional GRID-RESOLUTION may be used in place of STROKES-GRID-RESOLUTION.
+Optional GRID-RESOLUTION may be used in place of `strokes-grid-resolution'.
 The grid is a square whose dimension is [0,GRID-RESOLUTION)."
   (cond ((consp position)		; actual pixel location
 	 (let ((grid-resolution (or grid-resolution strokes-grid-resolution))
@@ -566,7 +567,7 @@ The return value is a list ((XMIN . YMIN) (XMAX . YMAX))."
 (defun strokes-renormalize-to-grid (positions &optional grid-resolution)
   "Map POSITIONS to a new grid whose dimensions are based on GRID-RESOLUTION.
 POSITIONS is a list of positions and stroke-lifts.
-Optional GRID-RESOLUTION may be used in place of STROKES-GRID-RESOLUTION.
+Optional GRID-RESOLUTION may be used in place of `strokes-grid-resolution'.
 The grid is a square whose dimension is [0,GRID-RESOLUTION)."
   (or grid-resolution (setq grid-resolution strokes-grid-resolution))
   (let ((stroke-extent (strokes-get-stroke-extent positions)))
@@ -726,7 +727,7 @@ Optional PROMPT in minibuffer displays before and during stroke reading.
 This function will display the stroke interactively as it is being
 entered in the strokes buffer if the variable
 `strokes-use-strokes-buffer' is non-nil.
-Optional EVENT is acceptable as the starting event of the stroke"
+Optional EVENT is acceptable as the starting event of the stroke."
   (save-excursion
     (let ((pix-locs nil)
 	  (grid-locs nil)
@@ -737,7 +738,7 @@ Optional EVENT is acceptable as the starting event of the stroke"
 	  (save-window-excursion
 	    (set-window-configuration strokes-window-configuration)
 	    (when prompt
-	      (message prompt)
+	      (message "%s" prompt)
 	      (setq event (read-event))
 	      (or (strokes-button-press-event-p event)
 		  (error "You must draw with the mouse")))
@@ -753,7 +754,7 @@ Optional EVENT is acceptable as the starting event of the stroke"
 			      (progn
 				(goto-char point)
 				(subst-char-in-region point (1+ point)
-						      ?\  strokes-character))
+						      ?\s strokes-character))
 			    ;; otherwise, we can start drawing the next time...
 			    (setq safe-to-draw-p t))
 			  (push (cdr (mouse-pixel-position))
@@ -763,12 +764,12 @@ Optional EVENT is acceptable as the starting event of the stroke"
 	    ;; clean up strokes buffer and then bury it.
 	    (when (equal (buffer-name) strokes-buffer-name)
 	      (subst-char-in-region (point-min) (point-max)
-				    strokes-character ?\ )
+				    strokes-character ?\s)
 	      (goto-char (point-min))
 	      (bury-buffer))))
       ;; Otherwise, don't use strokes buffer and read stroke silently
       (when prompt
-	(message prompt)
+	(message "%s" prompt)
 	(setq event (read-event))
 	(or (strokes-button-press-event-p event)
 	    (error "You must draw with the mouse")))
@@ -790,7 +791,7 @@ Optional PROMPT in minibuffer displays before and during stroke reading.
 Note that a complex stroke allows the user to pen-up and pen-down.  This
 is implemented by allowing the user to paint with button 1 or button 2 and
 then complete the stroke with button 3.
-Optional EVENT is acceptable as the starting event of the stroke"
+Optional EVENT is acceptable as the starting event of the stroke."
   (save-excursion
     (save-window-excursion
       (set-window-configuration strokes-window-configuration)
@@ -798,7 +799,7 @@ Optional EVENT is acceptable as the starting event of the stroke"
 	    (grid-locs nil))
 	(if prompt
 	    (while (not (strokes-button-press-event-p event))
-	      (message prompt)
+	      (message "%s" prompt)
 	      (setq event (read-event))))
 	(unwind-protect
 	    (track-mouse
@@ -813,7 +814,7 @@ Optional EVENT is acceptable as the starting event of the stroke"
 			(when point
 			  (goto-char point)
 			  (subst-char-in-region point (1+ point)
-						?\  strokes-character))
+						?\s strokes-character))
 			(push (cdr (mouse-pixel-position))
 			      pix-locs)))
 		  (setq event (read-event)))
@@ -831,7 +832,7 @@ Optional EVENT is acceptable as the starting event of the stroke"
 	  ;; protected
 	  (when (equal (buffer-name) strokes-buffer-name)
 	    (subst-char-in-region (point-min) (point-max)
-				  strokes-character ?\ )
+				  strokes-character ?\s)
 	    (goto-char (point-min))
 	    (bury-buffer)))))))
 
@@ -892,11 +893,12 @@ This must be bound to a mouse event."
 
 ;;;###autoload
 (defun strokes-help ()
-  "Get instruction on using the `strokes' package."
+  "Get instruction on using the Strokes package."
   (interactive)
   (with-output-to-temp-buffer "*Help with Strokes*"
     (princ
-     "This is help for the strokes package.
+     (substitute-command-keys
+      "This is help for the strokes package.
 
 ------------------------------------------------------------
 
@@ -986,7 +988,7 @@ You can change this location by setting the variable `strokes-file'.
 You will be prompted to save them when you exit Emacs, or you can save
 them with
 
-> M-x strokes-save-strokes
+> M-x strokes-prompt-user-save-strokes
 
 Your strokes get loaded automatically when you enable `strokes-mode'.
 You can also load in your user-defined strokes with
@@ -1024,7 +1026,7 @@ o Strokes are a bit computer-dependent in that they depend somewhat on
   variable which many people wanted to see was
   `strokes-use-strokes-buffer' which allows the user to use strokes
   silently--without displaying the strokes.  All variables can be set
-  by customizing the group `strokes' via \[customize-group].")
+  by customizing the group `strokes' via \\[customize-group]."))
     (set-buffer standard-output)
     (help-mode)
     (print-help-return-message)))
@@ -1035,7 +1037,7 @@ o Strokes are a bit computer-dependent in that they depend somewhat on
   "Erase the contents of the current buffer and fill it with whitespace."
   (erase-buffer)
   (loop repeat (frame-height) do
-	(insert-char ?\  (1- (frame-width)))
+	(insert-char ?\s (1- (frame-width)))
 	(newline))
   (goto-char (point-min)))
 
@@ -1169,7 +1171,7 @@ the stroke as a character in some language."
       (insert strokes-xpm-header)
       (loop repeat 33 do
 	    (insert ?\")
-	    (insert-char ?\  33)
+	    (insert-char ?\s 33)
 	    (insert "\",")
 	    (newline)
 	    finally
@@ -1195,7 +1197,7 @@ the stroke as a character in some language."
 		     ;; Otherwise, just plot the point...
 		     (goto-line (+ 17 y))
 		     (forward-char (+ 2 x))
-		     (subst-char-in-region (point) (1+ (point)) ?\  ?\*)))
+		     (subst-char-in-region (point) (1+ (point)) ?\s ?\*)))
 		  ((strokes-lift-p point)
 		   ;; a lift--tell the loop to X out the next point...
 		   (setq lift-flag t))))
@@ -1286,7 +1288,7 @@ the stroke as a character in some language."
 ;;	      (command-name (symbol-name (cdr def))))
 ;;	  (strokes-xpm-for-stroke stroke " *strokes-xpm*")
 ;;	  (newline 2)
-;;	  (insert-char ?\  45)
+;;	  (insert-char ?\s 45)
 ;;	  (beginning-of-line)
 ;;	  (insert command-name)
 ;;	  (beginning-of-line)
@@ -1342,7 +1344,7 @@ If STROKES-MAP is not given, `strokes-global-map' will be used instead."
 				(prin1-to-string (cdr def)))))
 	    (strokes-xpm-for-stroke stroke " *strokes-xpm*")
 	    (newline 2)
-	    (insert-char ?\  45)
+	    (insert-char ?\s 45)
 	    (beginning-of-line)
 	    (insert command-name)
 	    (beginning-of-line)
@@ -1418,7 +1420,7 @@ Encode/decode your strokes with \\[strokes-encode-buffer],
 ;; This is the stuff that will eventually be used for composing letters in
 ;; any language, compression, decompression, graphics, editing, etc.
 
-(defface strokes-char-face '((t (:background "lightgray")))
+(defface strokes-char '((t (:background "lightgray")))
   "Face for strokes characters."
   :version "21.1"
   :group 'strokes)
@@ -1513,7 +1515,7 @@ Encode/decode your strokes with \\[strokes-encode-buffer],
 
 (defsubst strokes-xpm-char-bit-p (char)
   "Non-nil if CHAR represents an `on' or `off' bit in the XPM."
-  (or (eq char ?\ )
+  (or (eq char ?\s)
       (eq char ?*)))
 
 ;;(defsubst strokes-xor (a b)  ### Should I make this an inline function? ###
@@ -1695,7 +1697,7 @@ Optional FORCE non-nil will ignore the buffer's read-only status."
 	    (delete-char 1)
 	    (add-text-properties start (point)
 				 (list 'type 'stroke-string
-				       'face 'strokes-char-face
+				       'face 'strokes-char
 				       'stroke-glyph glyph
 				       'display nil))))
 	(message "Encoding strokes in %s...done" buffer)))))
@@ -1714,7 +1716,7 @@ Store XPM in buffer BUFNAME if supplied \(default is ` *strokes-xpm*'\)"
 	(insert-char
 	 (if current-char-is-on-p
 	     ?*
-	   ?\ )
+	   ?\s)
 	 (strokes-xpm-decode-char (char-after)))
 	(delete-char 1)
 	(setq current-char-is-on-p (not current-char-is-on-p)))

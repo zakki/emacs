@@ -1,3 +1,428 @@
+2005-12-28  Dan Nicolaescu  <dann@ics.uci.edu>
+
+	* e/eterm-color.ti: Temporarily disable the ri entry.
+	* e/eterm-color: Regenerate.
+
+2005-12-21  L$,1 q(Brentey K,Aa(Broly  <lorentey@elte.hu>
+
+	* TODO: Add note on the multi-tty branch.
+
+2005-12-16  L$,1 q(Brentey K,Aa(Broly  <lorentey@elte.hu>
+
+	* NEWS: Change `prev-buffer' to `previous-buffer'; add note on
+	them using the frame-local buffer list.
+
+2005-12-10  David Koppelman  <koppel@ece.lsu.edu>
+
+	* NEWS: hi-lock-mode is now buffer local, use global-hi-lock-mode
+	instead.
+
+2005-12-02  Jay Belanger  <belanger@truman.edu>
+
+	* NEWS: Add comment about the Calc prefix.
+
+2005-11-28  Thien-Thi Nguyen  <ttn@gnu.org>
+
+	* MORE.STUFF: Add entry: "Go in a buffer: Go Text Protocol client".
+
+2005-11-18  Chong Yidong  <cyd@stupidchicken.com>
+
+	* images/icons/emacs_16.png, images/icons/emacs_24.png
+	* images/icons/emacs_32.png, images/icons/emacs_48.png:
+	New Emacs icons.
+
+2005-11-18  Carsten Dominik  <dominik@science.uva.nl>
+
+	* orgcard.tex: Version 3.20
+
+2005-11-16  Nick Roberts  <nickrob@snap.net.nz>
+
+	* images/gud/go.xpm, images/gud/go.pbm: Old gud-remove icons.
+	Use for run/continue.
+	* images/gud/stop.xpm, images/gud/stop.pbm: Old gud-break icons.
+	Use for interrupting inferior.
+	* images/gud/pp.xpm, images/gud/pstar.xpm, images/gud/until.xpm:
+	Use a more appropriate variable name.
+	* images/gud/remove.xpm, images/gud/remove.pbm
+	* images/gud/break.xpm, images/gud/break.pbm: Make more intuitive.
+
+2005-11-09  Nick Roberts  <nickrob@snap.net.nz>
+
+	* images/gud/pp.xpm, images/gud/pp.pbm: New icons.
+
+2005-11-06  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* images/copy.xpm, images/copy.pbm, images/low-color/copy.xpm
+	* images/save.xpm, images/save.pbm, images/low-color/save.xpm:
+	Adjust baseline.
+
+2005-11-06  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* images/up-node.xpm, images/prev-node.xpm, images/next-node.xpm
+	* images/up-node.pbm, images/prev-node.pbm, images/next-node.pbm
+	* images/low-color/up-node.xpm, images/low-color/prev-node.xpm
+	* images/low-color/next-node.xpm: Adjust paper size and layout.
+
+2005-11-05  Nick Roberts  <nickrob@snap.net.nz>
+
+	* DEBUG: Describe how to provide preprocessor macro information.
+
+2005-11-04  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* images/up-node.xpm, images/prev-node.xpm, images/next-node.xpm
+	* images/up-node.pbm, images/prev-node.pbm, images/next-node.pbm
+	* images/low-color/up-node.xpm, images/low-color/prev-node.xpm
+	* images/low-color/next-node.xpm: New images.
+
+2005-11-04  Carsten Dominik  <dominik@science.uva.nl>
+
+	* orgcard.tex (section{Notes}): Version number change.
+
+2005-11-03  Romain Francoise  <romain@orebokech.com>
+
+	* orgcard.tex: Update FSF's address.
+
+2005-11-03  Nick Roberts  <nickrob@snap.net.nz>
+
+	* DEBUG: GDB can sometimes expand macros.
+
+2005-11-01  Romain Francoise  <romain@orebokech.com>
+
+	* NEWS: Source files are compressed by default.
+
+2005-10-28  Bill Wohler  <wohler@newt.com>
+
+	* NEWS: Help mode now creates hyperlinks for URLs.
+
+2005-10-27  Dan Nicolaescu  <dann@ics.uci.edu>
+
+	* e/eterm-color.ti (el1): Undo 2005-10-23 change.
+	Add some comments on how to update this file. Add ri
+	capability that has long been supported by term.el.
+
+2005-10-25  Nick Roberts  <nickrob@snap.net.nz>
+
+	* images/gud/until.xpm: Colour correction.
+
+2005-10-23  Richard M. Stallman  <rms@gnu.org>
+
+	* e/eterm-color.ti (el1): Capability deleted,
+	since term.el doesn't implement it.
+
+2005-10-20  Dan Nicolaescu  <dann@ics.uci.edu>
+
+	* e/eterm-color.ti: Change the terminal name to eterm-color.
+	* e/eterm-color: Regenerate.
+
+2005-10-20  Bryan Henderson  <bryanh@giraffe-data.com>  (tiny change)
+
+	* Makefile (e/eterm-color): Rename eterm to eterm-color.
+
+2005-10-18  Chong Yidong  <cyd@stupidchicken.com>
+
+	* NEWS: New variable `max-image-size'.
+
+2005-10-17  Bill Wohler  <wohler@newt.com>
+
+	Moved all remaining images from lisp/toolbar to etc/images. The
+	low resolution images were placed in their own directory (low-color).
+
+	* images/attach.*, images/cancel.*, images/close.*:
+	* images/copy.*, images/cut.*, images/diropen.*:
+	* images/exit.*, images/help.*, images/home.*:
+	* images/index.*, images/info.*, images/mail.*:
+	* images/new.*, images/open.*, images/paste.*:
+	* images/preferences.*, images/print.*, images/save.*:
+	* images/saveas.*, images/search.*:
+	* images/search-replace.*, images/spell.*:
+	* images/undo.*: Moved here from lisp/toolbar.
+
+	* images/low-color/copy.*: Moved here from lisp/toolbar/lc-copy.*.
+	* images/low-color/cut.*: Moved here from lisp/toolbar/lc-cut.*.
+	* images/low-color/help.*: Moved here from lisp/toolbar/lc-help.*.
+	* images/low-color/home.*: Moved here from lisp/toolbar/lc-home.*.
+	* images/low-color/index.*: Moved here from lisp/toolbar/lc-index.*.
+	* images/low-color/new.*: Moved here from lisp/toolbar/lc-new.*.
+	* images/low-color/open.*: Moved here from lisp/toolbar/lc-open.*.
+	* images/low-color/paste.*: Moved here from lisp/toolbar/lc-paste.*.
+	* images/low-color/preferences.*: Moved here from
+	lisp/toolbar/lc-preferences.*.
+	* images/low-color/print.*: Moved here from lisp/toolbar/lc-print.*.
+	* images/low-color/save.*: Moved here from lisp/toolbar/lc-save.*.
+	* images/low-color/saveas.*: Moved here from lisp/toolbar/lc-saveas.*.
+	* images/low-color/search.*: Moved here from lisp/toolbar/lc-search.*.
+	* images/low-color/spell.*: Moved here from lisp/toolbar/lc-spell.*.
+	* images/low-color/undo.*: Moved here from lisp/toolbar/lc-undo.*.
+
+	To conform with convention, the underscore (_) in the following
+	image names were replaced with dash (-) or (/) as appropriate.
+
+	* images/back-arrow.*: Moved here from lisp/toolbar/back_arrow.*.
+	* images/fld-open.*: Moved here from lisp/toolbar/fld_open.*.
+	* images/fwd-arrow.*: Moved here from lisp/toolbar/fwd_arrow.*.
+	* images/jump-to.*: Moved here from lisp/toolbar/jump_to.*.
+	* images/left-arrow.*: Moved here from lisp/toolbar/left_arrow.*.
+	* images/right-arrow.*: Moved here from lisp/toolbar/right_arrow.*.
+	* images/up-arrow.*: Moved here from lisp/toolbar/up_arrow.*.
+	* images/low-color/back-arrow.*: Moved here from
+	lisp/toolbar/lc-back_arrow.*.
+	* images/low-color/fwd-arrow.*: Moved here from
+	lisp/toolbar/lc-fwd_arrow.*.
+	* images/low-color/jump-to.*: Moved here from
+	lisp/toolbar/lc-jump_to.*.
+	* images/low-color/left-arrow.*: Moved here from
+	lisp/toolbar/lc-left_arrow.*.
+	* images/low-color/right-arrow.*: Moved here from
+	lisp/toolbar/lc-right_arrow.*.
+	* images/low-color/up-arrow.*: Moved here from
+	lisp/toolbar/lc-up_arrow.*.
+	* images/mail/compose.*: Moved here from lisp/toolbar/mail_compose.*.
+	* images/mail/send.*: Moved here from lisp/toolbar/mail_send.*.
+
+	* images/README: Incorporated the content of lisp/toolbar/README
+	now that all of the images are here.
+
+2005-10-16  Nick Roberts  <nickrob@snap.net.nz>
+
+	* images/gud/n.pbm, images/gud/n.xpm
+	* images/gud/ni.xpm, images/gud/ni.xpm
+	* images/gud/s.xpm, images/gud/s.xpm
+	* images/gud/si.xpm, images/gud/si.xpm: Rename to
+	next.*, nexti.*, step.*, and stepi.* , respectively, as the
+	file-name no longer clashes on 8+3 filesystems.
+
+2005-10-14  Bill Wohler  <wohler@newt.com>
+
+	* images/gud/break.*: Moved here from toolbar/gud-break.*.
+	* images/gud/cont.*: Moved here from toolbar/gud-cont.*.
+	* images/gud/down.*: Moved here from toolbar/gud-down.*.
+	* images/gud/finish.*: Moved here from toolbar/gud-finish.*.
+	* images/gud/ni.*: Moved here from toolbar/gud-ni.*.
+	* images/gud/n.*: Moved here from toolbar/gud-n.*.
+	* images/gud/print.*: Moved here from toolbar/gud-print.*.
+	* images/gud/pstar.*: Moved here from toolbar/gud-pstar.*.
+	* images/gud/remove.*: Moved here from toolbar/gud-remove.*.
+	* images/gud/run.*: Moved here from toolbar/gud-run.*.
+	* images/gud/si.*: Moved here from toolbar/gud-si.*.
+	* images/gud/s.*: Moved here from toolbar/gud-s.*.
+	* images/gud/until.*: Moved here from toolbar/gud-until.*.
+	* images/gud/up.*: Moved here from toolbar/gud-up.*.
+	* images/gud/watch.*: Moved here from toolbar/gud-watch.*.
+
+2005-10-14  Bill Wohler  <wohler@newt.com>
+
+	Released MH-E version 7.85.
+
+	* NEWS, MH-E-NEWS: Updated for release 7.85.
+
+2005-10-10  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* NEWS: -nb => -nbi
+
+2005-10-10  Carsten Dominik  <dominik@science.uva.nl>
+
+	* orgcard.tex: Version 3.17, no changes except version number.
+
+2005-10-09  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* NEWS: -nb, --no-bitmap-icon
+
+2005-10-02  Stefan Monnier  <monnier@iro.umontreal.ca>
+
+	* TODO: Clarify the local variables entry.
+
+2005-09-30  Bill Wohler  <wohler@newt.com>
+
+	Moved MH-E image files from toolbar and mail directories into
+	images.
+
+	* images/mail: New directory.
+
+	* images/mail/reply.*: Moved here from lisp/mail/reply2*.
+
+	* images/mail/alias.*, images/mail/refile.*, images/mail/repack.*:
+	* images/mail/reply*: Moved here from lisp/toolbar.
+
+	* images/execute.*, images/highlight.*, images/mh-logo.xpm:
+	* images/page-down.*, images/show.*, images/widen.*: Moved here
+	from lisp/toolbar.
+
+	* images/refresh.*: Moved here from lisp/toolbar/rescan.*.
+	Use GNOME 2.10's refresh icon.
+
+	* images/README: New file that indicates which icons came from
+	GNOME (see lisp/toolbar/README).
+
+2005-09-30  Romain Francoise  <romain@orebokech.com>
+
+	* NEWS: Mention changes to `read-buffer'.
+
+2005-09-30  Chong Yidong  <cyd@stupidchicken.com>
+
+	* images/ezimage: New directory.
+
+	* images/ezimage/*.xpm: Add images used by speedbar.el.
+
+2005-09-30  David Ponce  <david@dponce.com>
+
+	* NEWS: Update recentf changes.
+
+2005-09-28  Simon Josefsson  <jas@extundo.com>
+
+	* GNUS-NEWS: Fix IDNA notes.
+
+2005-09-27  Jay Belanger <belanger@truman.edu>
+
+	* calccard.tex: Update `versionnumber', remove `versiondate'.
+	(Error Recovery): Refer to "initial state" rather than "default state".
+	(Algebra): Mention LaTeX language mode.
+	(Programming): Delete reference to "Z =".
+
+2005-09-24  Steven Huwig  <steven_h@acm.org>  (tiny change)
+
+	* emacs.py (ehelp): Add g and l to arg list, and use them in the
+	call to `help'.
+
+2005-09-17  Romain Francoise  <romain@orebokech.com>
+
+	* gfdl.1: Update to version 1.2.  Delete UC macro.
+
+2005-09-15  Kenichi Handa  <handa@m17n.org>
+
+	* PROBLEMS: Fix the paragraph describing the limitation of UTF-8/16/7.
+
+2005-09-14  Romain Francoise  <romain@orebokech.com>
+
+	* NEWS: Add entry for write-region-inhibit-fsync.
+
+2005-09-09  Kevin Ryde  <user42@zip.com.au>
+
+	* MORE.STUFF: Update url for calculator.el.
+
+2005-09-08  Kenichi Handa  <handa@m17n.org>
+
+	* PROBLEMS: Show a patch for Mule-UCS to make it byte-compiled
+	correctly.
+
+2005-08-31  Michael Albinus  <michael.albinus@gmx.de>
+
+	* NEWS: Add entry for `make-auto-save-file-name'.
+
+2005-08-19  Emilio C. Lopes  <eclig@gmx.net>
+
+	* emacsclient.1 (DESCRIPTION): Reflect inclusion in the
+	Emacs distribution.  Make role of EDITOR clearer.
+	(OPTIONS): Document `-s', `-V' and `-h'
+	as well as their long name counterparts.
+	(BUGS): Remove.
+
+2005-08-26  Romain Francoise  <romain@orebokech.com>
+
+	* PROBLEMS: Fix capitalization of "Gnus".
+
+2005-08-20  Chong Yidong  <cyd@stupidchicken.com>
+
+	* MORE.STUFF: Update links and URLs.
+
+2005-08-05  Kenichi Handa  <handa@m17n.org>
+
+	* NEWS: Fix the entry describing code-pages.
+
+2005-07-28  Juanma Barranquero  <lekktu@gmail.com>
+
+	* .cvsignore: Add `icons' (for in-place installs).
+
+2005-07-19  Juri Linkov  <juri@jurta.org>
+
+	* grep.txt: New file.
+
+2005-07-19  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* PROBLEMS (Fedora Core 4 GNU/Linux: Segfault during dumping):
+	-R comes after i386 in setarch command.
+
+2005-07-12  Juri Linkov  <juri@jurta.org>
+
+	* refcard.tex (Files): Change description of `C-x C-q' from
+	`checkin/checkout' to `toggle read-only'.
+	(Getting Help): Replace `C-h c' with `C-h k'.
+	(Error Recovery): Replace `recover-file' with `recover-session'.
+	(Info): Replace key binding `C-h C-i' with `C-h S'.  Add `t'.
+
+2005-07-07  Richard M. Stallman  <rms@gnu.org>
+
+	* GNU: Update how to help.  Improve footnote 7.
+
+2005-07-07  Lute Kamstra  <lute@gnu.org>
+
+	* tasks.texi: Delete file.  The GNU Task List is obsolete and has
+	been replaced by http://savannah.gnu.org/projects/tasklist.
+
+2005-07-07  Lute Kamstra  <lute@gnu.org>
+
+	* refcard.tex: Update `versionnumber' and `year'.  Update Emacs's
+	version to 22.
+	(Starting Emacs): Delete sentence to fix formatting problems.
+	(Multiple Windows): Clarify first sentence.  Mention C-x 5 1.
+	(Formatting): Update the binding of set face.
+	(International Character Sets): set-language-environment is bound
+	to C-x RET l.
+
+2005-07-05  Lute Kamstra  <lute@gnu.org>
+
+	Update FSF's address in GPL notices.
+
+	* INTERVIEW:
+	* calccard.tex:
+	* cs-dired-ref.tex:
+	* cs-refcard.tex:
+	* dired-ref.tex:
+	* fr-drdref.tex:
+	* fr-refcard.tex:
+	* gfdl.1:
+	* pl-refcard.tex:
+	* refcard.tex:
+	* ru-refcard.tex:
+	* sk-dired-ref.tex:
+	* sk-refcard.tex:
+	* vipcard.tex:
+	* viperCard.tex: Update FSF's address.
+
+2005-07-03  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
+
+	* PROBLEMS (Fedora Core 4 GNU/Linux: Segfault during dumping):
+	Add it again.
+
+2005-06-29  Carsten Dominik  <dominik@science.uva.nl>
+
+	* NEWS: Add an entry for Org-mode, and a change entry for reftex-mode.
+
+2005-06-28  Richard M. Stallman  <rms@gnu.org>
+
+	* PROBLEMS (Fedora Core 4 GNU/Linux: Segfault during dumping): New.
+
+2005-06-11  Eli Zaretskii  <eliz@gnu.org>
+
+	* DEBUG: Mention emacs-buffer.gdb.
+
+2005-06-10  Noah Friedman  <friedman@splode.com>
+
+	* emacs-buffer.gdb (ybuffer-list): Don't use $filename; can't use
+	char as placeholder when buffer has no file name and process is
+	still live.  Use different printf cases instead.
+
+2005-06-08  Kim F. Storm  <storm@cua.dk>
+
+	* PROBLEMS: Linux kernel 2.6.10 may corrupt process output.
+	Warn that using CVS+SSH may corrupt files, include work-around.
+
+2005-06-06  Juri Linkov  <juri@jurta.org>
+
+	* TUTORIAL.cs, TUTORIAL.sk: Change NBSP to space.
+
+	* TUTORIAL.ro: Change NBSP to space.  Move coding cookie from the
+	second line to Local Variables.  Fix title line.
+
 2005-05-30  Miles Bader  <miles@gnu.org>
 
 	* emacs-buffer.gdb: Remove RCS keywords.
@@ -36,7 +461,7 @@
 
 2005-05-05  Slawomir Nowaczyk  <slawek@cs.lth.se>  (tiny change)
 
-        * TUTORIAL.pl: Updated header.
+	* TUTORIAL.pl: Updated header.
 
 2005-05-02  Richard M. Stallman  <rms@gnu.org>
 
@@ -79,8 +504,8 @@
 
 2005-04-10  Masatake YAMATO  <jet@gyve.org>
 
-	* compilation.txt (symbol): Added gcov-file
-	gcov-bb-file gcov-never-called-line gcov-called-line .
+	* compilation.txt (symbol): Add gcov-file
+	gcov-bb-file gcov-never-called-line gcov-called-line.
 
 2005-04-08  Kenichi Handa  <handa@m17n.org>
 
@@ -97,7 +522,7 @@
 
 2005-04-05  Marcelo Toledo  <marcelo@gnu.org>
 
-        * TUTORIAL.translators: Added the field Maintainer.
+	* TUTORIAL.translators: Added the field Maintainer.
 
 2005-04-04  Thien-Thi Nguyen  <ttn@gnu.org>
 
@@ -118,22 +543,21 @@
 
 2005-04-01  Marcelo Toledo  <marcelo@gnu.org>
 
-        * TUTORIAL.pt_BR, TUTORIAL.cn, TUTORIAL.cs, TUTORIAL.de,
-        * TUTORIAL.es, TUTORIAL.fr, TUTORIAL.it, TUTORIAL.ja, TUTORIAL.ko,
-        * TUTORIAL.pl, TUTORIAL.pt_BR, TUTORIAL.ro, TUTORIAL.ru,
-        * TUTORIAL.sk, TUTORIAL.sl, TUTORIAL.th, TUTORIAL.zh: Fix title
-        line.
+	* TUTORIAL.pt_BR, TUTORIAL.cn, TUTORIAL.cs, TUTORIAL.de,
+	* TUTORIAL.es, TUTORIAL.fr, TUTORIAL.it, TUTORIAL.ja, TUTORIAL.ko,
+	* TUTORIAL.pl, TUTORIAL.pt_BR, TUTORIAL.ro, TUTORIAL.ru,
+	* TUTORIAL.sk, TUTORIAL.sl, TUTORIAL.th, TUTORIAL.zh: Fix title line.
 
 2005-04-01  Ognyan Kulev  <ogi@fmi.uni-sofia.bg>
 
-        * TUTORIAL.bg: Fix title line; Applied TUTORIAL changes in
-        revision 1.59, "Emacs" is not transliterated to cyrillic anymore;
-        Minor fixes.
+	* TUTORIAL.bg: Fix title line; Applied TUTORIAL changes in
+	revision 1.59, "Emacs" is not transliterated to cyrillic anymore;
+	Minor fixes.
 
 2005-04-01  Mats Lidell  <matsl@contactor.se>
 
-        * TUTORIAL.sv: Sync some other changes with the TUTORIAL version
-        1.61 in CVS.
+	* TUTORIAL.sv: Sync some other changes with the TUTORIAL version
+	1.61 in CVS.
 
 2005-04-01  Lute Kamstra  <lute@gnu.org>
 
@@ -267,7 +691,7 @@
 
 	* e/eterm.ti: Comment out smcup, rmcup. Add kbs, kdch1, rc, sc.
 	Reformat.
-        * e/eterm: Regenerate.
+	* e/eterm: Regenerate.
 
 2004-09-25  Jan Dj,Ad(Brv  <jan.h.d@swipnet.se>
 
@@ -276,7 +700,7 @@
 2004-09-16  Dan Nicolaescu  <dann@ics.uci.edu>
 
 	* e/eterm.ti: Change the strings for smso and rmso.
-          e/eterm: Regenerate.
+	e/eterm: Regenerate.
 
 2004-09-09  Thien-Thi Nguyen  <ttn@gnu.org>
 
@@ -285,7 +709,7 @@
 2004-09-07  Dan Nicolaescu  <dann@ics.uci.edu>
 
 	* e/eterm.ti: Add `op' entry to enable colors in term.
-        * e/eterm: Regenerate.
+	* e/eterm: Regenerate.
 
 2004-09-04  Eric S. Raymond  <esr@thyrsus.com>
 
@@ -357,7 +781,7 @@
 
 2004-07-08  David Kastrup  <dak@gnu.org>
 
-	* NEWS (Lisp changes in 21.4): document (match-data t) change.
+	* NEWS (Lisp changes in 21.4): Document (match-data t) change.
 
 2002-06-26  Eli Zaretskii  <eliz@is.elta.co.il>
 
@@ -367,8 +791,8 @@
 
 	* NEWS: Move description from new paragraph-start and
 	indent-line-function defaults to general news instead of new
-	packages.  Same for query-replace-skip-read-only.  Add
-	description of new `\,' and `\?' replacement string features.
+	packages.  Same for query-replace-skip-read-only.
+	Add description of new `\,' and `\?' replacement string features.
 
 2004-06-23  Luc Teirlinck  <teirllm@auburn.edu>
 
@@ -395,8 +819,7 @@
 
 2004-05-14  David Ponce  <david@dponce.com>
 
-	* tree-widget: New directory containing tree-widget themes and
-	images.
+	* tree-widget: New directory containing tree-widget themes and images.
 
 2004-04-13  Marcelo Toledo  <marcelo@gnu.org>
 
@@ -2077,7 +2500,7 @@
 ;; End:
 
     Copyright (C) 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2001
-	Free Software Foundation, Inc.
+	2002, 2003, 2004, 2005 Free Software Foundation, Inc.
   Copying and distribution of this file, with or without modification,
   are permitted provided the copyright notice and this notice are preserved.
 

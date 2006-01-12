@@ -1,6 +1,6 @@
 ;;; animate.el --- make text dance
 
-;; Copyright (C) 2001,2005 Free Software Foundation, Inc.
+;; Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Maintainer: Richard Stallman <rms@gnu.org>
 ;; Keywords: games
@@ -19,8 +19,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -156,7 +156,7 @@ Strings will be separated from each other by SPACE lines."
 (defun animate-birthday-present (&optional name)
   "Display one's birthday present in a new buffer.
 You can specify the one's name by NAME; the default value is \"Sarah\"."
-  (interactive (list (read-string "Name (default \"Sarah\"): "
+  (interactive (list (read-string "Name (default Sarah): "
 				  nil nil "Sarah")))
   ;; Make a suitable buffer to display the birthday present in.
   (switch-to-buffer (get-buffer-create (format "*%s*" name)))

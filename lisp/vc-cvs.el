@@ -1,7 +1,7 @@
 ;;; vc-cvs.el --- non-resident support for CVS version-control
 
-;; Copyright (C) 1995,98,99,2000,2001,02,2003, 2005
-;;  Free Software Foundation, Inc.
+;; Copyright (C) 1995, 1998, 1999, 2000, 2001, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author:      FSF (see vc.el for full credits)
 ;; Maintainer:  Andre Spiegel <spiegel@gnu.org>
@@ -22,8 +22,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -452,7 +452,8 @@ REV is the revision to check out into WORKFILE."
 	(message "Checking out %s...done" filename)))))
 
 (defun vc-cvs-delete-file (file)
-  (vc-cvs-command nil 0 file "remove" "-f"))
+  (vc-cvs-command nil 0 file "remove" "-f")
+  (vc-cvs-command nil 0 file "commit" "-mRemoved."))
 
 (defun vc-cvs-revert (file &optional contents-done)
   "Revert FILE to the version it was based on."

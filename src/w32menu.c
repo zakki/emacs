@@ -1,5 +1,6 @@
 /* Menu support for GNU Emacs on the Microsoft W32 API.
-   Copyright (C) 1986,88,93,94,96,98,1999,2003  Free Software Foundation, Inc.
+   Copyright (C) 1986, 1988, 1993, 1994, 1996, 1998, 1999, 2002, 2003,
+                 2004, 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -15,8 +16,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #include <config.h>
 #include <signal.h>
@@ -737,7 +738,8 @@ cached information about equivalent key sequences.  */)
 
       XSETFRAME (Vmenu_updating_frame, f);
     }
-  Vmenu_updating_frame = Qnil;
+  else
+    Vmenu_updating_frame = Qnil;
 #endif /* HAVE_MENUS */
 
   title = Qnil;
@@ -1443,7 +1445,8 @@ set_frame_menubar (f, first_time, deep_p)
 	 because it is not reentrant.  */
       specbind (Qdebug_on_next_call, Qnil);
 
-      record_unwind_protect (Fset_match_data, Fmatch_data (Qnil, Qnil));
+      record_unwind_save_match_data ();
+
       if (NILP (Voverriding_local_map_menu_flag))
 	{
 	  specbind (Qoverriding_terminal_local_map, Qnil);
@@ -2319,7 +2322,23 @@ add_menu_item (HMENU menu, widget_value *wv, HMENU item)
 					  item != NULL ? (UINT) item
 					    : (UINT) wv->call_data,
 					  utf16_string);
-      if (fuFlags & MF_OWNERDRAW)
+      if (!return_value)
+	{
+	  /* On W9x/ME, unicode menus are not supported, though AppendMenuW
+	     apparently does exist at least in some cases and appears to be
+	     stubbed out to do nothing.  out_string is UTF-8, but since
+	     our standard menus are in English and this is only going to
+	     happen the first time a menu is used, the encoding is
+	     of minor importance compared with menus not working at all.  */
+	  return_value =
+	    AppendMenu (menu, fuFlags,
+			item != NULL ? (UINT) item: (UINT) wv->call_data,
+			out_string);
+	  /* Don't use unicode menus in future.  */
+	  unicode_append_menu = NULL;
+	}
+
+      if (unicode_append_menu && (fuFlags & MF_OWNERDRAW))
 	local_free (out_string);
     }
   else
@@ -2417,8 +2436,11 @@ w32_menu_display_help (HWND owner, HMENU menu, UINT item, UINT flags)
       struct frame *f = x_window_to_frame (&one_w32_display_info, owner);
       Lisp_Object frame, help;
 
-      /* No help echo on owner-draw menu items.  */
-      if (flags & MF_OWNERDRAW || flags & MF_POPUP)
+      /* No help echo on owner-draw menu items, or when the keyboard is used
+	 to navigate the menus, since tooltips are distracting if they pop
+	 up elsewhere.  */
+      if (flags & MF_OWNERDRAW || flags & MF_POPUP
+	  || !(flags & MF_MOUSESELECT))
 	help = Qnil;
       else
 	{

@@ -1,6 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1998, 1999 Free Software Foundation, Inc.
+@c Copyright (C) 1998, 1999, 2002, 2003, 2004,
+@c   2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/characters
 @node Non-ASCII Characters, Searching and Matching, Text, Top
@@ -716,8 +717,8 @@ operation finishes the job of choosing a coding system.  Very often
 you will want to find out afterwards which coding system was chosen.
 
 @defvar buffer-file-coding-system
-This variable records the coding system that was used for visiting the
-current buffer.  It is used for saving the buffer, and for writing part
+This buffer-local variable records the coding system that was used to visit
+the current buffer.  It is used for saving the buffer, and for writing part
 of the buffer with @code{write-region}.  If the text to be written
 cannot be safely encoded using the coding system specified by this
 variable, these operations select an alternative encoding by calling
@@ -1067,11 +1068,11 @@ for decoding (in case @var{operation} does decoding), and
 @var{encoding-system} is the coding system for encoding (in case
 @var{operation} does encoding).
 
-The argument @var{operation} should be a symbol, one of
-@code{insert-file-contents}, @code{write-region}, @code{call-process},
-@code{call-process-region}, @code{start-process}, or
-@code{open-network-stream}.  These are the names of the Emacs I/O primitives
-that can do coding system conversion.
+The argument @var{operation} should be a symbol, any one of
+@code{insert-file-contents}, @code{write-region},
+@code{start-process}, @code{call-process}, @code{call-process-region},
+or @code{open-network-stream}.  These are the names of the Emacs I/O
+primitives that can do coding system conversion.
 
 The remaining arguments should be the same arguments that might be given
 to that I/O primitive.  Depending on the primitive, one of those
@@ -1081,9 +1082,9 @@ name is the target.  For subprocess primitives, the process name is the
 target.  For @code{open-network-stream}, the target is the service name
 or port number.
 
-This function looks up the target in @code{file-coding-system-alist},
-@code{process-coding-system-alist}, or
-@code{network-coding-system-alist}, depending on @var{operation}.
+Depending on @var{operation}, this function looks up the target in
+@code{file-coding-system-alist}, @code{process-coding-system-alist},
+or @code{network-coding-system-alist}.
 @end defun
 
 @node Specifying Coding Systems

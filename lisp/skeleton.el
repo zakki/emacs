@@ -1,6 +1,7 @@
 ;;; skeleton.el --- Lisp language extension for writing statement skeletons
 
-;; Copyright (C) 1993, 1994, 1995, 1996, 2003 by Free Software Foundation, Inc.
+;; Copyright (C) 1993, 1994, 1995, 1996, 2002, 2003,
+;;   2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Daniel Pfeiffer <occitan@esperanto.org>
 ;; Maintainer: FSF
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -50,7 +51,7 @@ Typical examples might be `upcase' or `capitalize'.")
 
 
 (defvar skeleton-autowrap t
-  "Controls wrapping behaviour of functions created with `define-skeleton'.
+  "Controls wrapping behavior of functions created with `define-skeleton'.
 When the region is visible (due to `transient-mark-mode' or marking a region
 with the mouse) and this is non-nil and the function was called without an
 explicit ARG, then the ARG defaults to -1, i.e. wrapping around the visible
@@ -154,7 +155,7 @@ on `skeleton-autowrap'.  An ARG of  M-0  will prevent this just for once.
 This command can also be an abbrev expansion (3rd and 4th columns in
 \\[edit-abbrevs]  buffer: \"\"  command-name).
 
-Optional first argument STR may also be a string which will be the value
+Optional second argument STR may also be a string which will be the value
 of `str' whereas the skeleton's interactor is then ignored."
   (skeleton-insert (funcall skeleton-filter skeleton)
 		   ;; Pretend  C-x a e  passed its prefix arg to us

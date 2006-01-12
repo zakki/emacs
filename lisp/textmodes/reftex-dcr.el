@@ -3,7 +3,7 @@
 ;;  Free Software Foundation, Inc.
 
 ;; Author: Carsten Dominik <dominik@science.uva.nl>
-;; Version: 4.28
+;; Version: VERSIONTAG
 ;;
 
 ;; This file is part of GNU Emacs.
@@ -20,8 +20,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -267,7 +267,7 @@ With argument, actually select the window showing the cross reference."
   ;; Display crossref info in echo area.
   (cond
    ((null docstruct)
-    (message (substitute-command-keys (format reftex-no-info-message "ref"))))
+    (message "%s" (substitute-command-keys (format reftex-no-info-message "ref"))))
    ((null entry)
     (message "ref: unknown label: %s" label))
    (t
@@ -300,7 +300,7 @@ With argument, actually select the window showing the cross reference."
               (error
                (if (and files (= (length all-files) (length files)))
                    (message "cite: no such database entry: %s" key)
-                 (message (substitute-command-keys 
+                 (message "%s" (substitute-command-keys 
                            (format reftex-no-info-message "cite"))))
                nil)))
       (when entry

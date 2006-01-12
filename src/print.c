@@ -1,6 +1,7 @@
 /* Lisp object printing and output streams.
-   Copyright (C) 1985, 1986, 1988, 1993, 1994, 1995, 1997, 1998, 1999,
-     2000, 2001, 2003, 2004, 2005 Free Software Foundation, Inc.
+   Copyright (C) 1985, 1986, 1988, 1993, 1994, 1995, 1997,
+                 1998, 1999, 2000, 2001, 2002, 2003, 2004,
+                 2005 Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -16,8 +17,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 
 #include <config.h>
@@ -969,6 +970,26 @@ debug_print (arg)
   Fprin1 (arg, Qexternal_debugging_output);
   fprintf (stderr, "\r\n");
 }
+
+void
+safe_debug_print (arg)
+     Lisp_Object arg;
+{
+  int valid = valid_lisp_object_p (arg);
+
+  if (valid > 0)
+    debug_print (arg);
+  else
+    fprintf (stderr, "#<%s_LISP_OBJECT 0x%08lx>\r\n",
+	     !valid ? "INVALID" : "SOME",
+#ifdef NO_UNION_TYPE
+	     (unsigned long) arg
+#else
+	     (unsigned long) arg.i
+#endif
+	     );
+}
+
 
 DEFUN ("error-message-string", Ferror_message_string, Serror_message_string,
        1, 1, 0,
@@ -1024,8 +1045,10 @@ print_error_message (data, stream, context, caller)
    *Messages*.  */
   if (!NILP (caller) && SYMBOLP (caller))
     {
-      const char *name = SDATA (SYMBOL_NAME (caller));
-      message_dolog (name, strlen (name), 0, 0);
+      Lisp_Object cname = SYMBOL_NAME (caller);
+      char *name = alloca (SBYTES (cname));
+      bcopy (SDATA (cname), name, SBYTES (cname));
+      message_dolog (name, SBYTES (cname), 0, 0);
       message_dolog (": ", 2, 0, 0);
     }
 
@@ -1291,7 +1314,7 @@ print_preprocess (obj)
   /* Give up if we go so deep that print_object will get an error.  */
   /* See similar code in print_object.  */
   if (print_depth >= PRINT_CIRCLE)
-    return;
+    error ("Apparently circular structure being printed");
 
   /* Avoid infinite recursion for circular nested structure
      in the case where Vprint_circle is nil.  */
@@ -1322,7 +1345,8 @@ print_preprocess (obj)
 	      {
 		/* OBJ appears more than once.  Let's remember that.  */
 		PRINT_NUMBER_STATUS (Vprint_number_table, i) = Qt;
-		return;
+                print_depth--;
+                return;
 	      }
 
 	  /* OBJ is not yet recorded.  Let's add to the table.  */

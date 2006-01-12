@@ -1,7 +1,7 @@
 @c -*-texinfo-*-
 @c This is part of the GNU Emacs Lisp Reference Manual.
-@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2003
-@c   Free Software Foundation, Inc.
+@c Copyright (C) 1990, 1991, 1992, 1993, 1994, 1995, 1998, 1999, 2002, 2003,
+@c   2004, 2005 Free Software Foundation, Inc.
 @c See the file elisp.texi for copying conditions.
 @setfilename ../info/numbers
 @node Numbers, Strings and Characters, Lisp Data Types, Top
@@ -183,21 +183,26 @@ there is no correct answer.  For example, @code{(/ 0.0 0.0)} returns a
 NaN.  For practical purposes, there's no significant difference between
 different NaN values in Emacs Lisp, and there's no rule for precisely
 which NaN value should be used in a particular case, so Emacs Lisp
-doesn't try to distinguish them.  Here are the read syntaxes for
-these special floating point values:
+doesn't try to distinguish them (but it does report the sign, if you
+print it).  Here are the read syntaxes for these special floating
+point values:
 
 @table @asis
 @item positive infinity
 @samp{1.0e+INF}
 @item negative infinity
 @samp{-1.0e+INF}
-@item Not-a-number
-@samp{0.0e+NaN}.
+@item Not-a-number 
+@samp{0.0e+NaN} or @samp{-0.0e+NaN}.
 @end table
 
-  In addition, the value @code{-0.0} is distinguishable from ordinary
-zero in @acronym{IEEE} floating point (although @code{equal} and
-@code{=} consider them equal values).
+  To test whether a floating point value is a NaN, compare it with
+itself using @code{=}.  That returns @code{nil} for a NaN, and
+@code{t} for any other floating point value.
+
+  The value @code{-0.0} is distinguishable from ordinary zero in
+@acronym{IEEE} floating point, but Emacs Lisp @code{equal} and
+@code{=} consider them equal values.
 
   You can use @code{logb} to extract the binary exponent of a floating
 point number (or estimate the logarithm of an integer):

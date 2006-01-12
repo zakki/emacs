@@ -4,7 +4,8 @@
 ;; Maintainer: FSF
 ;; Keywords: unix, tools
 
-;; Copyright (C) 1992,93,94,95,96,1998,2000,02,03,04 Free Software Foundation, Inc.
+;; Copyright (C) 1992, 1993, 1994, 1995, 1996, 1998, 2000, 2001, 2002, 2003,
+;;  2004, 2005 Free Software Foundation, Inc.
 
 ;; This file is part of GNU Emacs.
 
@@ -20,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -42,7 +43,17 @@
 (eval-when-compile (require 'cl)) ; for case macro
 
 (require 'comint)
-(require 'etags)
+(require 'font-lock)
+
+(defvar gdb-active-process)
+(defvar gdb-define-alist)
+(defvar gdb-macro-info)
+(defvar gdb-server-prefix)
+(defvar gdb-show-changed-values)
+(defvar gdb-var-changed)
+(defvar gdb-var-list)
+(defvar gdb-speedbar-auto-raise)
+(defvar tool-bar-map)
 
 ;; ======================================================================
 ;; GUD commands must be visible in C buffers visited by GUD
@@ -112,26 +123,50 @@ Used to grey out relevant togolbar icons.")
 	(info "(emacs)GDB Graphical Interface")
       (info "(emacs)Debuggers"))))
 
+(defun gud-tool-bar-item-visible-no-fringe ()
+  (not (or (eq (buffer-local-value 'major-mode (window-buffer)) 'speedbar-mode)
+	   (and (memq gud-minor-mode '(gdbmi gdba))
+		(> (car (window-fringes)) 0)))))
+
+(defun gud-stop-subjob ()
+  (interactive)
+  (if (string-equal
+       (buffer-local-value 'gud-target-name gud-comint-buffer) "emacs")
+      (comint-stop-subjob)
+    (comint-interrupt-subjob)))
+
 (easy-mmode-defmap gud-menu-map
   '(([help]     "Info" . gud-goto-info)
     ([tooltips] menu-item "Toggle GUD tooltips" gud-tooltip-mode
-                  :enable  (and (not emacs-basic-display)
-				(display-graphic-p)
-				(fboundp 'x-show-tip))
+                  :enable (and (not emacs-basic-display)
+			       (display-graphic-p)
+			       (fboundp 'x-show-tip))
 	          :button (:toggle . gud-tooltip-mode))
     ([refresh]	"Refresh" . gud-refresh)
     ([run]	menu-item "Run" gud-run
                   :enable (and (not gud-running)
-			       (memq gud-minor-mode '(gdbmi gdba gdb dbx jdb))))
+			       (memq gud-minor-mode '(gdbmi gdb dbx jdb)))
+		  :visible (not (eq gud-minor-mode 'gdba)))
+    ([go]	menu-item "Run/Continue" gud-go
+		  :visible (and (not gud-running)
+				(eq gud-minor-mode 'gdba)))
+    ([stop]	menu-item "Stop" gud-stop-subjob
+		  :visible (or (not (eq gud-minor-mode 'gdba))
+			       (and gud-running
+				    (eq gud-minor-mode 'gdba))))
     ([until]	menu-item "Continue to selection" gud-until
                   :enable (and (not gud-running)
-			       (memq gud-minor-mode '(gdbmi gdba gdb perldb))))
+			       (memq gud-minor-mode '(gdbmi gdba gdb perldb)))
+		  :visible (gud-tool-bar-item-visible-no-fringe))
     ([remove]	menu-item "Remove Breakpoint" gud-remove
-                  :enable (not gud-running))
+                  :enable (not gud-running)
+		  :visible (gud-tool-bar-item-visible-no-fringe))
     ([tbreak]	menu-item "Temporary Breakpoint" gud-tbreak
-		  :enable (memq gud-minor-mode '(gdbmi gdba gdb sdb xdb bashdb)))
+		  :enable (memq gud-minor-mode
+				'(gdbmi gdba gdb sdb xdb bashdb)))
     ([break]	menu-item "Set Breakpoint" gud-break
-                  :enable (not gud-running))
+                  :enable (not gud-running)
+		  :visible (gud-tool-bar-item-visible-no-fringe))
     ([up]	menu-item "Up Stack" gud-up
 		  :enable (and (not gud-running)
 			       (memq gud-minor-mode
@@ -140,30 +175,38 @@ Used to grey out relevant togolbar icons.")
 		  :enable (and (not gud-running)
 			       (memq gud-minor-mode
 				     '(gdbmi gdba gdb dbx xdb jdb pdb bashdb))))
+    ([pp]	menu-item "Print the emacs s-expression" gud-pp
+                  :enable (and (not gud-running)
+				  gdb-active-process)
+		  :visible (and (string-equal
+				 (buffer-local-value
+				  'gud-target-name gud-comint-buffer) "emacs")
+				(eq gud-minor-mode 'gdba)))
     ([print*]	menu-item "Print Dereference" gud-pstar
-                     :enable (and (not gud-running)
-				  (memq gud-minor-mode '(gdbmi gdba gdb))))
+                  :enable (and (not gud-running)
+			       (memq gud-minor-mode '(gdbmi gdba gdb))))
     ([print]	menu-item "Print Expression" gud-print
-                     :enable (not gud-running))
+                  :enable (not gud-running))
     ([watch]	menu-item "Watch Expression" gud-watch
-		     :enable (and (not gud-running)
-				  (memq gud-minor-mode '(gdbmi gdba))))
+		  :enable (and (not gud-running)
+			       (memq gud-minor-mode '(gdbmi gdba))))
     ([finish]	menu-item "Finish Function" gud-finish
-		     :enable (and (not gud-running)
-				  (memq gud-minor-mode
-					'(gdbmi gdba gdb xdb jdb pdb bashdb))))
+                  :enable (and (not gud-running)
+			       (memq gud-minor-mode
+				     '(gdbmi gdba gdb xdb jdb pdb bashdb))))
     ([stepi]	menu-item "Step Instruction" gud-stepi
-                     :enable (and (not gud-running)
-				  (memq gud-minor-mode '(gdbmi gdba gdb dbx))))
+                  :enable (and (not gud-running)
+			       (memq gud-minor-mode '(gdbmi gdba gdb dbx))))
     ([nexti]	menu-item "Next Instruction" gud-nexti
-                     :enable (and (not gud-running)
-				  (memq gud-minor-mode '(gdbmi gdba gdb dbx))))
+                  :enable (and (not gud-running)
+			       (memq gud-minor-mode '(gdbmi gdba gdb dbx))))
     ([step]	menu-item "Step Line" gud-step
-                     :enable (not gud-running))
+                  :enable (not gud-running))
     ([next]	menu-item "Next Line" gud-next
-                     :enable (not gud-running))
+                  :enable (not gud-running))
     ([cont]	menu-item "Continue" gud-cont
-                     :enable (not gud-running)))
+                  :enable (not gud-running)
+		  :visible (not (eq gud-minor-mode 'gdba))))
   "Menu for `gud-mode'."
   :name "Gud")
 
@@ -183,24 +226,27 @@ Used to grey out relevant togolbar icons.")
 (defvar gud-tool-bar-map
   (if (display-graphic-p)
       (let ((map (make-sparse-keymap)))
-	(dolist (x '((gud-break . "gud-break")
-		     (gud-remove . "gud-remove")
-		     (gud-print . "gud-print")
-		     (gud-pstar . "gud-pstar")
-		     (gud-watch . "gud-watch")
-		     (gud-cont . "gud-cont")
-		     (gud-until . "gud-until")
-		     (gud-finish . "gud-finish")
-		     (gud-run . "gud-run")
+	(dolist (x '((gud-break . "gud/break")
+		     (gud-remove . "gud/remove")
+		     (gud-print . "gud/print")
+		     (gud-pstar . "gud/pstar")
+		     (gud-pp . "gud/pp")
+		     (gud-watch . "gud/watch")
+		     (gud-run . "gud/run")
+		     (gud-go . "gud/go")
+		     (gud-stop-subjob . "gud/stop")
 		     ;; gud-s, gud-si etc. instead of gud-step,
 		     ;; gud-stepi, to avoid file-name clashes on DOS
 		     ;; 8+3 filesystems.
-		     (gud-next . "gud-n")
-		     (gud-step . "gud-s")
-		     (gud-nexti . "gud-ni")
-		     (gud-stepi . "gud-si")
-		     (gud-up . "gud-up")
-		     (gud-down . "gud-down")
+		     (gud-cont . "gud/cont")
+		     (gud-until . "gud/until")
+		     (gud-next . "gud/next")
+		     (gud-step . "gud/step")
+		     (gud-finish . "gud/finish")
+		     (gud-nexti . "gud/nexti")
+		     (gud-stepi . "gud/stepi")
+		     (gud-up . "gud/up")
+		     (gud-down . "gud/down")
 		     (gud-goto-info . "info"))
 		   map)
 	  (tool-bar-local-item-from-menu
@@ -322,15 +368,18 @@ we're in the GUD buffer)."
 ;; speedbar support functions and variables.
 (eval-when-compile (require 'speedbar))	;For speedbar-with-attached-buffer.
 
-(defvar gud-last-speedbar-buffer nil
-  "The last GUD buffer used.")
-
 (defvar gud-last-speedbar-stackframe nil
   "Description of the currently displayed GUD stack.
 t means that there is no stack, and we are in display-file mode.")
 
 (defvar gud-speedbar-key-map nil
   "Keymap used when in the buffers display mode.")
+
+(defun gud-speedbar-item-info ()
+  "Display the data type of the watch expression element."
+  (let ((var (nth (- (line-number-at-pos (point)) 2) gdb-var-list)))
+    (if (nth 4 var)
+	(speedbar-message "%s" (nth 3 var)))))
 
 (defun gud-install-speedbar-variables ()
   "Install those variables used by speedbar to enhance gud/gdb."
@@ -341,20 +390,35 @@ t means that there is no stack, and we are in display-file mode.")
     (define-key gud-speedbar-key-map "j" 'speedbar-edit-line)
     (define-key gud-speedbar-key-map "e" 'speedbar-edit-line)
     (define-key gud-speedbar-key-map "\C-m" 'speedbar-edit-line)
-    (define-key gud-speedbar-key-map "D" 'gdb-var-delete)))
+    (define-key gud-speedbar-key-map " " 'speedbar-toggle-line-expansion)
+    (define-key gud-speedbar-key-map "[" 'speedbar-expand-line-descendants)
+    (define-key gud-speedbar-key-map "]" 'speedbar-contract-line-descendants)
+    (define-key gud-speedbar-key-map "D" 'gdb-var-delete)
+    (define-key gud-speedbar-key-map "p" 'gud-pp))
 
+  (speedbar-add-expansion-list '("GUD" gud-speedbar-menu-items
+				 gud-speedbar-key-map
+				 gud-expansion-speedbar-buttons))
+
+  (add-to-list 
+   'speedbar-mode-functions-list
+   '("GUD" (speedbar-item-info . gud-speedbar-item-info)
+     (speedbar-line-directory . ignore))))
 
 (defvar gud-speedbar-menu-items
-  ;; Note to self.  Add expand, and turn off items when not available.
   '(["Jump to stack frame" speedbar-edit-line
-     (with-current-buffer gud-comint-buffer
-       (not (memq gud-minor-mode '(gdbmi gdba))))]
+     :visible (with-current-buffer gud-comint-buffer
+		(not (memq gud-minor-mode '(gdbmi gdba))))]
     ["Edit value" speedbar-edit-line
-     (with-current-buffer gud-comint-buffer
-       (not (memq gud-minor-mode '(gdbmi gdba))))]
+     :visible (with-current-buffer gud-comint-buffer
+		(memq gud-minor-mode '(gdbmi gdba)))]
     ["Delete expression" gdb-var-delete
      (with-current-buffer gud-comint-buffer
-       (not (memq gud-minor-mode '(gdbmi gdba))))])
+       (memq gud-minor-mode '(gdbmi gdba)))]
+    ["Auto raise frame" gdb-speedbar-auto-raise
+     :style toggle :selected gdb-speedbar-auto-raise
+     :visible (with-current-buffer gud-comint-buffer
+       (memq gud-minor-mode '(gdbmi gdba)))])
   "Additional menu items to add to the speedbar frame.")
 
 ;; Make sure our special speedbar mode is loaded
@@ -362,89 +426,105 @@ t means that there is no stack, and we are in display-file mode.")
     (gud-install-speedbar-variables)
   (add-hook 'speedbar-load-hook 'gud-install-speedbar-variables))
 
+(defun gud-expansion-speedbar-buttons (directory zero)
+  "Wrapper for call to speedbar-add-expansion-list.   DIRECTORY and
+ZERO are not used, but are required by the caller."
+  (gud-speedbar-buttons gud-comint-buffer))
+
 (defun gud-speedbar-buttons (buffer)
   "Create a speedbar display based on the current state of GUD.
 If the GUD BUFFER is not running a supported debugger, then turn
-off the specialized speedbar mode."
-  (let ((minor-mode (with-current-buffer buffer gud-minor-mode)))
-    (cond
-     ((memq minor-mode '(gdbmi gdba))
-      (when (or gdb-var-changed
-		(not (save-excursion
-		       (goto-char (point-min))
-		       (let ((case-fold-search t))
-			 (looking-at "Watch Expressions:")))))
-	(erase-buffer)
-	(insert "Watch Expressions:\n")
-	(let ((var-list gdb-var-list))
-	  (while var-list
-	    (let* ((depth 0) (start 0) (char ?+)
-		   (var (car var-list)) (varnum (nth 1 var)))
-	      (while (string-match "\\." varnum start)
-		(setq depth (1+ depth)
-		      start (1+ (match-beginning 0))))
-	      (if (equal (nth 2 var) "0")
-		  (speedbar-make-tag-line 'bracket ?? nil nil
-					  (concat (car var) "\t" (nth 4 var))
-					  'gdb-edit-value
-					  nil
-					  (if (and (nth 5 var)
-						   gdb-show-changed-values)
-					      'font-lock-warning-face
-					    nil) depth)
-		(if (and (cadr var-list)
-			 (string-match varnum (cadr (cadr var-list))))
-		    (setq char ?-))
-		(speedbar-make-tag-line 'bracket char
-					'gdb-speedbar-expand-node varnum
-					(concat (car var) "\t" (nth 3 var))
-					nil nil nil depth)))
-	    (setq var-list (cdr var-list))))
-	(setq gdb-var-changed nil)))
-     (t (if (and (save-excursion
-		   (goto-char (point-min))
-		   (looking-at "Current Stack"))
-		 (equal gud-last-last-frame gud-last-speedbar-stackframe))
-	    nil
-	  (setq gud-last-speedbar-buffer buffer)
-	  (let ((gud-frame-list
-		 (cond ((eq minor-mode 'gdb)
-			(gud-gdb-get-stackframe buffer))
-		       ;; Add more debuggers here!
-		       (t (speedbar-remove-localized-speedbar-support buffer)
-			  nil))))
-	    (erase-buffer)
-	    (if (not gud-frame-list)
-		(insert "No Stack frames\n")
-	      (insert "Current Stack:\n"))
-	    (dolist (frame gud-frame-list)
-	      (insert (nth 1 frame) ":\n")
-	      (if (= (length frame) 2)
-		  (progn
-;	            (speedbar-insert-button "[?]"
-;				            'speedbar-button-face
-;				            nil nil nil t)
-		    (speedbar-insert-button (car frame)
-					     'speedbar-directory-face
-					     nil nil nil t))
-;	      (speedbar-insert-button "[+]"
-;				      'speedbar-button-face
-;				      'speedbar-highlight-face
-;				      'gud-gdb-get-scope-data
-;				      frame t)
-	      (speedbar-insert-button (car frame)
-				      'speedbar-file-face
-				      'speedbar-highlight-face
-				      (cond ((memq minor-mode '(gdbmi gdba gdb))
-					     'gud-gdb-goto-stackframe)
-					    (t (error "Should never be here")))
-					frame t)))
-;            (let ((selected-frame
-;	           (cond ((eq ff 'gud-gdb-find-file)
-;		          (gud-gdb-selected-frame-info buffer))
-;		         (t (error "Should never be here"))))))
-	    )
-	  (setq gud-last-speedbar-stackframe gud-last-last-frame))))))
+off the specialized speedbar mode.  BUFFER is not used, but are
+required by the caller."
+  (when (and gud-comint-buffer
+	     ;; gud-comint-buffer might be killed
+	     (buffer-name gud-comint-buffer))
+    (let* ((minor-mode (with-current-buffer buffer gud-minor-mode))
+	  (window (get-buffer-window (current-buffer) 0))
+	  (p (window-point window)))
+      (cond
+       ((memq minor-mode '(gdbmi gdba))
+	(when (or gdb-var-changed
+		  (not (save-excursion
+			 (goto-char (point-min))
+			 (let ((case-fold-search t))
+			   (looking-at "Watch Expressions:")))))
+	  (erase-buffer)
+	  (insert "Watch Expressions:\n")
+	  (if gdb-speedbar-auto-raise
+	      (raise-frame speedbar-frame))
+	  (let ((var-list gdb-var-list))
+	    (while var-list
+	      (let* (char (depth 0) (start 0)
+		     (var (car var-list)) (varnum (nth 1 var)))
+		(while (string-match "\\." varnum start)
+		  (setq depth (1+ depth)
+			start (1+ (match-beginning 0))))
+		(if (or (equal (nth 2 var) "0")
+			(and (equal (nth 2 var) "1")
+			     (string-match "char \\*$" (nth 3 var))))
+		    (speedbar-make-tag-line 'bracket ?? nil nil
+					    (concat (car var) "\t" (nth 4 var))
+					    'gdb-edit-value
+					    nil
+					    (if (and (nth 5 var)
+						     gdb-show-changed-values)
+						'font-lock-warning-face
+					      nil) depth)
+		  (if (and (cadr var-list)
+			   (string-match (concat varnum "\\.")
+					 (cadr (cadr var-list))))
+		      (setq char ?-)
+		    (setq char ?+))
+		  (if (string-match "\\*$" (nth 3 var))
+		      (speedbar-make-tag-line 'bracket char
+					      'gdb-speedbar-expand-node varnum
+					      (concat (car var) "\t"
+						      (nth 3 var)"\t"
+						      (nth 4 var))
+					      'gdb-edit-value nil
+					      (if (and (nth 5 var)
+						       gdb-show-changed-values)
+						  'font-lock-warning-face
+						nil) depth)
+		  (speedbar-make-tag-line 'bracket char
+					  'gdb-speedbar-expand-node varnum
+					  (concat (car var) "\t" (nth 3 var))
+					  nil nil nil depth))))
+	      (setq var-list (cdr var-list))))
+	  (setq gdb-var-changed nil)))
+       (t (if (and (save-excursion
+		     (goto-char (point-min))
+		     (looking-at "Current Stack:"))
+		   (equal gud-last-last-frame gud-last-speedbar-stackframe))
+	      nil
+	    (let ((gud-frame-list
+	    (cond ((eq minor-mode 'gdb)
+		   (gud-gdb-get-stackframe buffer))
+		  ;; Add more debuggers here!
+		  (t (speedbar-remove-localized-speedbar-support buffer)
+		     nil))))
+	      (erase-buffer)
+	      (if (not gud-frame-list)
+		  (insert "No Stack frames\n")
+		(insert "Current Stack:\n"))
+	      (dolist (frame gud-frame-list)
+		(insert (nth 1 frame) ":\n")
+		(if (= (length frame) 2)
+		(progn
+		  (speedbar-insert-button (car frame)
+					  'speedbar-directory-face
+					  nil nil nil t))
+		(speedbar-insert-button
+		 (car frame)
+		 'speedbar-file-face
+		 'speedbar-highlight-face
+		 (cond ((memq minor-mode '(gdbmi gdba gdb))
+			'gud-gdb-goto-stackframe)
+		       (t (error "Should never be here")))
+		 frame t))))
+	    (setq gud-last-speedbar-stackframe gud-last-last-frame))))
+      (set-window-point window p))))
 
 
 ;; ======================================================================
@@ -497,18 +577,31 @@ off the specialized speedbar mode."
     ;; Check for annotations and change gud-minor-mode to 'gdba if
     ;; they are found.
     (while (string-match "\n\032\032\\(.*\\)\n" gud-marker-acc)
-      (when (string-equal (match-string 1 gud-marker-acc) "prompt")
-	(require 'gdb-ui)
-	(gdb-prompt nil))
+      (let ((match (match-string 1 gud-marker-acc)))
 
-      (setq
-       ;; Append any text before the marker to the output we're going
-       ;; to return - we don't include the marker in this text.
-       output (concat output
-		      (substring gud-marker-acc 0 (match-beginning 0)))
+	;; Pick up stopped annotation if attaching to process.
+	(if (string-equal match "stopped") (setq gdb-active-process t))
 
-       ;; Set the accumulator to the remaining text.
-       gud-marker-acc (substring gud-marker-acc (match-end 0))))
+	;; Using annotations, switch to gud-gdba-marker-filter.
+	(when (string-equal match "prompt")
+	  (require 'gdb-ui)
+	  (gdb-prompt nil))
+
+	(setq
+	 ;; Append any text before the marker to the output we're going
+	 ;; to return - we don't include the marker in this text.
+	 output (concat output
+			(substring gud-marker-acc 0 (match-beginning 0)))
+
+	 ;; Set the accumulator to the remaining text.
+
+	 gud-marker-acc (substring gud-marker-acc (match-end 0)))
+
+	;; Pick up any errors that occur before first prompt annotation.
+	(if (string-equal match "error-begin")
+	    (put-text-property 0 (length gud-marker-acc)
+			       'face font-lock-warning-face
+			       gud-marker-acc))))
 
     ;; Does the remaining text look like it might end with the
     ;; beginning of another marker?  If it does, then keep it in
@@ -567,27 +660,39 @@ The directory containing FILE becomes the initial working directory
 and source-file directory for your debugger."
   (interactive (list (gud-query-cmdline 'gdb)))
 
+  (if (and gud-comint-buffer
+	   (buffer-name gud-comint-buffer)
+	   (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba)))
+      (error "Multiple debugging is only supported with \"gdb --fullname\""))
+				
   (gud-common-init command-line nil 'gud-gdb-marker-filter)
   (set (make-local-variable 'gud-minor-mode) 'gdb)
 
   (gud-def gud-break  "break %f:%l"  "\C-b" "Set breakpoint at current line.")
-  (gud-def gud-tbreak "tbreak %f:%l" "\C-t" "Set temporary breakpoint at current line.")
-  (gud-def gud-remove "clear %f:%l"  "\C-d" "Remove breakpoint at current line")
-  (gud-def gud-step   "step %p"      "\C-s" "Step one source line with display.")
-  (gud-def gud-stepi  "stepi %p"     "\C-i" "Step one instruction with display.")
-  (gud-def gud-next   "next %p"      "\C-n" "Step one line (skip functions).")
-  (gud-def gud-nexti  "nexti %p"      nil   "Step one instruction (skip functions).")
-  (gud-def gud-cont   "cont"         "\C-r" "Continue with display.")
-  (gud-def gud-finish "finish"       "\C-f" "Finish executing current function.")
-  (gud-def gud-jump   "tbreak %f:%l\njump %f:%l" "\C-j" "Relocate execution address to line at point in source buffer.")
+  (gud-def gud-tbreak "tbreak %f:%l" "\C-t"
+	   "Set temporary breakpoint at current line.")
+  (gud-def gud-remove "clear %f:%l" "\C-d" "Remove breakpoint at current line")
+  (gud-def gud-step   "step %p"     "\C-s" "Step one source line with display.")
+  (gud-def gud-stepi  "stepi %p"    "\C-i" "Step one instruction with display.")
+  (gud-def gud-next   "next %p"     "\C-n" "Step one line (skip functions).")
+  (gud-def gud-nexti  "nexti %p" nil   "Step one instruction (skip functions).")
+  (gud-def gud-cont   "cont"     "\C-r" "Continue with display.")
+  (gud-def gud-finish "finish"   "\C-f" "Finish executing current function.")
+  (gud-def gud-jump
+	   (progn (gud-call "tbreak %f:%l") (gud-call "jump %f:%l"))
+	   "\C-j" "Set execution address to current line.")
 
-  (gud-def gud-up     "up %p"        "<" "Up N stack frames (numeric arg).")
-  (gud-def gud-down   "down %p"      ">" "Down N stack frames (numeric arg).")
-  (gud-def gud-print  "print %e"     "\C-p" "Evaluate C expression at point.")
-  (gud-def gud-pstar  "print* %e"    nil
+  (gud-def gud-up     "up %p"     "<" "Up N stack frames (numeric arg).")
+  (gud-def gud-down   "down %p"   ">" "Down N stack frames (numeric arg).")
+  (gud-def gud-print  "print %e"  "\C-p" "Evaluate C expression at point.")
+  (gud-def gud-pstar  "print* %e" nil
 	   "Evaluate C dereferenced pointer expression at point.")
-  (gud-def gud-until  "until %l"     "\C-u" "Continue to current line.")
-  (gud-def gud-run    "run"	     nil    "Run the program.")
+
+  ;; For debugging Emacs only.
+  (gud-def gud-pv "pv1 %e"      "\C-v" "Print the value of the lisp variable.")
+
+  (gud-def gud-until  "until %l" "\C-u" "Continue to current line.")
+  (gud-def gud-run    "run"	 nil    "Run the program.")
 
   (local-set-key "\C-i" 'gud-gdb-complete-command)
   (setq comint-prompt-regexp "^(.*gdb[+]?) *")
@@ -826,6 +931,7 @@ The directory containing FILE becomes the initial working directory
 and source-file directory for your debugger."
   (interactive (list (gud-query-cmdline 'sdb)))
 
+  (if gud-sdb-needs-tags (require 'etags))
   (if (and gud-sdb-needs-tags
 	   (not (and (boundp 'tags-file-name)
 		     (stringp tags-file-name)
@@ -1220,7 +1326,7 @@ containing the executable being debugged."
 The directory containing FILE becomes the initial working directory
 and source-file directory for your debugger.
 
-You can set the variable 'gud-xdb-directories' to a list of program source
+You can set the variable `gud-xdb-directories' to a list of program source
 directories if your program contains sources from more than one directory."
   (interactive (list (gud-query-cmdline 'xdb)))
 
@@ -1846,7 +1952,7 @@ extension EXTN.  Normally EXTN is given as the regular expression
 
 	   ;; Anything else means the input is invalid.
 	   (t
-	    (message (format "Error parsing file %s." file))
+	    (message "Error parsing file %s." file)
 	    (throw 'abort nil))))))
     l))
 
@@ -2505,9 +2611,10 @@ It is saved for when this flag is not set.")
 	      (save-restriction
 		(widen)
 		(if (marker-buffer gud-delete-prompt-marker)
-		    (progn
+		    (let ((inhibit-read-only t))
 		      (delete-region (process-mark proc)
 				     gud-delete-prompt-marker)
+		      (comint-update-fence)
 		      (set-marker gud-delete-prompt-marker nil)))
 		;; Save the process output, checking for source file markers.
 		(setq output (gud-marker-filter string))
@@ -2528,16 +2635,12 @@ It is saved for when this flag is not set.")
 	    ;; This must be outside of the save-excursion
 	    ;; in case the source file is our current buffer.
 	    (if process-window
-		(save-selected-window
-		  (select-window process-window)
+		(with-selected-window process-window
 		  (gud-display-frame))
 	      ;; We have to be in the proper buffer, (process-buffer proc),
 	      ;; but not in a save-excursion, because that would restore point.
-	      (let ((old-buf (current-buffer)))
-		(set-buffer (process-buffer proc))
-		(unwind-protect
-		    (gud-display-frame)
-		  (set-buffer old-buf)))))
+	      (with-current-buffer (process-buffer proc)
+		(gud-display-frame))))
 
 	  ;; If we deferred text that arrived during this processing,
 	  ;; handle it now.
@@ -2554,6 +2657,10 @@ It is saved for when this flag is not set.")
 	 ;; Stop displaying an arrow in a source file.
 	 (setq gud-overlay-arrow-position nil)
 	 (set-process-buffer proc nil)
+	 (if (and (boundp 'speedbar-frame)
+		  (string-equal speedbar-initial-expansion-list-name "GUD"))
+	     (speedbar-change-initial-expansion-list
+	      speedbar-previously-used-expansion-list-name))
 	 (if (memq gud-minor-mode-type '(gdbmi gdba))
 	     (gdb-reset)
 	   (gud-reset)))
@@ -2592,7 +2699,7 @@ It is saved for when this flag is not set.")
 (defun gud-kill-buffer-hook ()
   (setq gud-minor-mode-type gud-minor-mode)
   (condition-case nil
-      (kill-process (get-buffer-process gud-comint-buffer))
+      (kill-process (get-buffer-process (current-buffer)))
     (error nil)))
 
 (defun gud-reset ()
@@ -2628,6 +2735,7 @@ Obeying it means displaying in another window the specified file and line."
 	 (window (and buffer (or (get-buffer-window buffer)
 				   (display-buffer buffer))))
 	 (pos))
+    (message "%s %s" (current-buffer) buffer)
     (if buffer
 	(progn
 	  (with-current-buffer buffer
@@ -2643,7 +2751,15 @@ Obeying it means displaying in another window the specified file and line."
 	      (setq pos (point))
 	      (or gud-overlay-arrow-position
 		  (setq gud-overlay-arrow-position (make-marker)))
-	      (set-marker gud-overlay-arrow-position (point) (current-buffer)))
+	      (set-marker gud-overlay-arrow-position (point) (current-buffer))
+	      ;; If they turned on hl-line, move the hl-line highlight to
+	      ;; the arrow's line.
+	      (when (featurep 'hl-line)
+		(cond
+		 (global-hl-line-mode
+		  (global-hl-line-highlight))
+		 ((and hl-line-mode hl-line-sticky-flag)
+		  (hl-line-highlight)))))
 	    (cond ((or (< pos (point-min)) (> pos (point-max)))
 		   (widen)
 		   (goto-char pos))))
@@ -2859,12 +2975,12 @@ the character after the end of the expr."
 If `->' is found, return `?.'.  If `.' is found, return `?.'.
 If any other punctuation is found, return `??'.
 If no punctuation is found, return `? '."
-  (let ((result ?\ )
+  (let ((result ?\s)
 	(syntax))
     (while (< span-start span-end)
       (setq syntax (char-syntax (char-after span-start)))
       (cond
-       ((= syntax ?\ ) t)
+       ((= syntax ?\s) t)
        ((= syntax ?.) (setq syntax (char-after span-start))
 	(cond
 	 ((= syntax ?.) (setq result ?.))
@@ -2896,7 +3012,7 @@ Link exprs of the form:
      ((= (car first) (car second)) nil)
      ((= (cdr first) (cdr second)) nil)
      ((= syntax ?.) t)
-     ((= syntax ?\ )
+     ((= syntax ?\s)
       (setq span-start (char-after (- span-start 1)))
       (setq span-end (char-after span-end))
       (cond
@@ -3006,6 +3122,8 @@ class of the file (using s to separate nested class ids)."
     ("\\$\\(\\w+\\)" (1 font-lock-variable-name-face))
     ("^\\s-*\\([a-z]+\\)" (1 font-lock-keyword-face))))
 
+;; FIXME: The keyword "end" associated with "document"
+;; should have font-lock-keyword-face (currently font-lock-doc-face).
 (defvar gdb-script-font-lock-syntactic-keywords
   '(("^document\\s-.*\\(\n\\)" (1 "< b"))
     ;; It would be best to change the \n in front, but it's more difficult.
@@ -3021,7 +3139,7 @@ class of the file (using s to separate nested class ids)."
 
 (defun gdb-script-skip-to-head ()
   "We're just in front of an `end' and we need to go to its head."
-  (while (and (re-search-backward "^\\s-*\\(\\(end\\)\\|define\\|document\\|if\\|while\\)\\>" nil 'move)
+  (while (and (re-search-backward "^\\s-*\\(\\(end\\)\\|define\\|document\\|if\\|while\\|commands\\)\\>" nil 'move)
 	      (match-end 2))
     (gdb-script-skip-to-head)))
 
@@ -3040,7 +3158,7 @@ class of the file (using s to separate nested class ids)."
     (forward-line 0)
     (skip-chars-forward " \t")
     (+ (current-indentation)
-       (if (looking-at "\\(if\\|while\\|define\\|else\\)\\>")
+       (if (looking-at "\\(if\\|while\\|define\\|else\\|commands\\)\\>")
 	   gdb-script-basic-indent 0)))))
 
 (defun gdb-script-indent-line ()
@@ -3112,10 +3230,49 @@ Treats actions as defuns."
 ;;; tooltips for GUD
 
 ;;; Customizable settings
+
+;;;###autoload
+(define-minor-mode gud-tooltip-mode
+  "Toggle the display of GUD tooltips."
+  :global t
+  :group 'gud
+  :group 'tooltip
+  (require 'tooltip)
+  (if gud-tooltip-mode
+      (progn
+	(add-hook 'change-major-mode-hook 'gud-tooltip-change-major-mode)
+	(add-hook 'pre-command-hook 'tooltip-hide)
+	(add-hook 'tooltip-hook 'gud-tooltip-tips)
+	(define-key global-map [mouse-movement] 'gud-tooltip-mouse-motion))
+    (unless tooltip-mode (remove-hook 'pre-command-hook 'tooltip-hide)
+    (remove-hook 'change-major-mode-hook 'gud-tooltip-change-major-mode)
+    (remove-hook 'tooltip-hook 'gud-tooltip-tips)
+    (define-key global-map [mouse-movement] 'ignore)))
+  (gud-tooltip-activate-mouse-motions-if-enabled)
+  (if (and
+       gud-comint-buffer
+       (buffer-name gud-comint-buffer); gud-comint-buffer might be killed
+       (with-current-buffer gud-comint-buffer
+	(memq gud-minor-mode '(gdbmi gdba))))
+      (if gud-tooltip-mode
+	  (progn
+	    (dolist (buffer (buffer-list))
+	      (unless (eq buffer gud-comint-buffer)
+		(with-current-buffer buffer
+		  (when (and (memq gud-minor-mode '(gdbmi gdba))
+			     (not (string-match "\\`\\*.+\\*\\'"
+						(buffer-name))))
+		    (make-local-variable 'gdb-define-alist)
+		    (gdb-create-define-alist)
+		    (add-hook 'after-save-hook
+			      'gdb-create-define-alist nil t))))))
+	(kill-local-variable 'gdb-define-alist)
+	(remove-hook 'after-save-hook 'gdb-create-define-alist t))))
+
 (defcustom gud-tooltip-modes '(gud-mode c-mode c++-mode fortran-mode)
-  "List of modes for which to enable GUD tips."
+  "List of modes for which to enable GUD tooltips."
   :type 'sexp
-  :tag "GUD modes"
+  :group 'gud
   :group 'tooltip)
 
 (defcustom gud-tooltip-display
@@ -3126,21 +3283,19 @@ Treats actions as defuns."
 Forms in the list are combined with AND.  The default is to display
 only tooltips in the buffer containing the overlay arrow."
   :type 'sexp
-  :tag "GUD buffers predicate"
+  :group 'gud
   :group 'tooltip)
 
 (defcustom gud-tooltip-echo-area nil
   "Use the echo area instead of frames for GUD tooltips."
   :type 'boolean
-  :tag "Use echo area"
+  :group 'gud
   :group 'tooltip)
 
 (define-obsolete-variable-alias 'tooltip-gud-modes
                                 'gud-tooltip-modes "22.1")
 (define-obsolete-variable-alias 'tooltip-gud-display
                                 'gud-tooltip-display "22.1")
-(define-obsolete-variable-alias 'tooltip-use-echo-area
-                                'gud-tooltip-echo-area "22.1")
 
 ;;; Reacting on mouse movements
 
@@ -3197,52 +3352,23 @@ For C this would dereference a pointer expression.")
   "The mouse movement event that led to a tooltip display.
 This event can be examined by forms in GUD-TOOLTIP-DISPLAY.")
 
-(defun toggle-gud-tooltip-dereference ()
-  "Toggle whether tooltips should show `* expr' or `expr'."
-  (interactive)
-  (setq gud-tooltip-dereference (not gud-tooltip-dereference))
-  (when (interactive-p)
-    (message "Dereferencing is now %s."
-	     (if gud-tooltip-dereference "on" "off"))))
+(defun gud-tooltip-dereference ()
+  "Toggle whether tooltips should show `* expr' or `expr'.
+With arg, dereference expr iff arg is positive."
+ (interactive "P")
+  (setq gud-tooltip-dereference
+	(if (null arg)
+	    (not gud-tooltip-dereference)
+	  (> (prefix-numeric-value arg) 0)))
+  (message "Dereferencing is now %s."
+	   (if gud-tooltip-dereference "on" "off")))
 
 (define-obsolete-function-alias 'tooltip-gud-toggle-dereference
-                                'toggle-gud-tooltip-dereference "22.1")
-
-(define-minor-mode gud-tooltip-mode
-  "Toggle the display of GUD tooltips."
-  :global t
-  :group 'gud
-  (require 'tooltip)
-  (if gud-tooltip-mode
-      (progn
-	(add-hook 'change-major-mode-hook 'gud-tooltip-change-major-mode)
-	(add-hook 'pre-command-hook 'tooltip-hide)
-	(add-hook 'tooltip-hook 'gud-tooltip-tips)
-	(define-key global-map [mouse-movement] 'gud-tooltip-mouse-motion))
-    (unless tooltip-mode (remove-hook 'pre-command-hook 'tooltip-hide)
-    (remove-hook 'change-major-mode-hook 'gud-tooltip-change-major-mode)
-    (remove-hook 'tooltip-hook 'gud-tooltip-tips)
-    (define-key global-map [mouse-movement] 'ignore)))
-  (gud-tooltip-activate-mouse-motions-if-enabled)
-  (if (with-current-buffer gud-comint-buffer (eq gud-minor-mode 'gdba))
-      (if gud-tooltip-mode
-	  (progn
-	    (dolist (buffer (buffer-list))
-	      (unless (eq buffer gud-comint-buffer)
-		(with-current-buffer buffer
-		  (when (and (memq gud-minor-mode '(gdbmi gdba))
-			     (not (string-match "\\`\\*.+\\*\\'"
-						(buffer-name))))
-		    (make-local-variable 'gdb-define-alist)
-		    (gdb-create-define-alist)
-		    (add-hook 'after-save-hook
-			      'gdb-create-define-alist nil t))))))
-	(kill-local-variable 'gdb-define-alist)
-	(remove-hook 'after-save-hook 'gdb-create-define-alist t))))
+                                'gud-tooltip-dereference "22.1")
 
 ; This will only display data that comes in one chunk.
 ; Larger arrays (say 400 elements) are displayed in
-; the tootip incompletely and spill over into the gud buffer.
+; the tooltip incompletely and spill over into the gud buffer.
 ; Switching the process-filter creates timing problems and
 ; it may be difficult to do better. Using annotations as in
 ; gdb-ui.el gets round this problem.
@@ -3250,19 +3376,16 @@ This event can be examined by forms in GUD-TOOLTIP-DISPLAY.")
   "Process debugger output and show it in a tooltip window."
   (set-process-filter process gud-tooltip-original-filter)
   (tooltip-show (tooltip-strip-prompt process output)
-		gud-tooltip-echo-area))
+		(or gud-tooltip-echo-area tooltip-use-echo-area)))
 
 (defun gud-tooltip-print-command (expr)
-  "Return a suitable command to print the expression EXPR.
-If GUD-TOOLTIP-DEREFERENCE is t, also prepend a `*' to EXPR."
-  (when gud-tooltip-dereference
-    (setq expr (concat "*" expr)))
+  "Return a suitable command to print the expression EXPR."
   (case gud-minor-mode
-    (gdba (concat "server print " expr))
-    ((dbx gdbmi) (concat "print " expr))
-    (xdb (concat "p " expr))
-    (sdb (concat expr "/"))
-    (perldb expr)))
+	(gdba (concat "server print " expr))
+	((dbx gdbmi) (concat "print " expr))
+	(xdb (concat "p " expr))
+	(sdb (concat expr "/"))
+	(perldb expr)))
 
 (defun gud-tooltip-tips (event)
   "Show tip for identifier or selection under the mouse.
@@ -3276,9 +3399,8 @@ This function must return nil if it doesn't handle EVENT."
   (let (process)
     (when (and (eventp event)
 	       gud-tooltip-mode
-	       (boundp 'gud-comint-buffer)
 	       gud-comint-buffer
-	       (buffer-name gud-comint-buffer); gud-comint-buffer might be killed
+	       (buffer-name gud-comint-buffer); might be killed
 	       (setq process (get-buffer-process gud-comint-buffer))
 	       (posn-point (event-end event))
 	       (or (and (eq gud-minor-mode 'gdba) (not gdb-active-process))
@@ -3295,8 +3417,12 @@ This function must return nil if it doesn't handle EVENT."
 						(cddr mouse))))
 		  (let ((define-elt (assoc expr gdb-define-alist)))
 		    (unless (null define-elt)
-		      (tooltip-show (cdr define-elt))
+		      (tooltip-show
+		       (cdr define-elt)
+		       (or gud-tooltip-echo-area tooltip-use-echo-area))
 		      expr))))
+	    (when gud-tooltip-dereference
+	      (setq expr (concat "*" expr)))
 	    (let ((cmd (gud-tooltip-print-command expr)))
 	      (when (and gud-tooltip-mode (eq gud-minor-mode 'gdb))
 		(gud-tooltip-mode -1)

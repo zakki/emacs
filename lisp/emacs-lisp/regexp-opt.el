@@ -1,7 +1,7 @@
 ;;; regexp-opt.el --- generate efficient regexps to match strings
 
-;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2004
-;;           Free Software Foundation, Inc.
+;; Copyright (C) 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2002,
+;;   2003, 2004, 2005 Free Software Foundation, Inc.
 
 ;; Author: Simon Marshall <simon@gnu.org>
 ;; Maintainer: FSF
@@ -21,8 +21,8 @@
 
 ;; You should have received a copy of the GNU General Public License
 ;; along with GNU Emacs; see the file COPYING.  If not, write to the
-;; Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-;; Boston, MA 02111-1307, USA.
+;; Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+;; Boston, MA 02110-1301, USA.
 
 ;;; Commentary:
 
@@ -116,7 +116,7 @@ by \\=\\< and \\>."
 (defun regexp-opt-depth (regexp)
   "Return the depth of REGEXP.
 This means the number of non-shy regexp grouping constructs
-\(parenthesised expressions) in REGEXP."
+\(parenthesized expressions) in REGEXP."
   (save-match-data
     ;; Hack to signal an error if REGEXP does not have balanced parentheses.
     (string-match regexp "")

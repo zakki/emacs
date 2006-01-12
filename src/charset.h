@@ -1,7 +1,8 @@
 /* Header for multibyte character handler.
-   Copyright (C) 1995, 1997, 1998 Electrotechnical Laboratory, JAPAN.
-   Licensed to the Free Software Foundation.
-   Copyright (C) 2001 Free Software Foundation, Inc.
+   Copyright (C) 2001, 2002, 2003, 2004, 2005 Free Software Foundation, Inc.
+   Copyright (C) 1995, 1997, 1998, 2003
+     National Institute of Advanced Industrial Science and Technology (AIST)
+     Registration Number H14PRO021
 
 This file is part of GNU Emacs.
 
@@ -17,8 +18,8 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with GNU Emacs; see the file COPYING.  If not, write to
-the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  */
+the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
+Boston, MA 02110-1301, USA.  */
 
 #ifndef EMACS_CHARSET_H
 #define EMACS_CHARSET_H
@@ -129,6 +130,9 @@ extern int charset_katakana_jisx0201; /* JISX0201.Kana (Japanese Katakana) */
 extern int charset_latin_jisx0201; /* JISX0201.Roman (Japanese Roman) */
 extern int charset_big5_1;	/* Big5 Level 1 (Chinese Traditional) */
 extern int charset_big5_2;	/* Big5 Level 2 (Chinese Traditional) */
+extern int charset_mule_unicode_0100_24ff;
+extern int charset_mule_unicode_2500_33ff;
+extern int charset_mule_unicode_e000_ffff;
 
 /* Check if CH is an ASCII character or a base leading-code.
    Nowadays, any byte can be the first byte of a character in a
