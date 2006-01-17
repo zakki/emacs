@@ -700,9 +700,6 @@ Optional argument PROPS specifies other text properties to apply."
 	(put-text-property
          i (1+ i) 'mouse-face 'mode-line-highlight
          ruler)
-	(put-text-property
-         i (1+ i) 'mouse-face 'mode-line-highlight
-         ruler)
         (put-text-property
          i (1+ i) 'help-echo ruler-mode-goal-column-help-echo
          ruler))
@@ -715,9 +712,6 @@ Optional argument PROPS specifies other text properties to apply."
 	(put-text-property
          i (1+ i) 'mouse-face 'mode-line-highlight
          ruler)
-	(put-text-property
-         i (1+ i) 'mouse-face 'mode-line-highlight
-         ruler)
         (put-text-property
          i (1+ i) 'help-echo ruler-mode-comment-column-help-echo
          ruler))
@@ -726,9 +720,6 @@ Optional argument PROPS specifies other text properties to apply."
         (aset ruler i ruler-mode-fill-column-char)
         (put-text-property
          i (1+ i) 'face 'ruler-mode-fill-column
-         ruler)
-	(put-text-property
-         i (1+ i) 'mouse-face 'mode-line-highlight
          ruler)
 	(put-text-property
          i (1+ i) 'mouse-face 'mode-line-highlight

@@ -4256,6 +4256,8 @@ need not be quoted in `allout-new-exposure'.
 
 Cursor is left at start position.
 
+Use this instead of obsolete `allout-exposure'.
+
 Examples:
 \(allout-new-exposure (-1 () () () 1) 0)
 	Close current topic at current level so only the immediate

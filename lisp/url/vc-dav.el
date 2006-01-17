@@ -26,11 +26,6 @@
 
 ;;; Code:
 
-
-;;; Commentary:
-
-;;; Code:
-
 (require 'url)
 (require 'url-dav)
 
