@@ -240,8 +240,11 @@ When the function exits, the thread dies.  */)
   new_thread->next_thread = all_threads;
   all_threads = new_thread;
 
-  /* FIXME check result */
-  pthread_create (&thr, NULL, run_thread, new_thread);
+  if (pthread_create (&thr, NULL, run_thread, new_thread))
+    {
+      /* Restore the previous situation.  */
+      all_threads = all_threads->next_thread;
+    }
 
   return Qnil;
 }
