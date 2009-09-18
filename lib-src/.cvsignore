@@ -6,12 +6,10 @@ cvtmail
 digest-doc
 ebrowse
 emacsclient
-emacsserver
 etags
 fakemail
 getopt.h
 hexl
-mac-fix-env
 make-docfile
 movemail
 obj
