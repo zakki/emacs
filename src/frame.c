@@ -193,13 +193,6 @@ set_menu_bar_lines (struct frame *f, Lisp_Object value, Lisp_Object oldval)
 
 Lisp_Object Vframe_list;
 
-extern Lisp_Object Vminibuffer_list;
-extern Lisp_Object get_minibuffer (int);
-extern Lisp_Object Fhandle_switch_frame (Lisp_Object event);
-extern Lisp_Object Fredirect_frame_focus (Lisp_Object frame, Lisp_Object focus_frame);
-extern Lisp_Object x_get_focus_frame (struct frame *frame);
-extern Lisp_Object QCname, Qfont_param;
-
 
 DEFUN ("framep", Fframep, Sframep, 1, 1, 0,
        doc: /* Return non-nil if OBJECT is a frame.
@@ -1181,16 +1174,6 @@ FRAME defaults to the selected frame.  */)
   CHECK_LIVE_FRAME (frame);
   return other_visible_frames (XFRAME (frame)) ? Qt : Qnil;
 }
-
-/* Error handler for `delete-frame-functions'. */
-static Lisp_Object
-delete_frame_handler (Lisp_Object arg)
-{
-  add_to_log ("Error during `delete-frame': %s", arg, Qnil);
-  return Qnil;
-}
-
-extern Lisp_Object Qrun_hook_with_args;
 
 /* Delete FRAME.  When FORCE equals Qnoelisp, delete FRAME
   unconditionally.  x_connection_closed and delete_terminal use
@@ -2567,6 +2550,28 @@ If FRAME is omitted, the selected frame is used.  */)
 #endif
     return make_number (FRAME_COLS (f));
 }
+
+DEFUN ("tool-bar-pixel-width", Ftool_bar_pixel_width,
+       Stool_bar_pixel_width, 0, 1, 0,
+       doc: /* Return width in pixels of FRAME's tool bar.
+The result is greater than zero only when the tool bar is on the left
+or right side of FRAME.  If FRAME is omitted, the selected frame is
+used.  */)
+  (Lisp_Object frame)
+{
+  struct frame *f;
+
+  if (NILP (frame))
+    frame = selected_frame;
+  CHECK_FRAME (frame);
+  f = XFRAME (frame);
+
+#ifdef FRAME_TOOLBAR_WIDTH
+  if (FRAME_WINDOW_P (f))
+    return make_number (FRAME_TOOLBAR_WIDTH (f));
+#endif
+  return make_number (0);
+}
 
 DEFUN ("set-frame-height", Fset_frame_height, Sset_frame_height, 2, 3, 0,
        doc: /* Specify that the frame FRAME has LINES lines.
@@ -2688,11 +2693,11 @@ the rightmost or bottommost possible position (that stays within the screen).  *
    that is an index in this table.  */
 
 struct frame_parm_table {
-  char *name;
+  const char *name;
   Lisp_Object *variable;
 };
 
-static struct frame_parm_table frame_parms[] =
+static const struct frame_parm_table frame_parms[] =
 {
   {"auto-raise",		&Qauto_raise},
   {"auto-lower",		&Qauto_lower},
@@ -2730,9 +2735,6 @@ static struct frame_parm_table frame_parms[] =
 };
 
 #ifdef HAVE_WINDOW_SYSTEM
-
-extern Lisp_Object Qbox;
-extern Lisp_Object Qtop;
 
 /* Calculate fullscreen size.  Return in *TOP_POS and *LEFT_POS the
    wanted positions of the WM window (not Emacs window).
@@ -4512,6 +4514,7 @@ automatically.  See also `mouse-autoselect-window'.  */);
   defsubr (&Sframe_char_width);
   defsubr (&Sframe_pixel_height);
   defsubr (&Sframe_pixel_width);
+  defsubr (&Stool_bar_pixel_width);
   defsubr (&Sset_frame_height);
   defsubr (&Sset_frame_width);
   defsubr (&Sset_frame_size);

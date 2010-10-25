@@ -1,13 +1,14 @@
 ;;; comint.el --- general command interpreter in a window stuff
 
-;; Copyright (C) 1988, 1990, 1992, 1993, 1994, 1995, 1996, 1997, 1998, 1999,
-;;   2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-;;   Free Software Foundation, Inc.
+;; Copyright (C) 1988, 1990, 1992, 1993, 1994, 1995, 1996, 1997, 1998,
+;;   1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009,
+;;   2010  Free Software Foundation, Inc.
 
 ;; Author: Olin Shivers <shivers@cs.cmu.edu>
 ;;	Simon Marshall <simon@gnu.org>
 ;; Maintainer: FSF
 ;; Keywords: processes
+;; Package: emacs
 
 ;; This file is part of GNU Emacs.
 
@@ -414,6 +415,9 @@ See `comint-send-input'."
   :type 'boolean
   :group 'comint)
 
+(define-obsolete-variable-alias 'comint-use-prompt-regexp-instead-of-fields
+  'comint-use-prompt-regexp "22.1")
+
 ;; Note: If it is decided to purge comint-prompt-regexp from the source
 ;; entirely, searching for uses of this variable will help to identify
 ;; places that need attention.
@@ -425,11 +429,6 @@ particular, common movement commands such as `beginning-of-line'
 respect field boundaries in a natural way)."
   :type 'boolean
   :group 'comint)
-
-;; Autoload is necessary for Custom to recognize old alias.
-;;;###autoload
-(define-obsolete-variable-alias 'comint-use-prompt-regexp-instead-of-fields
-  'comint-use-prompt-regexp "22.1")
 
 (defcustom comint-mode-hook nil
   "Hook run upon entry to `comint-mode'.
@@ -674,6 +673,9 @@ Entry to this mode runs the hooks on `comint-mode-hook'."
   (make-local-variable 'comint-process-echoes)
   (make-local-variable 'comint-file-name-chars)
   (make-local-variable 'comint-file-name-quote-list)
+  ;; dir tracking on remote files
+  (set (make-local-variable 'comint-file-name-prefix)
+       (or (file-remote-p default-directory) ""))
   (make-local-variable 'comint-accum-marker)
   (setq comint-accum-marker (make-marker))
   (make-local-variable 'font-lock-defaults)
@@ -2294,8 +2296,6 @@ Does not delete the prompt."
 	(delete-region pmark (point))))
     ;; Output message and put back prompt
     (comint-output-filter proc replacement)))
-(define-obsolete-function-alias 'comint-kill-output
-  'comint-delete-output "21.1")
 
 (defun comint-write-output (filename &optional append mustbenew)
   "Write output from interpreter since last input to FILENAME.

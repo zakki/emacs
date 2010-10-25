@@ -24,13 +24,6 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <errno.h>
 #include <stdio.h>
 #include <setjmp.h>
-
-/* Define SIGCHLD as an alias for SIGCLD.  */
-
-#if !defined (SIGCHLD) && defined (SIGCLD)
-#define SIGCHLD SIGCLD
-#endif /* SIGCLD */
-
 #include <sys/types.h>
 
 #ifdef HAVE_UNISTD_H
@@ -38,32 +31,19 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #endif
 
 #include <sys/file.h>
-#ifdef HAVE_FCNTL_H
 #include <fcntl.h>
-#endif
 
 #ifdef WINDOWSNT
 #define NOMINMAX
 #include <windows.h>
-#include <stdlib.h>	/* for proper declaration of environ */
-#include <fcntl.h>
 #include "w32.h"
 #define _P_NOWAIT 1	/* from process.h */
 #endif
 
 #ifdef MSDOS	/* Demacs 1.1.1 91/10/16 HIRANO Satoshi */
-#include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/param.h>
 #endif /* MSDOS */
-
-#ifndef O_RDONLY
-#define O_RDONLY 0
-#endif
-
-#ifndef O_WRONLY
-#define O_WRONLY 1
-#endif
 
 #include "lisp.h"
 #include "commands.h"
@@ -115,7 +95,7 @@ Lisp_Object Qbuffer_file_type;
 int synch_process_alive;
 
 /* Nonzero => this is a string explaining death of synchronous subprocess.  */
-char *synch_process_death;
+const char *synch_process_death;
 
 /* Nonzero => this is the signal number that terminated the subprocess.  */
 int synch_process_termsig;
@@ -678,9 +658,9 @@ usage: (call-process PROGRAM &optional INFILE BUFFER DISPLAY &rest ARGS)  */)
   QUIT;
 
   {
-    register int nread;
+    register EMACS_INT nread;
     int first = 1;
-    int total_read = 0;
+    EMACS_INT total_read = 0;
     int carryover = 0;
     int display_on_the_fly = display_p;
     struct coding_system saved_coding;
@@ -818,7 +798,7 @@ usage: (call-process PROGRAM &optional INFILE BUFFER DISPLAY &rest ARGS)  */)
 
   if (synch_process_termsig)
     {
-      char *signame;
+      const char *signame;
 
       synchronize_system_messages_locale ();
       signame = strsignal (synch_process_termsig);
@@ -1231,8 +1211,6 @@ child_setup (int in, int out, int err, register char **new_argv, int set_pgrp, L
 #else
   setpgrp (pid, pid);
 #endif /* USG */
-  /* setpgrp_of_tty is incorrect here; it uses input_fd.  */
-  EMACS_SET_TTY_PGRP (0, &pid);
 
 #ifdef MSDOS
   pid = run_msdos_command (new_argv, pwd_var + 4, in, out, err, env);
@@ -1251,6 +1229,9 @@ child_setup (int in, int out, int err, register char **new_argv, int set_pgrp, L
     report_file_error ("Spawning child process", Qnil);
   return cpid;
 #else /* not WINDOWSNT */
+  /* setpgrp_of_tty is incorrect here; it uses input_fd.  */
+  EMACS_SET_TTY_PGRP (0, &pid);
+
   /* execvp does not accept an environment arg so the only way
      to pass this environment is to set environ.  Our caller
      is responsible for restoring the ambient value of environ.  */

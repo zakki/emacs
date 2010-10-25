@@ -262,7 +262,6 @@ typedef BOOL (WINAPI * GetMonitorInfo_Proc)
   (IN HMONITOR monitor, OUT struct MONITOR_INFO* info);
 
 TrackMouseEvent_Proc track_mouse_event_fn = NULL;
-ClipboardSequence_Proc clipboard_sequence_fn = NULL;
 ImmGetCompositionString_Proc get_composition_string_fn = NULL;
 ImmGetContext_Proc get_ime_context_fn = NULL;
 ImmReleaseContext_Proc release_ime_context_fn = NULL;
@@ -3112,9 +3111,6 @@ w32_wnd_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	  HIMC context;
 	  struct window *w;
 
-	  if (!context)
-	    break;
-
 	  f = x_window_to_frame (dpyinfo, hwnd);
 	  w = XWINDOW (FRAME_SELECTED_WINDOW (f));
 
@@ -3132,6 +3128,10 @@ w32_wnd_proc (HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 				- WINDOW_MODE_LINE_HEIGHT (w));
 
 	  context = get_ime_context_fn (hwnd);
+
+	  if (!context)
+	    break;
+
 	  set_ime_composition_window_fn (context, &form);
 	  release_ime_context_fn (hwnd, context);
 	}
@@ -6813,6 +6813,7 @@ frame_parm_handler w32_frame_parm_handlers[] =
   x_set_font_backend,
   x_set_alpha,
   0, /* x_set_sticky */
+  0, /* x_set_tool_bar_position */
 };
 
 void
@@ -7054,7 +7055,7 @@ or when you set the mouse color.  */);
 
   DEFVAR_LISP ("x-max-tooltip-size", &Vx_max_tooltip_size,
 	       doc: /* Maximum size for tooltips.
-Value is a pair (COLUMNS . ROWS). Text larger than this is clipped.  */);
+Value is a pair (COLUMNS . ROWS).  Text larger than this is clipped.  */);
   Vx_max_tooltip_size = Fcons (make_number (80), make_number (40));
 
   DEFVAR_LISP ("x-no-window-manager", &Vx_no_window_manager,
@@ -7182,9 +7183,6 @@ globals_of_w32fns (void)
   */
   track_mouse_event_fn = (TrackMouseEvent_Proc)
     GetProcAddress (user32_lib, "TrackMouseEvent");
-  /* ditto for GetClipboardSequenceNumber.  */
-  clipboard_sequence_fn = (ClipboardSequence_Proc)
-    GetProcAddress (user32_lib, "GetClipboardSequenceNumber");
 
   monitor_from_point_fn = (MonitorFromPoint_Proc)
     GetProcAddress (user32_lib, "MonitorFromPoint");

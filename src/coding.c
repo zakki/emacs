@@ -2008,7 +2008,7 @@ detect_coding_emacs_mule (struct coding_system *coding,
 	}
       else
 	{
-	  int more_bytes = emacs_mule_bytes[*src_base] - 1;
+	  int more_bytes = emacs_mule_bytes[c] - 1;
 
 	  while (more_bytes > 0)
 	    {
@@ -3902,7 +3902,7 @@ decode_coding_iso_2022 (struct coding_system *coding)
 		  int size;
 
 		  ONE_MORE_BYTE (dim);
-		  if (dim < 0 || dim > 4)
+		  if (dim < '0' || dim > '4')
 		    goto invalid_code;
 		  ONE_MORE_BYTE (M);
 		  if (M < 128)
@@ -4097,8 +4097,8 @@ decode_coding_iso_2022 (struct coding_system *coding)
 #define ENCODE_DESIGNATION(charset, reg, coding)			\
   do {									\
     unsigned char final_char = CHARSET_ISO_FINAL (charset);		\
-    char *intermediate_char_94 = "()*+";				\
-    char *intermediate_char_96 = ",-./";				\
+    const char *intermediate_char_94 = "()*+";				\
+    const char *intermediate_char_96 = ",-./";				\
     int revision = -1;							\
     int c;								\
 									\
@@ -4490,7 +4490,10 @@ encode_coding_iso_2022 (struct coding_system *coding)
   charset_list = CODING_ATTR_CHARSET_LIST (attrs);
   coding->safe_charsets = SDATA (CODING_ATTR_SAFE_CHARSETS (attrs));
 
-  ascii_compatible = ! NILP (CODING_ATTR_ASCII_COMPAT (attrs));
+  ascii_compatible
+    = (! NILP (CODING_ATTR_ASCII_COMPAT (attrs))
+       && ! (CODING_ISO_FLAGS (coding) & (CODING_ISO_FLAG_DESIGNATION
+					  | CODING_ISO_FLAG_LOCKING_SHIFT)));
 
   while (charbuf < charbuf_end)
     {

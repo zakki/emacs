@@ -332,8 +332,9 @@ directory, like `default-directory'."
   :group 'ibuffer)
 
 (defcustom ibuffer-compressed-file-name-regexp
-  "\\.\\(arj\\|bgz\\|bz2\\|gz\\|lzh\\|taz\\|tgz\\|zip\\|z\\)$"
+  "\\.\\(arj\\|bgz\\|bz2\\|gz\\|lzh\\|taz\\|tgz\\|xz\\|zip\\|z\\)$"
   "Regexp to match compressed file names."
+  :version "24.1"                       ; added xz
   :type 'regexp
   :group 'ibuffer)
 
@@ -2641,7 +2642,7 @@ will be inserted before the group at point."
 ;;;;;;  ibuffer-backward-filter-group ibuffer-forward-filter-group
 ;;;;;;  ibuffer-toggle-filter-group ibuffer-mouse-toggle-filter-group
 ;;;;;;  ibuffer-interactive-filter-by-mode ibuffer-mouse-filter-by-mode
-;;;;;;  ibuffer-auto-mode) "ibuf-ext" "ibuf-ext.el" "e1272bfdc7c3b6e926b2a68155217303")
+;;;;;;  ibuffer-auto-mode) "ibuf-ext" "ibuf-ext.el" "fa9822b5ef905f06d8a03dc9ce3a2894")
 ;;; Generated autoloads from ibuf-ext.el
 
 (autoload 'ibuffer-auto-mode "ibuf-ext" "\

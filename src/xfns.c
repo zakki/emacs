@@ -161,6 +161,10 @@ int x_gtk_file_dialog_help_text;
 
 int x_gtk_whole_detached_tool_bar;
 
+/* If non-zero, use Gtk+ tooltips.  */
+
+static int x_gtk_use_system_tooltips;
+
 /* The background and shape of the mouse pointer, and shape when not
    over text or in the modeline.  */
 
@@ -197,19 +201,6 @@ Lisp_Object Qsuppress_icon;
 Lisp_Object Qundefined_color;
 Lisp_Object Qcompound_text, Qcancel_timer;
 Lisp_Object Qfont_param;
-
-/* In dispnew.c */
-
-extern Lisp_Object Vwindow_system_version;
-
-/* In editfns.c */
-
-extern Lisp_Object Vsystem_name;
-
-/* The below are defined in frame.c.  */
-
-extern Lisp_Object Vmenu_bar_mode, Vtool_bar_mode;
-extern Lisp_Object Qtooltip;
 
 #if GLYPH_DEBUG
 int image_cache_refcount, dpyinfo_refcount;
@@ -510,7 +501,7 @@ void x_set_scroll_bar_background (struct frame *, Lisp_Object,
 static Lisp_Object x_default_scroll_bar_color_parameter (struct frame *,
                                                          Lisp_Object,
                                                          Lisp_Object,
-                                                         char *, char *,
+                                                         const char *, const char *,
                                                          int);
 
 
@@ -657,12 +648,16 @@ int
 x_defined_color (struct frame *f, const char *color_name,
 		 XColor *color, int alloc_p)
 {
-  int success_p;
+  int success_p = 0;
   Display *dpy = FRAME_X_DISPLAY (f);
   Colormap cmap = FRAME_X_COLORMAP (f);
 
   BLOCK_INPUT;
-  success_p = XParseColor (dpy, cmap, color_name, color);
+#ifdef USE_GTK
+  success_p = xg_check_special_colors (f, color_name, color);
+#endif
+  if (!success_p)
+    success_p = XParseColor (dpy, cmap, color_name, color);
   if (success_p && alloc_p)
     success_p = x_alloc_nearest_color (f, cmap, color);
   UNBLOCK_INPUT;
@@ -771,10 +766,10 @@ xg_set_icon (FRAME_PTR f, Lisp_Object file)
 }
 
 int
-xg_set_icon_from_xpm_data (FRAME_PTR f, char **data)
+xg_set_icon_from_xpm_data (FRAME_PTR f, const char **data)
 {
   int result = 0;
-  GdkPixbuf *pixbuf = gdk_pixbuf_new_from_xpm_data ((const char **) data);
+  GdkPixbuf *pixbuf = gdk_pixbuf_new_from_xpm_data (data);
 
   if (!pixbuf)
     return 0;
@@ -1780,7 +1775,7 @@ x_set_scroll_bar_default_width (struct frame *f)
 static Lisp_Object
 x_default_scroll_bar_color_parameter (struct frame *f,
 				      Lisp_Object alist, Lisp_Object prop,
-				      char *xprop, char *xclass,
+				      const char *xprop, const char *xclass,
 				      int foreground_p)
 {
   struct x_display_info *dpyinfo = FRAME_X_DISPLAY_INFO (f);
@@ -2151,7 +2146,7 @@ xic_create_xfontset (struct frame *f)
 	}
       if (! xfs)
 	{
-	  char *last_resort = "-*-*-*-r-normal--*-*-*-*-*-*";
+	  const char *last_resort = "-*-*-*-r-normal--*-*-*-*-*-*";
 
 	  missing_list = NULL;
 	  xfs = XCreateFontSet (FRAME_X_DISPLAY (f), last_resort,
@@ -3024,7 +3019,7 @@ x_default_font_parameter (struct frame *f, Lisp_Object parms)
 
   if (! FONTP (font) && ! STRINGP (font))
     {
-      char *names[]
+      const char *names[]
 	= {
 #ifdef HAVE_XFT
 	    /* This will find the normal Xft font.  */
@@ -3401,6 +3396,8 @@ This function is an internal primitive--use `make-frame' instead.  */)
 		       "waitForWM", "WaitForWM", RES_TYPE_BOOLEAN);
   x_default_parameter (f, parms, Qfullscreen, Qnil,
                        "fullscreen", "Fullscreen", RES_TYPE_SYMBOL);
+  x_default_parameter (f, parms, Qtool_bar_position,
+                       f->tool_bar_position, 0, 0, RES_TYPE_SYMBOL);
 
   /* Compute the size of the X window.  */
   window_prompting = x_figure_window_size (f, parms, 1);
@@ -3753,7 +3750,7 @@ If omitted or nil, that stands for the selected frame's display.  */)
   (Lisp_Object terminal)
 {
   struct x_display_info *dpyinfo = check_x_display_info (terminal);
-  char *vendor = ServerVendor (dpyinfo->display);
+  const char *vendor = ServerVendor (dpyinfo->display);
 
   if (! vendor) vendor = "";
   return build_string (vendor);
@@ -3947,7 +3944,7 @@ x_screen_planes (register struct frame *f)
 
 static struct visual_class
 {
-  char *name;
+  const char *name;
   int class;
 }
 visual_classes[] =
@@ -4614,7 +4611,9 @@ unwind_create_tip_frame (Lisp_Object frame)
    when this happens.  */
 
 static Lisp_Object
-x_create_tip_frame (struct x_display_info *dpyinfo, Lisp_Object parms, Lisp_Object text)
+x_create_tip_frame (struct x_display_info *dpyinfo,
+                    Lisp_Object parms,
+                    Lisp_Object text)
 {
   struct frame *f;
   Lisp_Object frame, tem;
@@ -5041,6 +5040,27 @@ Text larger than the specified size is clipped.  */)
   else
     CHECK_NUMBER (dy);
 
+#ifdef USE_GTK
+  if (x_gtk_use_system_tooltips)
+    {
+      int ok; 
+
+      /* Hide a previous tip, if any.  */
+      Fx_hide_tip ();
+
+      BLOCK_INPUT;
+      if ((ok = xg_prepare_tooltip (f, string, &width, &height)) != 0)
+        {
+	  compute_tip_xy (f, parms, dx, dy, width, height, &root_x, &root_y);
+          xg_show_tooltip (f, root_x, root_y);
+          /* This is used in Fx_hide_tip.  */
+          XSETFRAME (tip_frame, f);
+        }
+      UNBLOCK_INPUT;
+      if (ok) goto start_timer;
+    }
+#endif /* USE_GTK */
+
   if (NILP (last_show_tip_args))
     last_show_tip_args = Fmake_vector (make_number (3), Qnil);
 
@@ -5201,6 +5221,7 @@ Value is t if tooltip was open, nil otherwise.  */)
   int count;
   Lisp_Object deleted, frame, timer;
   struct gcpro gcpro1, gcpro2;
+  struct frame *f;
 
   /* Return quickly if nothing to do.  */
   if (NILP (tip_timer) && NILP (tip_frame))
@@ -5218,6 +5239,14 @@ Value is t if tooltip was open, nil otherwise.  */)
   if (!NILP (timer))
     call1 (Qcancel_timer, timer);
 
+#ifdef USE_GTK
+  /* When using system tooltip, tip_frame is the Emacs frame on which
+     the tip is shown.  */
+  f = XFRAME (frame);
+  if (FRAME_LIVE_P (f) && xg_hide_tooltip (f))
+    frame = Qnil;
+#endif
+
   if (FRAMEP (frame))
     {
       delete_frame (frame, Qnil);
@@ -5228,8 +5257,9 @@ Value is t if tooltip was open, nil otherwise.  */)
 	 redisplay procedure is not called when a tip frame over menu
 	 items is unmapped.  Redisplay the menu manually...  */
       {
-	struct frame *f = SELECTED_FRAME ();
-	Widget w = f->output_data.x->menubar_widget;
+        Widget w;
+	f = SELECTED_FRAME ();
+	w = f->output_data.x->menubar_widget;
 
 	if (!DoesSaveUnders (FRAME_X_DISPLAY_INFO (f)->screen)
 	    && w != NULL)
@@ -5578,7 +5608,7 @@ If FRAME is omitted or nil, it defaults to the selected frame. */)
   font_param = Ffont_get (font, intern (":name"));
   if (STRINGP (font_param))
     default_name = xstrdup (SDATA (font_param));
-  else 
+  else
     {
       font_param = Fframe_parameter (frame, Qfont_param);
       if (STRINGP (font_param))
@@ -5589,7 +5619,7 @@ If FRAME is omitted or nil, it defaults to the selected frame. */)
     default_name = xstrdup (x_last_font_name);
 
   /* Convert fontconfig names to Gtk names, i.e. remove - before number */
-  if (default_name) 
+  if (default_name)
     {
       char *p = strrchr (default_name, '-');
       if (p)
@@ -5850,8 +5880,8 @@ or when you set the mouse color.  */);
   Vx_cursor_fore_pixel = Qnil;
 
   DEFVAR_LISP ("x-max-tooltip-size", &Vx_max_tooltip_size,
-    doc: /* Maximum size for tooltips.  Value is a pair (COLUMNS . ROWS).
-Text larger than this is clipped.  */);
+    doc: /* Maximum size for tooltips.
+Value is a pair (COLUMNS . ROWS).  Text larger than this is clipped.  */);
   Vx_max_tooltip_size = Fcons (make_number (80), make_number (40));
 
   DEFVAR_LISP ("x-no-window-manager", &Vx_no_window_manager,
@@ -5897,6 +5927,12 @@ to turn the additional text off.  */);
 The default is to just show an arrow and pressing on that arrow shows
 the tool bar buttons.  */);
   x_gtk_whole_detached_tool_bar = 0;
+
+  DEFVAR_BOOL ("x-gtk-use-system-tooltips", &x_gtk_use_system_tooltips,
+    doc: /* *If non-nil with a Gtk+ built Emacs, the Gtk+ toolip is used.
+Otherwise use Emacs own tooltip implementation.
+When using Gtk+ tooltips, the tooltip face is not used.  */);
+  x_gtk_use_system_tooltips = 1;
 
   Fprovide (intern_c_string ("x"), Qnil);
 

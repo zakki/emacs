@@ -31,6 +31,7 @@ s/\.h\.in/.h-in/
 /^ALL_CFLAGS *=/s/@[^@\n]*@//g
 /^CPPFLAGS *=/s/@[^@\n]*@//
 /^LDFLAGS *=/s/@[^@\n]*@//
+/^LD_FIRSTFLAG *=/s/@[^@\n]*@//
 /^LIBS *=/s/@[^@\n]*@//
 /^LIBES *=/,/^ *$/ {
   s/@[^@\n]*@//g
@@ -51,7 +52,6 @@ s/\.h\.in/.h-in/
 /^TEMACS_LDFLAGS2 *=/s/@TEMACS_LDFLAGS2@/$(LDFLAGS)/
 /^LIBS_SYSTEM *=/s/@LIBS_SYSTEM@//
 /^LIB_GCC *=/s/@LIB_GCC@//
-/^LD *=/s/@LINKER@/$(CC)/
 /^LIB_STANDARD *=/s/@LIB_STANDARD@//
 /^LIB_MATH *=/s/@LIB_MATH@/-lm/
 /^LIBTIFF *=/s/@LIBTIFF@//
@@ -88,6 +88,10 @@ s/\.h\.in/.h-in/
 /^CFLAGS_SOUND *=/s/@CFLAGS_SOUND@//
 /^RSVG_LIBS *=/s/@RSVG_LIBS@//
 /^RSVG_CFLAGS *=/s/@RSVG_CFLAGS@//
+/^IMAGEMAGICK_LIBS *=/s/@IMAGEMAGICK_LIBS@//
+/^IMAGEMAGICK_CFLAGS *=/s/@IMAGEMAGICK_CFLAGS@//
+/^LIBXML2_LIBS *=/s/@LIBXML2_LIBS@//
+/^LIBXML2_CFLAGS *=/s/@LIBXML2_CFLAGS@//
 /^WIDGET_OBJ *=/s/@WIDGET_OBJ@//
 /^CYGWIN_OBJ *=/s/@CYGWIN_OBJ@//
 /^MSDOS_OBJ *=/s/= */= dosfns.o msdos.o w16select.o/
@@ -100,6 +104,8 @@ s/\.h\.in/.h-in/
 /^GNU_OBJC_CFLAGS*=/s/@GNU_OBJC_CFLAGS@//
 /^LIBRESOLV *=/s/@LIBRESOLV@//
 /^LIBSELINUX_LIBS *=/s/@LIBSELINUX_LIBS@//
+/^LIBGNUTLS_LIBS *=/s/@[^@\n]*@//
+/^LIBGNUTLS_CFLAGS *=/s/@[^@\n]*@//
 /^GETLOADAVG_LIBS *=/s/@[^@\n]*@//
 /^START_FILES *=/s/@START_FILES@//
 /^OTHER_FILES *=/s/@OTHER_FILES@//
@@ -118,7 +124,7 @@ s/\.h\.in/.h-in/
 /^RALLOC_OBJ *=/s/@RALLOC_OBJ@/ralloc.o/
 /^PRE_ALLOC_OBJ *=/s/@PRE_ALLOC_OBJ@/lastfile.o/
 /^POST_ALLOC_OBJ *=/s/@POST_ALLOC_OBJ@/$(vmlimitobj)/
-/^UNEXEC_OBJ *=/s/@UNEXEC_OBJ@/unexec.o/
+/^UNEXEC_OBJ *=/s/@UNEXEC_OBJ@/unexcoff.o/
 /^CANNOT_DUMP *=/s/@CANNOT_DUMP@/no/
 /^DEPFLAGS *=/s/@DEPFLAGS@//
 /^MKDEPDIR *=/s/@MKDEPDIR@//
