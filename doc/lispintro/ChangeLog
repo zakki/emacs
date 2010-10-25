@@ -1,3 +1,33 @@
+2010-10-11  Glenn Morris  <rgm@gnu.org>
+
+	* Makefile.in (.dvi.ps): Remove unnecessary suffix rule.
+	(.PHONY): Add ps.
+	(ps, emacs-lisp-intro.ps): New targets.
+	(clean): Delete ps file.
+	(MAKEINFO): Use --force like the other doc/ Makefiles do.
+	Add explicit -I$srcdir.
+
+2010-10-09  Glenn Morris  <rgm@gnu.org>
+
+	* Makefile.in (VPATH): Remove.
+	(infodir): Make it absolute.
+	(mkinfodir, $(infodir)/eintr, infoclean): No need to cd $srcdir.
+
+	* Makefile.in (dist): Anchor regexps.
+
+	* Makefile.in (${infodir}/eintr, emacs-lisp-intro.dvi)
+	(emacs-lisp-intro.pdf, emacs-lisp-intro.html): Use $<.
+
+	* Makefile.in (infoclean): Remove harmless, long-standing error.
+
+	* Makefile.in ($(infodir)): Delete rule.
+	(mkinfodir): New.
+	($(infodir)/eintr): Use $mkinfodir instead of infodir.
+
+2010-10-09  Glenn Morris  <rgm@gnu.org>
+
+	* Makefile.in (.PHONY): Declare info, dvi, html, pdf, dist.
+
 2010-10-07  Glenn Morris  <rgm@gnu.org>
 
 	* Makefile.in (version): New, set by configure.

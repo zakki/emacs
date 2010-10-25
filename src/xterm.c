@@ -1,7 +1,8 @@
 /* X Communication module for terminals which understand the X protocol.
-   Copyright (C) 1989, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000, 2001,
-                 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-                 Free Software Foundation, Inc.
+
+Copyright (C) 1989, 1993, 1994, 1995, 1996, 1997, 1998, 1999, 2000,
+  2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
+  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -1942,18 +1943,38 @@ x_draw_relief_rect (struct frame *f,
     gc = f->output_data.x->black_relief.gc;
   XSetClipRectangles (dpy, gc, 0, 0, clip_rect, 1, Unsorted);
 
+  /* This code is more complicated than it has to be, because of two
+     minor hacks to make the boxes look nicer: (i) if width > 1, draw
+     the outermost line using the black relief.  (ii) Omit the four
+     corner pixels.  */
+
   /* Top.  */
   if (top_p)
-    for (i = 0; i < width; ++i)
-      XDrawLine (dpy, window, gc,
-		 left_x + i * left_p, top_y + i,
-		 right_x + 1 - i * right_p, top_y + i);
+    {
+      if (width == 1)
+	XDrawLine (dpy, window, gc,
+		   left_x  + (left_p  ? 1 : 0), top_y,
+		   right_x + (right_p ? 0 : 1), top_y);
+
+      for (i = 1; i < width; ++i)
+	XDrawLine (dpy, window, gc,
+		   left_x  + i * left_p, top_y + i,
+		   right_x + 1 - i * right_p, top_y + i);
+    }
 
   /* Left.  */
   if (left_p)
-    for (i = 0; i < width; ++i)
-      XDrawLine (dpy, window, gc,
-		 left_x + i, top_y + i, left_x + i, bottom_y - i + 1);
+    {
+      if (width == 1)
+	XDrawLine (dpy, window, gc, left_x, top_y + 1, left_x, bottom_y);
+
+      XClearArea (dpy, window, left_x, top_y, 1, 1, False);
+      XClearArea (dpy, window, left_x, bottom_y, 1, 1, False);
+
+      for (i = (width > 1 ? 1 : 0); i < width; ++i)
+	XDrawLine (dpy, window, gc,
+		   left_x + i, top_y + i, left_x + i, bottom_y - i + 1);
+    }
 
   XSetClipMask (dpy, gc, None);
   if (raised_p)
@@ -1962,18 +1983,40 @@ x_draw_relief_rect (struct frame *f,
     gc = f->output_data.x->white_relief.gc;
   XSetClipRectangles (dpy, gc, 0, 0, clip_rect, 1, Unsorted);
 
+  if (width > 1)
+    {
+      /* Outermost top line.  */
+      if (top_p)
+	XDrawLine (dpy, window, gc,
+		   left_x  + (left_p  ? 1 : 0), top_y,
+		   right_x + (right_p ? 0 : 1), top_y);
+
+      /* Outermost left line.  */
+      if (left_p)
+	XDrawLine (dpy, window, gc, left_x, top_y + 1, left_x, bottom_y);
+    }
+
   /* Bottom.  */
   if (bot_p)
-    for (i = 0; i < width; ++i)
+    {
       XDrawLine (dpy, window, gc,
-		 left_x + i * left_p, bottom_y - i,
-		 right_x + 1 - i * right_p, bottom_y - i);
+		 left_x  + (left_p  ? 1 : 0), bottom_y,
+		 right_x + (right_p ? 0 : 1), bottom_y);
+      for (i = 1; i < width; ++i)
+	XDrawLine (dpy, window, gc,
+		   left_x  + i * left_p, bottom_y - i,
+		   right_x + 1 - i * right_p, bottom_y - i);
+    }
 
   /* Right.  */
   if (right_p)
-    for (i = 0; i < width; ++i)
-      XDrawLine (dpy, window, gc,
-		 right_x - i, top_y + i + 1, right_x - i, bottom_y - i);
+    {
+      XClearArea (dpy, window, right_x, top_y, 1, 1, False);
+      XClearArea (dpy, window, right_x, bottom_y, 1, 1, False);
+      for (i = 0; i < width; ++i)
+	XDrawLine (dpy, window, gc,
+		   right_x - i, top_y + i + 1, right_x - i, bottom_y - i);
+    }
 
   XSetClipMask (dpy, gc, None);
 }
@@ -7655,15 +7698,12 @@ x_connection_closed (Display *dpy, const char *error_message)
 #endif
 
 #ifdef USE_GTK
-      /* Due to bugs in some Gtk+ versions, just exit here if this
-         is the last display/terminal. */
-      if (terminal_list->next_terminal == NULL)
-        {
-          fprintf (stderr, "%s\n", error_msg);
-          Fkill_emacs (make_number (70));
-          /* NOTREACHED */
-        }
-      xg_display_close (dpyinfo->display);
+      /* Due to bugs in some Gtk+ versions, just exit here. */
+      {
+	fprintf (stderr, "%s\n", error_msg);
+	Fkill_emacs (make_number (70));
+	abort ();  /* NOTREACHED */
+      }
 #endif
 
       /* Indicate that this display is dead.  */
@@ -10640,9 +10680,11 @@ selected window or cursor position is preserved.  */);
   x_mouse_click_focus_ignore_position = 0;
 
   DEFVAR_LISP ("x-toolkit-scroll-bars", &Vx_toolkit_scroll_bars,
-    doc: /* What X toolkit scroll bars Emacs uses.
-A value of nil means Emacs doesn't use X toolkit scroll bars.
-Otherwise, value is a symbol describing the X toolkit.  */);
+    doc: /* Which toolkit scroll bars Emacs uses, if any.
+A value of nil means Emacs doesn't use toolkit scroll bars.
+With the X Window system, the value is a symbol describing the
+X toolkit.  Possible values are: gtk, motif, xaw, or xaw3d.
+With MS Windows, the value is t.  */);
 #ifdef USE_TOOLKIT_SCROLL_BARS
 #ifdef USE_MOTIF
   Vx_toolkit_scroll_bars = intern_c_string ("motif");
@@ -10708,5 +10750,3 @@ default is nil, which is the same as `super'.  */);
 
 #endif /* HAVE_X_WINDOWS */
 
-/* arch-tag: 6d4e4cb7-abc1-4302-9585-d84dcfb09d0f
-   (do not change this comment) */

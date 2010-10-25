@@ -33,7 +33,7 @@
 
 ;;; Code:
 
-;; For Emacs < 22.2.
+;; For Emacs <22.2 and XEmacs.
 (eval-and-compile
   (unless (fboundp 'declare-function) (defmacro declare-function (&rest r))))
 (eval-when-compile
@@ -1366,7 +1366,7 @@ Return the modified alist."
 	(when (string-match r word)
 	  (throw 'found r))))))
 
-(defmacro gnus-pull (key alist &optional assoc-p)
+(defmacro gnus-alist-pull (key alist &optional assoc-p)
   "Modify ALIST to be without KEY."
   (unless (symbolp alist)
     (error "Not a symbol: %s" alist))
@@ -1647,7 +1647,8 @@ SPEC is a predicate specifier that contains stuff like `or', `and',
 (defun gnus-ido-completing-read (prompt collection &optional require-match
                                         initial-input history def)
   "Call `ido-completing-read-function'."
-  (ido-completing-read prompt collection nil require-match initial-input history def))
+  (ido-completing-read prompt collection nil require-match
+		       initial-input history def))
 
 
 (autoload 'iswitchb-read-buffer "iswitchb")

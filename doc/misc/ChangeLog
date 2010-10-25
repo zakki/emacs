@@ -1,3 +1,142 @@
+2010-10-25  Daiki Ueno  <ueno@unixuser.org>
+
+	* epa.texi (Mail-mode integration): Add alternative key bindings
+	for epa-mail commands; escape comma.
+
+2010-10-24  Jay Belanger  <jay.p.belanger@gmail.com>
+
+	* calc.texi:  Use emacsver.texi to determine Emacs version.
+
+2010-10-24  Juanma Barranquero  <lekktu@gmail.com>
+
+	* gnus.texi (Group Parameters, Buttons): Fix typos.
+
+2010-10-22  Tassilo Horn  <tassilo@member.fsf.org>
+
+	* gnus.texi (Subscription Commands): Mention that you can also
+	subscribe to new groups via the Server buffer, which is probably more
+	convenient when subscribing to many groups.
+
+2010-10-21  Julien Danjou  <julien@danjou.info>
+
+	* message.texi (Message Headers): Allow message-default-headers to be a
+	function.
+
+2010-10-21  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* gnus-news.texi: Mention new archive defaults.
+
+2010-10-21  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus.texi (RSS): Remove nnrss-wash-html-in-text-plain-parts.
+
+2010-10-20  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* gnus.texi (HTML): Document the function value of
+	gnus-blocked-images.
+	(Article Washing): shr and gnus-w3m, not the direct function names.
+
+2010-10-20  Julien Danjou  <julien@danjou.info>
+
+	* emacs-mime.texi (Flowed text): Add a note about mml-enable-flowed
+	variable.
+
+2010-10-19  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* gnus.texi (Customizing the IMAP Connection): The port strings are
+	strings.
+	(Document Groups): Mention git.
+
+2010-10-18  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* gnus-coding.texi (Gnus Maintainance Guide): Update to mention Emacs
+	bzr/Gnus git sync.
+
+2010-10-15  Eli Zaretskii  <eliz@gnu.org>
+
+	* auth.texi (GnuPG and EasyPG Assistant Configuration): Fix last
+	change.
+
+2010-10-13  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* auth.texi (GnuPG and EasyPG Assistant Configuration): Fix up the
+	@item syntax for in-Emacs makeinfo.
+
+2010-10-13  Teodor Zlatanov  <tzz@lifelogs.com>
+
+	* auth.texi (GnuPG and EasyPG Assistant Configuration): Fix syntax and
+	trim sentence.
+
+2010-10-12  Daiki Ueno  <ueno@unixuser.org>
+
+	* epa.texi (Caching Passphrases):
+	* auth.texi (GnuPG and EasyPG Assistant Configuration): Clarify
+	some configurations require to set up gpg-agent.
+
+2010-10-11  Glenn Morris  <rgm@gnu.org>
+
+	* Makefile.in (.texi.dvi): Remove unnecessary suffix rule.
+
+2010-10-09  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* gnus.texi (Spam Package Introduction): Mention `$'.
+
+2010-10-09  Eli Zaretskii  <eliz@gnu.org>
+
+	* makefile.w32-in (emacsdir): New variable.
+	($(infodir)/efaq, faq.dvi): Depend on emacsver.texi.
+	(ENVADD, $(infodir)/efaq): Add -I$(emacsdir).
+
+2010-10-09  Glenn Morris  <rgm@gnu.org>
+
+	* Makefile.in (mostlyclean): Delete *.toc.
+
+	* Makefile.in: Use $< in rules.
+
+	* Makefile.in (maintainer-clean): Remove harmless, long-standing error.
+
+	* Makefile.in ($(infodir)): Delete rule.
+	(mkinfodir): New.  Use it in all the info rules, rather than depending
+	on infodir.
+
+2010-10-09  Glenn Morris  <rgm@gnu.org>
+
+	* gnus.texi (Article Washing): Fix previous change.
+
+	* Makefile.in (emacsdir): New variable.
+	($(infodir)/efaq): Pass -I $(emacsdir) to makeinfo.
+	Depend on emacsver.texi.
+
+	* faq.texi (VER): Replace with EMACSVER from emacsver.texi.
+
+	* Makefile.in (.PHONY): Declare info, dvi, pdf and the clean rules.
+
+2010-10-08  Julien Danjou  <julien@danjou.info>
+
+	* gnus.texi: Add mm-shr.
+
+2010-10-08  Ludovic Courtès  <ludo@gnu.org>
+
+	* gnus.texi (Finding the Parent, The Gnus Registry)
+	(Registry Article Refer Method): Update docs for nnregistry.el.
+
+2010-10-08  Daiki Ueno  <ueno@unixuser.org>
+
+	* auth.texi (Help for users)
+	(GnuPG and EasyPG Assistant Configuration): Update docs.
+
+2010-10-08  Glenn Morris  <rgm@gnu.org>
+
+	* cl.texi (Organization, Installation, Old CL Compatibility):
+	Deprecate cl-compat for new code.
+	(Usage, Installation): Remove outdated information.
+
+	* eudc.texi (CCSO PH/QI, LDAP Requirements): Remove old information.
+
+2010-10-07  Katsumi Yamaoka  <yamaoka@jpl.org>
+
+	* gnus.texi (Gravatars): Document gnus-gravatar-too-ugly.
+
 2010-10-06  Julien Danjou  <julien@danjou.info>
 
 	* sieve.texi (Manage Sieve API): Document sieve-manage-authenticate.

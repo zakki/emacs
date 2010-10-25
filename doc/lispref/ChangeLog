@@ -1,3 +1,74 @@
+2010-10-24  Eli Zaretskii  <eliz@gnu.org>
+
+	* display.texi (Window Systems): Deprecate use of window-system as
+	a predicate.
+
+2010-10-23  Glenn Morris  <rgm@gnu.org>
+
+	* help.texi (Documentation Basics): Remove mentions of digest-doc and
+	sorted-doc.
+
+2010-10-15  Eli Zaretskii  <eliz@gnu.org>
+
+	* os.texi (Dynamic Libraries): New node, with slightly modified
+	text deleted from "Image Formats".
+	(System Interface): Add @menu entry for "Dynamic Libraries".
+
+	* display.texi (Image Formats): Remove description of
+	image-library-alist.  (Renamed in revno 101949.)
+
+2010-10-12  Glenn Morris  <rgm@gnu.org>
+
+	* book-spine.texinfo: Rename to book-spine.texi.
+
+2010-10-11  Glenn Morris  <rgm@gnu.org>
+
+	* Makefile.in (MAKEINFO): Add explicit -I$srcdir.
+
+	* Makefile.in (DVIPS): New variable.
+	(.PHONY): Add html, ps.
+	(html, elisp.html, ps, elisp.ps): New targets.
+	(clean): Delete html, ps files.
+	($(infodir)/elisp): Remove unnecessary includes.
+
+2010-10-09  Eli Zaretskii  <eliz@gnu.org>
+
+	* makefile.w32-in (emacsdir): New variable.
+	(srcs): Add emacsver.texi.
+	($(infodir)/elisp, elisp.dvi): Add -I$(emacsdir).
+
+2010-10-09  Glenn Morris  <rgm@gnu.org>
+
+	* Makefile.in (VPATH): Remove.
+	(infodir): Make it absolute.
+	(mkinfodir, $(infodir)/elisp, infoclean): No need to cd $srcdir.
+
+	* Makefile.in (dist): Anchor regexps.
+
+	* Makefile.in (srcs): Put elisp.texi first.
+	($(infodir)/elisp, elisp.dvi, elisp.pdf): Use $<.
+
+	* Makefile.in (infoclean): Remove harmless, long-standing error.
+
+	* Makefile.in ($(infodir)): Delete rule.
+	(mkinfodir): New.
+	($(infodir)/elisp): Use $mkinfodir instead of infodir.
+
+	* Makefile.in (dist): Remove reference to emacsver.texi.in.
+	Also copy emacsver.texi, and edit $emacsdir.
+
+2010-10-09  Glenn Morris  <rgm@gnu.org>
+
+	* Makefile.in (emacsdir): New variable.
+	(MAKEINFO): Add -I $emacsdir.
+	(dist): Copy emacsver.texi.
+	(srcs): Add emacsver.texi.
+
+	* book-spine.texinfo, elisp.texi, vol2.texi, vol1.texi:
+	Set EMACSVER by including emacsver.texi.
+
+	* Makefile.in (.PHONY): Declare info, dvi, pdf, dist.
+
 2010-10-07  Glenn Morris  <rgm@gnu.org>
 
 	* Makefile.in (version): New, set by configure.
@@ -2525,6 +2596,12 @@
 2007-08-25  Richard Stallman  <rms@gnu.org>
 
 	* display.texi (Images): Delete redundant @findex.
+
+2007-08-16  Stefan Monnier  <monnier@iro.umontreal.ca>
+
+	* text.texi (Change Hooks): (after|before)-change-functions are no
+	longer bound to nil while running; rather inhibit-modification-hooks
+	is t.
 
 2007-08-16  Richard Stallman  <rms@gnu.org>
 

@@ -22,45 +22,45 @@
 SHELL = /bin/sh
 
 srcdir = @srcdir@
-VPATH = @srcdir@
 version=@version@
 
-infodir = ../../info
+infodir = $(srcdir)/../../info
 # Directory with the (customized) texinfo.tex file.
 texinfodir = $(srcdir)/../misc
 
-MAKEINFO = makeinfo
+MAKEINFO = makeinfo --force -I $(srcdir)
 TEXI2DVI = texi2dvi
 TEXI2PDF = texi2pdf
 DVIPS = dvips
 
-.SUFFIXES: .dvi .ps .texi
+mkinfodir = @test -d ${infodir} || mkdir ${infodir} || test -d ${infodir}
+
+.PHONY: info dvi html pdf ps
 
 info: ${infodir}/eintr
-
-$(infodir):
-	mkdir $@ || test -d $@
 
 dvi: emacs-lisp-intro.dvi
 html: emacs-lisp-intro.html
 pdf: emacs-lisp-intro.pdf
+ps: emacs-lisp-intro.ps
 
 # The file name eintr must fit within 5 characters, to allow for
 # -NN extensions to fit into DOS 8+3 limits without clashing.
-${infodir}/eintr: $(infodir) ${srcdir}/emacs-lisp-intro.texi
-	cd $(srcdir); $(MAKEINFO) emacs-lisp-intro.texi -o $@
+${infodir}/eintr: ${srcdir}/emacs-lisp-intro.texi
+	$(mkinfodir)
+	$(MAKEINFO) -o $@ $<
 
 emacs-lisp-intro.dvi: ${srcdir}/emacs-lisp-intro.texi
-	$(TEXI2DVI) -I $(srcdir) -I $(texinfodir) $^
+	$(TEXI2DVI) -I $(srcdir) -I $(texinfodir) $<
+
+emacs-lisp-intro.ps: emacs-lisp-intro.dvi
+	$(DVIPS) -o $@ $<
 
 emacs-lisp-intro.pdf: ${srcdir}/emacs-lisp-intro.texi
-	$(TEXI2PDF) -I $(srcdir) -I $(texinfodir) $^
+	$(TEXI2PDF) -I $(srcdir) -I $(texinfodir) $<
 
 emacs-lisp-intro.html: ${srcdir}/emacs-lisp-intro.texi
-	$(MAKEINFO) --html -o $@ $^
-
-.dvi.ps:
-	$(DVIPS) $< -o $@
+	$(MAKEINFO) --html -o $@ $<
 
 .PHONY: mostlyclean clean distclean maintainer-clean infoclean
 
@@ -69,7 +69,7 @@ mostlyclean:
 	  *.op *.ops *.pg *.pgs *.tp *.tps *.vr *.vrs
 
 clean: mostlyclean
-	rm -f emacs-lisp-intro.dvi emacs-lisp-intro.pdf
+	rm -f emacs-lisp-intro.dvi emacs-lisp-intro.pdf emacs-lisp-intro.ps
 	rm -rf emacs-lisp-intro.html/
 	rm -f emacs-lispintro-${version}.tar*
 
@@ -80,14 +80,16 @@ infoclean:
 
 maintainer-clean: distclean infoclean
 
+.PHONY: dist
+
 dist:
 	rm -rf emacs-lispintro-${version}
 	mkdir emacs-lispintro-${version}
 	cp ${srcdir}/*.texi ${srcdir}/*.eps ${srcdir}/*.pdf \
 	  ${texinfodir}/texinfo.tex \
 	  ${srcdir}/ChangeLog* ${srcdir}/README emacs-lispintro-${version}/
-	sed -e 's/@sr[c]dir@/./' -e 's/\(texinfodir *=\).*/\1 ./' \
-	  -e 's/\(infodir *=\).*/\1 ./' -e 's/^\(clean:.*\)/\1 infoclean/' \
+	sed -e 's/@sr[c]dir@/./' -e 's/^\(texinfodir *=\).*/\1 ./' \
+	  -e 's/^\(infodir *=\).*/\1 ./' -e 's/^\(clean:.*\)/\1 infoclean/' \
 	  -e "s/@ver[s]ion@/${version}/" \
 	  ${srcdir}/Makefile.in > emacs-lispintro-${version}/Makefile
 	tar -cf emacs-lispintro-${version}.tar emacs-lispintro-${version}

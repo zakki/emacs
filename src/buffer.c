@@ -1,8 +1,8 @@
 /* Buffer manipulation primitives for GNU Emacs.
-   Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994,
-                 1995, 1997, 1998, 1999, 2000, 2001, 2002,
-                 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010
-                 Free Software Foundation, Inc.
+
+Copyright (C) 1985, 1986, 1987, 1988, 1989, 1993, 1994, 1995, 1997,
+  1998, 1999, 2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008,
+  2009, 2010  Free Software Foundation, Inc.
 
 This file is part of GNU Emacs.
 
@@ -5822,10 +5822,7 @@ No information is given about the length of the text after the change.
 
 Buffer changes made while executing the `before-change-functions'
 don't call any before-change or after-change functions.
-That's because these variables are temporarily set to nil.
-As a result, a hook function cannot straightforwardly alter the
-value of these variables.  See the Emacs Lisp manual for a way of
-accomplishing an equivalent result by using other variables.
+That's because `inhibit-modification-hooks' is temporarily set non-nil.
 
 If an unhandled error happens in running these functions,
 the variable's value remains nil.  That prevents the error
@@ -5843,10 +5840,7 @@ and the post-change beginning and end are at the same place.)
 
 Buffer changes made while executing the `after-change-functions'
 don't call any before-change or after-change functions.
-That's because these variables are temporarily set to nil.
-As a result, a hook function cannot straightforwardly alter the
-value of these variables.  See the Emacs Lisp manual for a way of
-accomplishing an equivalent result by using other variables.
+That's because `inhibit-modification-hooks' is temporarily set non-nil.
 
 If an unhandled error happens in running these functions,
 the variable's value remains nil.  That prevents the error
@@ -6011,8 +6005,12 @@ to the default frame line height.  A value of nil means add no extra space.  */)
 
   DEFVAR_PER_BUFFER ("cursor-in-non-selected-windows",
 		     &current_buffer->cursor_in_non_selected_windows, Qnil,
-		     doc: /* *Cursor type to display in non-selected windows.
-The value t means to use hollow box cursor.  See `cursor-type' for other values.  */);
+		     doc: /* *Non-nil means show a cursor in non-selected windows.
+If nil, only shows a cursor in the selected window.
+If t, displays a cursor related to the usual cursor type
+\(a solid box becomes hollow, a bar becomes a narrower bar).
+You can also specify the cursor type as in the `cursor-type' variable.
+Use Custom to set this variable and update the display."  */);
 
   DEFVAR_LISP ("kill-buffer-query-functions", &Vkill_buffer_query_functions,
 	       doc: /* List of functions called with no args to query before killing a buffer.
@@ -6089,5 +6087,3 @@ keys_of_buffer (void)
   Fput (intern_c_string ("erase-buffer"), Qdisabled, Qt);
 }
 
-/* arch-tag: e48569bf-69a9-4b65-a23b-8e68769436e1
-   (do not change this comment) */

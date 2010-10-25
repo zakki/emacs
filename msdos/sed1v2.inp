@@ -43,7 +43,6 @@ s/\.h\.in/.h-in/
 /^C_SWITCH_X_SITE *=/s/@C_SWITCH_X_SITE@//
 /^C_WARNINGS_SWITCH *=/s/@C_WARNINGS_SWITCH@//
 /^PROFILING_CFLAGS *=/s/@PROFILING_CFLAGS@//
-/^PROFILING_LDFLAGS *=/s/@PROFILING_LDFLAGS@//
 #/^LD_SWITCH_X_SITE *=/s/@LD_SWITCH_X_SITE@//
 /^LD_SWITCH_SYSTEM_TEMACS *=/s/@LD_SWITCH_SYSTEM_TEMACS@//
 /^LD_SWITCH_X_SITE_AUX *=/s/@LD_SWITCH_X_SITE_AUX@//
@@ -132,12 +131,12 @@ s/\.h\.in/.h-in/
 /^M_FILE *=/s!@[^@\n]*@!m/intel386.h!
 /^S_FILE *=/s!@[^@\n]*@!s/msdos.h!
 /^@SET_MAKE@$/s/@SET_MAKE@//
-/^.\${libsrc}make-docfile.*>/s!make-docfile!make-docfile -o ../etc/DOC!
-/^.\${libsrc}make-doc/s!>.*$!!
+/^.\$(libsrc)\/make-docfile.*>/s!make-docfile!make-docfile -o ../etc/DOC!
+/^.\$(libsrc)\/make-doc/s!>.*$!!
 /^[ 	]*$/d
 /^	if test -f/,/^	fi$/c\
 	command.com /c if exist .gdbinit rm -f _gdbinit
-/^	if test "\${CANNOT_DUMP}" =/,/^	else /d
+/^	if test "\$(CANNOT_DUMP)" =/,/^	else /d
 /^	fi/d
 /^	LC_ALL=C \$(RUN_TEMACS)/i\
 	stubedit temacs.exe minstack=1024k
@@ -153,7 +152,7 @@ s/ || true\; \\$//
 /^	if test -f/,/^	fi$/c\
 	command.com /c if exist .gdbinit rm -f _gdbinit
 /^	#/d
-/^	cd.*make-docfile/s!$!; cd ${dot}${dot}/src!
+/^	cd.*make-docfile/s!$!; cd ../src!
 /^	@: /d
 /^	-\{0,1\} *ln -/s/ln -f/cp -pf/
 /^[ 	]touch /s/touch/djecho $@ >/

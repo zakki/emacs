@@ -23,7 +23,7 @@
 
 ;;; Code:
 
-;; For Emacs < 22.2.
+;; For Emacs <22.2 and XEmacs.
 (eval-and-compile
   (unless (fboundp 'declare-function) (defmacro declare-function (&rest r))))
 
@@ -124,6 +124,14 @@ match found will be used."
 (defcustom mml-insert-mime-headers-always t
   "If non-nil, always put Content-Type: text/plain at top of empty parts.
 It is necessary to work against a bug in certain clients."
+  :version "24.1"
+  :type 'boolean
+  :group 'message)
+
+(defcustom mml-enable-flowed t
+  "If non-nil, enable format=flowed usage when encoding a message.
+This is only performed when filling on text/plain with hard
+newlines in the text."
   :version "24.1"
   :type 'boolean
   :group 'message)
@@ -546,7 +554,8 @@ If MML is non-nil, return the buffer up till the correspondent mml tag."
 		    ;; in the mml tag or it says "flowed" and there
 		    ;; actually are hard newlines in the text.
 		    (let (use-hard-newlines)
-		      (when (and (string= type "text/plain")
+		      (when (and mml-enable-flowed
+                                 (string= type "text/plain")
 				 (not (string= (cdr (assq 'sign cont)) "pgp"))
 				 (or (null (assq 'format cont))
 				     (string= (cdr (assq 'format cont))
@@ -1457,6 +1466,7 @@ or the `pop-to-buffer' function."
   (require 'gnus-msg)		      ; for gnus-setup-posting-charset
   (save-excursion
     (let* ((buf (current-buffer))
+	   (article-editing (eq major-mode 'gnus-article-edit-mode))
 	   (message-options message-options)
 	   (message-this-is-mail (message-mail-p))
 	   (message-this-is-news (message-news-p))
@@ -1476,15 +1486,19 @@ or the `pop-to-buffer' function."
       (mml-preview-insert-mail-followup-to)
       (let ((message-deletable-headers (if (message-news-p)
 					   nil
-					 message-deletable-headers)))
+					 message-deletable-headers))
+	    (mail-header-separator (if article-editing
+				       ""
+				     mail-header-separator)))
 	(message-generate-headers
 	 (copy-sequence (if (message-news-p)
 			    message-required-news-headers
-			  message-required-mail-headers))))
-      (if (re-search-forward
-	   (concat "^" (regexp-quote mail-header-separator) "\n") nil t)
-	  (replace-match "\n"))
-      (let ((mail-header-separator ""));; mail-header-separator is removed.
+			  message-required-mail-headers)))
+	(unless article-editing
+	  (if (re-search-forward
+	       (concat "^" (regexp-quote mail-header-separator) "\n") nil t)
+	      (replace-match "\n"))
+	  (setq mail-header-separator ""))
 	(message-sort-headers)
 	(mml-to-mime))
       (if raw

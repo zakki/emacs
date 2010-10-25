@@ -1,3 +1,12 @@
+2010-10-14  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* url-gw.el (url-open-stream): Use open-gnutls-stream if it exists.
+
+2010-10-07  Lars Magne Ingebrigtsen  <larsi@gnus.org>
+
+	* url-http.el (url-http-end-of-document-sentinel): Protect against
+	the process buffer being killed.
+
 2010-10-04  Lars Magne Ingebrigtsen  <larsi@gnus.org>
 
 	* url-http.el (url-http-wait-for-headers-change-function): Protect

@@ -24,22 +24,24 @@ SHELL = /bin/sh
 # Standard configure variables.
 srcdir = @srcdir@
 
-# Tell make where to find source files; this is needed for the makefiles.
-VPATH=@srcdir@
-
 version=@version@
 
-infodir = ../../info
+infodir = $(srcdir)/../../info
 # Directory with the (customized) texinfo.tex file.
 texinfodir = $(srcdir)/../misc
+# Directory with emacsver.texi.
+emacsdir =  $(srcdir)/../emacs
 
-MAKEINFO = makeinfo --force
+MAKEINFO = makeinfo --force -I $(emacsdir) -I $(srcdir)
 TEXI2DVI = texi2dvi
 TEXI2PDF = texi2pdf
+DVIPS = dvips
 
 # List of all the texinfo files in the manual:
 
 srcs = \
+  $(srcdir)/elisp.texi \
+  $(emacsdir)/emacsver.texi \
   $(srcdir)/abbrevs.texi \
   $(srcdir)/advice.texi \
   $(srcdir)/anti.texi \
@@ -53,7 +55,6 @@ srcs = \
   $(srcdir)/debugging.texi \
   $(srcdir)/display.texi \
   $(srcdir)/edebug.texi \
-  $(srcdir)/elisp.texi \
   $(srcdir)/errors.texi \
   $(srcdir)/eval.texi \
   $(srcdir)/files.texi \
@@ -93,22 +94,31 @@ srcs = \
   $(srcdir)/gpl.texi \
   $(srcdir)/doclicense.texi
 
-# The info file is named `elisp'.
+mkinfodir = @test -d ${infodir} || mkdir ${infodir} || test -d ${infodir}
+
+.PHONY: info dvi pdf ps
+
 info: $(infodir)/elisp
 dvi: elisp.dvi
+html: elisp.html
 pdf: elisp.pdf
+ps: elisp.ps
 
-$(infodir):
-	mkdir $@ || test -d $@
-
-$(infodir)/elisp: $(infodir) $(srcs)
-	cd $(srcdir); $(MAKEINFO) -I. -I$(texinfodir) elisp.texi -o $@
+$(infodir)/elisp: $(srcs)
+	$(mkinfodir)
+	$(MAKEINFO) -o $@ $<
 
 elisp.dvi: $(srcs)
-	$(TEXI2DVI) -I $(srcdir) -I $(texinfodir) $(srcdir)/elisp.texi
+	$(TEXI2DVI) -I $(srcdir) -I $(texinfodir) $<
+
+elisp.html: $(srcs)
+	$(MAKEINFO) --html -o $@ $<
+
+elisp.ps: elisp.dvi
+	$(DVIPS) -o $@ $<
 
 elisp.pdf: $(srcs)
-	$(TEXI2PDF) -I $(srcdir) -I $(texinfodir) $(srcdir)/elisp.texi
+	$(TEXI2PDF) -I $(srcdir) -I $(texinfodir) $<
 
 .PHONY: mostlyclean clean distclean maintainer-clean infoclean
 
@@ -119,7 +129,8 @@ mostlyclean:
 	rm -f elisp[12]*
 
 clean: mostlyclean
-	rm -f elisp.dvi elisp.pdf vol[12].pdf
+	rm -f elisp.dvi elisp.pdf elisp.ps vol[12].pdf
+	rm -rf elisp.html
 	rm -f emacs-lispref-${version}.tar*
 
 distclean: clean
@@ -129,14 +140,18 @@ infoclean:
 
 maintainer-clean: distclean infoclean
 
+.PHONY: dist
+
 ## Note this excludes the two-volume stuff.
 dist:
 	rm -rf emacs-lispref-${version}
 	mkdir emacs-lispref-${version}
 	cp ${srcdir}/*.texi ${texinfodir}/texinfo.tex \
-	  ${srcdir}/ChangeLog* ${srcdir}/README emacs-lispref-${version}/
-	sed -e 's/@sr[c]dir@/./' -e 's/\(texinfodir *=\).*/\1 ./' \
-	  -e 's/\(infodir *=\).*/\1 ./' -e 's/^\(clean:.*\)/\1 infoclean/' \
+	  $(emacsdir)/emacsver.texi ${srcdir}/ChangeLog* \
+	  ${srcdir}/README emacs-lispref-${version}/
+	sed -e 's/@sr[c]dir@/./' -e 's/^\(texinfodir *=\).*/\1 ./' \
+	  -e 's/^\(emacsdir *=\).*/\1 ./' \
+	  -e 's/^\(infodir *=\).*/\1 ./' -e 's/^\(clean:.*\)/\1 infoclean/' \
 	  -e "s/@ver[s]ion@/${version}/" \
 	  ${srcdir}/Makefile.in > emacs-lispref-${version}/Makefile
 	tar -cf emacs-lispref-${version}.tar emacs-lispref-${version}

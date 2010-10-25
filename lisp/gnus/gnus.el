@@ -30,7 +30,7 @@
 
 (eval '(run-hooks 'gnus-load-hook))
 
-;; For Emacs < 22.2.
+;; For Emacs <22.2 and XEmacs.
 (eval-and-compile
   (unless (fboundp 'declare-function) (defmacro declare-function (&rest r))))
 
@@ -1356,12 +1356,12 @@ updated if the value of this variable is nil, even if you change the
 value of `gnus-message-archive-method' afterward.  If you want the
 saved \"archive\" method to be updated whenever you change the value of
 `gnus-message-archive-method', set this variable to a non-nil value."
-  :version "23.1" ;; No Gnus
+  :version "23.1"
   :group 'gnus-server
   :group 'gnus-message
   :type 'boolean)
 
-(defcustom gnus-message-archive-group nil
+(defcustom gnus-message-archive-group '((format-time-string "sent.%Y-%m"))
   "*Name of the group in which to save the messages you've written.
 This can either be a string; a list of strings; or an alist
 of regexps/functions/forms to be evaluated to return a string (or a list
@@ -1381,8 +1381,12 @@ unprefixed -- which implicitly means \"store on the archive server\".
 However, you may wish to store the message on some other server.  In
 that case, just return a fully prefixed name of the group --
 \"nnml+private:mail.misc\", for instance."
+  :version "24.1"
   :group 'gnus-message
   :type '(choice (const :tag "none" nil)
+		 (const :tag "Weekly" ((format-time-string "sent.%Yw%U")))
+		 (const :tag "Monthly" ((format-time-string "sent.%Y-%m")))
+		 (const :tag "Yearly" ((format-time-string "sent.%Y")))
 		 function
 		 sexp
 		 string))
@@ -2585,6 +2589,11 @@ a string, be sure to use a valid format, see RFC 2616."
 (defvar gnus-server-method-cache nil)
 (defvar gnus-extended-servers nil)
 
+;; The carpal mode has been removed, but define the variable for
+;; backwards compatability.
+(defvar gnus-carpal nil)
+(make-obsolete-variable 'gnus-carpal nil "Emacs 24.1")
+
 (defvar gnus-agent-fetching nil
   "Whether Gnus agent is in fetching mode.")
 
@@ -2906,6 +2915,7 @@ gnus-registry.el will populate this if it's loaded.")
       gnus-start-date-timer gnus-stop-date-timer
       gnus-mime-view-all-parts)
      ("gnus-int" gnus-request-type)
+     ("gnus-html" gnus-html-show-images)
      ("gnus-start" gnus-newsrc-parse-options gnus-1 gnus-no-server-1
       gnus-dribble-enter gnus-read-init-file gnus-dribble-touch
       gnus-check-reasonable-setup)
@@ -3386,14 +3396,14 @@ that that variable is buffer-local to the summary buffers."
 (defun gnus-news-group-p (group &optional article)
   "Return non-nil if GROUP (and ARTICLE) come from a news server."
   (cond ((gnus-member-of-valid 'post group) ;Ordinary news group
-	 t)				;is news of course.
+	 t)				    ;is news of course.
 	((not (gnus-member-of-valid 'post-mail group)) ;Non-combined.
 	 nil)				;must be mail then.
 	((vectorp article)		;Has header info.
 	 (eq (gnus-request-type group (mail-header-id article)) 'news))
-	((null article)			;Hasn't header info
+	((null article)			       ;Hasn't header info
 	 (eq (gnus-request-type group) 'news)) ;(unknown ==> mail)
-	((< article 0)			;Virtual message
+	((< article 0)			       ;Virtual message
 	 nil)				;we don't know, guess mail.
 	(t				;Has positive number
 	 (eq (gnus-request-type group article) 'news)))) ;use it.
@@ -3810,12 +3820,13 @@ You should probably use `gnus-find-method-for-group' instead."
 
 (defun gnus-expand-group-parameter (match value group)
   "Use MATCH to expand VALUE in GROUP."
-  (with-temp-buffer
-    (insert group)
-    (goto-char (point-min))
-    (while (re-search-forward match nil t)
-      (replace-match value))
-    (buffer-string)))
+  (let ((start (string-match match group)))
+    (if start
+        (let ((matched-string (substring group start (match-end 0))))
+          ;; Build match groups
+          (string-match match matched-string)
+          (replace-match value nil nil matched-string))
+      group)))
 
 (defun gnus-expand-group-parameters (match parameters group)
   "Go through PARAMETERS and expand them according to the match data."
@@ -3917,8 +3928,11 @@ If ALLOW-LIST, also allow list as a result."
 			   group 'params))))
 
 (defun gnus-group-set-parameter (group name value)
-  "Set parameter NAME to VALUE in GROUP."
-  (let ((info (gnus-get-info group)))
+  "Set parameter NAME to VALUE in GROUP.
+GROUP can also be an INFO structure."
+  (let ((info (if (listp group)
+		  group
+		(gnus-get-info group))))
     (when info
       (gnus-group-remove-parameter group name)
       (let ((old-params (gnus-info-params info))
@@ -3928,17 +3942,22 @@ If ALLOW-LIST, also allow list as a result."
 		    (not (eq (caar old-params) name)))
 	    (setq new-params (append new-params (list (car old-params)))))
 	  (setq old-params (cdr old-params)))
-	(gnus-group-set-info new-params group 'params)))))
+	(if (listp group)
+	    (gnus-info-set-params info new-params t)
+	  (gnus-group-set-info new-params (gnus-info-group info) 'params))))))
 
 (defun gnus-group-remove-parameter (group name)
-  "Remove parameter NAME from GROUP."
-  (let ((info (gnus-get-info group)))
+  "Remove parameter NAME from GROUP.
+GROUP can also be an INFO structure."
+  (let ((info (if (listp group)
+		  group
+		(gnus-get-info group))))
     (when info
       (let ((params (gnus-info-params info)))
 	(when params
 	  (setq params (delq name params))
 	  (while (assq name params)
-	    (gnus-pull name params))
+	    (gnus-alist-pull name params))
 	  (gnus-info-set-params info params))))))
 
 (defun gnus-group-add-score (group &optional score)

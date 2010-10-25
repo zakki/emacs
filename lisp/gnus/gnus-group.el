@@ -25,7 +25,7 @@
 
 ;;; Code:
 
-;; For Emacs < 22.2.
+;; For Emacs <22.2 and XEmacs.
 (eval-and-compile
   (unless (fboundp 'declare-function) (defmacro declare-function (&rest r))))
 
@@ -54,6 +54,8 @@
 
 (autoload 'gnus-agent-total-fetched-for "gnus-agent")
 (autoload 'gnus-cache-total-fetched-for "gnus-cache")
+
+(autoload 'gnus-group-make-nnir-group "nnir")
 
 (defcustom gnus-no-groups-message "No Gnus is good news"
   "*Message displayed by Gnus when no groups are available."
@@ -653,6 +655,7 @@ simple manner.")
   "D" gnus-group-enter-directory
   "f" gnus-group-make-doc-group
   "w" gnus-group-make-web-group
+  "G" gnus-group-make-nnir-group
   "M" gnus-group-read-ephemeral-group
   "r" gnus-group-rename-group
   "R" gnus-group-make-rss-group
@@ -757,7 +760,6 @@ simple manner.")
        (symbol-value 'gnus-topic-mode)))
 
 (defun gnus-group-make-menu-bar ()
-  (gnus-turn-off-edit-menu 'group)
   (unless (boundp 'gnus-group-reading-menu)
 
     (easy-menu-define
@@ -905,6 +907,7 @@ simple manner.")
 	["Add the help group" gnus-group-make-help-group t]
 	["Make a doc group..." gnus-group-make-doc-group t]
 	["Make a web group..." gnus-group-make-web-group t]
+	["Make a search group..." gnus-group-make-nnir-group t]
 	["Make a virtual group..." gnus-group-make-empty-virtual t]
 	["Add a group to a virtual..." gnus-group-add-to-virtual t]
 	["Make an ephemeral group..." gnus-group-read-ephemeral-group t]
@@ -1548,7 +1551,7 @@ if it is a string, only list groups matching REGEXP."
 	      ?m ? ))
 	 (gnus-tmp-moderated-string
 	  (if (eq gnus-tmp-moderated ?m) "(m)" ""))
-         (gnus-tmp-group-icon (gnus-group-get-icon gnus-tmp-qualified-group))
+         (gnus-tmp-group-icon (gnus-group-get-icon gnus-tmp-group))
 	 (gnus-tmp-news-server (or (cadr gnus-tmp-method) ""))
 	 (gnus-tmp-news-method (or (car gnus-tmp-method) ""))
 	 (gnus-tmp-news-method-string
@@ -1888,7 +1891,7 @@ If FIRST-TOO, the current line is also eligible as a target."
       (unless no-advance
 	(gnus-group-next-group 1))
       (decf n))
-    (gnus-summary-position-point)
+    (gnus-group-position-point)
     n))
 
 (defun gnus-group-unmark-group (n)
@@ -2190,11 +2193,13 @@ if it is not a list."
 				      require-match initial-input
 				      (or hist 'gnus-group-history)
 				      def))
-    (if (if (listp collection)
-	    (member group (mapcar 'symbol-name collection))
-	  (symbol-value (intern-soft group collection)))
-	group
-      (mm-encode-coding-string group (gnus-group-name-charset nil group)))))
+    (unless (if (listp collection)
+		(member group (mapcar 'symbol-name collection))
+	      (symbol-value (intern-soft group collection)))
+      (setq group
+	    (mm-encode-coding-string
+	     group (gnus-group-name-charset nil group))))
+    (replace-regexp-in-string "\n" "" group)))
 
 ;;;###autoload
 (defun gnus-fetch-group (group &optional articles)
@@ -3027,7 +3032,7 @@ If SOLID (the prefix), create a solid group."
 		  (nnweb-ephemeral-p t))))
     (if solid
 	(progn
-	  (gnus-pull 'nnweb-ephemeral-p method)
+	  (gnus-alist-pull 'nnweb-ephemeral-p method)
 	  (gnus-group-make-group group method))
       (gnus-group-read-ephemeral-group
        group method t
@@ -3677,7 +3682,7 @@ If given numerical prefix, toggle the N next groups."
 Killed newsgroups are subscribed.  If SILENT, don't try to update the
 group line."
   (interactive (list (gnus-group-completing-read
-		      nil (gnus-read-active-file-p))))
+		      nil nil (gnus-read-active-file-p))))
   (let ((newsrc (gnus-group-entry group)))
     (cond
      ((string-match "^[ \t]*$" group)
@@ -4010,7 +4015,7 @@ If DONT-SCAN is non-nil, scan non-activated groups as well."
       (goto-char beg))
     (when gnus-goto-next-group-when-activating
       (gnus-group-next-unread-group 1 t))
-    (gnus-summary-position-point)
+    (gnus-group-position-point)
     ret))
 
 (defun gnus-group-fetch-control (group)
@@ -4321,7 +4326,8 @@ and the second element is the address."
   (interactive
    (list (let ((how (gnus-completing-read
 		     "Which back end"
-		     (mapcar 'car (append gnus-valid-select-methods gnus-server-alist))
+		     (mapcar 'car (append gnus-valid-select-methods
+					  gnus-server-alist))
 		     t (cons "nntp" 0) 'gnus-method-history)))
 	   ;; We either got a back end name or a virtual server name.
 	   ;; If the first, we also need an address.

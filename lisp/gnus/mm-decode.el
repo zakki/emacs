@@ -24,7 +24,7 @@
 
 ;;; Code:
 
-;; For Emacs < 22.2.
+;; For Emacs <22.2 and XEmacs.
 (eval-and-compile
   (unless (fboundp 'declare-function) (defmacro declare-function (&rest r))))
 
@@ -105,8 +105,8 @@
 	 ,disposition ,description ,cache ,id))
 
 (defcustom mm-text-html-renderer
-  (cond ((fboundp 'libxml-parse-html-region) 'mm-shr)
-	((executable-find "w3m") 'gnus-article-html)
+  (cond ((fboundp 'libxml-parse-html-region) 'shr)
+	((executable-find "w3m") 'gnus-w3m)
 	((executable-find "links") 'links)
 	((executable-find "lynx") 'lynx)
 	((locate-library "w3") 'w3)
@@ -115,7 +115,8 @@
   "Render of HTML contents.
 It is one of defined renderer types, or a rendering function.
 The defined renderer types are:
-`gnus-article-html' : use Gnus renderer based on w3m;
+`shr': use Gnus simple HTML renderer;
+`gnus-w3m' : use Gnus renderer based on w3m;
 `w3m'  : use emacs-w3m;
 `w3m-standalone': use w3m;
 `links': use links;
@@ -124,7 +125,8 @@ The defined renderer types are:
 `html2text' : use html2text;
 nil    : use external viewer (default web browser)."
   :version "24.1"
-  :type '(choice (const gnus-article-html)
+  :type '(choice (const shr)
+                 (const gnus-w3m)
                  (const w3)
                  (const w3m :tag "emacs-w3m")
 		 (const w3m-standalone :tag "standalone w3m" )
@@ -134,10 +136,6 @@ nil    : use external viewer (default web browser)."
 		 (const nil :tag "External viewer")
 		 (function))
   :group 'mime-display)
-
-(defvar mm-inline-text-html-renderer nil
-  "Function used for rendering inline HTML contents.
-It is suggested to customize `mm-text-html-renderer' instead.")
 
 (defcustom mm-inline-text-html-with-images nil
   "If non-nil, Gnus will allow retrieving images in HTML contents with
@@ -243,8 +241,7 @@ before the external MIME handler is invoked."
     ("text/html"
      mm-inline-text-html
      (lambda (handle)
-       (or mm-inline-text-html-renderer
-	   mm-text-html-renderer)))
+       mm-text-html-renderer))
     ("text/x-vcard"
      mm-inline-text-vcard
      (lambda (handle)
@@ -1258,8 +1255,10 @@ PROMPT overrides the default one used to ask user for a file name."
 				      (or filename "")))
                           (or mm-default-directory default-directory)
 			  (or filename "")))
-    (when (file-directory-p file)
-      (setq file (expand-file-name filename file)))
+    (if (file-directory-p file)
+	(setq file (expand-file-name filename file))
+      (setq file (expand-file-name
+		  file (or mm-default-directory default-directory))))
     (setq mm-default-directory (file-name-directory file))
     (and (or (not (file-exists-p file))
 	     (yes-or-no-p (format "File %s already exists; overwrite? "
@@ -1682,13 +1681,17 @@ If RECURSIVE, search recursively."
 (declare-function libxml-parse-html-region "xml.c"
 		  (start end &optional base-url))
 (declare-function shr-insert-document "shr" (dom))
+(defvar shr-blocked-images)
 
 (defun mm-shr (handle)
   ;; Require since we bind its variables.
   (require 'shr)
   (let ((article-buffer (current-buffer))
-	(shr-blocked-images (with-current-buffer gnus-summary-buffer
-			      gnus-blocked-images))
+	(shr-blocked-images (if (and (boundp 'gnus-summary-buffer)
+				     (buffer-name gnus-summary-buffer))
+				(with-current-buffer gnus-summary-buffer
+				  (gnus-blocked-images))
+			      shr-blocked-images))
 	(shr-content-function (lambda (id)
 				(let ((handle (mm-get-content-id id)))
 				  (when handle
