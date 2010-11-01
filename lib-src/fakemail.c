@@ -35,7 +35,7 @@ main (void)
   return 0;
 }
 #else /* not BSD 4.2 (or newer) */
-#ifdef MSDOS
+#if defined (MSDOS) || defined (ANDROID)
 int
 main ()
 {

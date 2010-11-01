@@ -6332,10 +6332,12 @@ process has been transmitted to the serial port.  */)
     send_process (proc, "\004", 1, Qnil);
   else if (EQ (XPROCESS (proc)->type, Qserial))
     {
+#ifndef ANDROID
 #ifndef WINDOWSNT
       if (tcdrain (XPROCESS (proc)->outfd) != 0)
 	error ("tcdrain() failed: %s", emacs_strerror (errno));
 #endif /* not WINDOWSNT */
+#endif /* not ANDROID */
       /* Do nothing on Windows because writes are blocking.  */
     }
   else

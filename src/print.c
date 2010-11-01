@@ -891,7 +891,7 @@ debug_output_compilation_hack (int x)
   print_output_debug_flag = x;
 }
 
-#if defined (GNU_LINUX)
+#if defined (GNU_LINUX) && !defined(ANDROID)
 
 /* This functionality is not vitally important in general, so we rely on
    non-portable ability to use stderr as lvalue.  */

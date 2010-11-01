@@ -87,6 +87,9 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 #include <stdio_ext.h>
 #define PENDING_OUTPUT_COUNT(FILE) __fpending (FILE)
 #endif
+#ifdef ANDROID
+#define PENDING_OUTPUT_COUNT(FILE) ((FILE)->_p - (FILE)->_bf._base)
+#endif
 #ifndef PENDING_OUTPUT_COUNT
 #define PENDING_OUTPUT_COUNT(FILE) ((FILE)->_ptr - (FILE)->_base)
 #endif
