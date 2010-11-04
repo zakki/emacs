@@ -166,5 +166,8 @@ along with GNU Emacs.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #define USER_FULL_NAME ("Android User")
 
+#undef HAVE_WORKING_VFORK
+#define vfork fork
+
 /* arch-tag: 6244ea2a-abd0-44ec-abec-ff3dcc9afea9
    (do not change this comment) */
